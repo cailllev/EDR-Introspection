@@ -1,150 +1,64 @@
-// etw_dumper.cpp
-// Minimal ETW provider dumper: find PID by process name, enumerate providers, show instances that match PID.
-//
-// Compile with: cl /EHsc etw_dumper.cpp advapi32.lib
-
-#include <windows.h>
-#include <tlhelp32.h>
-#include <evntrace.h>
-#include <stdio.h>
+#include <krabs.hpp>
+#include <nlohmann/json.hpp>
+#include <iostream>
 #include <vector>
-#include <string>
 
-DWORD FindPidByName(const wchar_t* targetName) {
-    DWORD pid = 0;
-    HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-    if (snap == INVALID_HANDLE_VALUE) return 0;
-
-    PROCESSENTRY32W pe;
-    pe.dwSize = sizeof(pe);
-    if (Process32FirstW(snap, &pe)) {
-        do {
-            if (_wcsicmp(pe.szExeFile, targetName) == 0) {
-                pid = pe.th32ProcessID;
-                break; // return first match; change if you want all matches
-            }
-        } while (Process32NextW(snap, &pe));
-    }
-
-    CloseHandle(snap);
-    return pid;
+// Convert wstring to string
+std::string ws2s(const std::wstring& wstr) {
+    return std::string(wstr.begin(), wstr.end());
 }
 
-int wmain(int argc, wchar_t** argv) {
-    if (argc != 2) {
-        wprintf(L"Usage: %s <processname.exe>\n", argv[0]);
-        return 1;
+// Convert byte vector to uint32
+uint32_t byte2uint32(std::vector<BYTE> v) {
+    uint32_t res = 0;
+    for (int i = (int)v.size() - 1; i >= 0; i--) {
+        res <<= 8;
+        res += (uint32_t)v[i];
     }
+    return res;
+}
 
-    const wchar_t* procName = argv[1];
-    DWORD targetPid = FindPidByName(procName);
-    if (targetPid == 0) {
-        wprintf(L"[!] Process '%s' not found.\n", procName);
-        return 2;
+// Convert byte vector to uint64
+uint64_t byte2uint64(std::vector<BYTE> v) {
+    uint64_t res = 0;
+    for (int i = 7; i >= 0; i--) {
+        res <<= 8;
+        res += (uint64_t)v[i];
     }
+    return res;
+}
 
-    wprintf(L"[+] Found PID %u for '%s'\n", targetPid, procName);
+// Callback function when session receives an event from provider
+void callback(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
+    krabs::schema schema(record, trace_context.schema_locator);
+    krabs::parser parser(schema);
 
-    ULONG status = ERROR_SUCCESS;
-    ULONG required = 0;
-    GUID* guidBuffer = nullptr;
-    ULONG guidBufSize = 0;
+    if (schema.event_id() == 1) {
+        nlohmann::json data;
+        data["ProcessID"] = byte2uint32(parser.parse<krabs::binary>(L"ProcessID").bytes());
+        data["CreateTime"] = byte2uint64(parser.parse<krabs::binary>(L"CreateTime").bytes());
+        data["ParentProcessID"] = byte2uint32(parser.parse<krabs::binary>(L"ParentProcessID").bytes());
+        data["SessionID"] = byte2uint32(parser.parse<krabs::binary>(L"SessionID").bytes());
+        data["ImageName"] = ws2s(parser.parse<std::wstring>(L"ImageName"));
 
-    // First ask for required size for TraceGuidQueryList
-    status = EnumerateTraceGuidsEx(TraceGuidQueryList, nullptr, 0, nullptr, 0, &required);
-    if (status != ERROR_INSUFFICIENT_BUFFER && status != ERROR_SUCCESS) {
-        wprintf(L"EnumerateTraceGuidsEx(TraceGuidQueryList) failed (code %lu)\n", status);
-        return 3;
+        std::cout << data.dump(4) << std::endl;
     }
+}
 
-    // allocate
-    guidBuffer = (GUID*)malloc(required);
-    if (!guidBuffer) {
-        wprintf(L"[!] Allocation failed\n");
-        return 4;
-    }
-    ZeroMemory(guidBuffer, required);
-    guidBufSize = required;
+int main(int argc, const char* argv[]) {
+    // Create an ETW session
+    krabs::user_trace session(L"ETW_example");
 
-    status = EnumerateTraceGuidsEx(TraceGuidQueryList, nullptr, 0, guidBuffer, guidBufSize, &required);
-    if (status != ERROR_SUCCESS) {
-        wprintf(L"[!] EnumerateTraceGuidsEx(TraceGuidQueryList) failed (code %lu)\n", status);
-        free(guidBuffer);
-        return 5;
-    }
+    // Set provider
+    std::wstring name = L"Microsoft-Antimalware-Engine";
+    krabs::provider<> provider(name);
+    provider.any(0x10);
 
-    ULONG guidCount = guidBufSize / sizeof(GUID);
-    wprintf(L"[+] Total providers enumerated: %lu\n", guidCount);
+    // Add event callback function
+    provider.add_on_event_callback(callback);
+	std::cout << "[>] Callback function added for provider: " << ws2s(name) << std::endl;
 
-    // For each GUID, request the provider info (TraceGuidQueryInfo) which returns TRACE_GUID_INFO
-    for (ULONG i = 0; i < guidCount; ++i) {
-        GUID provider = guidBuffer[i];
-        wchar_t guidStr[64] = { 0 };
-        StringFromGUID2(provider, guidStr, ARRAYSIZE(guidStr));
-        wprintf(L"Provider GUID: %s\n", guidStr);
-
-        PTRACE_GUID_INFO info = nullptr;
-        ULONG infoSize = 0;
-        status = EnumerateTraceGuidsEx(TraceGuidQueryInfo, &provider, sizeof(provider), nullptr, 0, &infoSize);
-
-        if (status != ERROR_INSUFFICIENT_BUFFER && status != ERROR_SUCCESS) {
-            wprintf(L"  EnumerateTraceGuidsEx(TraceGuidQueryInfo) failed (code %lu)\n\n", status);
-            continue;
-        }
-
-        info = (PTRACE_GUID_INFO)malloc(infoSize);
-        if (!info) {
-            wprintf(L"  Allocation failed for provider info\n\n");
-            continue;
-        }
-        ZeroMemory(info, infoSize);
-
-        status = EnumerateTraceGuidsEx(TraceGuidQueryInfo, &provider, sizeof(provider), info, infoSize, &infoSize);
-        if (status != ERROR_SUCCESS) {
-            wprintf(L"  EnumerateTraceGuidsEx(TraceGuidQueryInfo) failed (code %lu)\n\n", status);
-            free(info);
-            continue;
-        }
-
-        // TRACE_GUID_INFO header is followed by TRACE_PROVIDER_INSTANCE_INFO blocks
-        PTRACE_PROVIDER_INSTANCE_INFO pInstance = (PTRACE_PROVIDER_INSTANCE_INFO)((BYTE*)info + sizeof(TRACE_GUID_INFO));
-        if (info->InstanceCount == 0) {
-            wprintf(L"  No instances\n\n");
-            free(info);
-            continue;
-        }
-
-        for (DWORD j = 0; j < info->InstanceCount; ++j) {
-            if (pInstance->Pid == targetPid) {
-                wprintf(L"  >>> Instance for PID %u <<<\n", pInstance->Pid);
-                if (pInstance->Flags & TRACE_PROVIDER_FLAG_LEGACY) {
-                    wprintf(L"    Registration method: RegisterTraceGuids (legacy)\n");
-                }
-                else {
-                    wprintf(L"    Registration method: EventRegister\n");
-                }
-
-                wprintf(L"    EnableCount: %u\n", pInstance->EnableCount);
-                // if enabled by sessions, print enable info blocks
-                PTRACE_ENABLE_INFO pEnable = (PTRACE_ENABLE_INFO)((BYTE*)pInstance + sizeof(TRACE_PROVIDER_INSTANCE_INFO));
-                for (DWORD k = 0; k < pInstance->EnableCount; ++k) {
-                    wprintf(L"      SessionId: %hu Level: %hu MatchAny: %llu MatchAll: %llu EnableProperty: %u\n",
-                        pEnable->LoggerId, pEnable->Level,
-                        (unsigned long long)pEnable->MatchAnyKeyword,
-                        (unsigned long long)pEnable->MatchAllKeyword,
-                        pEnable->EnableProperty);
-                    pEnable++;
-                }
-                wprintf(L"\n");
-            }
-            // move to next instance (NextOffset bytes ahead)
-            if (pInstance->NextOffset == 0) break;
-            pInstance = (PTRACE_PROVIDER_INSTANCE_INFO)((BYTE*)pInstance + pInstance->NextOffset);
-        }
-
-        free(info);
-    }
-
-    free(guidBuffer);
-    return 0;
+    // Enable provider and start session
+    session.enable(provider);
+    session.start();
 }

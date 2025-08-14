@@ -1,7 +1,26 @@
 #include <windows.h>
 #include <iostream>
 
-int main() {
+int main(int argc, char** argv) {
+    bool sleep = false;
+    int waitTime = 0;
+
+    if (argc < 2) {
+        sleep = false;
+    }
+    else if (strcmp(argv[1], "--wait") == 0) {
+        sleep = true;
+        if (argc < 3) {
+			waitTime = 3; // default wait time
+        }
+        else {
+            waitTime = strtol(argv[2], NULL, 10);
+        }
+    }
+    else {
+        sleep = false;
+	}
+
     // start Notepad
     STARTUPINFO si = { sizeof(si) };
     PROCESS_INFORMATION pi;
@@ -11,6 +30,16 @@ int main() {
     }
 
     std::cout << "Notepad started. PID: " << pi.dwProcessId << "\n";
+    if (sleep) {
+        for (int i = waitTime; i > 0; i--) {
+            std::cout << "Starting injection in " << i << "\n";
+            Sleep(1000);
+        }
+    }
+    else {
+		std::cout << "Press ENTER to start injection...\n";
+		std::cin.get();
+    }
 
     // open process with read/write access
     HANDLE hProcess = OpenProcess(PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE, FALSE, pi.dwProcessId);
