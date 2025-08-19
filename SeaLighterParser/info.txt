@@ -1,4 +1,0 @@
-"C:\\Users\\hacker\\source\\repos\\EDR-Introspection\\x64\\Release\\Injector.exe"
-"PID": 13940
-Started: 2025-08-18 19:36:20Z
-Stopped: 2025-08-18 19:36:23Z

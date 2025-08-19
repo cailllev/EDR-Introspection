@@ -42,9 +42,8 @@ std::vector<Event> load_events(const std::string& filename) {
                           j.value("property_types", json::object()) };
                 events.push_back(ev);
             }
-            catch (const std::exception& e) {
-                std::cerr << "Error parsing partial JSON: " << e.what()
-                    << "\nBuffer was:\n" << buffer.str() << "\n";
+            catch (...) {
+                // std::cerr << "Error parsing partial JSON: " << e.what() << "\nBuffer was:\n" << buffer.str() << "\n";
             }
             buffer.str("");
             buffer.clear();
@@ -74,7 +73,7 @@ void group_by_event_id(const std::vector<Event>& events) {
             g.first_properties = ev.properties;
         }
     }
-	std::cout << "Grouped " << groups.size() << " unique event_ids.\n";
+
     // sort groups by event_id
 	std::vector<std::pair<int, Group>> sorted_groups(groups.begin(), groups.end());
     std::sort(sorted_groups.begin(), sorted_groups.end(),

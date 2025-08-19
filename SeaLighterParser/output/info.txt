@@ -1,0 +1,12 @@
+"C:\\Users\\hacker\\source\\repos\\EDR-Introspection\\x64\\Release\\Injector.exe"
+
+Notepad started. PID: 15996
+Process started at: 2025-08-19 09:55:02Z
+Press ENTER to start injection...
+
+Memory allocated at address: 0000017412FB0000
+Value before write: 0x0
+Value written to address: 0000017412FB0000
+Value written at: 2025-08-19 09:55:05Z
+Value after write: 0xdeadbeaf
+Notepad terminated.
