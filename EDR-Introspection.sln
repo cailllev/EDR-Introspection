@@ -5,7 +5,7 @@ VisualStudioVersion = 17.14.36408.4
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Injector", "Injector\Injector.vcxproj", "{315FDBE5-7B08-489D-94F6-D7A56EDDECB9}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SeaLighterParser", "SeaLighterParser\SeaLighterParser.vcxproj", "{EE05DB11-B9EF-46AA-8D28-7D80835EA3AD}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SeaLighterParser", "ETW\SeaLighterParser\SeaLighterParser.vcxproj", "{EE05DB11-B9EF-46AA-8D28-7D80835EA3AD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
