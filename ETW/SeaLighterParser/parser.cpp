@@ -117,10 +117,10 @@ void filter_by_property(const std::vector<Event>& events, const std::string& key
 // setup: 
 // 1. Get-Process MsMpEng
 // 2. adapt antimaleware-msmpeng.json with the PID from above
-// 3. .\SeaLighter.exe .\anitmalware-msmpeng.json | Tee-Object antimalware-msmpeng.out.utf16; Get-Content antimalware-msmpeng.out.utf16 | Out-File -FilePath antimalware-msmpeng.out -Encoding utf8
-// 4. .\Injector.exe in new window, as soon as output is visible from SeaLighter
-// 5. stop .\SeaLighter.exe
-// 6. .\parser.exe antimalware-msmpeng.out group
+// 3. .\SeaLighter.exe .\anitmalware-msmpeng.json | Tee-Object antimalware-msmpeng.txt.utf16; Get-Content antimalware-msmpeng.txt.utf16 | Out-File -FilePath antimalware-msmpeng.txt -Encoding utf8
+// 4. execute .\Injector.exe in new window, as soon as output is visible from SeaLighter.exe
+// 5. stop .\SeaLighter.exe after 10 seconds
+// 6. .\parser.exe antimalware-msmpeng.txt group
 int main(int argc, char* argv[]) {
     if (argc < 3) {
         std::cerr << "Usage:\n"
