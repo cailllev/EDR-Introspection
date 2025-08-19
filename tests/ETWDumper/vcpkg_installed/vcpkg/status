@@ -1,0 +1,31 @@
+Package: krabsetw
+Version: 4.3.2
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 1640d51af39382bd7e923a7fc5fd5f22fbe8027017d1b82f48847e1e5591fae4
+Description: krabsetw is a header-only C++ library that simplifies interacting with ETW.
+Status: install ok installed
+
+Package: vcpkg-cmake-config
+Version: 2024-05-23
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 5f32804c7915d7da1cac54b275b93bfa5a14e4895e3f5fe21dc0d05aa769153f
+Status: install ok installed
+
+Package: vcpkg-cmake
+Version: 2024-04-23
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 0d207a6a8569a3a9de6c28f2b10b3fc9cd22d6565f3c73f04f080ae91a9d8b03
+Status: install ok installed
+
+Package: nlohmann-json
+Version: 3.12.0
+Depends: vcpkg-cmake, vcpkg-cmake-config
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 6de5ac8945f4765e6bf8f135f7c6cfd93352c96d68cd90e0c5d419f841a30b4c
+Description: JSON for Modern C++
+Status: install ok installed
+

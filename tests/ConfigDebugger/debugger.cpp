@@ -79,7 +79,7 @@ static std::vector<ProviderInfo> ParseProviders(const std::wstring& logmanOutput
 int wmain(int argc, wchar_t* argv[]) {
     if (argc != 3) {
         std::wcerr << L"Usage: ConfigDebugger.exe <exe name> <path to SeaLighter.exe>\n";
-        std::wcerr << L"Example: ConfigCreator.exe MsMpEng.exe C:\\Users\\hacker\\Downloads\\SeaLighter.exe";
+        std::wcerr << L"Example: ConfigDebugger.exe MsMpEng.exe C:\\Users\\hacker\\Downloads\\SeaLighter.exe";
         return 1;
     }
     std::wstring exeName = argv[1];
