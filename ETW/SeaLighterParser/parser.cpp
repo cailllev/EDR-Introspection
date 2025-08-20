@@ -4,6 +4,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <set>
 #include "json.hpp"
 
 using json = nlohmann::json;
@@ -104,6 +105,7 @@ void filter_by_event_id(const std::vector<Event>& events, int filter_id) {
 
 // Filter by property key/value
 void filter_by_property(const std::vector<Event>& events, const std::string& key, const std::string& value) {
+    std::cout << "Filtering events with property \"" << key << "\" = \"" << value << "\"\n\n";
     for (const auto& ev : events) {
         if (ev.properties.contains(key) && ev.properties[key] == value) {
             int eid = ev.header.value("event_id", -1);
@@ -114,19 +116,81 @@ void filter_by_property(const std::vector<Event>& events, const std::string& key
     }
 }
 
+// Filter by property key/value (int)
+void filter_by_int_property(const std::vector<Event>& events, const std::string& key, const int value) {
+    std::cout << "Filtering events with property \"" << key << "\" = \"" << value << "\"\n\n";
+    for (const auto& ev : events) {
+        if (ev.properties.contains(key) && ev.properties[key] == value) {
+            int eid = ev.header.value("event_id", -1);
+            std::cout << "event_id=" << eid
+                << " task_name=\"" << ev.header.value("task_name", "") << "\"\n"
+                << " properties=" << ev.properties.dump(2) << "\n\n";
+        }
+    }
+}
+
+// Output all events as a sparse CSV timeline
+void output_timeline_csv(const std::vector<Event>& events) {
+    // collect all property keys
+    std::set<std::string> all_keys;
+    for (const auto& ev : events) {
+        for (auto it = ev.properties.begin(); it != ev.properties.end(); ++it) {
+            all_keys.insert(it.key());
+        }
+    }
+
+    // print CSV header
+    std::cout << "timestamp,event_id,task_name,PID,PPID,Message,Command Line,FilePath,VName,Sig Seq,Sig Sha";
+    for (const auto& key : all_keys) {
+        std::cout << "," << key;
+    }
+    std::cout << "\n";
+
+    // print each event as a row
+    for (const auto& ev : events) {
+        // timestamp: try header["timestamp"], fallback to ""
+        if (ev.header.contains("timestamp")) {
+            std::cout << "\"" << ev.header["timestamp"].get<std::string>() << "\",";
+        } else {
+            std::cout << ",";
+        }
+        std::cout << ev.header.value("event_id", -1) << ",";
+        std::cout << "\"" << ev.header.value("task_name", "") << "\"";
+
+        // Properties
+        for (const auto& key : all_keys) {
+            std::cout << ",";
+            if (ev.properties.contains(key)) {
+                // Quote string values, else dump as is
+                if (ev.properties[key].is_string()) {
+                    std::cout << "\"" << ev.properties[key].get<std::string>() << "\"";
+                } else {
+                    std::cout << ev.properties[key].dump();
+                }
+            } else {
+                std::cout << "";
+            }
+        }
+        std::cout << "\n";
+    }
+}
+
 // setup: 
 // 1. Get-Process MsMpEng
 // 2. adapt antimaleware-msmpeng.json with the PID from above
-// 3. .\SeaLighter.exe .\anitmalware-msmpeng.json | Tee-Object antimalware-msmpeng.txt.utf16; Get-Content antimalware-msmpeng.txt.utf16 | Out-File -FilePath antimalware-msmpeng.txt -Encoding utf8
+// 3. .\SeaLighter.exe .\anitmalware-msmpeng.json | Tee-Object antimalware-msmpeng.txt.utf16
 // 4. execute .\Injector.exe in new window, as soon as output is visible from SeaLighter.exe
-// 5. stop .\SeaLighter.exe after 10 seconds
-// 6. .\parser.exe antimalware-msmpeng.txt group
+// 5. stop .\SeaLighter.exe after ~15 seconds
+// 6. Get-Content antimalware-msmpeng.txt.utf16 | Out-File -FilePath antimalware-msmpeng.txt -Encoding utf8
+// 7. .\parser.exe antimalware-msmpeng.txt group
+// or .\parser.exe antimalware-msmpeng.txt toTimeline
 int main(int argc, char* argv[]) {
     if (argc < 3) {
         std::cerr << "Usage:\n"
             << argv[0] << " <file.json> group\n"
             << argv[0] << " <file.json> event <event_id>\n"
-            << argv[0] << " <file.json> prop <key> <value>\n";
+            << argv[0] << " <file.json> prop <key> <value>\n"
+            << argv[0] << " <file.json> toTimeline\n";
         return 1;
     }
 
@@ -147,6 +211,14 @@ int main(int argc, char* argv[]) {
             std::string key = argv[3];
             std::string value = argv[4];
             filter_by_property(events, key, value);
+        }
+        else if (mode == "propInt" && argc >= 5) {
+            std::string key = argv[3];
+            int value = std::stoi(argv[4]);
+            filter_by_int_property(events, key, value);
+        }
+        else if (mode == "toTimeline") {
+            output_timeline_csv(events);
         }
         else {
             std::cerr << "Invalid arguments.\n";
