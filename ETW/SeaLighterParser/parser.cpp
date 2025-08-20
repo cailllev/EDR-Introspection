@@ -5,6 +5,8 @@
 #include <unordered_map>
 #include <vector>
 #include <set>
+#include <map>
+#include <regex>
 #include "json.hpp"
 
 using json = nlohmann::json;
@@ -129,47 +131,87 @@ void filter_by_int_property(const std::vector<Event>& events, const std::string&
     }
 }
 
-// Output all events as a sparse CSV timeline
+// Helper: translate device paths to drive letters
+std::string translate_if_path(const std::string& s) {
+    std::string to_replace = "\\Device\\HarddiskVolume4\\";
+    std::string replacement = "C:\\";
+    int idx = s.find(to_replace);
+    if (idx != std::string::npos) {
+        return s.substr(0, idx) + replacement + s.substr(idx + to_replace.length());
+    }
+    return s;
+}
+
+// todo quoting errors with Timeline Explorer
+void print_value(Event ev, std::string key) {
+    if (ev.properties[key].is_string()) {
+        std::string s = ev.properties[key].get<std::string>();
+        s = translate_if_path(s);
+        std::cout << "\"" << s << "\"";
+    }
+    else {
+        std::cout << ev.properties[key].dump();
+    }
+}
+
+// Output all events as a sparse CSV timeline with merged PPID and FilePath
 void output_timeline_csv(const std::vector<Event>& events) {
-    // collect all property keys
-    std::set<std::string> all_keys;
+    // Keys to merge for PPID and FilePath
+    static const std::vector<std::string> ppid_keys = {
+        "Parent PID", "TPID", "Target PID"
+    };
+    static const std::vector<std::string> filepath_keys = {
+        "File Name", "File Path", "Process Image Path", "Name", "Reason Image Path"
+    };
+
+	// start of CSV header
+    // TODO: "name" not allowed?
+    std::vector<std::string> all_keys = { "timestamp","event_id","task_name","PID",
+        "PPID","Message","Command Line","FilePath","VName","Sig Seq","Sig Sha"};
+
+    // collect all property keys except merged ones, set automatically rejects duplicates
     for (const auto& ev : events) {
         for (auto it = ev.properties.begin(); it != ev.properties.end(); ++it) {
-            all_keys.insert(it.key());
+            // skip merged keys
+            if (std::find(ppid_keys.begin(), ppid_keys.end(), it.key()) != ppid_keys.end()) continue;
+            if (std::find(filepath_keys.begin(), filepath_keys.end(), it.key()) != filepath_keys.end()) continue;
+            
+            // skip already inserted keys
+            if (std::find(all_keys.begin(), all_keys.end(), it.key()) != all_keys.end()) continue;
+
+            // insert if it does not exists yet
+            all_keys.push_back(it.key());
         }
     }
 
     // print CSV header
-    std::cout << "timestamp,event_id,task_name,PID,PPID,Message,Command Line,FilePath,VName,Sig Seq,Sig Sha";
     for (const auto& key : all_keys) {
-        std::cout << "," << key;
+        std::cout << key << ",";
     }
     std::cout << "\n";
 
     // print each event as a row
     for (const auto& ev : events) {
-        // timestamp: try header["timestamp"], fallback to ""
-        if (ev.header.contains("timestamp")) {
-            std::cout << "\"" << ev.header["timestamp"].get<std::string>() << "\",";
-        } else {
-            std::cout << ",";
-        }
-        std::cout << ev.header.value("event_id", -1) << ",";
-        std::cout << "\"" << ev.header.value("task_name", "") << "\"";
-
-        // Properties
+        // traverse keys in order of csv header, print "" if the current event does not have this key
         for (const auto& key : all_keys) {
-            std::cout << ",";
+
+            // check if this event has a value for this key
             if (ev.properties.contains(key)) {
-                // Quote string values, else dump as is
-                if (ev.properties[key].is_string()) {
-                    std::cout << "\"" << ev.properties[key].get<std::string>() << "\"";
-                } else {
-                    std::cout << ev.properties[key].dump();
-                }
-            } else {
+                print_value(ev, key);
+            }
+            // else check if the key is a merged key
+            else if (std::find(ppid_keys.begin(), ppid_keys.end(), key) != ppid_keys.end()) {
+                print_value(ev, key);
+            }
+            else if (std::find(filepath_keys.begin(), filepath_keys.end(), key) != filepath_keys.end()) {
+                print_value(ev, key);
+            }
+            
+            // else print "" to skip it
+            else {
                 std::cout << "";
             }
+            std::cout << ",";
         }
         std::cout << "\n";
     }
