@@ -6,38 +6,25 @@
 
 
 krabs::user_trace trace_user(L"EDRIntrospection");
+std::vector<std::string> etw_events;
 
-struct ETW_EVENT {
-    const EVENT_RECORD& record;
-    krabs::schema schema;
-};
-std::vector<ETW_EVENT> etw_events;
 
-std::vector<json> get_events() {
-    std::vector<json> ret;
-    for (auto& ev : etw_events) {
-        ret.push_back(krabs_etw_to_json(ev));
-    }
-    return ret;
-}
-
-//const EVENT_RECORD& record, krabs::schema schema
-json krabs_etw_to_json(ETW_EVENT ee) {
-    krabs::parser parser(ee.schema);
+std::string krabs_etw_to_json(const EVENT_RECORD& record, krabs::schema schema) {
+    krabs::parser parser(schema);
     json j;
 
     j[TYPE] = "ETW";
-    j[TIMESTAMP ] = static_cast<__int64>(ee.record.EventHeader.TimeStamp.QuadPart);
-	j[PID] = ee.record.EventHeader.ProcessId;  // the pid in the header should always be the EDR process
+    j[TIMESTAMP ] = static_cast<__int64>(record.EventHeader.TimeStamp.QuadPart);
+	j[PID] = record.EventHeader.ProcessId;  // the pid in the header should always be the EDR process
     //j["thread_id"] = ee.record.EventHeader.ThreadId;
 
     // Construct the event string, like "ImageLoad"
-    std::wstring combined = std::wstring(ee.schema.task_name()) + std::wstring(ee.schema.opcode_name());
+    std::wstring combined = std::wstring(schema.task_name()) + std::wstring(schema.opcode_name());
     j[TASK] = wstring2string(combined);
 
     //j["opcode_id"] = schema.event_opcode();
-    j[EVENT_ID] = ee.schema.event_id();
-    j[PROVIDER_NAME] = wchar2string(ee.schema.provider_name());
+    j[EVENT_ID] = schema.event_id();
+    j[PROVIDER_NAME] = wchar2string(schema.provider_name());
 
     // Iterate over all properties defined in the schema
     for (const auto& property : parser.properties()) {
@@ -115,7 +102,7 @@ json krabs_etw_to_json(ETW_EVENT ee) {
 
     // Callstack
     j["stack_trace"] = json::array();
-    auto stack_trace = ee.schema.stack_trace();
+    auto stack_trace = schema.stack_trace();
     int idx = 0;
     for (auto& return_address : stack_trace)
     {
@@ -128,8 +115,12 @@ json krabs_etw_to_json(ETW_EVENT ee) {
             idx++;
         }
     }
+    return j.dump();
+}
 
-    return j;
+
+std::vector<std::string> get_events() {
+	return etw_events;
 }
 
 
@@ -142,28 +133,15 @@ void event_callback(const EVENT_RECORD& record, const krabs::trace_context trace
         if (processId != g_EDR_PID) {
             return;
         }
-        etw_events.push_back(ETW_EVENT{ record, schema });
+        etw_events.push_back(krabs_etw_to_json(record, schema));
     }
     catch (const std::exception& e) {
-        std::cerr << "ETW event_callback exception: %s", e.what();
+        std::cerr << "ETW event_callback exception: " << e.what();
     }
     catch (...) {
         std::cerr << "ETW event_callback unknown exception";
     }
 }
-
-
-bool start_etw_reader(std::vector<HANDLE>& threads) {
-    HANDLE thread = CreateThread(NULL, 0, t_start_etw_trace, NULL, 0, NULL);
-    if (thread == NULL) {
-        std::cerr << "[!] ETW: Could not start thread";
-        return false;
-    }
-    std::cout << "[+] ETW: Started Thread (handle %p)", thread;
-    threads.push_back(thread);
-    return true;
-}
-
 
 DWORD WINAPI t_start_etw_trace(LPVOID param) {
     try {
@@ -260,7 +238,7 @@ DWORD WINAPI t_start_etw_trace(LPVOID param) {
         trace_user.start();
     }
     catch (const std::exception& e) {
-        std::cout << "[!] ETW TraceProcessingThread exception: %s", e.what();
+        std::cout << "[!] ETW TraceProcessingThread exception: " << e.what();
     }
     catch (...) {
         std::cout << "[!] ETW TraceProcessingThread unknown exception";
@@ -268,6 +246,18 @@ DWORD WINAPI t_start_etw_trace(LPVOID param) {
 
     std::cout << "[+] ETW: Thread finished";
     return 0;
+}
+
+
+bool start_etw_reader(std::vector<HANDLE>& threads) {
+    HANDLE thread = CreateThread(NULL, 0, t_start_etw_trace, NULL, 0, NULL);
+    if (thread == NULL) {
+        std::cerr << "[!] ETW: Could not start thread";
+        return false;
+    }
+    std::cout << "[+] ETW: Started Thread (handle " << thread << ")";
+    threads.push_back(thread);
+    return true;
 }
 
 
