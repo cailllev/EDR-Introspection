@@ -1,13 +1,19 @@
 #include <iostream>
 #include <fstream>
-#include <sstream>
-#include <string>
-#include <unordered_map>
-#include <vector>
-#include <set>
 #include <map>
 #include <regex>
+#include <set>
+#include <sstream>
+#include <string>
+#include <string.h>
+//#include <tlhelp32.h>
+#include <unordered_map>
+#include <vector>
+#include <windows.h>
+
 #include "json.hpp"
+#include "etwreader.h"
+#include "globals.h"
 
 /*
 - creates krabs ETW traces for Antimalware, Kernel, etc.
@@ -16,28 +22,15 @@
 - then transforms the captured events into a "filtered" csv, ready for Timeline Explorer
 */
 
-using json = nlohmann::json;
-struct Event {
-    json header;
-    json properties;
-    json property_types;
-};
-struct AttackEvent {
-    std::string timestamp;
-    std::string event_id;
-    std::string message;
-};
-
-std::string timestamp = "timestamp";
-std::string event_id = "event_id";
-std::string task_name = "task_name";
+// PID of the EDR process, used to filter the ETW Antimalware provider
+int g_EDR_PID = 0;
 
 
 // translate device paths to drive letters
 std::string translate_if_path(const std::string& s) {
     std::string to_replace = "\\Device\\HarddiskVolume4\\";
     std::string replacement = "C:\\";
-    int idx = s.find(to_replace);
+    size_t idx = s.find(to_replace);
     if (idx != std::string::npos) {
         return s.substr(0, idx) + replacement + s.substr(idx + to_replace.length());
     }
@@ -45,20 +38,20 @@ std::string translate_if_path(const std::string& s) {
 }
 
 // todo quoting errors with Timeline Explorer
-void print_value(Event ev, std::string key) {
-    if (ev.properties[key].is_string()) {
-        std::string s = ev.properties[key].get<std::string>();
+void print_value(json ev, std::string key) {
+    if (ev[key].is_string()) {
+        std::string s = ev[key].get<std::string>();
         s = translate_if_path(s);
         std::cout << "\"" << s << "\"";
     }
     else {
-        std::cout << ev.properties[key].dump();
+        std::cout << ev[key].dump();
     }
 }
 
 
 // output all events as a sparse CSV timeline with merged PPID and FilePath
-void output_timeline_csv(const std::vector<Event>& events) {
+void output_timeline_csv(const std::vector<json>& events) {
     // keys to merge for PPID and FilePath
     static const std::vector<std::string> ppid_keys = {
         "Parent PID", "TPID", "Target PID"
@@ -74,7 +67,7 @@ void output_timeline_csv(const std::vector<Event>& events) {
 
     // collect all property keys except merged ones, set automatically rejects duplicates
     for (const auto& ev : events) {
-        for (auto it = ev.properties.begin(); it != ev.properties.end(); ++it) {
+        for (auto it = ev.begin(); it != ev.end(); ++it) {
             // skip merged keys
             if (std::find(ppid_keys.begin(), ppid_keys.end(), it.key()) != ppid_keys.end()) continue;
             if (std::find(filepath_keys.begin(), filepath_keys.end(), it.key()) != filepath_keys.end()) continue;
@@ -99,7 +92,7 @@ void output_timeline_csv(const std::vector<Event>& events) {
         for (const auto& key : all_keys) {
 
             // check if this event has a value for this key
-            if (ev.properties.contains(key)) {
+            if (ev.contains(key)) {
                 print_value(ev, key);
             }
             // else check if the key is a merged key
@@ -133,10 +126,10 @@ std::vector<std::string> split(const std::string& s, char delim) {
     return result;
 }
 
-// TODO: parse csv?
-std::vector<Event> read_lines(std::string infile) {
-    std::vector<Event> attack_events;
-    json header;
+// TODO: actually parse csv?
+std::vector<json> get_attack_events(std::string infile) {
+    std::vector<json> attack_events;
+    json j;
 
     std::string line;
     std::ifstream input(infile);
@@ -148,29 +141,26 @@ std::vector<Event> read_lines(std::string infile) {
     // parse the rest
     while (std::getline(input, line)) {
         std::vector<std::string> data = split(line, ',');
-        header[timestamp] = data[0];
-        header[event_id] = data[1];
-        header[task_name] = data[2];
-        attack_events.push_back(
-            Event {
-                header, {}, {} // attack_events do not have any properties (for now)
-            }
-        );
+        //TODO rework to new layout
+        j[TIMESTAMP] = data[0];
+        j[EVENT_ID] = data[1];
+        j[TASK] = data[2];
+        attack_events.push_back(j);
     }
 
     return attack_events;
 }
 
-std::vector<Event> merge_events(const std::vector<Event> events, const std::vector<Event> attack_events) {
+std::vector<json> merge_events(const std::vector<json> events, const std::vector<json> attack_events) {
     if (attack_events.size() != 0) {
-        std::vector<Event> merged;
+        std::vector<json> merged;
         // merge events from attack.csv
         int idx_event_to_merge = 0;
-        Event attack_event_to_merge = attack_events[idx_event_to_merge];
+        json attack_event_to_merge = attack_events[idx_event_to_merge];
 
         for (const auto& ev : events) {
             // iterate until we find an ETW event AFTER the attack event
-            if (attack_event_to_merge.header[timestamp] < ev.properties[timestamp].get<std::string>()) {
+            if (attack_event_to_merge[TIMESTAMP].get<std::string>() < ev[TIMESTAMP].get<std::string>()) {
                 merged.push_back(attack_event_to_merge); // insert attack before this event
                 idx_event_to_merge += 1;
                 if (idx_event_to_merge == attack_events.size()) {
@@ -190,14 +180,48 @@ std::vector<Event> merge_events(const std::vector<Event> events, const std::vect
     return events;
 }
 
+int get_PID_by_name(std::string exe_name) {
+    /*
+    PROCESSENTRY32 entry;
+    entry.dwSize = sizeof(PROCESSENTRY32);
+    HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (Process32First(snapshot, &entry)) {
+        while (Process32Next(snapshot, &entry)) {
+            if (stricmp(entry.szExeFile, exe_name) == 0) {
+                return entry.th32ProcessID;
+            }
+        }
+    }
+    std::cerr << "[!] Unable to find PID for: " << exe_name;
+    exit(1);
+    */
+    return 2020; // TODO fuck tlhelp32.h
+}
+
 int main(int argc, char* argv[]) {
-    if (argc < 2) {
-        std::cerr << "Usage: " << argv[0] << " <attack-output.csv>\n";
+    if (argc < 3) {
+        std::cerr << "Usage: " << argv[0] << " <EDR exe to track> <attack-output.csv> \n";
         return 1;
     }
 
-    std::vector<Event> events; // TODO: capture it
-    std::vector<Event> attack_events = read_lines(argv[1]);
+    g_EDR_PID = get_PID_by_name(argv[1]);
+
+    std::vector<HANDLE> threads;
+    if (!start_etw_reader(threads)) { // try to start trace
+        exit(1);
+    }
+	std::cout << "[*] Press ENTER after the attack is finished...\n"; // todo invoke the attack here and observe?
+	std::cin.get();
+
+    std::vector<json> events = get_events();
+    stop_etw_reader();
+    DWORD res = WaitForMultipleObjects((DWORD)threads.size(), threads.data(), TRUE, INFINITE);
+    if (res == WAIT_FAILED) {
+        std::cout << "[!] EDRIntrospection: Wait failed";
+    }
+    std::cout << ("[!] EDRIntrospection: all %llu threads finished", threads.size());
+
+    std::vector<json> attack_events = get_attack_events(argv[2]);
     events = merge_events(events, attack_events);
     output_timeline_csv(events);
 }
