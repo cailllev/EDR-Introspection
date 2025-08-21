@@ -1,4 +1,6 @@
 #include <iostream>
+#include <windows.h>
+
 #include "utils.h"
 
 // all stolen from https://github.com/dobin/RedEdr
