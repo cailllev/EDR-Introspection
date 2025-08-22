@@ -1,4 +1,6 @@
 #include <iostream>
+#include <iomanip>
+#include <sstream>
 #include <windows.h>
 
 #include "utils.h"
@@ -38,6 +40,31 @@ bool wstring_starts_with(const std::wstring& str, const std::wstring& prefix) {
 		return false;
 	}
 	return str.compare(0, prefix.size(), prefix) == 0;
+}
+
+std::string filetime_to_iso8601(__int64 timestamp) {
+    // FILETIME is # of 100-ns intervals since Jan 1, 1601 (UTC)
+    FILETIME ft;
+    ft.dwLowDateTime = static_cast<DWORD>(timestamp & 0xFFFFFFFF);
+    ft.dwHighDateTime = static_cast<DWORD>(timestamp >> 32);
+
+    SYSTEMTIME stUTC;
+    if (!FileTimeToSystemTime(&ft, &stUTC)) {
+        return "";
+    }
+
+    // Format into ISO 8601
+    std::ostringstream oss;
+    oss << std::setfill('0')
+        << std::setw(4) << stUTC.wYear << "-"
+        << std::setw(2) << stUTC.wMonth << "-"
+        << std::setw(2) << stUTC.wDay << " "
+        << std::setw(2) << stUTC.wHour << ":"
+        << std::setw(2) << stUTC.wMinute << ":"
+        << std::setw(2) << stUTC.wSecond << "."
+        << std::setw(3) << stUTC.wMilliseconds
+        << "Z";
+    return oss.str();
 }
 
 char* get_memory_region_protect(DWORD protect) {
