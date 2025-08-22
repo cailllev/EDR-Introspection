@@ -6,7 +6,9 @@
 
 // global CSV output stream
 std::ostringstream csv;
+std::string myProvider = "Injector";
 std::string myEventID = "1337";
+int PID = 0;
 
 // get current timestamp in ISO 8601 format, e.g. 2025-08-18 18:03:51.123Z
 std::ostringstream printCurrentTime() {
@@ -28,9 +30,11 @@ std::ostringstream printCurrentTime() {
 
 
 void printAndAddToCsv(std::string msg) {
-    csv << "\"" << printCurrentTime().str() << "\"," // add qoutes arround string
+    csv << printCurrentTime().str() << ","
+		<< myProvider << ","
         << myEventID << ","
-        << "\"" << msg << "\"" << "\n"; // add qoutes arround string
+        << PID << ","
+        << msg << "\n";
     std::cout << msg << "\n";
 }
 
@@ -56,11 +60,12 @@ int main(int argc, char** argv) {
         }
     }
 
-    csv << "timestamp,event_id,message\n";
+    csv << "timestamp,attack,event_id,PID,message\n";
     std::ostringstream msg;
 
     // print current 
-    msg << "Injector started with PID " << GetCurrentProcessId();
+	PID = GetCurrentProcessId();
+    msg << "Injector started with PID " << PID;
     printAndAddToCsv(msg.str()); msg.str("");
 
     // start new process to inject to
