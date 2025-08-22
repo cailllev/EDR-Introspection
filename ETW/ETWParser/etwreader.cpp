@@ -5,26 +5,31 @@
 #include "etwreader.h"
 
 
+struct Event {
+    const EVENT_RECORD& record;
+    const krabs::schema schema;
+};
+std::vector<Event> etw_events;
+
 krabs::user_trace trace_user(L"EDRIntrospection");
-std::vector<std::string> etw_events;
 
 
-std::string krabs_etw_to_json(const EVENT_RECORD& record, krabs::schema schema) {
-    krabs::parser parser(schema);
+json krabs_etw_to_json(Event e) {
+    krabs::parser parser(e.schema);
     json j;
 
     j[TYPE] = "ETW";
-    j[TIMESTAMP ] = static_cast<__int64>(record.EventHeader.TimeStamp.QuadPart);
-	j[PID] = record.EventHeader.ProcessId;  // the pid in the header should always be the EDR process
+    j[TIMESTAMP ] = static_cast<__int64>(e.record.EventHeader.TimeStamp.QuadPart);
+	j[PID] = e.record.EventHeader.ProcessId;  // the pid in the header should always be the EDR process
     //j["thread_id"] = ee.record.EventHeader.ThreadId;
 
     // Construct the event string, like "ImageLoad"
-    std::wstring combined = std::wstring(schema.task_name()) + std::wstring(schema.opcode_name());
+    std::wstring combined = std::wstring(e.schema.task_name()) + std::wstring(e.schema.opcode_name());
     j[TASK] = wstring2string(combined);
 
     //j["opcode_id"] = schema.event_opcode();
-    j[EVENT_ID] = schema.event_id();
-    j[PROVIDER_NAME] = wchar2string(schema.provider_name());
+    j[EVENT_ID] = e.schema.event_id();
+    j[PROVIDER_NAME] = wchar2string(e.schema.provider_name());
 
     // Iterate over all properties defined in the schema
     for (const auto& property : parser.properties()) {
@@ -102,7 +107,7 @@ std::string krabs_etw_to_json(const EVENT_RECORD& record, krabs::schema schema) 
 
     // Callstack
     j["stack_trace"] = json::array();
-    auto stack_trace = schema.stack_trace();
+    auto stack_trace = e.schema.stack_trace();
     int idx = 0;
     for (auto& return_address : stack_trace)
     {
@@ -119,8 +124,12 @@ std::string krabs_etw_to_json(const EVENT_RECORD& record, krabs::schema schema) 
 }
 
 
-std::vector<std::string> get_events() {
-	return etw_events;
+std::vector<json> get_events() {
+    std::vector<json> ret;
+    for (auto& e : etw_events) {
+        ret.push_back(krabs_etw_to_json(e));
+	}
+	return ret;
 }
 
 
@@ -133,7 +142,7 @@ void event_callback(const EVENT_RECORD& record, const krabs::trace_context& trac
         if (processId != g_EDR_PID) {
             return;
         }
-        etw_events.push_back(krabs_etw_to_json(record, schema));
+        etw_events.push_back(Event{ record, schema });
     }
     catch (const std::exception& e) {
         std::cerr << "ETW event_callback exception: " << e.what();

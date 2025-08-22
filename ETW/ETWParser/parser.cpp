@@ -213,7 +213,7 @@ int main(int argc, char* argv[]) {
 	std::cout << "[*] Press ENTER after the attack is finished...\n"; // todo invoke the attack here and observe?
 	std::cin.get();
 
-    std::vector<std::string> events_stringified = get_events();
+    std::vector<json> events = get_events();
     stop_etw_reader();
     DWORD res = WaitForMultipleObjects((DWORD)threads.size(), threads.data(), TRUE, INFINITE);
     if (res == WAIT_FAILED) {
@@ -222,16 +222,6 @@ int main(int argc, char* argv[]) {
     std::cout << "[!] EDRIntrospection: all " << threads.size() << " threads finished";
 
     std::vector<json> attack_events = get_attack_events(argv[2]);
-    std::vector<json> events;
-    for (auto& event_str : events_stringified) {
-        try {
-            json event_json = json::parse(event_str);
-            events.push_back(event_json);
-        }
-        catch (const std::exception& e) {
-            std::cerr << "[!] EDRIntrospection: Failed to parse ETW event: " << e.what() << "\n";
-        }
-	}
     events = merge_events(events, attack_events);
     output_timeline_csv(events);
 }
