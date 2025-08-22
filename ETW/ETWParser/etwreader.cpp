@@ -125,7 +125,7 @@ std::vector<std::string> get_events() {
 
 
 // this function(-chain) should be high performanceor events get lost
-void event_callback(const EVENT_RECORD& record, const krabs::trace_context trace_context) {
+void event_callback(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
     try {
         krabs::schema schema(record, trace_context.schema_locator);
 
