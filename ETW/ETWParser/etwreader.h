@@ -9,7 +9,7 @@
 
 bool start_etw_reader(std::vector<HANDLE>& threads);
 void stop_etw_reader();
-std::vector<std::string> get_events();
+std::vector<json> get_events();
 
 static const std::string TYPE = "type";
 static const std::string TIMESTAMP = "timestamp";
