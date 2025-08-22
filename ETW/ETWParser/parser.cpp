@@ -6,7 +6,7 @@
 #include <sstream>
 #include <string>
 #include <string.h>
-//#include <tlhelp32.h>
+
 #include <unordered_map>
 #include <vector>
 #include <windows.h>
@@ -62,8 +62,8 @@ void output_timeline_csv(const std::vector<json>& events) {
 
     // start of CSV header
     // TODO: "name" not allowed?
-    std::vector<std::string> all_keys = { "timestamp","event_id","task_name","PID",
-        "PPID","Message","Command Line","FilePath","VName","Sig Seq","Sig Sha" };
+    std::vector<std::string> all_keys = { TIMESTAMP, PROVIDER_NAME, EVENT_ID, TASK, PID,
+		"PPID", "Message", "Command Line", "FilePath", "VName", "Sig Seq", "Sig Sha" };
 
     // collect all property keys except merged ones, set automatically rejects duplicates
     for (const auto& ev : events) {
@@ -141,47 +141,57 @@ std::vector<json> get_attack_events(std::string infile) {
     // parse the rest
     while (std::getline(input, line)) {
         std::vector<std::string> data = split(line, ',');
-        //TODO rework to new layout
+        // TODO: less magic?
         j[TIMESTAMP] = data[0];
-        j[EVENT_ID] = data[1];
-        j[TASK] = data[2];
+        j[PROVIDER_NAME] = data[1];
+        j[EVENT_ID] = _strtoi64(data[2].c_str(), nullptr, 10);
+        j[PID] = _strtoi64(data[3].c_str(), nullptr, 10);
+        j[TASK] = data[4];
         attack_events.push_back(j);
     }
 
+	std::cout << "[*] EDRi: Got " << attack_events.size() << " events from " << infile << "\n";
     return attack_events;
 }
 
 std::vector<json> merge_events(const std::vector<json> events, const std::vector<json> attack_events) {
     if (attack_events.size() != 0) {
+        std::cout << "[*] EDRi: Merging " << attack_events.size() << " attack events into " << events.size() << " ETW events\n";
         std::vector<json> merged;
         // merge events from attack.csv
         int idx_event_to_merge = 0;
         json attack_event_to_merge = attack_events[idx_event_to_merge];
+		bool all_merged = false;
 
         for (const auto& ev : events) {
+            std::cout << "it: " << merged.size() << "\n";
             // iterate until we find an ETW event AFTER the attack event
-            if (attack_event_to_merge[TIMESTAMP].get<std::string>() < ev[TIMESTAMP].get<std::string>()) {
+			// then insert all attack events that happened cronologically before this event, locally before this event
+            while (!all_merged && attack_event_to_merge[TIMESTAMP].get<std::string>() < ev[TIMESTAMP].get<std::string>()) {
                 merged.push_back(attack_event_to_merge); // insert attack before this event
                 idx_event_to_merge += 1;
                 if (idx_event_to_merge == attack_events.size()) {
+                    all_merged = true;
                     break; // all merged
                 }
                 attack_event_to_merge = attack_events[idx_event_to_merge];
             }
-            merged.push_back(ev); // insert the event (after the attack event)
+            merged.push_back(ev); // then insert the event (after the attack event(s))
         }
         // merge any attack_events that happened after the last event
         for (int i = idx_event_to_merge; i < attack_events.size(); i++) {
             merged.push_back(attack_events[i]);
         }
 
+        std::cout << "[*] EDRi: Now " << merged.size() << " events\n";
         return merged;
     }
+    std::cout << "[*] No attack events to merge\n";
     return events;
 }
 
+/*
 int get_PID_by_name(std::string exe_name) {
-    /*
     PROCESSENTRY32 entry;
     entry.dwSize = sizeof(PROCESSENTRY32);
     HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
@@ -194,17 +204,18 @@ int get_PID_by_name(std::string exe_name) {
     }
     std::cerr << "[!] Unable to find PID for: " << exe_name;
     exit(1);
-    */
-    return 2020; // TODO fuck tlhelp32.h
 }
+*/
 
 int main(int argc, char* argv[]) {
     if (argc < 3) {
-        std::cerr << "Usage: " << argv[0] << " <EDR exe to track> <attack-output.csv> \n";
+        std::cerr << "Usage: " << argv[0] << " <PID to track> <attack-output.csv> \n";
         return 1;
     }
+    std::cout << "[*] Start the attack when the 'Trace started' appears\n";
 
-    g_EDR_PID = get_PID_by_name(argv[1]);
+    //g_EDR_PID = get_PID_by_name(argv[1]);
+	g_EDR_PID = strtol(argv[1], nullptr, 10);
 
     std::vector<HANDLE> threads;
     if (!start_etw_reader(threads)) { // try to start trace
@@ -214,12 +225,16 @@ int main(int argc, char* argv[]) {
 	std::cin.get();
 
     std::vector<json> events = get_events();
+    std::cout << "[*] EDRi: Stopping traces\n";
     stop_etw_reader();
+    /*
     DWORD res = WaitForMultipleObjects((DWORD)threads.size(), threads.data(), TRUE, INFINITE);
     if (res == WAIT_FAILED) {
-        std::cout << "[!] EDRIntrospection: Wait failed";
+        std::cout << "[!] EDRi: Wait failed";
     }
-    std::cout << "[!] EDRIntrospection: all " << threads.size() << " threads finished";
+    std::cout << "[*] EDRi: All " << threads.size() << " threads finished\n";
+    */
+	Sleep(2000); // wait a bit to ensure all events are processed
 
     std::vector<json> attack_events = get_attack_events(argv[2]);
     events = merge_events(events, attack_events);
