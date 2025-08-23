@@ -9,17 +9,19 @@ struct Event {
     const EVENT_RECORD& record;
     const krabs::schema schema;
 };
-std::vector<Event> etw_events;
+std::vector<json> etw_events;
 
 krabs::user_trace trace_user(L"EDRIntrospection");
 bool extensive = false; // enable more providers and events
 int errors = 0;
+bool g_trace_running = false;
 
 
 json krabs_etw_to_json(Event e) {
     try {
         krabs::parser parser(e.schema);
         json j;
+
 
         j[TYPE] = "ETW";
         j[TIMESTAMP] = filetime_to_iso8601(
@@ -28,14 +30,13 @@ json krabs_etw_to_json(Event e) {
         j[PID] = e.record.EventHeader.ProcessId;  // the pid in the header should always be the EDR process
         //j["thread_id"] = ee.record.EventHeader.ThreadId;
 
-        // Construct the event string, like "ImageLoad"
+		// task = task_name + opcode_name
         std::wstring combined = std::wstring(e.schema.task_name()) + std::wstring(e.schema.opcode_name());
         j[TASK] = wstring2string(combined);
 
         //j["opcode_id"] = schema.event_opcode();
         j[EVENT_ID] = e.schema.event_id();
         j[PROVIDER_NAME] = wchar2string(e.schema.provider_name());
-        return j;
 
         // Iterate over all properties defined in the schema
         for (const auto& property : parser.properties()) {
@@ -146,14 +147,7 @@ json krabs_etw_to_json(Event e) {
 
 std::vector<json> get_events() {
 	std::cout << "[+] ETW: Got " << etw_events.size() << " events\n";
-    std::vector<json> ret;
-    for (auto& e : etw_events) {
-        json j = krabs_etw_to_json(e);
-        if (!j.empty())
-            ret.push_back(j);
-    }
-    std::cout << "[+] ETW: Parsed " << ret.size() << " events with " << errors << " errors\n";
-	return ret;
+	return etw_events;
 }
 
 
@@ -166,7 +160,14 @@ void event_callback(const EVENT_RECORD& record, const krabs::trace_context& trac
         if (processId != g_EDR_PID) {
             return;
         }
-        etw_events.push_back(Event{ record, schema });
+
+		// check for antimalware engine version event, this is always the first event
+        if (!g_trace_running && 
+            std::wstring(schema.provider_name()) == std::wstring(L"Microsoft-Antimalware-Engine") && 
+            std::wstring(schema.task_name()) == std::wstring(L"Versions ")) {
+            g_trace_running = true; // TODO invoke attack here?
+        }
+        etw_events.push_back(krabs_etw_to_json(Event{ record, schema }));
     }
     catch (const std::exception& e) {
         std::cerr << "ETW event_callback exception: " << e.what();
@@ -178,11 +179,6 @@ void event_callback(const EVENT_RECORD& record, const krabs::trace_context& trac
 
 DWORD WINAPI t_start_etw_trace(LPVOID param) {
     try {
-        krabs::provider<> antimalwareengine_provider(L"Microsoft-Antimalware-Engine");
-        antimalwareengine_provider.add_on_event_callback(event_callback);
-        trace_user.enable(antimalwareengine_provider);
-        std::cout << "[+] ETW: Microsoft-Antimalware-Engine (all)\n";
-
         if (extensive) {
             // https://github.com/jdu2600/Etw-SyscallMonitor/tree/main/src/ETW
             /*
@@ -268,6 +264,11 @@ DWORD WINAPI t_start_etw_trace(LPVOID param) {
             trace_user.enable(kernelnetwork_provider);
             std::cout << "[+] ETW: Microsoft-Windows-Kernel-Network: 12, 15, 28, 31, 42, 43, 58, 59\n";
         }
+
+        krabs::provider<> antimalwareengine_provider(L"Microsoft-Antimalware-Engine");
+        antimalwareengine_provider.add_on_event_callback(event_callback);
+        trace_user.enable(antimalwareengine_provider);
+        std::cout << "[+] ETW: Microsoft-Antimalware-Engine (all)\n";
 
 		// blocking, use etw_reader_stop() to stop the trace
 		std::cout << "[+] ETW: Trace started...\n";
