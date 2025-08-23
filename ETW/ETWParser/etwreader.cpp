@@ -164,9 +164,10 @@ void event_callback(const EVENT_RECORD& record, const krabs::trace_context& trac
 		// check for antimalware engine version event, this is always the first event
         if (!g_trace_running && 
             std::wstring(schema.provider_name()) == std::wstring(L"Microsoft-Antimalware-Engine") && 
-            std::wstring(schema.task_name()) == std::wstring(L"Versions ")) {
+            schema.event_id() == 4 && std::wstring(schema.task_name()) == std::wstring(L"Versions ")) {
             g_trace_running = true; // TODO invoke attack here?
         }
+		// convert it to json NOW or lose the property values
         etw_events.push_back(krabs_etw_to_json(Event{ record, schema }));
     }
     catch (const std::exception& e) {
