@@ -61,7 +61,7 @@ void output_timeline_csv(const std::vector<json>& events) {
     };
 
     // start of CSV header
-    // TODO: "name" not allowed?
+    // TODO: Timeline Explorer: "name" not allowed?
     std::vector<std::string> all_keys = { TIMESTAMP, PROVIDER_NAME, EVENT_ID, TASK, PID,
 		"PPID", "Message", "Command Line", "FilePath", "VName", "Sig Seq", "Sig Sha" };
 
@@ -164,7 +164,6 @@ std::vector<json> merge_events(const std::vector<json> events, const std::vector
 		bool all_merged = false;
 
         for (const auto& ev : events) {
-            std::cout << "it: " << merged.size() << "\n";
             // iterate until we find an ETW event AFTER the attack event
 			// then insert all attack events that happened cronologically before this event, locally before this event
             while (!all_merged && attack_event_to_merge[TIMESTAMP].get<std::string>() < ev[TIMESTAMP].get<std::string>()) {
@@ -221,20 +220,22 @@ int main(int argc, char* argv[]) {
     if (!start_etw_reader(threads)) { // try to start trace
         exit(1);
     }
-	std::cout << "[*] Press ENTER after the attack is finished...\n"; // todo invoke the attack here and observe?
-	std::cin.get();
+	// wait untiil g_trace_running is true
+	while (!g_trace_running) {
+		Sleep(10);
+	}
+	std::cout << "[*] EDRi: Trace started, ready for attack\n";
+    std::cout << "[*] EDRi: Press ENTER after the attack is finished\n"; // todo invoke the attack here and observe?
+    std::cin.get();
 
     std::vector<json> events = get_events();
     std::cout << "[*] EDRi: Stopping traces\n";
     stop_etw_reader();
-    /*
     DWORD res = WaitForMultipleObjects((DWORD)threads.size(), threads.data(), TRUE, INFINITE);
     if (res == WAIT_FAILED) {
         std::cout << "[!] EDRi: Wait failed";
     }
     std::cout << "[*] EDRi: All " << threads.size() << " threads finished\n";
-    */
-	Sleep(2000); // wait a bit to ensure all events are processed
 
     std::vector<json> attack_events = get_attack_events(argv[2]);
     events = merge_events(events, attack_events);
