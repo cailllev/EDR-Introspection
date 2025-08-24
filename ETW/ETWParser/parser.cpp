@@ -159,10 +159,11 @@ std::vector<json> get_attack_events(std::string infile) {
         std::vector<std::string> data = split(line, ',');
         // TODO: less magic?
         j[TIMESTAMP] = data[0];
-        j[PROVIDER_NAME] = data[1];
-        j[EVENT_ID] = _strtoi64(data[2].c_str(), nullptr, 10);
-        j[PID] = _strtoi64(data[3].c_str(), nullptr, 10);
-        j[TASK] = data[4];
+        j[TYPE] = data[1];
+        j[PROVIDER_NAME] = data[2];
+        j[EVENT_ID] = _strtoi64(data[3].c_str(), nullptr, 10);
+        j[PID] = _strtoi64(data[5].c_str(), nullptr, 10);
+        j[TASK] = data[5];
         attack_events.push_back(j);
     }
 
