@@ -48,10 +48,10 @@ json krabs_etw_to_json(Event e) {
                 /*
                 * Reserved1":"0","Reserved2":"0","Reserved3":"0","Reserved4":"0",
                 * "SignatureLevel":"(Unsupported type)\n","SignatureType":"(Unsupported type)\n
-                */
                 if (wstring_starts_with(propertyName, L"Reserved") || wstring_starts_with(propertyName, L"Signature")) {
                     continue;
                 }
+                */
                 std::string jsonKey = wstring2string((std::wstring&)propertyName);
 
                 // Special cases
@@ -63,47 +63,97 @@ json krabs_etw_to_json(Event e) {
 
                 switch (propertyType) {
                 case TDH_INTYPE_UINT32:
+                {
                     j[jsonKey] = (uint32_t)parser.parse<uint32_t>(propertyName);
                     break;
+                }
 
                 case TDH_INTYPE_UINT64:
+                {
                     j[jsonKey] = (uint64_t)parser.parse<uint64_t>(propertyName);
                     break;
+                }
 
                 case TDH_INTYPE_UNICODESTRING:
                 {
-                    std::wstringstream ss;
-                    ss << parser.parse<std::wstring>(propertyName);
-                    std::string s = wstring2string((std::wstring&)ss.str());
+                    std::wstringstream wss;
+                    wss << parser.parse<std::wstring>(propertyName);
+                    std::string s = wstring2string((std::wstring&)wss.str());
                     j[jsonKey] = s;
+                    break;
                 }
-                break;
 
                 case TDH_INTYPE_ANSISTRING:
+                {
                     j[jsonKey] = parser.parse<std::string>(propertyName);
                     break;
+                }
 
                 case TDH_INTYPE_POINTER:
+                {
                     j[jsonKey] = (uint64_t)parser.parse<PVOID>(propertyName);
                     break;
+                }
 
                 case TDH_INTYPE_FILETIME:
                 {
-                    // Not a PFILETIME!
                     FILETIME fileTime = parser.parse<FILETIME>(propertyName);
-
-                    // As int
                     ULARGE_INTEGER uli;
                     uli.LowPart = fileTime.dwLowDateTime;
                     uli.HighPart = fileTime.dwHighDateTime;
-
                     j[jsonKey] = uli.QuadPart;
+                    break;
+                }
+                
+                case TDH_INTYPE_INT8:
+                {
+                    j[jsonKey] = (int32_t)parser.parse<CHAR>(propertyName);
+                    break;
+                }
+
+                case TDH_INTYPE_SID:
+                {
+                    PSID sid = parser.parse<PSID>(propertyName);
+                    LPWSTR sidString = nullptr;
+                    if (ConvertSidToStringSidW(sid, &sidString)) {
+                        std::wstring ws(sidString);
+                        j[jsonKey] = wstring2string(ws);
+                        LocalFree(sidString);
+                    }
+                    else {
+                        j[jsonKey] = "invalid_sid";
+                    }
+                    break;
+                }
+
+                case TDH_INTYPE_BOOLEAN:
+                {
+                    j[jsonKey] = (bool)parser.parse<BOOL>(propertyName);
+                    break;
+                }
+
+                case TDH_INTYPE_HEXINT32:
+                {
+                    std::ostringstream oss;
+                    oss << "0x" << std::hex << std::uppercase << parser.parse<uint32_t>(propertyName);
+                    j[jsonKey] = oss.str();
+                    break;
+                }
+
+                case TDH_INTYPE_HEXINT64:
+                {
+                    std::ostringstream oss;
+                    oss << "0x" << std::hex << std::uppercase << parser.parse<uint64_t>(propertyName);
+                    j[jsonKey] = oss.str();
                     break;
                 }
 
                 default:
+                {
+                    std::cout << "[*] ETW: Warning: Unsupported property type " << propertyType << " for " << j[TASK] << "'s " << jsonKey << "\n";
                     j[jsonKey] = "unsupported";
                     break;
+                }
                 }
 
             }
@@ -162,8 +212,7 @@ void event_callback(const EVENT_RECORD& record, const krabs::trace_context& trac
         }
 
 		// check for antimalware engine version event, this is always the first event
-        if (!g_trace_running && 
-            std::wstring(schema.provider_name()) == std::wstring(L"Microsoft-Antimalware-Engine") && 
+        if (!g_trace_running && std::wstring(schema.provider_name()) == std::wstring(L"Microsoft-Antimalware-Engine") &&
             schema.event_id() == 4 && std::wstring(schema.task_name()) == std::wstring(L"Versions ")) {
             g_trace_running = true; // TODO invoke attack here?
         }

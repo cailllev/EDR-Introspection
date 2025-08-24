@@ -124,13 +124,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="cxxopts.hpp" />
     <ClCompile Include="etwreader.cpp" />
     <ClCompile Include="parser.cpp" />
+    <ClCompile Include="profile.cpp" />
     <ClCompile Include="utils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="etwreader.h" />
     <ClInclude Include="globals.h" />
+    <ClInclude Include="profile.h" />
     <ClInclude Include="utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
