@@ -6,6 +6,7 @@
 
 // global CSV output stream
 std::ostringstream csv;
+std::string myType = "Attack";
 std::string myProvider = "Injector";
 std::string myEventID = "1337";
 int PID = 0;
@@ -31,6 +32,7 @@ std::ostringstream printCurrentTime() {
 
 void printAndAddToCsv(std::string msg) {
     csv << printCurrentTime().str() << ","
+		<< myType << ","
 		<< myProvider << ","
         << myEventID << ","
         << PID << ","
@@ -60,7 +62,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    csv << "timestamp,attack,event_id,PID,message\n";
+    csv << "timestamp,type,attack,event_id,PID,message\n";
     std::ostringstream msg;
 
     // print current 
