@@ -6,11 +6,13 @@
 #include <sstream>
 #include <string>
 #include <string.h>
-
 #include <unordered_map>
 #include <vector>
 #include <windows.h>
+#include <tlhelp32.h> // import after windows.h, else all breaks, that's crazy, yo
+#include <wchar.h>
 
+#include "cxxopts.hpp"
 #include "json.hpp"
 #include "etwreader.h"
 #include "globals.h"
@@ -53,16 +55,18 @@ void print_value(json ev, std::string key) {
 // output all events as a sparse CSV timeline with merged PPID and FilePath
 void output_timeline_csv(const std::vector<json>& events) {
     // keys to merge for PPID and FilePath
+    // TODO: write to config
     static const std::vector<std::string> ppid_keys = {
-        "Parent PID", "TPID", "Target PID"
+        "PPID",  "Parent PID", "TPID", "Target PID", "TargetPID" // TargetPID? 
+        //(T)TID -> (target) thread ID, irrelevant now
     };
     static const std::vector<std::string> filepath_keys = {
-        "File Name", "File Path", "Process Image Path", "Name", "Reason Image Path"
+        "FileName", "File Name", "File Path", "Image Path", "Process Image Path", "Name", "Reason Image Path" // FileName, ImageName?
     };
 
     // start of CSV header
     // TODO: Timeline Explorer: "name" not allowed?
-    std::vector<std::string> all_keys = { TIMESTAMP, PROVIDER_NAME, EVENT_ID, TASK, PID,
+    std::vector<std::string> all_keys = { TIMESTAMP, TYPE, PROVIDER_NAME, EVENT_ID, TASK, PID,
 		"PPID", "Message", "Command Line", "FilePath", "VName", "Sig Seq", "Sig Sha" };
 
     // collect all property keys except merged ones, set automatically rejects duplicates
@@ -90,16 +94,28 @@ void output_timeline_csv(const std::vector<json>& events) {
     for (const auto& ev : events) {
         // traverse keys in order of csv header, print "" if the current event does not have this key
         for (const auto& key : all_keys) {
+			// example: PPID (this is a merged key, there are no other keys like Parent PID, ... in the header)
 
-            // check if this event has a value for this key
-            if (ev.contains(key)) {
-                print_value(ev, key);
-            }
-            // else check if the key is a merged key
-            else if (std::find(ppid_keys.begin(), ppid_keys.end(), key) != ppid_keys.end()) {
-                print_value(ev, key);
+            // check if the key is a merged key
+            if (std::find(ppid_keys.begin(), ppid_keys.end(), key) != ppid_keys.end()) {
+                for (auto& it: ev.items()) { // get the original key from the EVENT, not CSV HEADER
+                    if (std::find(ppid_keys.begin(), ppid_keys.end(), it.key()) != ppid_keys.end()) {
+                        print_value(ev, it.key());
+                        break;
+                    }
+				}
             }
             else if (std::find(filepath_keys.begin(), filepath_keys.end(), key) != filepath_keys.end()) {
+                for (auto& it : ev.items()) { // get the original key from the EVENT, not CSV HEADER
+                    if (std::find(filepath_keys.begin(), filepath_keys.end(), it.key()) != filepath_keys.end()) {
+                        print_value(ev, it.key());
+                        break;
+                    }
+                }
+            }
+
+            // else check if this event has a value for this key
+             else if (ev.contains(key)) {
                 print_value(ev, key);
             }
 
@@ -189,32 +205,48 @@ std::vector<json> merge_events(const std::vector<json> events, const std::vector
     return events;
 }
 
-/*
 int get_PID_by_name(std::string exe_name) {
-    PROCESSENTRY32 entry;
-    entry.dwSize = sizeof(PROCESSENTRY32);
+    PROCESSENTRY32 pe;
+    pe.dwSize = sizeof(PROCESSENTRY32);
     HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-    if (Process32First(snapshot, &entry)) {
-        while (Process32Next(snapshot, &entry)) {
-            if (stricmp(entry.szExeFile, exe_name) == 0) {
-                return entry.th32ProcessID;
+    if (Process32First(snapshot, &pe)) {
+        while (Process32Next(snapshot, &pe)) {
+            if (wcscmp(pe.szExeFile, std::wstring(exe_name.begin(), exe_name.end()).c_str()) == 0) {
+                return pe.th32ProcessID;
             }
         }
     }
-    std::cerr << "[!] Unable to find PID for: " << exe_name;
+    std::cerr << "[!] EDRi: Unable to find PID for: " << exe_name;
     exit(1);
 }
-*/
 
 int main(int argc, char* argv[]) {
-    if (argc < 3) {
-        std::cerr << "Usage: " << argv[0] << " <PID to track> <attack-output.csv> \n";
-        return 1;
-    }
-    std::cout << "[*] Start the attack when the 'Trace started' appears\n";
+    cxxopts::Options options("EDRi", "EDR Introspection Framework");
 
-    //g_EDR_PID = get_PID_by_name(argv[1]);
-	g_EDR_PID = strtol(argv[1], nullptr, 10);
+    options.add_options()
+        ("e,exe", "EDR Executable Name", cxxopts::value<std::string>())
+        ("a,attackOutput", "The Path of the attack-output.csv", cxxopts::value<std::string>())
+        ("h,help", "Print usage");
+
+    cxxopts::ParseResult result;
+    try {
+        result = options.parse(argc, argv);
+    }
+    catch (const cxxopts::exceptions::parsing& e) {
+        std::cerr << "Error parsing options: " << e.what() << "\n";
+        std::cout << options.help() << "\n";
+        return 1;
+	}
+    std::cout << "[*] EDRi: EDR Introspection Framework\n";
+
+    if (result.count("help") || result.count("e") == 0 || result.count("a") == 0) {
+        std::cout << options.help() << "\n";
+        return 0;
+    }
+
+    g_EDR_PID = get_PID_by_name(result["exe"].as<std::string>());
+    std::cerr << "[+] EDRi: Got PID for " << result["exe"].as<std::string>() << ": " << g_EDR_PID << "\n";
+    std::cout << "[*] EDRi: Start the attack when the 'Trace started' appears\n";
 
     std::vector<HANDLE> threads;
     if (!start_etw_reader(threads)) { // try to start trace
@@ -237,7 +269,7 @@ int main(int argc, char* argv[]) {
     }
     std::cout << "[*] EDRi: All " << threads.size() << " threads finished\n";
 
-    std::vector<json> attack_events = get_attack_events(argv[2]);
+    std::vector<json> attack_events = get_attack_events(result["attackOutput"].as<std::string>());
     events = merge_events(events, attack_events);
     output_timeline_csv(events);
 }
