@@ -28,13 +28,13 @@ json krabs_etw_to_json(Event e) {
             static_cast<__int64>(e.record.EventHeader.TimeStamp.QuadPart)
             );
         j[PID] = e.record.EventHeader.ProcessId;  // the pid in the header should always be the EDR process
-        //j["thread_id"] = ee.record.EventHeader.ThreadId;
+        j[TID] = e.record.EventHeader.ThreadId;
 
 		// task = task_name + opcode_name
         std::wstring combined = std::wstring(e.schema.task_name()) + std::wstring(e.schema.opcode_name());
         j[TASK] = wstring2string(combined);
 
-        //j["opcode_id"] = schema.event_opcode();
+        //j["opcode_id"] = schema.event_opcode(); // opcode is the same as event_id, sometimes just a different number
         j[EVENT_ID] = e.schema.event_id();
         j[PROVIDER_NAME] = wchar2string(e.schema.provider_name());
 

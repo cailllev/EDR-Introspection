@@ -133,6 +133,7 @@
   <ItemGroup>
     <ClInclude Include="etwreader.h" />
     <ClInclude Include="globals.h" />
+    <ClInclude Include="parser.h" />
     <ClInclude Include="profile.h" />
     <ClInclude Include="utils.h" />
   </ItemGroup>

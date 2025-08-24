@@ -14,6 +14,7 @@ std::vector<json> get_events();
 static const std::string TYPE = "type";
 static const std::string TIMESTAMP = "timestamp";
 static const std::string PID = "PID";
+static const std::string TID = "TID";
 static const std::string TASK = "task";
 static const std::string EVENT_ID = "event_id";
 static const std::string PROVIDER_NAME = "provider_name";

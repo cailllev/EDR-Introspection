@@ -16,6 +16,7 @@
 #include "json.hpp"
 #include "etwreader.h"
 #include "globals.h"
+#include "parser.h"
 
 /*
 - creates krabs ETW traces for Antimalware, Kernel, etc.
@@ -54,21 +55,12 @@ void print_value(json ev, std::string key) {
 
 // output all events as a sparse CSV timeline with merged PPID and FilePath
 void output_timeline_csv(const std::vector<json>& events) {
-    // keys to merge for PPID and FilePath
-    // TODO: write to config
-    static const std::vector<std::string> ppid_keys = {
-        "PPID",  "Parent PID", "TPID", "Target PID", "TargetPID" // TargetPID? 
-        //(T)TID -> (target) thread ID, irrelevant now
-    };
-    static const std::vector<std::string> filepath_keys = {
-        "FileName", "File Name", "File Path", "Image Path", "Process Image Path", "Name", "Reason Image Path" // FileName, ImageName?
-    };
+    std::vector<std::string> all_keys;
+    for (const auto& k : csv_header_start) {
+        all_keys.push_back(k);
+    }
 
-    // start of CSV header
     // TODO: Timeline Explorer: "name" not allowed?
-    std::vector<std::string> all_keys = { TIMESTAMP, TYPE, PROVIDER_NAME, EVENT_ID, TASK, PID,
-		"PPID", "Message", "Command Line", "FilePath", "VName", "Sig Seq", "Sig Sha" };
-
     // collect all property keys except merged ones, set automatically rejects duplicates
     for (const auto& ev : events) {
         for (auto it = ev.begin(); it != ev.end(); ++it) {
@@ -94,28 +86,25 @@ void output_timeline_csv(const std::vector<json>& events) {
     for (const auto& ev : events) {
         // traverse keys in order of csv header, print "" if the current event does not have this key
         for (const auto& key : all_keys) {
-			// example: PPID (this is a merged key, there are no other keys like Parent PID, ... in the header)
-
-            // check if the key is a merged key
-            if (std::find(ppid_keys.begin(), ppid_keys.end(), key) != ppid_keys.end()) {
-                for (auto& it: ev.items()) { // get the original key from the EVENT, not CSV HEADER
-                    if (std::find(ppid_keys.begin(), ppid_keys.end(), it.key()) != ppid_keys.end()) {
-                        print_value(ev, it.key());
-                        break;
-                    }
-				}
-            }
-            else if (std::find(filepath_keys.begin(), filepath_keys.end(), key) != filepath_keys.end()) {
-                for (auto& it : ev.items()) { // get the original key from the EVENT, not CSV HEADER
-                    if (std::find(filepath_keys.begin(), filepath_keys.end(), it.key()) != filepath_keys.end()) {
-                        print_value(ev, it.key());
-                        break;
+			// check if the key (from the csv header, not the event) is a merged key
+			bool is_merged_key = false;
+            for (const auto& cat : key_categories_to_merge) {
+                // example: PPID (this is a merged key, there are no other keys like Parent PID, ... in the header)
+                if (std::find(cat.begin(), cat.end(), key) != cat.end()) {
+                    for (auto& it : ev.items()) { // get the original key from the EVENT, not CSV HEADER
+                        if (std::find(cat.begin(), cat.end(), it.key()) != cat.end()) {
+                            print_value(ev, it.key());
+                            is_merged_key = true;
+                            break;
+                        }
                     }
                 }
+				if (is_merged_key) break; // no need to check other categories
             }
+			if (is_merged_key) break; // no need to check the rest of the csv header keys
 
             // else check if this event has a value for this key
-             else if (ev.contains(key)) {
+            if (ev.contains(key)) {
                 print_value(ev, key);
             }
 
@@ -138,7 +127,6 @@ std::vector<std::string> split(const std::string& s, char delim) {
     while (getline(ss, item, delim)) {
         result.push_back(item);
     }
-
     return result;
 }
 
@@ -175,14 +163,13 @@ std::vector<json> merge_events(const std::vector<json> events, const std::vector
     if (attack_events.size() != 0) {
         std::cout << "[*] EDRi: Merging " << attack_events.size() << " attack events into " << events.size() << " ETW events\n";
         std::vector<json> merged;
-        // merge events from attack.csv
         int idx_event_to_merge = 0;
         json attack_event_to_merge = attack_events[idx_event_to_merge];
 		bool all_merged = false;
 
         for (const auto& ev : events) {
             // iterate until we find an ETW event AFTER the attack event
-			// then insert all attack events that happened cronologically before this event, locally before this event
+			// then insert all attack events locally before this ETW event that happened cronologically before this ETW event
             while (!all_merged && attack_event_to_merge[TIMESTAMP].get<std::string>() < ev[TIMESTAMP].get<std::string>()) {
                 merged.push_back(attack_event_to_merge); // insert attack before this event
                 idx_event_to_merge += 1;
@@ -226,7 +213,8 @@ int main(int argc, char* argv[]) {
 
     options.add_options()
         ("e,exe", "EDR Executable Name", cxxopts::value<std::string>())
-        ("a,attackOutput", "The Path of the attack-output.csv", cxxopts::value<std::string>())
+        ("a,attackOutput", "The Path of the attack-output.csv, default " + attack_output_default, cxxopts::value<std::string>())
+        ("m,mergedOutput", "The Path of the all-events.csv, default " + merged_events_output_default, cxxopts::value<std::string>())
         ("h,help", "Print usage");
 
     cxxopts::ParseResult result;
@@ -240,13 +228,32 @@ int main(int argc, char* argv[]) {
 	}
     std::cout << "[*] EDRi: EDR Introspection Framework\n";
 
-    if (result.count("help") || result.count("e") == 0 || result.count("a") == 0) {
+    std::string attack_output;
+    if (result.count("a") == 0) {
+        attack_output = attack_output_default;
+    }
+    else {
+		attack_output = result["attackOutput"].as<std::string>();
+    }
+	std::cout << "[*] EDRi: Using attack output file: " << attack_output << "\n";
+
+    std::string merged_output;
+    if (result.count("m") == 0) {
+        merged_output = merged_events_output_default;
+    } 
+    else {
+        merged_output = result["mergedOutput"].as<std::string>();
+	}
+	std::cout << "[*] EDRi: Writing merged events to: " << merged_output << "\n";
+
+    if (result.count("help") || result.count("e") == 0) {
         std::cout << options.help() << "\n";
         return 0;
     }
+	std::string exe_name = result["exe"].as<std::string>();
 
-    g_EDR_PID = get_PID_by_name(result["exe"].as<std::string>());
-    std::cerr << "[+] EDRi: Got PID for " << result["exe"].as<std::string>() << ": " << g_EDR_PID << "\n";
+    g_EDR_PID = get_PID_by_name(exe_name);
+    std::cerr << "[+] EDRi: Got PID for " << exe_name << ": " << g_EDR_PID << "\n";
     std::cout << "[*] EDRi: Start the attack when the 'Trace started' appears\n";
 
     std::vector<HANDLE> threads;
@@ -270,7 +277,10 @@ int main(int argc, char* argv[]) {
     }
     std::cout << "[*] EDRi: All " << threads.size() << " threads finished\n";
 
-    std::vector<json> attack_events = get_attack_events(result["attackOutput"].as<std::string>());
+    std::vector<json> attack_events = get_attack_events(attack_output);
     events = merge_events(events, attack_events);
     output_timeline_csv(events);
+	//TODO write events to file
+    std::cout << "[*] EDRi: Done\n";
+	return 0;
 }
