@@ -11,22 +11,68 @@ std::string myProvider = "Injector";
 std::string myEventID = "1337";
 int PID = 0;
 
+// paths
+std::string outFile = "C:\\Users\\Public\\Downloads\\attack-output.csv";
+LPCWSTR newProcessToInjectTo = L"C:\\Windows\\System32\\notepad.exe";
+
 // get current timestamp in ISO 8601 format, e.g. 2025-08-18 18:03:51.123Z
 std::ostringstream printCurrentTime() {
-    SYSTEMTIME st;
-    GetSystemTime(&st);
-    std::ostringstream time;
-    time << std::setfill('0')
-        << std::setw(4) << st.wYear << '-'
-        << std::setw(2) << st.wMonth << '-'
-        << std::setw(2) << st.wDay << ' '
-        << std::setw(2) << st.wHour << ':'
-        << std::setw(2) << st.wMinute << ':'
-        << std::setw(2) << st.wSecond << '.'
-        << std::setw(3) << st.wMilliseconds
+    static LARGE_INTEGER qpcFreq = {};
+    static LARGE_INTEGER qpcBase = {};
+    static ULONGLONG filetimeBase = 0;
+
+    // Initialize mapping once
+    if (qpcFreq.QuadPart == 0) {
+        QueryPerformanceFrequency(&qpcFreq);
+
+        FILETIME ft;
+        GetSystemTimeAsFileTime(&ft);
+
+        ULARGE_INTEGER uli;
+        uli.LowPart = ft.dwLowDateTime;
+        uli.HighPart = ft.dwHighDateTime;
+        filetimeBase = uli.QuadPart;
+
+        QueryPerformanceCounter(&qpcBase);
+    }
+
+    // Current QPC
+    LARGE_INTEGER qpcNow;
+    QueryPerformanceCounter(&qpcNow);
+
+    // Convert QPC delta to 100ns units
+    ULONGLONG qpcTicks = static_cast<ULONGLONG>(qpcNow.QuadPart - qpcBase.QuadPart);
+    ULONGLONG hundredNsDelta = (qpcTicks * 10000000ULL) / qpcFreq.QuadPart;
+
+    // Final FILETIME in 100ns intervals since 1601
+    ULONGLONG filetimeNow = filetimeBase + hundredNsDelta;
+
+    // Convert back to SYSTEMTIME for human readable part
+    FILETIME ftNow;
+    ftNow.dwLowDateTime = static_cast<DWORD>(filetimeNow & 0xFFFFFFFF);
+    ftNow.dwHighDateTime = static_cast<DWORD>(filetimeNow >> 32);
+
+    SYSTEMTIME stUTC;
+    FileTimeToSystemTime(&ftNow, &stUTC);
+
+    // Fractional seconds: remainder in 100ns ticks
+    const ULONGLONG TICKS_PER_SEC = 10000000ULL;
+    ULONGLONG frac_ticks = filetimeNow % TICKS_PER_SEC;
+    double fractional = static_cast<double>(frac_ticks) / TICKS_PER_SEC;
+
+    std::ostringstream oss;
+    oss << std::setfill('0')
+        << std::setw(4) << stUTC.wYear << "-"
+        << std::setw(2) << stUTC.wMonth << "-"
+        << std::setw(2) << stUTC.wDay << " "
+        << std::setw(2) << stUTC.wHour << ":"
+        << std::setw(2) << stUTC.wMinute << ":"
+        << std::setw(2) << stUTC.wSecond << "."
+        << std::setw(7) << std::setfill('0') << static_cast<int>(fractional * 10000000ULL)
         << "Z";
-    std::cout << "[+] " << time.str() << " > ";
-    return time;
+
+    std::cout << "[+] " << oss.str() << " > ";
+    return oss;
 }
 
 
@@ -55,7 +101,7 @@ int main(int argc, char** argv) {
     else if (strcmp(argv[1], "--wait") == 0) {
         s = WaitTime;
         if (argc < 3) {
-            waitTime = 3; // default wait time
+            waitTime = 10; // default wait time in sec
         }
         else {
             waitTime = strtol(argv[2], NULL, 10);
@@ -70,17 +116,6 @@ int main(int argc, char** argv) {
     msg << "Injector started with PID " << PID;
     printAndAddToCsv(msg.str()); msg.str("");
 
-    // start new process to inject to
-    LPCWSTR newProcess = L"C:\\Windows\\System32\\notepad.exe";
-    STARTUPINFO si = { sizeof(si) };
-    PROCESS_INFORMATION pi;
-    if (!CreateProcess(newProcess, nullptr, nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) {
-        std::cerr << "[!] Failed to start process: " << GetLastError() << "\n";
-        return 1;
-    }
-
-	printCurrentTime();
-    std::cout << "New process started with PID " << pi.dwProcessId << "\n";
     switch (s) {
         case NoWait:
             break;
@@ -96,6 +131,17 @@ int main(int argc, char** argv) {
         default:
             break;
     }
+
+    // start new process to inject to
+    STARTUPINFO si = { sizeof(si) };
+    PROCESS_INFORMATION pi;
+    if (!CreateProcess(newProcessToInjectTo, nullptr, nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) {
+        std::cerr << "[!] Failed to start process: " << GetLastError() << "\n";
+        return 1;
+    }
+
+    msg << "New process started with PID " << pi.dwProcessId;
+    printAndAddToCsv(msg.str()); msg.str("");
 
     // open process with read/write access
     HANDLE hProcess = OpenProcess(PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE, FALSE, pi.dwProcessId);
@@ -114,25 +160,9 @@ int main(int argc, char** argv) {
         printAndAddToCsv(msg.str()); msg.str("");
     }
     else {
-        std::cerr << "Failed to allocate memory: " << GetLastError() << "\n";
+        std::cerr << "[!] Failed to allocate memory: " << GetLastError() << "\n";
         return 1;
     }
-
-    /*
-	// read process memory information
-	MEMORY_BASIC_INFORMATION mbi;
-    if (VirtualQueryEx(hProcess, remoteAddrShellCode, &mbi, sizeof(mbi))) {
-        printCurrentTime();
-        msg << "Memory region at address " << remoteAddrShellCode << " is State 0x" << std::hex
-            << mbi.State << std::dec << " with protection 0x" << std::hex << mbi.Protect << std::dec << "\n";
-    }
-    else {
-        std::cerr << "Failed to query memory: " << GetLastError() << "\n";
-        VirtualFreeEx(hProcess, remoteAddrShellCode, 0, MEM_RELEASE);
-        CloseHandle(hProcess);
-        return 1;
-	}
-    */
 
     // write value into process' memory
     SIZE_T bytesWritten;
@@ -141,7 +171,7 @@ int main(int argc, char** argv) {
         printAndAddToCsv(msg.str()); msg.str("");
     }
     else {
-        std::cerr << "Failed to write memory: " << GetLastError() << "\n";
+        std::cerr << "[!] Failed to write memory: " << GetLastError() << "\n";
         return 1;
     }
 
@@ -153,7 +183,7 @@ int main(int argc, char** argv) {
         printAndAddToCsv(msg.str()); msg.str("");
     }
     else {
-        std::cerr << "Failed to change memory protection: " << GetLastError() << "\n";
+        std::cerr << "[!] Failed to change memory protection: " << GetLastError() << "\n";
         VirtualFreeEx(hProcess, remoteAddrShellCode, 0, MEM_RELEASE);
         CloseHandle(hProcess);
         return 1;
@@ -166,12 +196,12 @@ int main(int argc, char** argv) {
         printAndAddToCsv(msg.str()); msg.str("");
     }
     else {
-        std::cerr << "Failed to create remote thread: " << GetLastError() << "\n";
+        std::cerr << "[!] Failed to create remote thread: " << GetLastError() << "\n";
         return 1;
 	}
 
 	// write the csv variable to a file
-    std::ofstream out("output.csv");
+    std::ofstream out(outFile);
     out << csv.str();
     out.close();
 

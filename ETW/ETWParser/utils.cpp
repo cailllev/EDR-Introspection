@@ -60,10 +60,9 @@ std::string filetime_to_iso8601(__int64 timestamp) {
 
     const unsigned long long TICKS_PER_SEC = 10000000ULL; // 10M * 100ns
     unsigned long long frac_ticks = uli.QuadPart % TICKS_PER_SEC;
+    double fractional = static_cast<double>(frac_ticks) / TICKS_PER_SEC;
 
     // convert to fractional seconds and format
-	int cutoff_digit = 7; // 0 = 1s, 1 = 0.1s, 2 = 0.01s, ..., 7 = 0.0000001s
-    double fractional = static_cast<double>(frac_ticks) / TICKS_PER_SEC;
     std::ostringstream oss;
     oss << std::setfill('0')
         << std::setw(4) << stUTC.wYear << "-"
@@ -71,8 +70,8 @@ std::string filetime_to_iso8601(__int64 timestamp) {
         << std::setw(2) << stUTC.wDay << " "
         << std::setw(2) << stUTC.wHour << ":"
         << std::setw(2) << stUTC.wMinute << ":"
-        << std::setw(2) << stUTC.wSecond
-        << std::fixed << std::setprecision(cutoff_digit) << fractional
+        << std::setw(2) << stUTC.wSecond << "."
+        << std::setw(7) << std::setfill('0') << static_cast<int>(fractional * 10000000ULL)
         << "Z";
 
     return oss.str();
