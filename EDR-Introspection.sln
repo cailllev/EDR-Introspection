@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Injector", "Injector\Inject
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SeaLighterParser", "ETW\SeaLighterParser\SeaLighterParser.vcxproj", "{EE05DB11-B9EF-46AA-8D28-7D80835EA3AD}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ETWParser", "ETW\ETWParser\ETWParser.vcxproj", "{5148AB9F-922A-48DA-A335-DD6BDDCEF143}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -31,6 +33,14 @@ Global
 		{EE05DB11-B9EF-46AA-8D28-7D80835EA3AD}.Release|x64.Build.0 = Release|x64
 		{EE05DB11-B9EF-46AA-8D28-7D80835EA3AD}.Release|x86.ActiveCfg = Release|Win32
 		{EE05DB11-B9EF-46AA-8D28-7D80835EA3AD}.Release|x86.Build.0 = Release|Win32
+		{5148AB9F-922A-48DA-A335-DD6BDDCEF143}.Debug|x64.ActiveCfg = Debug|x64
+		{5148AB9F-922A-48DA-A335-DD6BDDCEF143}.Debug|x64.Build.0 = Debug|x64
+		{5148AB9F-922A-48DA-A335-DD6BDDCEF143}.Debug|x86.ActiveCfg = Debug|Win32
+		{5148AB9F-922A-48DA-A335-DD6BDDCEF143}.Debug|x86.Build.0 = Debug|Win32
+		{5148AB9F-922A-48DA-A335-DD6BDDCEF143}.Release|x64.ActiveCfg = Release|x64
+		{5148AB9F-922A-48DA-A335-DD6BDDCEF143}.Release|x64.Build.0 = Release|x64
+		{5148AB9F-922A-48DA-A335-DD6BDDCEF143}.Release|x86.ActiveCfg = Release|Win32
+		{5148AB9F-922A-48DA-A335-DD6BDDCEF143}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
