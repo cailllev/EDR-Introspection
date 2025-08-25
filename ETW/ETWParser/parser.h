@@ -6,8 +6,7 @@
 
 
 // defaults
-std::string attack_output_default = "C:\\Users\\Public\\Downloads\\attack-output.csv";
-std::string merged_events_output_default = "C:\\Users\\Public\\Downloads\\all-events.csv";
+std::string all_events_output_default = "C:\\Users\\Public\\Downloads\\all-events.csv";
 
 // keys to merge for PPID and FilePath
 static const std::vector<std::string> ppid_keys = {
