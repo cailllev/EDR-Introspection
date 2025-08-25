@@ -1,63 +1,7 @@
-"C:\\Users\\hacker\\source\\repos\\EDR-Introspection\\x64\\Release\\Injector.exe"
+[+] 2025-08-20 11:49:31.855 > Injector started with PID 12160
+[+] 2025-08-20 11:49:31.887 > New process started with PID 1304
+[+] 2025-08-20 11:49:32.896 > Memory allocated at address 000001D9375C0000
+[+] 2025-08-20 11:49:32.898 > Shellcode written to address 000001D9375C0000
+[+] 2025-08-20 11:49:32.898 > Memory protection changed to PAGE_EXECUTE_READ
+[+] 2025-08-20 11:49:32.900 > Remote thread created successfully
 
-Defender PID: 2020
-PowerShell PID: 14256
-Injector started. PID: 13940
-Notepad started. PID: 11080
-Process started at: 2025-08-19 09:55:02Z
-Press ENTER to start injection...
-
-Memory allocated at address: 0000017412FB0000
-Value before write: 0x0
-Value written to address: 0000017412FB0000
-Value written at: 2025-08-19 09:55:05Z
-Value after write: 0xdeadbeaf
-Notepad terminated.
-
-
-event_id mapping (appear in this order):
-36: load scan result from cache: Classification,EventType,FileName,FileUSN,Info,Result,ScanSource
-73: start and stop of of tracking: CreationTime,EngineId,PID,Source,filepath,flags,flags2high,flags2low,oldFlags,oldFlags2high,oldFlags2low
-70: execution info: BasePath,Commandline,Flags,IntegrityLevel,PID,ParentPID
-109: process start: ImagePath,PID,ProcessContextId
-104: open subprocess / cmdline logging (FeatureID 22), amsi scan (FeatureID 21), parent tracking (FeatureID 35)
-53: open handle / parent tracking: AccessMask,PID,TargetPID,WasHardened
-11: dll/exe loading: ImagePath,PID
-111: quick scan? after loading a dll/exe: AttrId,AttrSeq,AttrSubset,PID
-112: scan result? after loading a dll/exe: AttrId,AttrSeq,AttrSubset,IsMultiProcDetection,IsMultiProcMatch,MatchedThreatsNumber,PID
-43: CPU meter start?
-67: CPU meter stop?
-26: process shutdown (right before event_id 73): PID
-
-properties to track (event_id):
-- "PID": 11080 (109, 73, 70, 104, 11, 111, 112, 26, 73)
-- "TargetPID": 11080 (53)
-- "Data": 11080 (43, 67)
-- "PID": 13940 (109, 73, 70, 104, 11, 111, 112, 26, 73)
-- "TargetPID": 13940 (53)
-- "Data": 13940 (43, 67)
-- "FileName": "C:\\Users\\hacker\\source\\repos\\EDR-Introspection\\x64\\Release\\Injector.exe" (36)
-- "filepath": "C:\\Users\\hacker\\source\\repos\\EDR-Introspection\\x64\\Release\\Injector.exe" (73) (start und end)
-- "BasePath": "\\Device\\HarddiskVolume4\\Users\\hacker\\source\\repos\\EDR-Introspection\\x64\\Release\\Injector.exe" (70)
-- "ImagePath": "\\Device\\HarddiskVolume4\\Users\\hacker\\source\\repos\\EDR-Introspection\\x64\\Release\\Injector.exe" (109)
-- "ImagePath": "\\Device\\HarddiskVolume4\\Users\\hacker\\source\\repos\\EDR-Introspection\\x64\\Release\\Injector.exe" (11)
-- "Name": "C:\\Users\\hacker\\source\\repos\\EDR-Introspection\\x64\\Release\\Injector.exe" (43)
-- "Name": "C:\\Users\\hacker\\source\\repos\\EDR-Introspection\\x64\\Release\\Injector.exe" (67)
-- "FirstParam": "C:\\Program Files\\WindowsApps\\Microsoft.WindowsNotepad_11.2506.35.0_x64__8wekyb3d8bbwe\\Notepad\\Notepad.exe" (104)
-- "Process": "\\Device\\HarddiskVolume4\\Program Files\\WindowsApps\\Microsoft.WindowsNotepad_11.2506.35.0_x64__8wekyb3d8bbwe\\Notepad\\Notepad.exe" (5)
-
-
---> 
-"any_of": {
-    "property_icontains": {
-        "name": "<properties to track>",
-        "value": "<the value, injector.exe, notepad.exe, pid, ...>",
-        "type": "STRINGA",
-    }
-}
-
-or
---> 
-"any_of": {
-    "any_field_contains": "notepad.exe, ..."
-}
