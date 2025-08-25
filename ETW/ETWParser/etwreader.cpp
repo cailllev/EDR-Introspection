@@ -16,12 +16,42 @@ bool extensive = false; // enable more providers and events
 int errors = 0;
 bool g_trace_running = false;
 
+json attack_etw_to_json(Event e) {
+    krabs::parser parser(e.schema);
+    json j;
+
+    try {
+        j[TYPE] = "Attack";
+        j[TIMESTAMP] = filetime_to_iso8601(
+            static_cast<__int64>(e.record.EventHeader.TimeStamp.QuadPart)
+        );
+        j[PID] = e.record.EventHeader.ProcessId;
+        j[TID] = e.record.EventHeader.ThreadId;
+        j[PROVIDER_NAME] = wchar2string(e.schema.provider_name());
+        j[EVENT_ID] = 13337;
+        std::wstring msg;
+        if (parser.try_parse(L"message", msg)) {
+            j[TASK] = std::string(msg.begin(), msg.end());
+        }
+        else {
+            j[TASK] = "(no message field)";
+            std::cout << "[*] ETW: Warning: Attack event missing Message field " << j.dump() << "\n";
+        }
+        j[TASK] = parser.parse<std::string>(L"message");
+        return j;
+    }
+    catch (const std::exception& ex) {
+        std::cerr << "[!] ETW: Attack Trace Exception: " << ex.what() << "\n";
+        errors++;
+        return json();
+    }
+}
+
 
 json krabs_etw_to_json(Event e) {
     try {
         krabs::parser parser(e.schema);
         json j;
-
 
         j[TYPE] = "ETW";
         j[TIMESTAMP] = filetime_to_iso8601(
@@ -29,14 +59,13 @@ json krabs_etw_to_json(Event e) {
             );
         j[PID] = e.record.EventHeader.ProcessId;  // the pid in the header should always be the EDR process
         j[TID] = e.record.EventHeader.ThreadId;
+        j[EVENT_ID] = e.schema.event_id(); // opcode is the same as event_id, sometimes just a different number
+        j[PROVIDER_NAME] = wchar2string(e.schema.provider_name());
 
 		// task = task_name + opcode_name
         std::wstring combined = std::wstring(e.schema.task_name()) + std::wstring(e.schema.opcode_name());
         j[TASK] = wstring2string(combined);
 
-        //j["opcode_id"] = schema.event_opcode(); // opcode is the same as event_id, sometimes just a different number
-        j[EVENT_ID] = e.schema.event_id();
-        j[PROVIDER_NAME] = wchar2string(e.schema.provider_name());
 
         // Iterate over all properties defined in the schema
         for (const auto& property : parser.properties()) {
@@ -201,7 +230,21 @@ std::vector<json> get_events() {
 }
 
 
-// this function(-chain) should be high performanceor events get lost
+void attack_event_callback(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
+    try {
+        krabs::schema schema(record, trace_context.schema_locator);
+        etw_events.push_back(attack_etw_to_json(Event{ record, schema }));
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[!] ETW: attack_event_callback exception: " << e.what();
+    }
+    catch (...) {
+        std::cerr << "[!] ETW: attack_event_callback unknown exception";
+    }
+}
+
+
+// this function(-chain) should be high performance or events get lost
 void event_callback(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
     try {
         krabs::schema schema(record, trace_context.schema_locator);
@@ -220,10 +263,10 @@ void event_callback(const EVENT_RECORD& record, const krabs::trace_context& trac
         etw_events.push_back(krabs_etw_to_json(Event{ record, schema }));
     }
     catch (const std::exception& e) {
-        std::cerr << "ETW event_callback exception: " << e.what();
+        std::cerr << "[!] ETW: event_callback exception: " << e.what();
     }
     catch (...) {
-        std::cerr << "ETW event_callback unknown exception";
+        std::cerr << "[!] ETW: event_callback unknown exception";
     }
 }
 
@@ -314,6 +357,12 @@ DWORD WINAPI t_start_etw_trace(LPVOID param) {
             trace_user.enable(kernelnetwork_provider);
             std::cout << "[+] ETW: Microsoft-Windows-Kernel-Network: 12, 15, 28, 31, 42, 43, 58, 59\n";
         }
+
+        krabs::guid attack_guid(L"{72248466-7166-4feb-a386-34d8f35bb637}");
+        krabs::provider<> attack_provider(attack_guid);
+        attack_provider.add_on_event_callback(attack_event_callback);
+        trace_user.enable(attack_provider);
+        std::cout << "[+] ETW: Injector-Attack (all)\n";
 
         krabs::provider<> antimalwareengine_provider(L"Microsoft-Antimalware-Engine");
         antimalwareengine_provider.add_on_event_callback(event_callback);
