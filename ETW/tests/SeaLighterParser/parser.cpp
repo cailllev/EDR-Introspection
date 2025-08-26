@@ -143,7 +143,7 @@ std::string translate_if_path(const std::string& s) {
 }
 
 // todo quoting errors with Timeline Explorer
-void print_value(Event ev, std::string key) {
+void add_value_to_csv(Event ev, std::string key) {
     if (ev.properties[key].is_string()) {
         std::string s = ev.properties[key].get<std::string>();
         s = translate_if_path(s);
@@ -155,7 +155,7 @@ void print_value(Event ev, std::string key) {
 }
 
 // Output all events as a sparse CSV timeline with merged PPID and FilePath
-void output_timeline_csv(const std::vector<Event>& events) {
+void create_timeline_csv(const std::vector<Event>& events) {
     // Keys to merge for PPID and FilePath
     static const std::vector<std::string> ppid_keys = {
         "Parent PID", "TPID", "Target PID"
@@ -197,14 +197,14 @@ void output_timeline_csv(const std::vector<Event>& events) {
 
             // check if this event has a value for this key
             if (ev.properties.contains(key)) {
-                print_value(ev, key);
+                add_value_to_csv(ev, key);
             }
             // else check if the key is a merged key
             else if (std::find(ppid_keys.begin(), ppid_keys.end(), key) != ppid_keys.end()) {
-                print_value(ev, key);
+                add_value_to_csv(ev, key);
             }
             else if (std::find(filepath_keys.begin(), filepath_keys.end(), key) != filepath_keys.end()) {
-                print_value(ev, key);
+                add_value_to_csv(ev, key);
             }
             
             // else print "" to skip it
@@ -260,7 +260,7 @@ int main(int argc, char* argv[]) {
             filter_by_int_property(events, key, value);
         }
         else if (mode == "toTimeline") {
-            output_timeline_csv(events);
+            create_timeline_csv(events);
         }
         else {
             std::cerr << "Invalid arguments.\n";
