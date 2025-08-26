@@ -16,6 +16,7 @@ bool extensive = false; // enable more providers and events
 int errors = 0;
 bool g_trace_running = false;
 
+
 json attack_etw_to_json(Event e) {
     krabs::parser parser(e.schema);
     json j;
@@ -91,17 +92,6 @@ json krabs_etw_to_json(Event e) {
                 }
 
                 switch (propertyType) {
-                case TDH_INTYPE_UINT32:
-                {
-                    j[jsonKey] = (uint32_t)parser.parse<uint32_t>(propertyName);
-                    break;
-                }
-
-                case TDH_INTYPE_UINT64:
-                {
-                    j[jsonKey] = (uint64_t)parser.parse<uint64_t>(propertyName);
-                    break;
-                }
 
                 case TDH_INTYPE_UNICODESTRING:
                 {
@@ -115,6 +105,36 @@ json krabs_etw_to_json(Event e) {
                 case TDH_INTYPE_ANSISTRING:
                 {
                     j[jsonKey] = parser.parse<std::string>(propertyName);
+                    break;
+                }
+
+                case TDH_INTYPE_INT8:
+                {
+                    j[jsonKey] = (int32_t)parser.parse<CHAR>(propertyName);
+                    break;
+                }
+
+                case TDH_INTYPE_UINT8:
+                {
+                    j[jsonKey] = (uint32_t)parser.parse<UCHAR>(propertyName);
+                    break;
+                }
+
+                case TDH_INTYPE_UINT32:
+                {
+                    j[jsonKey] = (uint32_t)parser.parse<uint32_t>(propertyName);
+                    break;
+                }
+
+                case TDH_INTYPE_UINT64:
+                {
+                    j[jsonKey] = (uint64_t)parser.parse<uint64_t>(propertyName);
+                    break;
+                }
+
+                case TDH_INTYPE_BOOLEAN:
+                {
+                    j[jsonKey] = (bool)parser.parse<BOOL>(propertyName);
                     break;
                 }
 
@@ -133,12 +153,6 @@ json krabs_etw_to_json(Event e) {
                     j[jsonKey] = uli.QuadPart;
                     break;
                 }
-                
-                case TDH_INTYPE_INT8:
-                {
-                    j[jsonKey] = (int32_t)parser.parse<CHAR>(propertyName);
-                    break;
-                }
 
                 case TDH_INTYPE_SID:
                 {
@@ -152,12 +166,6 @@ json krabs_etw_to_json(Event e) {
                     else {
                         j[jsonKey] = "invalid_sid";
                     }
-                    break;
-                }
-
-                case TDH_INTYPE_BOOLEAN:
-                {
-                    j[jsonKey] = (bool)parser.parse<BOOL>(propertyName);
                     break;
                 }
 
@@ -192,7 +200,19 @@ json krabs_etw_to_json(Event e) {
             }
         }
 
-        // Callstack
+        // check if the attack_PID and injected_PID can be set, TODO more elegant
+        if (g_attack_PID == 0 && j[EVENT_ID] == 73) {
+            if (j.contains("filepath") && j["filepath"] == attack_exe_path) {
+                g_attack_PID = j[PID];
+            }
+        }
+        if (g_injected_PID == 0 && j[EVENT_ID] == 73) {
+            if (j.contains("filepath") && j["filepath"] == injected_exe_path) {
+                g_injected_PID = j[PID];
+            }
+        }
+
+        // callstack
         try {
             j["stack_trace"] = json::array();
             auto stack_trace = e.schema.stack_trace();
@@ -259,6 +279,7 @@ void event_callback(const EVENT_RECORD& record, const krabs::trace_context& trac
             schema.event_id() == 4 && std::wstring(schema.task_name()) == std::wstring(L"Versions ")) {
             g_trace_running = true; // TODO invoke attack here?
         }
+
 		// convert it to json NOW or lose the property values
         etw_events.push_back(krabs_etw_to_json(Event{ record, schema }));
     }

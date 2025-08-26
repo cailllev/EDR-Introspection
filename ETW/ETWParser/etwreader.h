@@ -18,3 +18,6 @@ static const std::string TID = "TID";
 static const std::string TASK = "task";
 static const std::string EVENT_ID = "event_id";
 static const std::string PROVIDER_NAME = "provider_name";
+
+static const std::string attack_exe_path = "C:\\Users\\hacker\\source\\repos\\EDR - Introspection\\x64\\Release\\Injector.exe";
+static const std::string injected_exe_path = "C:\\Program Files\\WindowsApps\\Microsoft.WindowsNotepad_11.2506.35.0_x64__8wekyb3d8bbwe\\Notepad\\Notepad.exe";

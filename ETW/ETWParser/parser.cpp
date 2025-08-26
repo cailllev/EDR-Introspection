@@ -17,6 +17,7 @@
 #include "etwreader.h"
 #include "globals.h"
 #include "parser.h"
+#include "filter.h"
 
 /*
 - creates krabs ETW traces for Antimalware, Kernel, etc. and the attack provider
@@ -24,9 +25,40 @@
 - then transforms all captured events into a "filtered" csv, ready for Timeline Explorer
 */
 
-// PID of the EDR process, used to filter the ETW Antimalware provider
-int g_EDR_PID = 0;
+// PID logic:
+int g_EDR_PID = 0;  // is set with get_PID_by_name
+int g_attack_PID = 0;  // is set with the incoming ETW events
+int g_injected_PID = 0;  // is set with the incoming ETW events
 
+// the csv output
+std::ostringstream csv_output;
+
+
+// TODO MOOOORE
+// filter events based on known exclude values (e.g. wrong PID for given event id)
+bool filter(json event) {
+    for (auto event_id : event_ids_with_pids) {
+        if (event[EVENT_ID] == event_id) {
+            return event[PID] != g_attack_PID || event[PID] != g_injected_PID;
+        }
+    }
+
+    for (auto event_id : event_ids_with_target_pids) {
+        if (event[EVENT_ID] == event_id) {
+            return true; // TODO, how to filter
+        }
+    }
+
+    for (auto event_id : event_ids_with_pid_in_data) {
+        if (event[EVENT_ID] == event_id) {
+            if (event.contains("data")) {
+                return event["data"] == g_attack_PID || event["data"] == g_injected_PID;
+            }
+			std::cout << "[-] ETW: Warning: Event with ID " << event_id << " missing data field: " << event.dump() << "\n";
+            return true; // unexpected event fields, do not filter
+        }
+    }
+}
 
 // translate device paths to drive letters
 std::string translate_if_path(const std::string& s) {
@@ -40,21 +72,21 @@ std::string translate_if_path(const std::string& s) {
 }
 
 // todo quoting errors with Timeline Explorer
-void print_value(json ev, std::string key) {
+void add_value_to_csv(json ev, std::string key) {
     if (ev[key].is_string()) {
         std::string s = ev[key].get<std::string>();
         s = translate_if_path(s);
         std::replace(s.begin(), s.end(), '"', '\'');
-        std::cout << "\"" << s << "\"";
+        csv_output << "\"" << s << "\"";
     }
     else {
-        std::cout << ev[key].dump();
+        csv_output << ev[key].dump();
     }
 }
 
 
 // output all events as a sparse CSV timeline with merged PPID and FilePath
-void output_timeline_csv(const std::vector<json>& events) {
+void create_timeline_csv(const std::vector<json>& events) {
     std::vector<std::string> all_keys;
     for (const auto& k : csv_header_start) {
         all_keys.push_back(k);
@@ -78,12 +110,19 @@ void output_timeline_csv(const std::vector<json>& events) {
 
     // print CSV header
     for (const auto& key : all_keys) {
-        std::cout << key << ",";
+        csv_output << key << ",";
     }
-    std::cout << "\n";
+    csv_output << "\n";
 
     // print each event as a row
     for (const auto& ev : events) {
+        if (!filter(ev)) {
+			std::cout << "[-] ETW: Filtered out event: " << ev.dump() << "\n";
+            continue;
+        }
+
+		int num_keys_added = 0; // all rows must have the same number of columns (commas)
+
         // traverse keys in order of csv header, print "" if the current event does not have this key
         for (const auto& key : all_keys) {
 			// check if the key (from the csv header, not the event) is a merged key
@@ -93,7 +132,8 @@ void output_timeline_csv(const std::vector<json>& events) {
                 if (std::find(cat.begin(), cat.end(), key) != cat.end()) {
                     for (auto& it : ev.items()) { // get the original key from the EVENT, not CSV HEADER
                         if (std::find(cat.begin(), cat.end(), it.key()) != cat.end()) {
-                            print_value(ev, it.key());
+                            add_value_to_csv(ev, it.key());
+                            num_keys_added++;
                             is_merged_key = true;
                             break;
                         }
@@ -105,16 +145,22 @@ void output_timeline_csv(const std::vector<json>& events) {
 
             // else check if this event has a value for this key
             if (ev.contains(key)) {
-                print_value(ev, key);
+                add_value_to_csv(ev, key);
+                num_keys_added++;
             }
 
             // else print "" to skip it
             else {
-                std::cout << "";
+                csv_output << "";
             }
-            std::cout << ",";
+            csv_output << ",";
         }
-        std::cout << "\n";
+
+		// print missing commas if some keys were not printed
+        for (int i = num_keys_added; i < all_keys.size(); i++) {
+            csv_output << ",";
+		}
+        csv_output << "\n";
     }
 }
 
@@ -204,8 +250,10 @@ int main(int argc, char* argv[]) {
     }
     std::cout << "[*] EDRi: All " << threads.size() << " threads finished\n";
 
-    //TODO write events to file
-    output_timeline_csv(events);
+    create_timeline_csv(events);
+	std::ofstream out(output);
+	out << csv_output.str();
+	out.close();
 
     std::cout << "[*] EDRi: Done\n";
 	return 0;
