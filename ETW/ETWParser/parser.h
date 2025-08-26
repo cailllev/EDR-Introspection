@@ -10,7 +10,7 @@ std::string all_events_output_default = "C:\\Users\\Public\\Downloads\\all-event
 
 // keys to merge for PPID and FilePath
 static const std::vector<std::string> ppid_keys = {
-    "PPID",  "Parent PID", "TPID", "Target PID", "TargetPID" // TargetPID?
+    "PPID",  "Parent PID" // Target PID, TargetPID, TPID?
 };
 std::string ppid_merged_key = "PPID";
 static const std::vector<std::string> filepath_keys = {
