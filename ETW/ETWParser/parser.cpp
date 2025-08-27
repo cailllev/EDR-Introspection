@@ -33,13 +33,16 @@ int g_injected_PID = 0;  // is set with the incoming ETW events
 // the csv output
 std::ostringstream csv_output;
 
+// more debug info
+bool debug = false;
+
 
 // TODO MOOOORE
 // filter events based on known exclude values (e.g. wrong PID for given event id)
 bool filter(json event) {
     for (auto event_id : event_ids_with_pids) {
         if (event[EVENT_ID] == event_id) {
-            return event[PID] != g_attack_PID || event[PID] != g_injected_PID;
+            return event[PID] != g_attack_PID || event[PID] != g_injected_PID; // todo does not work
         }
     }
 
@@ -51,10 +54,12 @@ bool filter(json event) {
 
     for (auto event_id : event_ids_with_pid_in_data) {
         if (event[EVENT_ID] == event_id) {
-            if (event.contains("data")) {
-                return event["data"] == g_attack_PID || event["data"] == g_injected_PID;
+            if (event.contains("Data")) {
+                return event["Data"] == g_attack_PID || event["Data"] == g_injected_PID;
             }
-			std::cout << "[-] ETW: Warning: Event with ID " << event_id << " missing data field: " << event.dump() << "\n";
+            if (debug) {
+                std::cout << "[-] ETW: Warning: Event with ID " << event_id << " missing data field: " << event.dump() << "\n";
+            }
             return true; // unexpected event fields, do not filter
         }
     }
@@ -114,10 +119,14 @@ void create_timeline_csv(const std::vector<json>& events) {
     }
     csv_output << "\n";
 
+    int num_events_final = 0;
+
     // print each event as a row
     for (const auto& ev : events) {
         if (!filter(ev)) {
-			std::cout << "[-] ETW: Filtered out event: " << ev.dump() << "\n";
+            if (debug) {
+                std::cout << "[-] ETW: Filtered out event: " << ev.dump() << "\n";
+            }
             continue;
         }
 
@@ -161,7 +170,9 @@ void create_timeline_csv(const std::vector<json>& events) {
             csv_output << ",";
 		}
         csv_output << "\n";
+        num_events_final++;
     }
+	std::cout << "[*] EDRi: Got " << num_events_final << " events after filtering\n";
 }
 
 // https://stackoverflow.com/questions/14265581/parse-split-a-string-in-c-using-string-delimiter-standard-c#answer-46931770
@@ -211,13 +222,13 @@ int main(int argc, char* argv[]) {
     std::cout << "[*] EDRi: EDR Introspection Framework\n";
 
     std::string output;
-    if (result.count("m") == 0) {
+    if (result.count("o") == 0) {
         output = all_events_output_default;
     }
     else {
         output = result["output"].as<std::string>();
 	}
-	std::cout << "[*] EDRi: Writing merged events to: " << output << "\n";
+	std::cout << "[*] EDRi: Writing events to: " << output << "\n";
 
     if (result.count("help") || result.count("e") == 0) {
         std::cout << options.help() << "\n";
@@ -226,8 +237,7 @@ int main(int argc, char* argv[]) {
 	std::string exe_name = result["exe"].as<std::string>();
 
     g_EDR_PID = get_PID_by_name(exe_name);
-    std::cerr << "[+] EDRi: Got PID for " << exe_name << ": " << g_EDR_PID << "\n";
-    std::cout << "[*] EDRi: Start the attack when the 'Trace started' appears\n";
+    std::cerr << "[*] EDRi: Got PID for " << exe_name << ": " << g_EDR_PID << "\n";
 
     std::vector<HANDLE> threads;
     if (!start_etw_reader(threads)) { // try to start trace
@@ -238,8 +248,18 @@ int main(int argc, char* argv[]) {
 		Sleep(10);
 	}
 	std::cout << "[*] EDRi: Trace started, ready for attack\n";
-    std::cout << "[*] EDRi: Press ENTER after the attack is finished\n"; // todo invoke the attack here and observe?
-    std::cin.get();
+
+    // start the attack via explorer (breaks process tree)
+    std::string command = "explorer.exe \"" + attack_exe_path + "\"";
+	std::cout << "[*] EDRi: Starting attack: " << command << "\n";
+	system(command.c_str());
+
+	// wait until the attack and injection is done, i.e. event_id 73 with "Termination"
+    // TODO non defender "attack done" filter
+    while (!g_attack_done) {
+		std::cout << "[+] EDRi: Waiting for attack to finish...\n";
+        Sleep(1000);
+	}
 
     std::vector<json> events = get_events();
     std::cout << "[*] EDRi: Stopping traces\n";
