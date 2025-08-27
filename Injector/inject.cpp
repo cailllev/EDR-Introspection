@@ -35,22 +35,24 @@ int main(int argc, char** argv) {
     TraceLoggingRegister(g_hProvider);
 
 	enum StartupMode { NoWait, WaitTime, WaitForEnter };
-	StartupMode s = WaitForEnter; // default mode
-    int waitTime = 0;
+	StartupMode s = WaitTime;
+    int wait_time = 5;
+	bool exit_after_injection = false;
 
-    if (argc < 2) {
-        s = WaitForEnter;
+    if (argc == 1) {
+        // default
     }
-    else if (strcmp(argv[1], "--no-wait") == 0) {
-        s = NoWait;
-    }
-    else if (strcmp(argv[1], "--wait") == 0) {
-        s = WaitTime;
-        if (argc < 3) {
-            waitTime = 10; // default wait time in sec
+    if (argc >= 2) {
+        if (strcmp(argv[1], "--no-wait") == 0) {
+            s = NoWait;
         }
-        else {
-            waitTime = strtol(argv[2], NULL, 10);
+        else if (strcmp(argv[1], "--wait-enter") == 0) {
+            s = WaitForEnter;
+        }
+    }
+    if (argc >= 3) {
+        if (strcmp(argv[2], "--exit") == 0) {
+			exit_after_injection = true;
         }
     }
 
@@ -65,7 +67,7 @@ int main(int argc, char** argv) {
         case NoWait:
             break;
         case WaitTime:
-            for (int i = waitTime; i > 0; i--) {
+            for (int i = wait_time; i > 0; i--) {
                 std::cout << "[*] Starting injection in " << i << "\n";
                 Sleep(1000);
             };
@@ -171,6 +173,8 @@ int main(int argc, char** argv) {
         return 1;
 	}
 
+    msg << "[+] Attack done";
+    print_and_emit_event(msg.str()); msg.str("");
     TraceLoggingUnregister(g_hProvider);
     return 0;
 }
