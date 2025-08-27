@@ -11,12 +11,20 @@ struct Event {
 };
 std::vector<json> etw_events;
 
-krabs::user_trace trace_user(L"EDRIntrospection");
+krabs::user_trace trace_user(L"EDRi");
 bool extensive = false; // enable more providers and events
 int errors = 0;
 bool g_trace_running = false;
+bool g_attack_done = false;
 
 
+std::vector<json> get_events() {
+    std::cout << "[+] ETW: Got " << etw_events.size() << " events\n";
+    return etw_events;
+}
+
+
+// parses attack events
 json attack_etw_to_json(Event e) {
     krabs::parser parser(e.schema);
     json j;
@@ -30,6 +38,7 @@ json attack_etw_to_json(Event e) {
         j[TID] = e.record.EventHeader.ThreadId;
         j[PROVIDER_NAME] = wchar2string(e.schema.provider_name());
         j[EVENT_ID] = 13337;
+
         std::wstring msg;
         if (parser.try_parse(L"message", msg)) {
             j[TASK] = std::string(msg.begin(), msg.end());
@@ -38,7 +47,7 @@ json attack_etw_to_json(Event e) {
             j[TASK] = "(no message field)";
             std::cout << "[*] ETW: Warning: Attack event missing Message field " << j.dump() << "\n";
         }
-        j[TASK] = parser.parse<std::string>(L"message");
+
         return j;
     }
     catch (const std::exception& ex) {
@@ -48,7 +57,7 @@ json attack_etw_to_json(Event e) {
     }
 }
 
-
+// parses all other ETW events, , sets g_attack_done
 json krabs_etw_to_json(Event e) {
     try {
         krabs::parser parser(e.schema);
@@ -212,6 +221,11 @@ json krabs_etw_to_json(Event e) {
             }
         }
 
+		// check if the attack is done
+        if (!g_attack_done && j[PID] == g_attack_PID && j[EVENT_ID] == 73 && j["Source"] == "Termination") {
+            g_attack_done = true;
+		}
+
         // callstack
         try {
             j["stack_trace"] = json::array();
@@ -244,12 +258,7 @@ json krabs_etw_to_json(Event e) {
 }
 
 
-std::vector<json> get_events() {
-	std::cout << "[+] ETW: Got " << etw_events.size() << " events\n";
-	return etw_events;
-}
-
-
+// hand over schema for parsing
 void attack_event_callback(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
     try {
         krabs::schema schema(record, trace_context.schema_locator);
@@ -264,7 +273,7 @@ void attack_event_callback(const EVENT_RECORD& record, const krabs::trace_contex
 }
 
 
-// this function(-chain) should be high performance or events get lost
+// pre-filter EDR events and hand over schema for parsing, monitors events -> sets g_trace_running to true
 void event_callback(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
     try {
         krabs::schema schema(record, trace_context.schema_locator);
@@ -277,7 +286,7 @@ void event_callback(const EVENT_RECORD& record, const krabs::trace_context& trac
 		// check for antimalware engine version event, this is always the first event
         if (!g_trace_running && std::wstring(schema.provider_name()) == std::wstring(L"Microsoft-Antimalware-Engine") &&
             schema.event_id() == 4 && std::wstring(schema.task_name()) == std::wstring(L"Versions ")) {
-            g_trace_running = true; // TODO invoke attack here?
+            g_trace_running = true;
         }
 
 		// convert it to json NOW or lose the property values
