@@ -76,7 +76,6 @@ std::string translate_if_path(const std::string& s) {
     return s;
 }
 
-// todo quoting errors with Timeline Explorer
 void add_value_to_csv(json ev, std::string key) {
     if (ev[key].is_string()) {
         std::string s = ev[key].get<std::string>();
@@ -95,28 +94,30 @@ void create_timeline_csv(const std::vector<json>& events) {
     std::vector<std::string> all_keys;
     for (const auto& k : csv_header_start) {
         all_keys.push_back(k);
-    }
-
-    // TODO: Timeline Explorer: "name" not allowed?
-    // collect all property keys except merged ones, set automatically rejects duplicates
-    for (const auto& ev : events) {
-        for (auto it = ev.begin(); it != ev.end(); ++it) {
-            // skip merged keys
-            if (std::find(ppid_keys.begin(), ppid_keys.end(), it.key()) != ppid_keys.end()) continue;
-            if (std::find(filepath_keys.begin(), filepath_keys.end(), it.key()) != filepath_keys.end()) continue;
-
-            // skip already inserted keys
-            if (std::find(all_keys.begin(), all_keys.end(), it.key()) != all_keys.end()) continue;
-
-            // insert if it does not exists yet
-            all_keys.push_back(it.key());
+        if (debug) {
+			std::cout << "[+] EDRi: Added predefined key for CSV header: " << k << "\n";
         }
     }
 
-    // print CSV header
+    // collect all property keys except merged ones, set automatically rejects duplicates
+    for (const auto& ev : events) {
+        for (auto it = ev.begin(); it != ev.end(); ++it) {
+            // skip already inserted keys
+            if (std::find(all_keys.begin(), all_keys.end(), it.key()) != all_keys.end()) continue;
+
+			// or insert new key
+            all_keys.push_back(it.key());
+            if (debug) {
+                std::cout << "[+] EDRi: Added new key for CSV header: " << it.key() << "\n";
+            }
+        }
+    }
+
+    // add header to csv_output
     for (const auto& key : all_keys) {
         csv_output << key << ",";
     }
+    csv_output.seekp(-1, std::ios_base::end); // remove the last ","
     csv_output << "\n";
 
     int num_events_final = 0;
@@ -129,35 +130,16 @@ void create_timeline_csv(const std::vector<json>& events) {
             }
             continue;
         }
-
 		int num_keys_added = 0; // all rows must have the same number of columns (commas)
 
-        // traverse keys in order of csv header, print "" if the current event does not have this key
+        // traverse keys IN ORDER OF CSV HEADER
+		// i.e. given: key from csv, check: if event has it, add value, else skip (add "")
         for (const auto& key : all_keys) {
-			// check if the key (from the csv header, not the event) is a merged key
-			bool is_merged_key = false;
-            for (const auto& cat : key_categories_to_merge) {
-                // example: PPID (this is a merged key, there are no other keys like Parent PID, ... in the header)
-                if (std::find(cat.begin(), cat.end(), key) != cat.end()) {
-                    for (auto& it : ev.items()) { // get the original key from the EVENT, not CSV HEADER
-                        if (std::find(cat.begin(), cat.end(), it.key()) != cat.end()) {
-                            add_value_to_csv(ev, it.key());
-                            num_keys_added++;
-                            is_merged_key = true;
-                            break;
-                        }
-                    }
-                }
-				if (is_merged_key) break; // no need to check other categories
-            }
-			if (is_merged_key) break; // no need to check the rest of the csv header keys
-
-            // else check if this event has a value for this key
+            // check if this event has a value for this key
             if (ev.contains(key)) {
                 add_value_to_csv(ev, key);
                 num_keys_added++;
             }
-
             // else print "" to skip it
             else {
                 csv_output << "";
@@ -169,6 +151,7 @@ void create_timeline_csv(const std::vector<json>& events) {
         for (int i = num_keys_added; i < all_keys.size(); i++) {
             csv_output << ",";
 		}
+        csv_output.seekp(-1, std::ios_base::end); // remove the last ","
         csv_output << "\n";
         num_events_final++;
     }
@@ -187,6 +170,7 @@ std::vector<std::string> split(const std::string& s, char delim) {
     return result;
 }
 
+// TODO: store a mapping of PID -> exe_path, then add add column to csv header for process name, given by PID, e.g. 8600,Injector.exe
 int get_PID_by_name(std::string exe_name) {
     PROCESSENTRY32 pe;
     pe.dwSize = sizeof(PROCESSENTRY32);
@@ -208,6 +192,7 @@ int main(int argc, char* argv[]) {
     options.add_options()
         ("e,exe", "EDR Executable Name", cxxopts::value<std::string>())
         ("o,output", "The Path of the all-events.csv, default " + all_events_output_default, cxxopts::value<std::string>())
+        ("d,debug", "Print debug info")
         ("h,help", "Print usage");
 
     cxxopts::ParseResult result;
@@ -235,6 +220,10 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 	std::string exe_name = result["exe"].as<std::string>();
+
+    if (result.count("debug") > 0) {
+        debug = true;
+    }
 
     g_EDR_PID = get_PID_by_name(exe_name);
     std::cerr << "[*] EDRi: Got PID for " << exe_name << ": " << g_EDR_PID << "\n";

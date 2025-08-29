@@ -35,11 +35,11 @@ json attack_etw_to_json(Event e) {
             static_cast<__int64>(e.record.EventHeader.TimeStamp.QuadPart)
         );
         j[PID] = e.record.EventHeader.ProcessId;
-        j[TID] = e.record.EventHeader.ThreadId;
+        //j[TID] = e.record.EventHeader.ThreadId;
         j[PROVIDER_NAME] = wchar2string(e.schema.provider_name());
         j[EVENT_ID] = 13337;
 
-        std::wstring msg;
+        std::string msg;
         if (parser.try_parse(L"message", msg)) {
             j[TASK] = std::string(msg.begin(), msg.end());
         }
@@ -68,7 +68,7 @@ json krabs_etw_to_json(Event e) {
             static_cast<__int64>(e.record.EventHeader.TimeStamp.QuadPart)
             );
         j[PID] = e.record.EventHeader.ProcessId;  // the pid in the header should always be the EDR process
-        j[TID] = e.record.EventHeader.ThreadId;
+        //j[TID] = e.record.EventHeader.ThreadId;
         j[EVENT_ID] = e.schema.event_id(); // opcode is the same as event_id, sometimes just a different number
         j[PROVIDER_NAME] = wchar2string(e.schema.provider_name());
 
@@ -91,12 +91,23 @@ json krabs_etw_to_json(Event e) {
                     continue;
                 }
                 */
-                std::string jsonKey = wstring2string((std::wstring&)propertyName);
+                std::string key = wstring2string((std::wstring&)propertyName);
+
+                // check if it's a merged key --> write value to merged_key
+                // TODO, just append ";value" to existing? --> needs same type, is this possible?
+                for (const auto& cat : key_categories_to_merge) {
+                    if (std::find(cat.keys_to_merge.begin(), cat.keys_to_merge.end(), key) != cat.keys_to_merge.end()) {
+                        key = cat.merged_key;
+                        if (j.contains(key)) {
+                            std::cerr << "[*] ETW: Warning: Overwriting existing " << key << ":" << j[key] << "\n";
+                        }
+                    }
+                }
 
                 // Special cases
                 if (propertyName == L"ProtectionMask" || propertyName == L"LastProtectionMask") {
                     uint32_t protection_mask = parser.parse<uint32_t>(propertyName);
-                    j[jsonKey] = get_memory_region_protect(protection_mask);
+                    j[key] = get_memory_region_protect(protection_mask);
                     continue;
                 }
 
@@ -107,49 +118,49 @@ json krabs_etw_to_json(Event e) {
                     std::wstringstream wss;
                     wss << parser.parse<std::wstring>(propertyName);
                     std::string s = wstring2string((std::wstring&)wss.str());
-                    j[jsonKey] = s;
+                    j[key] = s;
                     break;
                 }
 
                 case TDH_INTYPE_ANSISTRING:
                 {
-                    j[jsonKey] = parser.parse<std::string>(propertyName);
+                    j[key] = parser.parse<std::string>(propertyName);
                     break;
                 }
 
                 case TDH_INTYPE_INT8:
                 {
-                    j[jsonKey] = (int32_t)parser.parse<CHAR>(propertyName);
+                    j[key] = (int32_t)parser.parse<CHAR>(propertyName);
                     break;
                 }
 
                 case TDH_INTYPE_UINT8:
                 {
-                    j[jsonKey] = (uint32_t)parser.parse<UCHAR>(propertyName);
+                    j[key] = (uint32_t)parser.parse<UCHAR>(propertyName);
                     break;
                 }
 
                 case TDH_INTYPE_UINT32:
                 {
-                    j[jsonKey] = (uint32_t)parser.parse<uint32_t>(propertyName);
+                    j[key] = (uint32_t)parser.parse<uint32_t>(propertyName);
                     break;
                 }
 
                 case TDH_INTYPE_UINT64:
                 {
-                    j[jsonKey] = (uint64_t)parser.parse<uint64_t>(propertyName);
+                    j[key] = (uint64_t)parser.parse<uint64_t>(propertyName);
                     break;
                 }
 
                 case TDH_INTYPE_BOOLEAN:
                 {
-                    j[jsonKey] = (bool)parser.parse<BOOL>(propertyName);
+                    j[key] = (bool)parser.parse<BOOL>(propertyName);
                     break;
                 }
 
                 case TDH_INTYPE_POINTER:
                 {
-                    j[jsonKey] = (uint64_t)parser.parse<PVOID>(propertyName);
+                    j[key] = (uint64_t)parser.parse<PVOID>(propertyName);
                     break;
                 }
 
@@ -159,7 +170,7 @@ json krabs_etw_to_json(Event e) {
                     ULARGE_INTEGER uli;
                     uli.LowPart = fileTime.dwLowDateTime;
                     uli.HighPart = fileTime.dwHighDateTime;
-                    j[jsonKey] = uli.QuadPart;
+                    j[key] = uli.QuadPart;
                     break;
                 }
 
@@ -169,11 +180,11 @@ json krabs_etw_to_json(Event e) {
                     LPWSTR sidString = nullptr;
                     if (ConvertSidToStringSidW(sid, &sidString)) {
                         std::wstring ws(sidString);
-                        j[jsonKey] = wstring2string(ws);
+                        j[key] = wstring2string(ws);
                         LocalFree(sidString);
                     }
                     else {
-                        j[jsonKey] = "invalid_sid";
+                        j[key] = "invalid_sid";
                     }
                     break;
                 }
@@ -182,7 +193,7 @@ json krabs_etw_to_json(Event e) {
                 {
                     std::ostringstream oss;
                     oss << "0x" << std::hex << std::uppercase << parser.parse<uint32_t>(propertyName);
-                    j[jsonKey] = oss.str();
+                    j[key] = oss.str();
                     break;
                 }
 
@@ -190,14 +201,14 @@ json krabs_etw_to_json(Event e) {
                 {
                     std::ostringstream oss;
                     oss << "0x" << std::hex << std::uppercase << parser.parse<uint64_t>(propertyName);
-                    j[jsonKey] = oss.str();
+                    j[key] = oss.str();
                     break;
                 }
 
                 default:
                 {
-                    std::cout << "[*] ETW: Warning: Unsupported property type " << propertyType << " for " << j[TASK] << "'s " << jsonKey << "\n";
-                    j[jsonKey] = "unsupported";
+                    std::cout << "[*] ETW: Warning: Unsupported property type " << propertyType << " for " << j[TASK] << "'s " << key << "\n";
+                    j[key] = "unsupported";
                     break;
                 }
                 }
