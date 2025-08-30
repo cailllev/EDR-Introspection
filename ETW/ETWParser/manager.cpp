@@ -8,16 +8,14 @@
 #include <string.h>
 #include <unordered_map>
 #include <vector>
-#include <windows.h>
-#include <tlhelp32.h> // import after windows.h, else all breaks, that's crazy, yo
 #include <wchar.h>
 
 #include "cxxopts.hpp"
 #include "json.hpp"
-#include "etwreader.h"
 #include "globals.h"
-#include "parser.h"
-#include "filter.h"
+#include "utils.h"
+#include "etwreader.h"
+#include "manager.h"
 
 /*
 - creates krabs ETW traces for Antimalware, Kernel, etc. and the attack provider
@@ -34,36 +32,8 @@ int g_injected_PID = 0;  // is set with the incoming ETW events
 std::ostringstream csv_output;
 
 // more debug info
-bool debug = false;
-
-
-// TODO MOOOORE
-// filter events based on known exclude values (e.g. wrong PID for given event id)
-bool filter(json event) {
-    for (auto event_id : event_ids_with_pids) {
-        if (event[EVENT_ID] == event_id) {
-            return event[PID] != g_attack_PID || event[PID] != g_injected_PID; // todo does not work
-        }
-    }
-
-    for (auto event_id : event_ids_with_target_pids) {
-        if (event[EVENT_ID] == event_id) {
-            return true; // TODO, how to filter
-        }
-    }
-
-    for (auto event_id : event_ids_with_pid_in_data) {
-        if (event[EVENT_ID] == event_id) {
-            if (event.contains("Data")) {
-                return event["Data"] == g_attack_PID || event["Data"] == g_injected_PID;
-            }
-            if (debug) {
-                std::cout << "[-] ETW: Warning: Event with ID " << event_id << " missing data field: " << event.dump() << "\n";
-            }
-            return true; // unexpected event fields, do not filter
-        }
-    }
-}
+bool g_debug = false;
+// TODO super debug (for filtered out events)
 
 // translate device paths to drive letters
 std::string translate_if_path(const std::string& s) {
@@ -88,13 +58,12 @@ void add_value_to_csv(json ev, std::string key) {
     }
 }
 
-
 // output all events as a sparse CSV timeline with merged PPID and FilePath
 void create_timeline_csv(const std::vector<json>& events) {
     std::vector<std::string> all_keys;
     for (const auto& k : csv_header_start) {
         all_keys.push_back(k);
-        if (debug) {
+        if (g_debug) {
 			std::cout << "[+] EDRi: Added predefined key for CSV header: " << k << "\n";
         }
     }
@@ -107,7 +76,7 @@ void create_timeline_csv(const std::vector<json>& events) {
 
 			// or insert new key
             all_keys.push_back(it.key());
-            if (debug) {
+            if (g_debug) {
                 std::cout << "[+] EDRi: Added new key for CSV header: " << it.key() << "\n";
             }
         }
@@ -124,12 +93,6 @@ void create_timeline_csv(const std::vector<json>& events) {
 
     // print each event as a row
     for (const auto& ev : events) {
-        if (!filter(ev)) {
-            if (debug) {
-                std::cout << "[-] ETW: Filtered out event: " << ev.dump() << "\n";
-            }
-            continue;
-        }
 		int num_keys_added = 0; // all rows must have the same number of columns (commas)
 
         // traverse keys IN ORDER OF CSV HEADER
@@ -155,35 +118,6 @@ void create_timeline_csv(const std::vector<json>& events) {
         csv_output << "\n";
         num_events_final++;
     }
-	std::cout << "[*] EDRi: Got " << num_events_final << " events after filtering\n";
-}
-
-// https://stackoverflow.com/questions/14265581/parse-split-a-string-in-c-using-string-delimiter-standard-c#answer-46931770
-std::vector<std::string> split(const std::string& s, char delim) {
-    std::vector<std::string> result;
-    std::stringstream ss(s);
-    std::string item;
-
-    while (getline(ss, item, delim)) {
-        result.push_back(item);
-    }
-    return result;
-}
-
-// TODO: store a mapping of PID -> exe_path, then add add column to csv header for process name, given by PID, e.g. 8600,Injector.exe
-int get_PID_by_name(std::string exe_name) {
-    PROCESSENTRY32 pe;
-    pe.dwSize = sizeof(PROCESSENTRY32);
-    HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-    if (Process32First(snapshot, &pe)) {
-        while (Process32Next(snapshot, &pe)) {
-            if (wcscmp(pe.szExeFile, std::wstring(exe_name.begin(), exe_name.end()).c_str()) == 0) {
-                return pe.th32ProcessID;
-            }
-        }
-    }
-    std::cerr << "[!] EDRi: Unable to find PID for: " << exe_name;
-    exit(1);
 }
 
 int main(int argc, char* argv[]) {
@@ -206,6 +140,7 @@ int main(int argc, char* argv[]) {
 	}
     std::cout << "[*] EDRi: EDR Introspection Framework\n";
 
+    // PARSING
     std::string output;
     if (result.count("o") == 0) {
         output = all_events_output_default;
@@ -222,12 +157,18 @@ int main(int argc, char* argv[]) {
 	std::string exe_name = result["exe"].as<std::string>();
 
     if (result.count("debug") > 0) {
-        debug = true;
+        g_debug = true;
     }
 
+    // PREPARATION
     g_EDR_PID = get_PID_by_name(exe_name);
+    if (g_EDR_PID == 0) {
+        std::cerr << "[!] EDRi: Unable to find PID for: " << exe_name;
+        exit(1);
+    }
     std::cerr << "[*] EDRi: Got PID for " << exe_name << ": " << g_EDR_PID << "\n";
 
+    // TRACKING
     std::vector<HANDLE> threads;
     if (!start_etw_reader(threads)) { // try to start trace
         exit(1);
@@ -245,10 +186,12 @@ int main(int argc, char* argv[]) {
 
 	// wait until the attack and injection is done, i.e. event_id 73 with "Termination"
     // TODO non defender "attack done" filter
+    std::cout << "[+] EDRi: Waiting for attack to finish...\n";
     while (!g_attack_done) {
-		std::cout << "[+] EDRi: Waiting for attack to finish...\n";
-        Sleep(1000);
+        Sleep(100);
 	}
+    std::cout << "[+] EDRi: Waiting for any final events...\n";
+    Sleep(1000);
 
     std::vector<json> events = get_events();
     std::cout << "[*] EDRi: Stopping traces\n";

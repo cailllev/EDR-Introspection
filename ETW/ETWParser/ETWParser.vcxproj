@@ -126,7 +126,7 @@
   <ItemGroup>
     <ClCompile Include="cxxopts.hpp" />
     <ClCompile Include="etwreader.cpp" />
-    <ClCompile Include="parser.cpp" />
+    <ClCompile Include="manager.cpp" />
     <ClCompile Include="profile.cpp" />
     <ClCompile Include="utils.cpp" />
   </ItemGroup>
@@ -134,7 +134,7 @@
     <ClInclude Include="etwreader.h" />
     <ClInclude Include="filter.h" />
     <ClInclude Include="globals.h" />
-    <ClInclude Include="parser.h" />
+    <ClInclude Include="manager.h" />
     <ClInclude Include="profile.h" />
     <ClInclude Include="utils.h" />
   </ItemGroup>
