@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="parser.cpp">
+    <ClCompile Include="manager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="etwreader.cpp">
@@ -44,7 +44,7 @@
     <ClInclude Include="profile.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="parser.h">
+    <ClInclude Include="manager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="filter.h">

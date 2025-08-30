@@ -6,43 +6,6 @@
 
 #include "utils.h"
 
-LONGLONG get_usn(std::string filepath) {
-    std::wstring f = std::wstring(filepath.begin(), filepath.end());
-    HANDLE hFile = CreateFileW(
-        f.c_str(),
-        GENERIC_READ,
-        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-        nullptr,
-        OPEN_EXISTING,
-        FILE_FLAG_BACKUP_SEMANTICS,
-        nullptr
-    );
-
-    if (hFile == INVALID_HANDLE_VALUE) {
-        std::cerr << "[!] Utils: Cannot open " << filepath.c_str() << ", " << GetLastError() << "\n";
-        return 0;
-    }
-
-    DWORD bytesReturned;
-    // enough space for USN_RECORD_V2
-    BYTE buffer[sizeof(USN_RECORD_V2) + 1024] = {};
-
-    if (!DeviceIoControl(
-        hFile,
-        FSCTL_READ_FILE_USN_DATA,
-        nullptr, 0,
-        buffer, sizeof(buffer),
-        &bytesReturned,
-        nullptr)) {
-        std::cerr << "[!] Utils: DeviceIoControl failed for " << filepath.c_str() << ", " << GetLastError() << "\n";
-        CloseHandle(hFile);
-        return 1;
-    }
-
-    auto* usnData = reinterpret_cast<USN_RECORD_V2*>(buffer);
-    CloseHandle(hFile);
-    return usnData->Usn;
-}
 
 // TODO: store a mapping of PID -> exe_path, then add add column to csv header for process name, given by PID, e.g. 8600,Injector.exe
 int get_PID_by_name(std::string exe_name) {

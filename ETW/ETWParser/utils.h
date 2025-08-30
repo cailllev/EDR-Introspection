@@ -11,5 +11,4 @@ std::string filetime_to_iso8601(__int64 timestamp);
 
 char* get_memory_region_protect(DWORD protect);
 
-LONGLONG get_usn(std::string filepath);
 int get_PID_by_name(std::string);

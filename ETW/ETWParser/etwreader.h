@@ -21,9 +21,13 @@ static const std::string PROVIDER_NAME = "provider_name";
 
 static const std::string attack_exe_path = "C:\\Users\\hacker\\source\\repos\\EDR-Introspection\\x64\\Release\\Injector.exe";
 static const std::string injected_exe_path = "C:\\Program Files\\WindowsApps\\Microsoft.WindowsNotepad_11.2506.35.0_x64__8wekyb3d8bbwe\\Notepad\\Notepad.exe";
+static const std::string shellcode_exe_path = "C:\\Program Files\\WindowsApps\\Microsoft.WindowsCalculator_11.2502.2.0_x64__8wekyb3d8bbwe\\CalculatorApp.exe";
 
 static const std::string attack_exe_name = attack_exe_path.substr(attack_exe_path.find_last_of("\\") + 1);
 static const std::string injected_exe_name = injected_exe_path.substr(injected_exe_path.find_last_of("\\") + 1);
+static const std::string shellcode_exe_name = shellcode_exe_path.substr(shellcode_exe_path.find_last_of("\\") + 1);
+
+static const std::vector<std::string> exe_paths_to_track = { attack_exe_path, injected_exe_path, shellcode_exe_path };
 
 // keys that get merged together
 struct MergeCategory {
@@ -32,12 +36,6 @@ struct MergeCategory {
 };
 
 // keys to merge for PPID and FilePath
-MergeCategory ppid_keys = {
-    "PPID",
-    {"Parent PID", "TPID"} // Target PID, TargetPID?
-};
-MergeCategory filepath_keys = {
-    "FilePath",
-    {"Base Path", "FileName", "File Name", "filepath", "File Path", "Image Path", "Image Name", "Path", "Process Image Path", "Name", "Reason Image Path"}
-};
-std::vector<MergeCategory> key_categories_to_merge = { ppid_keys, filepath_keys };
+extern MergeCategory ppid_keys;
+extern MergeCategory filepath_keys;
+extern std::vector<MergeCategory> key_categories_to_merge;

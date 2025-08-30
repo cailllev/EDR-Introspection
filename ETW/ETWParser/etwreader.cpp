@@ -3,6 +3,7 @@
 #include "globals.h"
 #include "utils.h"
 #include "etwreader.h"
+#include "filter.h"
 
 
 struct Event {
@@ -17,10 +18,87 @@ int errors = 0;
 bool g_trace_running = false;
 bool g_attack_done = false;
 
+// keys to merge for PPID and FilePath
+MergeCategory ppid_keys = {
+    "PPID",
+    {"Parent PID", "TPID"} // TargetPID?
+};
+MergeCategory filepath_keys = {
+    "FilePath",
+    {"BasePath", "FileName", "filepath", "File Path", "ImagePath", "ImageName", "Path", "ProcessImagePath", "Name", "ReasonImagePath"}
+};
+std::vector<MergeCategory> key_categories_to_merge = { ppid_keys, filepath_keys };
+
 
 std::vector<json> get_events() {
     std::cout << "[+] ETW: Got " << etw_events.size() << " events\n";
     return etw_events;
+}
+
+
+// filter events based on known exclude values (e.g. wrong PID for given event id)
+bool filter_out(json event) {
+    // events to remove
+    if (std::find(event_ids_to_remove.begin(), event_ids_to_remove.end(), event[EVENT_ID]) != event_ids_to_remove.end()) {
+        return true;
+	}
+
+    // events to keep if PID matches
+    if (std::find(event_ids_with_pid.begin(), event_ids_with_pid.end(), event[EVENT_ID]) != event_ids_with_pid.end()) {
+        return event[PID] != g_attack_PID && event[PID] != g_injected_PID;
+	}
+
+	// events to keep if PID or TargetPID matches
+    if (std::find(event_ids_with_pid_or_tpid.begin(), event_ids_with_pid_or_tpid.end(), event[EVENT_ID]) != event_ids_with_pid_or_tpid.end()) {
+        if (event.contains("TargetPID")) {
+            return event[PID] != g_attack_PID && event[PID] != g_injected_PID && event["TargetPID"] != g_attack_PID && event["TargetPID"] != g_injected_PID;
+		}
+        if (g_debug) {
+            std::cout << "[-] ETW: Warning: Event with ID " << event[EVENT_ID] << " missing TargetPID field: " << event.dump() << "\n";
+        }
+        return false;
+    }
+
+	// events to keep if PID in Data matches
+    if (std::find(event_ids_with_pid_in_data.begin(), event_ids_with_pid_in_data.end(), event[EVENT_ID]) != event_ids_with_pid_in_data.end()) {
+        if (event.contains("Data")) {
+            return event["Data"] != g_attack_PID && event["Data"] != g_injected_PID;
+        }
+        if (g_debug) {
+            std::cout << "[-] ETW: Warning: Event with ID " << event[EVENT_ID] << " missing Data field: " << event.dump() << "\n";
+        }
+        return false; // unexpected event fields, do not filter
+	}
+
+	// events to keep if Message contains filter string
+    if (std::find(event_ids_with_message.begin(), event_ids_with_message.end(), event[EVENT_ID]) != event_ids_with_message.end()) {
+        if (event.contains("Message")) {
+            std::string msg = event["Message"].get<std::string>();
+            std::transform(msg.begin(), msg.end(), msg.begin(), ::tolower);
+            if (msg.find("injector.exe") != std::string::npos || 
+                msg.find("microsoft.windowsnotepad") != std::string::npos || 
+                msg.find("microsoft.windowscalculator") != std::string::npos ) {
+                return true; // TODO does not filter
+            }
+        }
+        if (g_debug) {
+            std::cout << "[-] ETW: Warning: Event with ID " << event[EVENT_ID] << " missing Message field: " << event.dump() << "\n";
+        }
+        return false;
+    }
+
+    // events to keep if filepath matches
+    if (std::find(event_ids_with_filepath.begin(), event_ids_with_filepath.end(), event[EVENT_ID]) != event_ids_with_filepath.end()) {
+        if (event.contains("FilePath")) {
+            return std::strcmp(event["FilePath"].get<std::string>().c_str(), attack_exe_path.c_str());
+        }
+        if (g_debug) {
+            std::cout << "[-] ETW: Warning: Event with ID " << event[EVENT_ID] << " missing FilePath field: " << event.dump() << "\n";
+        }
+        return false; // unexpected event fields, do not filter
+    }
+
+	return false; // else do not filter
 }
 
 
@@ -222,27 +300,29 @@ json krabs_etw_to_json(Event e) {
 
         // check if the attack_PID and injected_PID can be set, TODO more elegant
         if (g_attack_PID == 0 && j[EVENT_ID] == 73) {
-            if (j.contains("filepath") && j["filepath"] == attack_exe_path) {
+            if (j.contains("FilePath") && j["FilePath"] == attack_exe_path) {
                 g_attack_PID = j[PID];
+                std::cout << "[+] ETW: Got attack PID: " << g_attack_PID << "\n";
             }
         }
         if (g_injected_PID == 0 && j[EVENT_ID] == 73) {
-            if (j.contains("filepath") && j["filepath"] == injected_exe_path) {
+            if (j.contains("FilePath") && j["FilePath"] == injected_exe_path) {
                 g_injected_PID = j[PID];
+                std::cout << "[+] ETW: Got injected PID: " << g_injected_PID << "\n";
             }
         }
 
 		// check if the attack is done
         if (!g_attack_done && j[PID] == g_attack_PID && j[EVENT_ID] == 73 && j["Source"] == "Termination") {
             g_attack_done = true;
+            std::cout << "[+] ETW: Detected termination of attack PID\n";
 		}
 
         // callstack
         try {
             j["stack_trace"] = json::array();
-            auto stack_trace = e.schema.stack_trace();
             int idx = 0;
-            for (auto& return_address : stack_trace)
+            for (auto& return_address : e.schema.stack_trace())
             {
                 // Only add non-kernelspace addresses
                 if (return_address < 0xFFFF080000000000) {
@@ -253,7 +333,6 @@ json krabs_etw_to_json(Event e) {
                     idx++;
                 }
             }
-
         }
         catch (const std::exception& ex) {
             std::cerr << "[!] ETW: Failed to parse " << j[TASK] << "'s call stack: " << ex.what() << "\n";
@@ -301,7 +380,17 @@ void event_callback(const EVENT_RECORD& record, const krabs::trace_context& trac
         }
 
 		// convert it to json NOW or lose the property values
-        etw_events.push_back(krabs_etw_to_json(Event{ record, schema }));
+        json ev = krabs_etw_to_json(Event{ record, schema });
+
+        // check if event can be filtered out
+        if (filter_out(ev)) {
+            if (g_debug) {
+                std::cout << "[-] ETW: Filtered out event: " << ev.dump() << "\n";
+            }
+        }
+        else {
+            etw_events.push_back(ev);
+        }
     }
     catch (const std::exception& e) {
         std::cerr << "[!] ETW: event_callback exception: " << e.what();
