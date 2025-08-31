@@ -28,38 +28,46 @@ int g_EDR_PID = 0;  // is set with get_PID_by_name
 int g_attack_PID = 0;  // is set with the incoming ETW events
 int g_injected_PID = 0;  // is set with the incoming ETW events
 
-// the csv output
-std::ostringstream csv_output;
+// currently running processes
+std::map<int, std::string> g_running_procs;
 
 // more debug info
 bool g_debug = false;
-// TODO super debug (for filtered out events)
+bool g_super_debug = false;
 
 // translate device paths to drive letters
 std::string translate_if_path(const std::string& s) {
-    std::string to_replace = "\\Device\\HarddiskVolume4\\";
+    std::vector<std::string> to_replace = { "\\Device\\HarddiskVolume4\\", "\\\\?\\C:\\" };
     std::string replacement = "C:\\";
-    size_t idx = s.find(to_replace);
-    if (idx != std::string::npos) {
-        return s.substr(0, idx) + replacement + s.substr(idx + to_replace.length());
-    }
-    return s;
+	std::string s2 = s;
+    for (const auto& tr : to_replace) {
+        size_t idx = s.find(tr);
+        if (idx != std::string::npos) {
+            s2 = s2.substr(0, idx) + replacement + s2.substr(idx + tr.length());
+            if (g_debug) {
+                std::cout << "[~] EDRi: Translated path " << s << " to " << s2 << "\n";
+            }
+        }
+	}
+    return s2;
 }
 
-void add_value_to_csv(json ev, std::string key) {
+std::string normalized_value(json ev, std::string key) {
     if (ev[key].is_string()) {
         std::string s = ev[key].get<std::string>();
         s = translate_if_path(s);
         std::replace(s.begin(), s.end(), '"', '\'');
-        csv_output << "\"" << s << "\"";
+        return "\"" + s + "\"";
     }
     else {
-        csv_output << ev[key].dump();
+        return ev[key].dump();
     }
 }
 
 // output all events as a sparse CSV timeline with merged PPID and FilePath
-void create_timeline_csv(const std::vector<json>& events) {
+std::string create_timeline_csv(const std::vector<json>& events) {
+    std::ostringstream csv_output;
+
     std::vector<std::string> all_keys;
     for (const auto& k : csv_header_start) {
         all_keys.push_back(k);
@@ -68,7 +76,7 @@ void create_timeline_csv(const std::vector<json>& events) {
         }
     }
 
-    // collect all property keys except merged ones, set automatically rejects duplicates
+    // collect all property keys except merged ones
     for (const auto& ev : events) {
         for (auto it = ev.begin(); it != ev.end(); ++it) {
             // skip already inserted keys
@@ -100,7 +108,7 @@ void create_timeline_csv(const std::vector<json>& events) {
         for (const auto& key : all_keys) {
             // check if this event has a value for this key
             if (ev.contains(key)) {
-                add_value_to_csv(ev, key);
+                csv_output << normalized_value(ev, key);
                 num_keys_added++;
             }
             // else print "" to skip it
@@ -118,6 +126,7 @@ void create_timeline_csv(const std::vector<json>& events) {
         csv_output << "\n";
         num_events_final++;
     }
+	return csv_output.str();
 }
 
 int main(int argc, char* argv[]) {
@@ -127,6 +136,7 @@ int main(int argc, char* argv[]) {
         ("e,exe", "EDR Executable Name", cxxopts::value<std::string>())
         ("o,output", "The Path of the all-events.csv, default " + all_events_output_default, cxxopts::value<std::string>())
         ("d,debug", "Print debug info")
+        ("v,verbose-debug", "Print very verbose debug info")
         ("h,help", "Print usage");
 
     cxxopts::ParseResult result;
@@ -159,14 +169,21 @@ int main(int argc, char* argv[]) {
     if (result.count("debug") > 0) {
         g_debug = true;
     }
+    if (result.count("verbose-debug") > 0) {
+        g_debug = true;
+        g_super_debug = true;
+	}
 
     // PREPARATION
-    g_EDR_PID = get_PID_by_name(exe_name);
+    g_running_procs = snapshot_procs();
+    g_EDR_PID = get_PID_by_name(g_running_procs, exe_name);
     if (g_EDR_PID == 0) {
         std::cerr << "[!] EDRi: Unable to find PID for: " << exe_name;
         exit(1);
     }
     std::cerr << "[*] EDRi: Got PID for " << exe_name << ": " << g_EDR_PID << "\n";
+
+    // TODO unencrypt attack exe and store to disk
 
     // TRACKING
     std::vector<HANDLE> threads;
@@ -191,9 +208,8 @@ int main(int argc, char* argv[]) {
         Sleep(100);
 	}
     std::cout << "[+] EDRi: Waiting for any final events...\n";
-    Sleep(1000);
+    Sleep(2000);
 
-    std::vector<json> events = get_events();
     std::cout << "[*] EDRi: Stopping traces\n";
     stop_etw_reader();
     DWORD res = WaitForMultipleObjects((DWORD)threads.size(), threads.data(), TRUE, INFINITE);
@@ -202,10 +218,20 @@ int main(int argc, char* argv[]) {
     }
     std::cout << "[*] EDRi: All " << threads.size() << " threads finished\n";
 
-    create_timeline_csv(events);
+    std::vector<json> events = get_events();
+    std::string csv_output = create_timeline_csv(events);
 	std::ofstream out(output);
-	out << csv_output.str();
+	out << csv_output;
 	out.close();
+
+    if (g_super_debug) {
+        std::vector<json> events_unfiltered = get_events_unfiltered();
+        std::string csv_output_unfiltered = create_timeline_csv(events_unfiltered);
+        std::string output_unfiltered = output.substr(0, output.find_last_of('.')) + "-unfiltered.csv";
+        std::ofstream out2(output_unfiltered);
+        out2 << csv_output_unfiltered;
+        out2.close();
+	}
 
     std::cout << "[*] EDRi: Done\n";
 	return 0;

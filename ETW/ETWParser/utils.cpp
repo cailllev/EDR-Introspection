@@ -7,20 +7,29 @@
 #include "utils.h"
 
 
-// TODO: store a mapping of PID -> exe_path, then add add column to csv header for process name, given by PID, e.g. 8600,Injector.exe
-int get_PID_by_name(std::string exe_name) {
+std::map<int, std::string> snapshot_procs() {
+    std::map<int, std::string> pid_name_map;
     PROCESSENTRY32 pe;
     pe.dwSize = sizeof(PROCESSENTRY32);
     HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (Process32First(snapshot, &pe)) {
         while (Process32Next(snapshot, &pe)) {
-            if (wcscmp(pe.szExeFile, std::wstring(exe_name.begin(), exe_name.end()).c_str()) == 0) {
-                return pe.th32ProcessID;
-            }
+            pid_name_map[pe.th32ProcessID] = wchar2string(pe.szExeFile);
         }
     }
-    return 0;
+    return pid_name_map;
 }
+
+// returns the PID of the first match, ignores other same-named processes
+int get_PID_by_name(std::map<int, std::string> procs, std::string name) {
+    for (auto it = procs.begin(); it != procs.end(); ++it) {
+        if (it->second == name) {
+            return it->first;
+        }
+    }
+    return 0; // not found
+}
+
 
 // all stolen from https://github.com/dobin/RedEdr
 
