@@ -1,5 +1,6 @@
 #pragma once
 
+#include <map>
 #include <string>
 
 // all stolen from https://github.com/dobin/RedEdr
@@ -11,4 +12,5 @@ std::string filetime_to_iso8601(__int64 timestamp);
 
 char* get_memory_region_protect(DWORD protect);
 
-int get_PID_by_name(std::string);
+int get_PID_by_name(std::map<int, std::string>, std::string);
+std::map<int, std::string> snapshot_procs();

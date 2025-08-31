@@ -17,7 +17,7 @@ TRACELOGGING_DEFINE_PROVIDER(
     (0x72248466, 0x7166, 0x4feb, 0xa3, 0x86, 0x34, 0xd8, 0xf3, 0x5b, 0xb6, 0x37)  // a random GUID
 );
 
-int sleep_between_steps_ms = 200; // time to wait between attack steps
+int sleep_between_steps_ms = 970; // time to wait between attack steps
 
 
 void print_and_emit_event(std::string msg) {
@@ -86,7 +86,8 @@ int main(int argc, char** argv) {
     STARTUPINFO si = { sizeof(si) };
     PROCESS_INFORMATION pi;
     if (!CreateProcess(newProcessToInjectTo, nullptr, nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) {
-        std::cerr << "[!] Failed to start process: " << GetLastError() << "\n";
+        msg << "[!] Failed to start process: " << GetLastError();
+        print_and_emit_event(msg.str()); msg.str("");
         return 1;
     }
 
@@ -100,7 +101,8 @@ int main(int argc, char** argv) {
     // open process with read/write access
     HANDLE hProcess = OpenProcess(PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE, FALSE, pi.dwProcessId);
     if (!hProcess) {
-        std::cerr << "[!] Failed to open process: " << GetLastError() << "\n";
+        msg << "[!] Failed to open process: " << GetLastError();
+        print_and_emit_event(msg.str()); msg.str("");
         return 1;
     }
 
@@ -122,7 +124,8 @@ int main(int argc, char** argv) {
 		Sleep(sleep_between_steps_ms);
     }
     else {
-        std::cerr << "[!] Failed to allocate memory: " << GetLastError() << "\n";
+        msg << "[!] Failed to allocate memory: " << GetLastError();
+        print_and_emit_event(msg.str()); msg.str("");
         return 1;
     }
 
@@ -137,7 +140,8 @@ int main(int argc, char** argv) {
         Sleep(sleep_between_steps_ms);
     }
     else {
-        std::cerr << "[!] Failed to write memory: " << GetLastError() << "\n";
+        msg << "[!] Failed to write memory: " << GetLastError();
+        print_and_emit_event(msg.str()); msg.str("");
         return 1;
     }
 
@@ -152,7 +156,8 @@ int main(int argc, char** argv) {
 		Sleep(sleep_between_steps_ms);
     }
     else {
-        std::cerr << "[!] Failed to change memory protection: " << GetLastError() << "\n";
+        msg << "[!] Failed to change memory protection: " << GetLastError();
+        print_and_emit_event(msg.str()); msg.str("");
         VirtualFreeEx(hProcess, remote_addr, 0, MEM_RELEASE);
         CloseHandle(hProcess);
         return 1;
@@ -169,7 +174,8 @@ int main(int argc, char** argv) {
 		Sleep(sleep_between_steps_ms);
     }
     else {
-        std::cerr << "[!] Failed to create remote thread: " << GetLastError() << "\n";
+        msg << "[!] Failed to create remote thread: " << GetLastError();
+        print_and_emit_event(msg.str()); msg.str("");
         return 1;
 	}
 

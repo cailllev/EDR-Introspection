@@ -11,6 +11,7 @@ struct Event {
     const krabs::schema schema;
 };
 std::vector<json> etw_events;
+std::vector<json> etw_events_unfiltered;
 
 krabs::user_trace trace_user(L"EDRi");
 bool extensive = false; // enable more providers and events
@@ -31,8 +32,13 @@ std::vector<MergeCategory> key_categories_to_merge = { ppid_keys, filepath_keys 
 
 
 std::vector<json> get_events() {
-    std::cout << "[+] ETW: Got " << etw_events.size() << " events\n";
+    std::cout << "[+] ETW: Got " << etw_events.size() << " filtered events\n";
     return etw_events;
+}
+
+std::vector<json> get_events_unfiltered() {
+    std::cout << "[+] ETW: Got " << etw_events_unfiltered.size() << " unfiltered events\n";
+    return etw_events_unfiltered;
 }
 
 
@@ -53,10 +59,10 @@ bool filter_out(json event) {
         if (event.contains("TargetPID")) {
             return event[PID] != g_attack_PID && event[PID] != g_injected_PID && event["TargetPID"] != g_attack_PID && event["TargetPID"] != g_injected_PID;
 		}
-        if (g_debug) {
+        else if (g_debug) {
             std::cout << "[-] ETW: Warning: Event with ID " << event[EVENT_ID] << " missing TargetPID field: " << event.dump() << "\n";
         }
-        return false;
+        return false; // unexpected event fields, do not filter
     }
 
 	// events to keep if PID in Data matches
@@ -64,27 +70,28 @@ bool filter_out(json event) {
         if (event.contains("Data")) {
             return event["Data"] != g_attack_PID && event["Data"] != g_injected_PID;
         }
-        if (g_debug) {
+        else if (g_debug) {
             std::cout << "[-] ETW: Warning: Event with ID " << event[EVENT_ID] << " missing Data field: " << event.dump() << "\n";
         }
         return false; // unexpected event fields, do not filter
 	}
 
-	// events to keep if Message contains filter string
+	// events to keep if Message contains filter string (case insensitive)
     if (std::find(event_ids_with_message.begin(), event_ids_with_message.end(), event[EVENT_ID]) != event_ids_with_message.end()) {
         if (event.contains("Message")) {
             std::string msg = event["Message"].get<std::string>();
-            std::transform(msg.begin(), msg.end(), msg.begin(), ::tolower);
-            if (msg.find("injector.exe") != std::string::npos || 
+            std::transform(msg.begin(), msg.end(), msg.begin(), [](unsigned char c) { return std::tolower(c); });
+            if (msg.find("injector.exe") != std::string::npos  || 
                 msg.find("microsoft.windowsnotepad") != std::string::npos || 
                 msg.find("microsoft.windowscalculator") != std::string::npos ) {
-                return true; // TODO does not filter
+				return false; // do not filter if any of the strings match
             }
+			return true; // else filter out
         }
-        if (g_debug) {
+        else if (g_debug) {
             std::cout << "[-] ETW: Warning: Event with ID " << event[EVENT_ID] << " missing Message field: " << event.dump() << "\n";
         }
-        return false;
+        return false; // unexpected event fields, do not filter
     }
 
     // events to keep if filepath matches
@@ -92,13 +99,13 @@ bool filter_out(json event) {
         if (event.contains("FilePath")) {
             return std::strcmp(event["FilePath"].get<std::string>().c_str(), attack_exe_path.c_str());
         }
-        if (g_debug) {
+        else if (g_debug) {
             std::cout << "[-] ETW: Warning: Event with ID " << event[EVENT_ID] << " missing FilePath field: " << event.dump() << "\n";
         }
         return false; // unexpected event fields, do not filter
     }
 
-	return false; // else do not filter
+	return false; // do not filter unregistered event ids
 }
 
 
@@ -113,9 +120,19 @@ json attack_etw_to_json(Event e) {
             static_cast<__int64>(e.record.EventHeader.TimeStamp.QuadPart)
         );
         j[PID] = e.record.EventHeader.ProcessId;
-        //j[TID] = e.record.EventHeader.ThreadId;
         j[PROVIDER_NAME] = wchar2string(e.schema.provider_name());
         j[EVENT_ID] = 13337;
+
+        // get attack exe name
+        if (g_running_procs.find(j[PID]) == g_running_procs.end()) {
+            if (g_debug) {
+                std::cout << "[!] ETW: Warning: PID " << j[PID] << " not found in running procs\n";
+            }
+            j[EXE] = "<not found>";
+        }
+        else {
+            j[EXE] = g_running_procs[j[PID]];
+        }
 
         std::string msg;
         if (parser.try_parse(L"message", msg)) {
@@ -299,17 +316,33 @@ json krabs_etw_to_json(Event e) {
         }
 
         // check if the attack_PID and injected_PID can be set, TODO more elegant
-        if (g_attack_PID == 0 && j[EVENT_ID] == 73) {
+        if (g_attack_PID == 0 && j[EVENT_ID] == PROC_START_EVENT_ID) {
             if (j.contains("FilePath") && j["FilePath"] == attack_exe_path) {
                 g_attack_PID = j[PID];
                 std::cout << "[+] ETW: Got attack PID: " << g_attack_PID << "\n";
             }
         }
-        if (g_injected_PID == 0 && j[EVENT_ID] == 73) {
+        if (g_injected_PID == 0 && j[EVENT_ID] == PROC_START_EVENT_ID) {
             if (j.contains("FilePath") && j["FilePath"] == injected_exe_path) {
                 g_injected_PID = j[PID];
                 std::cout << "[+] ETW: Got injected PID: " << g_injected_PID << "\n";
             }
+        }
+
+        // add newly spawned procs to process map
+        if (j[EVENT_ID] == PROC_START_EVENT_ID) {
+            std::string exe_path = j["FilePath"].get<std::string>();
+            g_running_procs[j[PID]] = exe_path.substr(exe_path.find_last_of("\\") + 1);
+        }
+        // then add exe name
+        if (g_running_procs.find(j[PID]) == g_running_procs.end()) {
+            if (g_debug) {
+                std::cout << "[!] ETW: Warning: PID " << j[PID] << " not found in running procs\n";
+            }
+            j[EXE] = "<not found>";
+        }
+        else {
+            j[EXE] = g_running_procs[j[PID]];
         }
 
 		// check if the attack is done
@@ -381,10 +414,11 @@ void event_callback(const EVENT_RECORD& record, const krabs::trace_context& trac
 
 		// convert it to json NOW or lose the property values
         json ev = krabs_etw_to_json(Event{ record, schema });
+		etw_events_unfiltered.push_back(ev);
 
         // check if event can be filtered out
         if (filter_out(ev)) {
-            if (g_debug) {
+            if (g_super_debug) {
                 std::cout << "[-] ETW: Filtered out event: " << ev.dump() << "\n";
             }
         }
