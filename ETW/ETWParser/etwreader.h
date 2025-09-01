@@ -7,20 +7,21 @@
 
 #include "globals.h"
 
-bool start_etw_reader(std::vector<HANDLE>& threads);
-void stop_etw_reader();
+bool start_etw_traces(std::vector<HANDLE>& threads);
+void stop_etw_traces();
 std::vector<json> get_events();
 std::vector<json> get_events_unfiltered();
+void print_etw_counts();
 
 static const std::string TYPE = "type";
 static const std::string TIMESTAMP = "timestamp";
 static const std::string PID = "PID";
+static const std::string TID = "TID";
 static const std::string EXE = "Exe";
 static const std::string TASK = "task";
 static const std::string EVENT_ID = "event_id";
 static const std::string PROVIDER_NAME = "provider_name";
 
-static const std::string attack_exe_path = "C:\\Users\\hacker\\source\\repos\\EDR-Introspection\\x64\\Release\\Injector.exe";
 static const std::string injected_exe_path = "C:\\Program Files\\WindowsApps\\Microsoft.WindowsNotepad_11.2506.35.0_x64__8wekyb3d8bbwe\\Notepad\\Notepad.exe";
 static const std::string shellcode_exe_path = "C:\\Program Files\\WindowsApps\\Microsoft.WindowsCalculator_11.2502.2.0_x64__8wekyb3d8bbwe\\CalculatorApp.exe";
 
@@ -38,5 +39,6 @@ struct MergeCategory {
 
 // keys to merge for PPID and FilePath
 extern MergeCategory ppid_keys;
+extern MergeCategory tpid_keys;
 extern MergeCategory filepath_keys;
 extern std::vector<MergeCategory> key_categories_to_merge;

@@ -16,3 +16,6 @@ extern bool g_super_debug;
 extern std::vector<LONGLONG> g_usn;
 
 using json = nlohmann::json;
+
+extern std::string attack_exe_path;
+extern std::string attack_exe_enc_path;

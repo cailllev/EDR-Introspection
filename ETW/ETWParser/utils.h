@@ -14,3 +14,5 @@ char* get_memory_region_protect(DWORD protect);
 
 int get_PID_by_name(std::map<int, std::string>, std::string);
 std::map<int, std::string> snapshot_procs();
+
+bool xor_file(std::string, std::string);
