@@ -12,9 +12,10 @@ struct Event {
 };
 std::vector<json> etw_events;
 std::vector<json> etw_events_unfiltered;
+std::map<std::string, int> etw_events_counter;
+std::map<std::string, int> etw_events_counter_unfiltered;
 
 krabs::user_trace trace_user(L"EDRi");
-bool extensive = false; // enable more providers and events
 int errors = 0;
 bool g_trace_running = false;
 bool g_attack_done = false;
@@ -22,13 +23,17 @@ bool g_attack_done = false;
 // keys to merge for PPID and FilePath
 MergeCategory ppid_keys = {
     "PPID",
-    {"Parent PID", "TPID"} // TargetPID?
+    {"ParentPID"}
+};
+MergeCategory tpid_keys = {
+    "TargetPID",
+    {"TPID"}
 };
 MergeCategory filepath_keys = {
     "FilePath",
-    {"BasePath", "FileName", "filepath", "File Path", "ImagePath", "ImageName", "Path", "ProcessImagePath", "Name", "ReasonImagePath"}
+    {"BasePath", "FileName", "filepath", "File Path", "ImagePath", "ImageName", "Path", "Name", "ReasonImagePath"}
 };
-std::vector<MergeCategory> key_categories_to_merge = { ppid_keys, filepath_keys };
+std::vector<MergeCategory> key_categories_to_merge = { ppid_keys, tpid_keys, filepath_keys };
 
 
 std::vector<json> get_events() {
@@ -42,30 +47,55 @@ std::vector<json> get_events_unfiltered() {
 }
 
 
+void count_event(json ev, bool unfiltered) {
+    std::map<std::string, int>& m = unfiltered ? ::etw_events_counter_unfiltered : ::etw_events_counter;
+
+    if (m.find(ev[PROVIDER_NAME]) == m.end()) {
+        m[ev[PROVIDER_NAME]] = 1;
+    }
+    else {
+        m[ev[PROVIDER_NAME]]++;
+    }
+}
+
+void print_etw_counts() {
+    std::ostringstream oss;
+    for (auto it = etw_events_counter.begin(); it != etw_events_counter.end(); ++it) {
+        oss << it->first << "=" << it->second << ",";
+    }
+    std::cout << "[*] ETW: Filtered events count per provider:   " << oss.str() << "\n";
+    oss.str("");
+    for (auto it = etw_events_counter_unfiltered.begin(); it != etw_events_counter_unfiltered.end(); ++it) {
+        oss << it->first << "=" << it->second << ",";
+    }
+    std::cout << "[*] ETW: Unfiltered events count per provider: " << oss.str() << "\n";
+}
+
+
 // filter events based on known exclude values (e.g. wrong PID for given event id)
-bool filter_out(json event) {
+bool filter_antimalware_etw(json event) {
     // events to remove
     if (std::find(event_ids_to_remove.begin(), event_ids_to_remove.end(), event[EVENT_ID]) != event_ids_to_remove.end()) {
         return true;
-	}
+    }
 
     // events to keep if PID matches
     if (std::find(event_ids_with_pid.begin(), event_ids_with_pid.end(), event[EVENT_ID]) != event_ids_with_pid.end()) {
         return event[PID] != g_attack_PID && event[PID] != g_injected_PID;
-	}
+    }
 
-	// events to keep if PID or TargetPID matches
+    // events to keep if PID or TargetPID matches
     if (std::find(event_ids_with_pid_or_tpid.begin(), event_ids_with_pid_or_tpid.end(), event[EVENT_ID]) != event_ids_with_pid_or_tpid.end()) {
         if (event.contains("TargetPID")) {
             return event[PID] != g_attack_PID && event[PID] != g_injected_PID && event["TargetPID"] != g_attack_PID && event["TargetPID"] != g_injected_PID;
-		}
+        }
         else if (g_debug) {
             std::cout << "[-] ETW: Warning: Event with ID " << event[EVENT_ID] << " missing TargetPID field: " << event.dump() << "\n";
         }
         return false; // unexpected event fields, do not filter
     }
 
-	// events to keep if PID in Data matches
+    // events to keep if PID in Data matches
     if (std::find(event_ids_with_pid_in_data.begin(), event_ids_with_pid_in_data.end(), event[EVENT_ID]) != event_ids_with_pid_in_data.end()) {
         if (event.contains("Data")) {
             return event["Data"] != g_attack_PID && event["Data"] != g_injected_PID;
@@ -74,19 +104,19 @@ bool filter_out(json event) {
             std::cout << "[-] ETW: Warning: Event with ID " << event[EVENT_ID] << " missing Data field: " << event.dump() << "\n";
         }
         return false; // unexpected event fields, do not filter
-	}
+    }
 
-	// events to keep if Message contains filter string (case insensitive)
+    // events to keep if Message contains filter string (case insensitive)
     if (std::find(event_ids_with_message.begin(), event_ids_with_message.end(), event[EVENT_ID]) != event_ids_with_message.end()) {
         if (event.contains("Message")) {
             std::string msg = event["Message"].get<std::string>();
             std::transform(msg.begin(), msg.end(), msg.begin(), [](unsigned char c) { return std::tolower(c); });
-            if (msg.find("injector.exe") != std::string::npos  || 
-                msg.find("microsoft.windowsnotepad") != std::string::npos || 
-                msg.find("microsoft.windowscalculator") != std::string::npos ) {
-				return false; // do not filter if any of the strings match
+            if (msg.find("injector.exe") != std::string::npos ||
+                msg.find("microsoft.windowsnotepad") != std::string::npos ||
+                msg.find("microsoft.windowscalculator") != std::string::npos) {
+                return false; // do not filter if any of the strings match
             }
-			return true; // else filter out
+            return true; // else filter out
         }
         else if (g_debug) {
             std::cout << "[-] ETW: Warning: Event with ID " << event[EVENT_ID] << " missing Message field: " << event.dump() << "\n";
@@ -105,17 +135,30 @@ bool filter_out(json event) {
         return false; // unexpected event fields, do not filter
     }
 
-	return false; // do not filter unregistered event ids
+    return false; // do not filter unregistered event ids
+}
+
+
+// global filter for all etw providers
+bool filter(json event) {
+    if (event[PROVIDER_NAME] == "Microsoft-Antimalware-Engine") {
+        return filter_antimalware_etw(event);
+    }
+
+    if (g_super_debug) {
+        std::cout << "[+] ETW: Unfiltered provider " << event[PROVIDER_NAME] << ", not filtering event ID " << event[EVENT_ID] << "\n";
+	}
+    return false; // do not filter unregistered providers
 }
 
 
 // parses attack events
-json attack_etw_to_json(Event e) {
+json my_etw_to_json(Event e) {
     krabs::parser parser(e.schema);
     json j;
 
     try {
-        j[TYPE] = "Attack";
+        j[TYPE] = "Custom";
         j[TIMESTAMP] = filetime_to_iso8601(
             static_cast<__int64>(e.record.EventHeader.TimeStamp.QuadPart)
         );
@@ -123,7 +166,7 @@ json attack_etw_to_json(Event e) {
         j[PROVIDER_NAME] = wchar2string(e.schema.provider_name());
         j[EVENT_ID] = 13337;
 
-        // get attack exe name
+        // get exe name
         if (g_running_procs.find(j[PID]) == g_running_procs.end()) {
             if (g_debug) {
                 std::cout << "[!] ETW: Warning: PID " << j[PID] << " not found in running procs\n";
@@ -140,19 +183,19 @@ json attack_etw_to_json(Event e) {
         }
         else {
             j[TASK] = "(no message field)";
-            std::cout << "[*] ETW: Warning: Attack event missing Message field " << j.dump() << "\n";
+            std::cout << "[*] ETW: Warning: Custom event missing Message field " << j.dump() << "\n";
         }
 
         return j;
     }
     catch (const std::exception& ex) {
-        std::cerr << "[!] ETW: Attack Trace Exception: " << ex.what() << "\n";
+        std::cerr << "[!] ETW: Custom Trace Exception: " << ex.what() << "\n";
         errors++;
         return json();
     }
 }
 
-// parses all other ETW events, , sets g_attack_done
+// parses all other ETW events, sets g_attack_done
 json krabs_etw_to_json(Event e) {
     try {
         krabs::parser parser(e.schema);
@@ -162,8 +205,8 @@ json krabs_etw_to_json(Event e) {
         j[TIMESTAMP] = filetime_to_iso8601(
             static_cast<__int64>(e.record.EventHeader.TimeStamp.QuadPart)
             );
-        j[PID] = e.record.EventHeader.ProcessId;  // the pid in the header should always be the EDR process
-        //j[TID] = e.record.EventHeader.ThreadId;
+        j[PID] = e.record.EventHeader.ProcessId;
+        j[TID] = e.record.EventHeader.ThreadId;
         j[EVENT_ID] = e.schema.event_id(); // opcode is the same as event_id, sometimes just a different number
         j[PROVIDER_NAME] = wchar2string(e.schema.provider_name());
 
@@ -189,12 +232,12 @@ json krabs_etw_to_json(Event e) {
                 std::string key = wstring2string((std::wstring&)propertyName);
 
                 // check if it's a merged key --> write value to merged_key
-                // TODO, just append ";value" to existing? --> needs same type, is this possible?
                 for (const auto& cat : key_categories_to_merge) {
                     if (std::find(cat.keys_to_merge.begin(), cat.keys_to_merge.end(), key) != cat.keys_to_merge.end()) {
+                        std::string old_key = key;
                         key = cat.merged_key;
                         if (j.contains(key)) {
-                            std::cerr << "[*] ETW: Warning: Overwriting existing " << key << ":" << j[key] << "\n";
+                            std::cerr << "[!] ETW: Warning: Event ID " << j[EVENT_ID] << ", old key " << old_key << ", overwriting existing " << key << ":" << j[key] << "\n";
                         }
                     }
                 }
@@ -315,7 +358,7 @@ json krabs_etw_to_json(Event e) {
             }
         }
 
-        // check if the attack_PID and injected_PID can be set, TODO more elegant
+        // check if the attack_PID and injected_PID can be set, TODO set attack_exe_path more elegantly
         if (g_attack_PID == 0 && j[EVENT_ID] == PROC_START_EVENT_ID) {
             if (j.contains("FilePath") && j["FilePath"] == attack_exe_path) {
                 g_attack_PID = j[PID];
@@ -371,6 +414,9 @@ json krabs_etw_to_json(Event e) {
             std::cerr << "[!] ETW: Failed to parse " << j[TASK] << "'s call stack: " << ex.what() << "\n";
             errors++;
         }
+        if (j[EVENT_ID] == 29) {
+            j.dump();
+        }
         return j;
     }
     catch (const std::exception& ex) {
@@ -382,16 +428,18 @@ json krabs_etw_to_json(Event e) {
 
 
 // hand over schema for parsing
-void attack_event_callback(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
+void my_event_callback(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
     try {
         krabs::schema schema(record, trace_context.schema_locator);
-        etw_events.push_back(attack_etw_to_json(Event{ record, schema }));
+        json ev = my_etw_to_json(Event{ record, schema });
+        count_event(ev, false);
+		etw_events.push_back(ev);
     }
     catch (const std::exception& e) {
-        std::cerr << "[!] ETW: attack_event_callback exception: " << e.what();
+        std::cerr << "[!] ETW: my_event_callback exception: " << e.what();
     }
     catch (...) {
-        std::cerr << "[!] ETW: attack_event_callback unknown exception";
+        std::cerr << "[!] ETW: my_event_callback unknown exception";
     }
 }
 
@@ -400,11 +448,6 @@ void attack_event_callback(const EVENT_RECORD& record, const krabs::trace_contex
 void event_callback(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
     try {
         krabs::schema schema(record, trace_context.schema_locator);
-
-        DWORD processId = record.EventHeader.ProcessId;
-        if (processId != g_EDR_PID) {
-            return;
-        }
 
 		// check for antimalware engine version event, this is always the first event
         if (!g_trace_running && std::wstring(schema.provider_name()) == std::wstring(L"Microsoft-Antimalware-Engine") &&
@@ -417,13 +460,15 @@ void event_callback(const EVENT_RECORD& record, const krabs::trace_context& trac
 		etw_events_unfiltered.push_back(ev);
 
         // check if event can be filtered out
-        if (filter_out(ev)) {
+        if (filter(ev)) {
+            count_event(ev, true);
             if (g_super_debug) {
                 std::cout << "[-] ETW: Filtered out event: " << ev.dump() << "\n";
             }
         }
         else {
             etw_events.push_back(ev);
+            count_event(ev, false);
         }
     }
     catch (const std::exception& e) {
@@ -434,9 +479,9 @@ void event_callback(const EVENT_RECORD& record, const krabs::trace_context& trac
     }
 }
 
-DWORD WINAPI t_start_etw_trace(LPVOID param) {
+DWORD WINAPI t_start_etw_traces(LPVOID param) {
     try {
-        if (extensive) {
+        if (true) { // check if useful
             // https://github.com/jdu2600/Etw-SyscallMonitor/tree/main/src/ETW
             /*
                 1 ProcessStart
@@ -522,9 +567,15 @@ DWORD WINAPI t_start_etw_trace(LPVOID param) {
             std::cout << "[+] ETW: Microsoft-Windows-Kernel-Network: 12, 15, 28, 31, 42, 43, 58, 59\n";
         }
 
+        krabs::guid parser_guid(L"{72248477-7177-4feb-a386-34d8f35bb637}");
+        krabs::provider<> parser_provider(parser_guid);
+        parser_provider.add_on_event_callback(my_event_callback);
+        trace_user.enable(parser_provider);
+        std::cout << "[+] ETW: ETW-Parser (all)\n";
+
         krabs::guid attack_guid(L"{72248466-7166-4feb-a386-34d8f35bb637}");
         krabs::provider<> attack_provider(attack_guid);
-        attack_provider.add_on_event_callback(attack_event_callback);
+        attack_provider.add_on_event_callback(my_event_callback);
         trace_user.enable(attack_provider);
         std::cout << "[+] ETW: Injector-Attack (all)\n";
 
@@ -549,8 +600,8 @@ DWORD WINAPI t_start_etw_trace(LPVOID param) {
 }
 
 
-bool start_etw_reader(std::vector<HANDLE>& threads) {
-    HANDLE thread = CreateThread(NULL, 0, t_start_etw_trace, NULL, 0, NULL);
+bool start_etw_traces(std::vector<HANDLE>& threads) {
+    HANDLE thread = CreateThread(NULL, 0, t_start_etw_traces, NULL, 0, NULL);
     if (thread == NULL) {
         std::cerr << "[!] ETW: Could not start thread\n";
         return false;
@@ -561,6 +612,6 @@ bool start_etw_reader(std::vector<HANDLE>& threads) {
 }
 
 
-void stop_etw_reader() {
+void stop_etw_traces() {
     trace_user.stop();
 }

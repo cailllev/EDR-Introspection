@@ -1,10 +1,15 @@
+#include <fstream>
 #include <iostream>
 #include <iomanip>
 #include <sstream>
+#include <vector>
 #include <windows.h>
 #include <tlhelp32.h> // import after windows.h, else all breaks, that's crazy, yo
 
 #include "utils.h"
+
+
+std::string encrypt_password = "much signature bypass, such wow";
 
 
 std::map<int, std::string> snapshot_procs() {
@@ -28,6 +33,36 @@ int get_PID_by_name(std::map<int, std::string> procs, std::string name) {
         }
     }
     return 0; // not found
+}
+
+// encrypt/decrypt a file with a static password
+bool xor_file(std::string in_path, std::string out_path) {
+    // open input file in binary mode
+    std::ifstream infile(in_path, std::ios::binary);
+    if (!infile) {
+        std::cerr << "[!] Utils: Failed to open input file: " << in_path << "\n";
+        return false;
+    }
+
+    // read file into buffer
+    std::vector<char> buffer((std::istreambuf_iterator<char>(infile)),
+        std::istreambuf_iterator<char>());
+    infile.close();
+
+    // xor encrypt with password
+    for (size_t i = 0; i < buffer.size(); ++i) {
+        buffer[i] ^= encrypt_password[i % encrypt_password.size()];
+    }
+
+    // write encrypted data to output file
+    std::ofstream outfile(out_path, std::ios::binary);
+    if (!outfile) {
+        std::cerr << "[!] Utils: Failed to open output file: " << out_path << "\n";
+        return false;
+    }
+    outfile.write(buffer.data(), buffer.size());
+    outfile.close();
+    return true;
 }
 
 
