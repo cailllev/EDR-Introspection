@@ -91,7 +91,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    msg << "[>]  After starting subprocess to inject to, PID: " << pi.dwProcessId;
+    msg << "[>]  After starting subprocess with PID " << pi.dwProcessId;
     print_and_emit_event(msg.str()); msg.str("");
 	Sleep(sleep_between_steps_ms);
 
