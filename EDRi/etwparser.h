@@ -27,15 +27,18 @@ bool filter_antimalware_etw(json&);
 bool filter_kernel_api_calls(json&);
 
 
-static const std::string TYPE = "type";
 static const std::string TIMESTAMP = "timestamp";
-static const std::string PID = "PID";
-static const std::string TID = "TID";
-static const std::string EXE = "Exe";
+static const std::string TYPE = "type";
+static const std::string PROVIDER_NAME = "providername";
+static const std::string EVENT_ID = "eventid";
 static const std::string TASK = "task";
-static const std::string EVENT_ID = "event_id";
-static const std::string PROVIDER_NAME = "provider_name";
-static const std::string FILEPATH = "FilePath";
+static const std::string PID = "pid";
+static const std::string TID = "tid";
+static const std::string EXE = "exe";
+static const std::string TARGET_PID = "targetpid";
+static const std::string FILEPATH = "filepath";
+static const std::string MESSAGE = "message";
+static const std::string DATA = "data";
 
 static const std::string injected_exe_path = "C:\\Program Files\\WindowsApps\\Microsoft.WindowsNotepad_11.2506.35.0_x64__8wekyb3d8bbwe\\Notepad\\Notepad.exe";
 static const std::string shellcode_exe_path = "C:\\Program Files\\WindowsApps\\Microsoft.WindowsCalculator_11.2502.2.0_x64__8wekyb3d8bbwe\\CalculatorApp.exe";

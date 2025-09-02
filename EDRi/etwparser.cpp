@@ -15,16 +15,16 @@ std::map<std::string, int> etw_events_counter_unfiltered;
 
 // keys to merge
 MergeCategory ppid_keys = {
-    "PPID",
-    {"ParentPID"}
+    "ppid",
+    {"parentpid"}
 };
 MergeCategory tpid_keys = {
-    "TargetPID",
-    {"TPID"}
+    TARGET_PID,
+    {"tpid"}
 };
 MergeCategory filepath_keys = {
     FILEPATH,
-    {"BasePath", "FileName", "filepath", "ImagePath", "ImageName", "Path", "Name", "ReasonImagePath"}
+    {"basepath", "filename", "imagepath", "imagename", "path", "name", "reasonimagepath"}
 };
 std::vector<MergeCategory> key_categories_to_merge = { ppid_keys, tpid_keys, filepath_keys };
 
@@ -37,10 +37,10 @@ void my_event_callback(const EVENT_RECORD& record, const krabs::trace_context& t
         etw_events.push_back(ev);
     }
     catch (const std::exception& e) {
-        std::cerr << "[!] ETW: my_event_callback exception: " << e.what();
+        std::cerr << "[!] ETW: my_event_callback exception: " << e.what() << "\n";
     }
     catch (...) {
-        std::cerr << "[!] ETW: my_event_callback unknown exception";
+        std::cerr << "[!] ETW: my_event_callback unknown exception\n";
     }
 }
 
@@ -68,10 +68,10 @@ void event_callback(const EVENT_RECORD& record, const krabs::trace_context& trac
         }
     }
     catch (const std::exception& e) {
-        std::cerr << "[!] ETW: event_callback exception: " << e.what();
+        std::cerr << "[!] ETW: event_callback exception: " << e.what() << "\n";
     }
     catch (...) {
-        std::cerr << "[!] ETW: event_callback unknown exception";
+        std::cerr << "[!] ETW: event_callback unknown exception\n";
     }
 }
 
@@ -105,8 +105,8 @@ bool filter_antimalware_etw(json& ev) {
 
     // events to keep if PID or TargetPID matches
     if (std::find(event_ids_with_pid_or_tpid.begin(), event_ids_with_pid_or_tpid.end(), ev[EVENT_ID]) != event_ids_with_pid_or_tpid.end()) {
-        if (ev.contains("TargetPID")) {
-            return ev[PID] != g_attack_PID && ev[PID] != g_injected_PID && ev["TargetPID"] != g_attack_PID && ev["TargetPID"] != g_injected_PID;
+        if (ev.contains(TARGET_PID)) {
+            return ev[PID] != g_attack_PID && ev[PID] != g_injected_PID && ev[TARGET_PID] != g_attack_PID && ev[TARGET_PID] != g_injected_PID;
         }
         else if (g_debug) {
             std::cout << "[-] ETW: Warning: Event with ID " << ev[EVENT_ID] << " missing TargetPID field: " << ev.dump() << "\n";
@@ -116,8 +116,8 @@ bool filter_antimalware_etw(json& ev) {
 
     // events to keep if PID in Data matches
     if (std::find(event_ids_with_pid_in_data.begin(), event_ids_with_pid_in_data.end(), ev[EVENT_ID]) != event_ids_with_pid_in_data.end()) {
-        if (ev.contains("Data")) {
-            return ev["Data"] != g_attack_PID && ev["Data"] != g_injected_PID;
+        if (ev.contains(DATA)) {
+            return ev[DATA] != g_attack_PID && ev[DATA] != g_injected_PID;
         }
         else if (g_debug) {
             std::cout << "[-] ETW: Warning: Event with ID " << ev[EVENT_ID] << " missing Data field: " << ev.dump() << "\n";
@@ -127,8 +127,8 @@ bool filter_antimalware_etw(json& ev) {
 
     // events to keep if Message contains filter string (case insensitive)
     if (std::find(event_ids_with_message.begin(), event_ids_with_message.end(), ev[EVENT_ID]) != event_ids_with_message.end()) {
-        if (ev.contains("Message")) {
-            std::string msg = ev["Message"].get<std::string>();
+        if (ev.contains(MESSAGE)) {
+            std::string msg = ev[MESSAGE].get<std::string>();
             std::transform(msg.begin(), msg.end(), msg.begin(), [](unsigned char c) { return std::tolower(c); });
             if (msg.find("injector.exe") != std::string::npos ||
                 msg.find("microsoft.windowsnotepad") != std::string::npos ||
@@ -145,8 +145,8 @@ bool filter_antimalware_etw(json& ev) {
 
     // events to keep if filepath matches
     if (std::find(event_ids_with_filepath.begin(), event_ids_with_filepath.end(), ev[EVENT_ID]) != event_ids_with_filepath.end()) {
-        if (ev.contains("FilePath")) {
-            return std::strcmp(ev["FilePath"].get<std::string>().c_str(), attack_exe_path.c_str());
+        if (ev.contains(FILEPATH)) {
+            return std::strcmp(ev[FILEPATH].get<std::string>().c_str(), attack_exe_path.c_str());
         }
         else if (g_debug) {
             std::cout << "[-] ETW: Warning: Event with ID " << ev[EVENT_ID] << " missing FilePath field: " << ev.dump() << "\n";
@@ -232,9 +232,16 @@ json parse_etw_event(Event e) {
         // Iterate over all properties defined in the schema
         for (const auto& property : parser.properties()) {
             try {
+                // get property name and type
                 const std::wstring& property_name = property.name();
                 const auto property_type = property.type();
+
+                // create key and convert it to lowercase
                 std::string key = wstring2string((std::wstring&)property_name);
+                std::transform(key.begin(), key.end(), key.begin(),
+                    [](unsigned char c) { return std::tolower(c); });
+
+                // for error messages
                 last_key = key;
                 last_type = property_type;
 
@@ -250,7 +257,7 @@ json parse_etw_event(Event e) {
                 }
 
                 // Special cases
-                if (property_name == L"ProtectionMask" || property_name == L"LastProtectionMask") {
+                if (key == "protectionmask" || key == "lastprotectionmask") {
                     uint32_t protection_mask = parser.parse<uint32_t>(property_name);
                     j[key] = get_memory_region_protect(protection_mask);
                     continue;
@@ -294,6 +301,25 @@ json parse_etw_event(Event e) {
                 case TDH_INTYPE_POINTER:
                     j[key] = (uint64_t)parser.parse<PVOID>(property_name);
                     break;
+
+                case TDH_INTYPE_GUID:
+                {
+                    GUID guid = parser.parse<GUID>(property_name);
+                    std::ostringstream oss;
+                    oss << std::hex << std::setfill('0')
+                        << std::setw(8) << guid.Data1 << "-"
+                        << std::setw(4) << guid.Data2 << "-"
+                        << std::setw(4) << guid.Data3 << "-";
+
+                    for (int i = 0; i < 2; i++)
+                        oss << std::setw(2) << static_cast<int>(guid.Data4[i]);
+                    oss << "-";
+                    for (int i = 2; i < 8; i++)
+                        oss << std::setw(2) << static_cast<int>(guid.Data4[i]);
+
+                    j[key] = oss.str();
+                    break;
+                }
                 
                 case TDH_INTYPE_FILETIME:
                 {
@@ -371,7 +397,7 @@ json parse_etw_event(Event e) {
         }
 
         // add a newly spawned procs to process map
-        if (j[EVENT_ID] == PROC_START_EVENT_ID) {
+        if (j[EVENT_ID] == PROCESS_START_STOP_EVENT_ID) {
             std::string exe_path = j[FILEPATH].get<std::string>();
             g_running_procs[j[PID]] = exe_path.substr(exe_path.find_last_of("\\") + 1);
         }
@@ -389,16 +415,12 @@ json parse_etw_event(Event e) {
 
         // callstack
         try {
-            j["stack_trace"] = json::array();
+            j["stacktrace"] = json::array();
             int idx = 0;
-            for (auto& return_address : e.schema.stack_trace())
-            {
-                // Only add non-kernelspace addresses
+            for (auto& return_address : e.schema.stack_trace()) {
+                // only add non-kernelspace addresses
                 if (return_address < 0xFFFF080000000000) {
-                    j["stack_trace"].push_back({
-                        { "addr", return_address},
-                        { "idx", idx }
-                        });
+                    j["stacktrace"].push_back(return_address);
                     idx++;
                 }
             }
@@ -425,13 +447,13 @@ void post_parsing_checks(json& j) {
     edr_profile_check_end(j);
 
     // check if the attack_PID and injected_PID can be set, TODO etw independent way?
-    if (g_attack_PID == 0 && j[EVENT_ID] == PROC_START_EVENT_ID) {
+    if (g_attack_PID == 0 && j[EVENT_ID] == PROCESS_START_STOP_EVENT_ID) {
         if (j.contains(FILEPATH) && j[FILEPATH] == attack_exe_path) {
             g_attack_PID = j[PID];
             std::cout << "[+] ETW: Got attack PID: " << g_attack_PID << "\n";
         }
     }
-    if (g_injected_PID == 0 && j[EVENT_ID] == PROC_START_EVENT_ID) {
+    if (g_injected_PID == 0 && j[EVENT_ID] == PROCESS_START_STOP_EVENT_ID) {
         if (j.contains(FILEPATH) && j[FILEPATH] == injected_exe_path) {
             g_injected_PID = j[PID];
             std::cout << "[+] ETW: Got injected PID: " << g_injected_PID << "\n";
