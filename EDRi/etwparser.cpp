@@ -77,7 +77,7 @@ void event_callback(const EVENT_RECORD& record, const krabs::trace_context& trac
 
 // global filter for all etw providers
 bool filter(json& ev) {
-    if (ev[PROVIDER_NAME] == "Microsoft-Antimalware-Engine") {
+    if (ev[PROVIDER_NAME] == ANTIMALWARE_PROVIDER) {
         return filter_antimalware_etw(ev);
     }
 

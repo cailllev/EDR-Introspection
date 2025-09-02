@@ -8,6 +8,8 @@
 
 static const int ANTIMALWARE_ATTACH_EVENT_ID = 4;
 static const int PROCESS_START_STOP_EVENT_ID = 73;
+static const std::string ATTACH_EVENT_TASK = "Versions Info ";
+static const std::string TERMINATION = "Termination";
 
 class EdrProfile {
 public:

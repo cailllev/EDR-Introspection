@@ -97,7 +97,7 @@ DWORD WINAPI t_start_etw_traces(LPVOID param) {
         std::cout << "[+] ETW: Microsoft-Windows-Kernel-Network: 12, 15, 28, 31, 42, 43, 58, 59\n";
 
         // my EDRi trace
-        krabs::guid parser_guid(L"{72248477-7177-4feb-a386-34d8f35bb637}");
+        krabs::guid parser_guid(EDRi_PROVIDER_GUID_W);
         krabs::provider<> parser_provider(parser_guid);
         parser_provider.add_on_event_callback(my_event_callback);
         trace_user.enable(parser_provider);
@@ -111,10 +111,10 @@ DWORD WINAPI t_start_etw_traces(LPVOID param) {
         std::cout << "[+] ETW: Injector-Attack (all)\n";
 
         // Antimalware trace, start last!
-        krabs::provider<> antimalwareengine_provider(L"Microsoft-Antimalware-Engine");
+        krabs::provider<> antimalwareengine_provider(ANTIMALWARE_PROVIDER_W);
         antimalwareengine_provider.add_on_event_callback(event_callback);
         trace_user.enable(antimalwareengine_provider);
-        std::cout << "[+] ETW: Microsoft-Antimalware-Engine (all)\n";
+        std::cout << "[+] ETW: " << ANTIMALWARE_PROVIDER << " (all)\n";
 
         // blocking, use etw_reader_stop() to stop the trace
         std::cout << "[+] ETW: Trace started...\n";

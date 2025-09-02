@@ -34,7 +34,7 @@ TRACELOGGING_DEFINE_PROVIDER(
     g_hProvider,
     "ETW-Parser", // name in the ETW
     (0x72248477, 0x7177, 0x4feb, 0xa3, 0x86, 0x34, 0xd8, 0xf3, 0x5b, 0xb6, 0x37)  // a random GUID
-);
+); // TODO get from EDRi_PROVIDER_GUID_W
 
 // globals
 int g_attack_PID = 0;  // is set with the incoming ETW events
