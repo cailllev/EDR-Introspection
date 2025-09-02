@@ -6,6 +6,9 @@
 #include "globals.h"
 
 
+static const int ANTIMALWARE_ATTACH_EVENT_ID = 4;
+static const int PROCESS_START_STOP_EVENT_ID = 73;
+
 class EdrProfile {
 public:
     std::string edr_exe_name;

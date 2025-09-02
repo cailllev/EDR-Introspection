@@ -8,14 +8,14 @@ static const std::map<std::string, std::shared_ptr<EdrProfile>> edr_profiles = {
         "MsMpEng.exe",
         [](const json& ev, EdrProfile& self) {
             return (ev[PROVIDER_NAME] == "Microsoft-Antimalware-Engine" &&
-                    ev[EVENT_ID] == 4 && 
+                    ev[EVENT_ID] == ANTIMALWARE_ATTACH_EVENT_ID &&
                     ev[TASK] == "Versions Info ");
         },
         [](const json& ev, EdrProfile& self) {
             return (ev[PROVIDER_NAME] == "Microsoft-Antimalware-Engine" &&
                     ev[PID] == g_attack_PID &&
-                    ev[EVENT_ID] == 73 &&
-                    ev["Source"] == "Termination");
+                    ev[EVENT_ID] == PROCESS_START_STOP_EVENT_ID &&
+                    ev["source"] == "Termination");
         }
     )}
 };
