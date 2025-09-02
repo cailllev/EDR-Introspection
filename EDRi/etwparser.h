@@ -7,25 +7,13 @@
 #include "globals.h"
 
 
+static const std::string ANTIMALWARE_PROVIDER = "Microsoft-Antimalware-Engine";
+static const std::wstring ANTIMALWARE_PROVIDER_W = std::wstring(ANTIMALWARE_PROVIDER.begin(), ANTIMALWARE_PROVIDER.end());
+
 struct Event {
     const EVENT_RECORD& record;
     const krabs::schema schema;
 };
-
-std::vector<json> get_events();
-std::vector<json> get_events_unfiltered();
-void print_etw_counts();
-
-void my_event_callback(const EVENT_RECORD&, const krabs::trace_context&);
-void event_callback(const EVENT_RECORD&, const krabs::trace_context&);
-json parse_my_etw_event(Event);
-json parse_etw_event(Event);
-void count_event(json, bool);
-void post_parsing_checks(json&);
-bool filter(json&);
-bool filter_antimalware_etw(json&);
-bool filter_kernel_api_calls(json&);
-
 
 static const std::string TIMESTAMP = "timestamp";
 static const std::string TYPE = "type";
@@ -39,6 +27,7 @@ static const std::string TARGET_PID = "targetpid";
 static const std::string FILEPATH = "filepath";
 static const std::string MESSAGE = "message";
 static const std::string DATA = "data";
+static const std::string SOURCE = "source";
 
 static const std::string injected_exe_path = "C:\\Program Files\\WindowsApps\\Microsoft.WindowsNotepad_11.2506.35.0_x64__8wekyb3d8bbwe\\Notepad\\Notepad.exe";
 static const std::string shellcode_exe_path = "C:\\Program Files\\WindowsApps\\Microsoft.WindowsCalculator_11.2502.2.0_x64__8wekyb3d8bbwe\\CalculatorApp.exe";
@@ -60,3 +49,17 @@ extern MergeCategory ppid_keys;
 extern MergeCategory tpid_keys;
 extern MergeCategory filepath_keys;
 extern std::vector<MergeCategory> key_categories_to_merge;
+
+std::vector<json> get_events();
+std::vector<json> get_events_unfiltered();
+void print_etw_counts();
+
+void my_event_callback(const EVENT_RECORD&, const krabs::trace_context&);
+void event_callback(const EVENT_RECORD&, const krabs::trace_context&);
+json parse_my_etw_event(Event);
+json parse_etw_event(Event);
+void count_event(json, bool);
+void post_parsing_checks(json&);
+bool filter(json&);
+bool filter_antimalware_etw(json&);
+bool filter_kernel_api_calls(json&);

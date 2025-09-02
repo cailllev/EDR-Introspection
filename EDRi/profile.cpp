@@ -7,15 +7,15 @@ static const std::map<std::string, std::shared_ptr<EdrProfile>> edr_profiles = {
     {"Defender", std::make_shared<EdrProfile>(
         "MsMpEng.exe",
         [](const json& ev, EdrProfile& self) {
-            return (ev[PROVIDER_NAME] == "Microsoft-Antimalware-Engine" &&
+            return (ev[PROVIDER_NAME] == ANTIMALWARE_PROVIDER &&
                     ev[EVENT_ID] == ANTIMALWARE_ATTACH_EVENT_ID &&
-                    ev[TASK] == "Versions Info ");
+                    ev[TASK] == ATTACH_EVENT_TASK);
         },
         [](const json& ev, EdrProfile& self) {
-            return (ev[PROVIDER_NAME] == "Microsoft-Antimalware-Engine" &&
+            return (ev[PROVIDER_NAME] == ANTIMALWARE_PROVIDER &&
                     ev[PID] == g_attack_PID &&
                     ev[EVENT_ID] == PROCESS_START_STOP_EVENT_ID &&
-                    ev["source"] == "Termination");
+                    ev[SOURCE] == TERMINATION);
         }
     )}
 };
