@@ -7,10 +7,10 @@
   "user_traces": [
     {
       "trace_name": "ProcTrace01",
-      "provider_name": "Microsoft-Antimalware-Engine",
+      "provider_name": "Microsoft-Windows-Kernel-File",
       "filters": {
-        "all_of": {
-          "process_id_is": 2020
+        "any_of": {
+          "event_id_is": [ 10, 30 ]
         }
       }
     }
