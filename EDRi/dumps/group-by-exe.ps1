@@ -9,12 +9,12 @@ $results = $csv | ? {$_.providername -ne "Injector-Attack" -and $_.providername 
     $uniqueExe = $allExe | Sort-Object -Unique
         [PSCustomObject]@{
             providername = $providername.Trim()
-            eventid      = [int]$eventid.Trim()
+            eventid      = ('{0:D4}' -f $eventid.Trim())
             task         = $task.Trim()
-            event_count  = $allExe.Count
-            exe_count    = [int]$uniqueExe.Count
+            event_count  = ('{0:D4}' -f $allExe.Count)
+            exe_count    = ('{0:D4}' -f $uniqueExe.Count)
             exes         = ($uniqueExe -join " ")
         }
     } |
     Sort-Object providername, eventid, task
-$results | Export-Csv "$(pwd)\$name-grouped-exes.csv" -NoTypeInformation
+$results | Export-Csv "$(pwd)\$name-grouped-exes.csv" -NoTypeInformation 
