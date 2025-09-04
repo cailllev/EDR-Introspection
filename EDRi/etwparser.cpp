@@ -2,6 +2,7 @@
 #include "helpers/json.hpp"
 #include <iostream>
 
+#include "globals.h"
 #include "utils.h"
 #include "filter.h"
 #include "profile.h"
@@ -13,6 +14,12 @@ std::vector<json> etw_events_unfiltered;
 std::map<std::string, int> etw_events_counter;
 std::map<std::string, int> etw_events_counter_unfiltered;
 
+// globals
+int g_attack_PID = 0;
+int g_injected_PID = 0;
+bool g_traces_started = false;
+bool g_attack_terminated = false;
+
 // keys to merge
 MergeCategory ppid_keys = {
     "ppid",
@@ -20,7 +27,7 @@ MergeCategory ppid_keys = {
 };
 MergeCategory tpid_keys = {
     TARGET_PID,
-    {"tpid"}
+    {"tpid" } // --> all refer to another PID
 };
 MergeCategory filepath_keys = {
     FILEPATH,
@@ -28,11 +35,38 @@ MergeCategory filepath_keys = {
 };
 std::vector<MergeCategory> key_categories_to_merge = { ppid_keys, tpid_keys, filepath_keys };
 
+
+std::string get_string_or_convert(const json& j, const std::string& key) {
+    if (!j.contains(key)) {
+        return ""; // key not present
+    }
+    if (j[key].is_string()) {
+        return j[key].get<std::string>();
+    }
+    else if (j[key].is_number()) {
+        return std::to_string(j[key].get<double>());
+    }
+    else if (j[key].is_boolean()) {
+        return j[key].get<bool>() ? "true" : "false";
+    }
+    else if (j[key].is_null()) {
+        return "null";
+    }
+    else {
+        // array or object
+        return j[key].dump();
+    }
+}
+
 // hand over schema for parsing
 void my_event_callback(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
     try {
         krabs::schema schema(record, trace_context.schema_locator);
         json ev = parse_my_etw_event(Event{ record, schema });
+        post_my_parsing_checks(ev);
+        etw_events_unfiltered.push_back(ev);
+
+        // do not filter own events -> no further checks
         count_event(ev, false);
         etw_events.push_back(ev);
     }
@@ -48,15 +82,20 @@ void my_event_callback(const EVENT_RECORD& record, const krabs::trace_context& t
 void event_callback(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
     try {
         krabs::schema schema(record, trace_context.schema_locator);
-        //std::cout << wchar2string(schema.provider_name()) << "\n";
 
         // convert it to json NOW or lose the property values
         json ev = parse_etw_event(Event{ record, schema });
         post_parsing_checks(ev);
         etw_events_unfiltered.push_back(ev);
 
+        if (!g_traces_started) {
+            if (g_super_debug) {
+                std::cout << "[-] Waiting for EDRi start marker, ignoring early event: " << ev.dump() << "\n";
+            }
+        }
+
         // check if event can be filtered out
-        if (filter(ev)) {
+        if (filter(ev)) {  // todo, only filter after run ended?
             count_event(ev, true);
             if (g_super_debug) {
                 std::cout << "[-] ETW: Filtered out event: " << ev.dump() << "\n";
@@ -77,56 +116,110 @@ void event_callback(const EVENT_RECORD& record, const krabs::trace_context& trac
 
 // global filter for all etw providers
 bool filter(json& ev) {
-    if (ev[PROVIDER_NAME] == ANTIMALWARE_PROVIDER) {
-        return filter_antimalware_etw(ev);
+    if (ev[PROVIDER_NAME] == KERNEL_PROCESS_PROVIDER) {
+        return filter_kernel_process(ev);
     }
 
-    if (ev[PROVIDER_NAME] == "Microsoft-Windows-Kernel-Audit-API-Calls") {
-        return filter_kernel_api_calls(ev);
+    else if (ev[PROVIDER_NAME] == KERNEL_API_PROVIDER) {
+        return filter_kernel_api_call(ev);
+    }
+
+    else if (ev[PROVIDER_NAME] == KERNEL_FILE_PROVIDER) {
+        return filter_kernel_file(ev);
+    }
+
+    else if (ev[PROVIDER_NAME] == KERNEL_FILE_PROVIDER) {
+        return filter_kernel_network(ev);
+    }
+
+    else if (ev[PROVIDER_NAME] == ANTIMALWARE_PROVIDER) {
+        return filter_antimalware(ev);
     }
 
     if (g_super_debug) {
-        std::cout << "[+] ETW: Unfiltered provider " << ev[PROVIDER_NAME] << ", not filtering event ID " << ev[EVENT_ID] << "\n";
+        std::cout << "[+] ETW: Unfiltered provider " << ev[PROVIDER_NAME] << ", not filtering its event ID " << ev[EVENT_ID] << "\n";
     }
+
     return false; // do not filter unregistered providers
 }
 
+// filter kernel process events
+bool filter_kernel_process(json& ev) {
+    if (std::find(kapi_event_ids_with_security_pids.begin(), kapi_event_ids_with_security_pids.end(), ev[EVENT_ID]) != kapi_event_ids_with_security_pids.end()) {
+        return std::find(g_tracking_PIDs.begin(), g_tracking_PIDs.end(), ev[PID]) == g_tracking_PIDs.end(); // filter out PIDs that are not in tracking (==true)
+    }
+    return false; // keep the rest
+}
+
+// filter kernel api calls
+bool filter_kernel_api_call(json& ev) {
+    if (std::find(kapi_event_ids_with_security_pids.begin(), kapi_event_ids_with_security_pids.end(), ev[EVENT_ID]) != kapi_event_ids_with_security_pids.end()) {
+        return std::find(g_tracking_PIDs.begin(), g_tracking_PIDs.end(), ev[PID]) == g_tracking_PIDs.end(); // filter out PIDs that are not in tracking (==true)
+    }
+    return false; // keep the rest
+}
+
+// filter kernel file events
+bool filter_kernel_file(json& ev) {
+    if (std::find(kfile_event_ids_with_security_pids.begin(), kfile_event_ids_with_security_pids.end(), ev[EVENT_ID]) != kfile_event_ids_with_security_pids.end()) {
+        return std::find(g_tracking_PIDs.begin(), g_tracking_PIDs.end(), ev[PID]) == g_tracking_PIDs.end(); // filter out PIDs that are not in tracking (==true)
+    }
+    return false; // keep the rest
+}
+
+// filter kernel network events
+bool filter_kernel_network(json& ev) {
+    if (std::find(knetwork_event_ids_with_security_pids.begin(), knetwork_event_ids_with_security_pids.end(), ev[EVENT_ID]) != knetwork_event_ids_with_security_pids.end()) {
+        return std::find(g_tracking_PIDs.begin(), g_tracking_PIDs.end(), ev[PID]) == g_tracking_PIDs.end(); // filter out PIDs that are not in tracking (==true)
+    }
+    return false; // keep the rest
+}
+
 // filter events based on known exclude values (e.g. wrong PID for given event id)
-bool filter_antimalware_etw(json& ev) {
+bool filter_antimalware(json& ev) {
     // events to remove
-    if (std::find(event_ids_to_remove.begin(), event_ids_to_remove.end(), ev[EVENT_ID]) != event_ids_to_remove.end()) {
+    if (std::find(am_event_ids_to_remove.begin(), am_event_ids_to_remove.end(), ev[EVENT_ID]) != am_event_ids_to_remove.end()) {
         return true;
     }
 
     // events to keep if PID matches
-    if (std::find(event_ids_with_pid.begin(), event_ids_with_pid.end(), ev[EVENT_ID]) != event_ids_with_pid.end()) {
-        return ev[PID] != g_attack_PID && ev[PID] != g_injected_PID;
+    if (std::find(am_event_ids_with_pid.begin(), am_event_ids_with_pid.end(), ev[EVENT_ID]) != am_event_ids_with_pid.end()) {
+        if (ev.contains(ORIGINATING_PID)) {
+            int pid = ev[ORIGINATING_PID];
+            return pid != g_attack_PID && pid != g_injected_PID;
+        }
+        else if (g_debug) {
+            std::cout << "[-] ETW: Warning: Event with ID " << ev[EVENT_ID] << " missing " << ORIGINATING_PID << " field: " << ev.dump() << "\n";
+        }
+        return false; // unexpected event fields, do not filter
     }
 
     // events to keep if PID or TargetPID matches
-    if (std::find(event_ids_with_pid_or_tpid.begin(), event_ids_with_pid_or_tpid.end(), ev[EVENT_ID]) != event_ids_with_pid_or_tpid.end()) {
-        if (ev.contains(TARGET_PID)) {
-            return ev[PID] != g_attack_PID && ev[PID] != g_injected_PID && ev[TARGET_PID] != g_attack_PID && ev[TARGET_PID] != g_injected_PID;
+    if (std::find(am_event_ids_with_pid_and_tpid.begin(), am_event_ids_with_pid_and_tpid.end(), ev[EVENT_ID]) != am_event_ids_with_pid_and_tpid.end()) {
+        if (ev.contains(TARGET_PID) && ev.contains(ORIGINATING_PID)) {
+            int pid = ev[ORIGINATING_PID];
+            int tpid = ev[TARGET_PID];
+            return ev[ORIGINATING_PID] != g_attack_PID && ev[ORIGINATING_PID] != g_injected_PID && ev[TARGET_PID] != g_attack_PID && ev[TARGET_PID] != g_injected_PID;
         }
         else if (g_debug) {
-            std::cout << "[-] ETW: Warning: Event with ID " << ev[EVENT_ID] << " missing TargetPID field: " << ev.dump() << "\n";
+            std::cout << "[-] ETW: Warning: Event with ID " << ev[EVENT_ID] << " missing " << ORIGINATING_PID << " or " << TARGET_PID << " field: " << ev.dump() << "\n";
         }
         return false; // unexpected event fields, do not filter
     }
 
     // events to keep if PID in Data matches
-    if (std::find(event_ids_with_pid_in_data.begin(), event_ids_with_pid_in_data.end(), ev[EVENT_ID]) != event_ids_with_pid_in_data.end()) {
+    if (std::find(am_event_ids_with_pid_in_data.begin(), am_event_ids_with_pid_in_data.end(), ev[EVENT_ID]) != am_event_ids_with_pid_in_data.end()) {
         if (ev.contains(DATA)) {
             return ev[DATA] != g_attack_PID && ev[DATA] != g_injected_PID;
         }
         else if (g_debug) {
-            std::cout << "[-] ETW: Warning: Event with ID " << ev[EVENT_ID] << " missing Data field: " << ev.dump() << "\n";
+            std::cout << "[-] ETW: Warning: Event with ID " << ev[EVENT_ID] << " missing " << DATA << " field: " << ev.dump() << "\n";
         }
         return false; // unexpected event fields, do not filter
     }
 
     // events to keep if Message contains filter string (case insensitive)
-    if (std::find(event_ids_with_message.begin(), event_ids_with_message.end(), ev[EVENT_ID]) != event_ids_with_message.end()) {
+    if (std::find(am_event_ids_with_message.begin(), am_event_ids_with_message.end(), ev[EVENT_ID]) != am_event_ids_with_message.end()) {
         if (ev.contains(MESSAGE)) {
             std::string msg = ev[MESSAGE].get<std::string>();
             std::transform(msg.begin(), msg.end(), msg.begin(), [](unsigned char c) { return std::tolower(c); });
@@ -138,32 +231,23 @@ bool filter_antimalware_etw(json& ev) {
             return true; // else filter out
         }
         else if (g_debug) {
-            std::cout << "[-] ETW: Warning: Event with ID " << ev[EVENT_ID] << " missing Message field: " << ev.dump() << "\n";
+            std::cout << "[-] ETW: Warning: Event with ID " << ev[EVENT_ID] << " missing " << MESSAGE << " field: " << ev.dump() << "\n";
         }
         return false; // unexpected event fields, do not filter
     }
 
     // events to keep if filepath matches
-    if (std::find(event_ids_with_filepath.begin(), event_ids_with_filepath.end(), ev[EVENT_ID]) != event_ids_with_filepath.end()) {
+    if (std::find(am_event_ids_with_filepath.begin(), am_event_ids_with_filepath.end(), ev[EVENT_ID]) != am_event_ids_with_filepath.end()) {
         if (ev.contains(FILEPATH)) {
             return std::strcmp(ev[FILEPATH].get<std::string>().c_str(), attack_exe_path.c_str());
         }
         else if (g_debug) {
-            std::cout << "[-] ETW: Warning: Event with ID " << ev[EVENT_ID] << " missing FilePath field: " << ev.dump() << "\n";
+            std::cout << "[-] ETW: Warning: Event with ID " << ev[EVENT_ID] << " missing " << FILEPATH << " field: " << ev.dump() << "\n";
         }
         return false; // unexpected event fields, do not filter
     }
 
     return false; // do not filter unregistered event ids
-}
-
-// filter kernel api calls on known exclude values (e.g. VBoxService.exe)
-bool filter_kernel_api_calls(json& ev) {
-    if (ev[EVENT_ID] == 5) {
-        return std::find(excluded_procs.begin(), excluded_procs.end(), ev[EXE]) != excluded_procs.end();
-    }
-
-    return false; // keep the rest
 }
 
 // parses attack events
@@ -178,26 +262,27 @@ json parse_my_etw_event(Event e) {
         );
         j[PID] = e.record.EventHeader.ProcessId;
         j[PROVIDER_NAME] = wchar2string(e.schema.provider_name());
-        j[EVENT_ID] = 13337;
-
-        // get exe name
-        if (g_running_procs.find(j[PID]) == g_running_procs.end()) {
-            if (g_debug) {
-                std::cout << "[!] ETW: Warning: PID " << j[PID] << " not found in running procs\n";
-            }
-            j[EXE] = "<not found>";
+        if (j[PROVIDER_NAME] == EDRi_PROVIDER_NAME) {
+            j[EVENT_ID] = EDRi_PROVIDER_EVENT_ID;
         }
         else {
-            j[EXE] = g_running_procs[j[PID]];
+            j[EVENT_ID] = ATTACK_PROVIDER_EVENT_ID;
         }
 
+        // get exe name for PID
+        std::string exe = get_proc_name(j[PID]);
+        if (g_traces_started && g_debug && exe == PROC_NOT_FOUND) { // only print when all traces running
+            std::cout << "[!] ETW: Warning: PID " << j[PID] << " not found in running procs\n";
+        }
+        j[EXE] = exe;
+
         std::string msg;
-        if (parser.try_parse(L"message", msg)) {
+        if (parser.try_parse(MY_MESSAGE_W, msg)) {
             j[TASK] = std::string(msg.begin(), msg.end());
         }
         else {
-            j[TASK] = "(no message field)";
-            std::cout << "[*] ETW: Warning: Custom event missing Message field " << j.dump() << "\n";
+            j[TASK] = "(no " + MY_MESSAGE + " field)";
+            std::cout << "[*] ETW: Warning: Custom event missing " << MY_MESSAGE << " field " << j.dump() << "\n";
         }
 
         return j;
@@ -228,6 +313,9 @@ json parse_etw_event(Event e) {
         j[TASK] = wstring2string(combined);
         std::string last_key;
         int last_type;
+        bool overwritten = false;
+        std::string overwritten_key;
+        std::string overwritten_value;
 
         // Iterate over all properties defined in the schema
         for (const auto& property : parser.properties()) {
@@ -250,10 +338,12 @@ json parse_etw_event(Event e) {
                     if (std::find(cat.keys_to_merge.begin(), cat.keys_to_merge.end(), key) != cat.keys_to_merge.end()) {
                         std::string old_key = key;
                         key = cat.merged_key;
-                        if (j.contains(key)) {
-                            std::cerr << "[!] ETW: Warning: Event ID " << j[EVENT_ID] << ", old key " << old_key << ", overwriting existing " << key << ":" << j[key] << "\n";
-                        }
                     }
+                }
+                if (j.contains(key)) {
+                    overwritten = true;
+                    overwritten_key = key;
+                    overwritten_value = get_string_or_convert(j, key);
                 }
 
                 // Special cases
@@ -397,36 +487,47 @@ json parse_etw_event(Event e) {
         }
 
         // add a newly spawned procs to process map
-        if (j[EVENT_ID] == PROCESS_START_STOP_EVENT_ID) {
+        int pid = check_new_proc(j);
+        if (pid != 0) {
             std::string exe_path = j[FILEPATH].get<std::string>();
-            g_running_procs[j[PID]] = exe_path.substr(exe_path.find_last_of("\\") + 1);
+            std::string exe_name = exe_path.substr(exe_path.find_last_of("\\") + 1);
+            add_proc(pid, exe_name);
         }
 
-        // check if process is listed in running procs
-        if (g_running_procs.find(j[PID]) == g_running_procs.end()) {
+        // correlate PID to EXE name and add it to event
+        if (get_proc_name(j[PID]) == "") {
             if (g_debug) {
-                std::cout << "[-] ETW: Warning: Name of PID " << j[PID] << " not found\n";
+                std::cout << "[-] ETW: Warning: Name of PID " << j[PID] << " not found" << j.dump() << "\n";
             }
             j[EXE] = "<not found>";
         }
         else {
-            j[EXE] = g_running_procs[j[PID]];
+            j[EXE] = get_proc_name(j[PID]);
         }
 
         // callstack
-        try {
-            j["stacktrace"] = json::array();
-            int idx = 0;
-            for (auto& return_address : e.schema.stack_trace()) {
-                // only add non-kernelspace addresses
-                if (return_address < 0xFFFF080000000000) {
-                    j["stacktrace"].push_back(return_address);
-                    idx++;
+        if (include_stacktrace) {
+            try {
+                j["stacktrace"] = json::array();
+                int idx = 0;
+                for (auto& return_address : e.schema.stack_trace()) {
+                    // only add non-kernelspace addresses
+                    if (return_address < 0xFFFF080000000000) {
+                        j["stacktrace"].push_back(return_address);
+                        idx++;
+                    }
                 }
             }
+            catch (const std::exception& ex) {
+                std::cerr << "[!] ETW: Failed to parse " << j[TASK] << "'s call stack: " << ex.what() << "\n";
+            }
         }
-        catch (const std::exception& ex) {
-            std::cerr << "[!] ETW: Failed to parse " << j[TASK] << "'s call stack: " << ex.what() << "\n";
+
+        if (overwritten) {
+            if (overwritten_value != j[overwritten_key]) { // only warn if the values differ
+                std::cerr << "[!] ETW: Warning: Event ID " << j[EVENT_ID] << ", overwritten value for " 
+                    << overwritten_key << ":" << j[overwritten_key] << " with " << overwritten_value << "\n";
+            }
         }
 
         return j;
@@ -437,26 +538,71 @@ json parse_etw_event(Event e) {
     }
 }
 
+// check proc started via kernel/antimalware etw
+int check_new_proc(json& j) {
+    if (j[PROVIDER_NAME] == KERNEL_PROCESS_PROVIDER && j[EVENT_ID] == KERNEL_PROC_START_EVENT_ID && j.contains(KERNEL_PID)) {
+        return j[KERNEL_PID]; // kernel proc uses this key
+    }
+    if (j[PROVIDER_NAME] == ANTIMALWARE_PROVIDER && j[EVENT_ID] == ANTIMALWARE_PROC_START_STOP_EVENT_ID && j[SOURCE] == ANTIMALWARE_PROC_START_MSG && j.contains(ORIGINATING_PID)) {
+        return j[ORIGINATING_PID]; // antimalware uses this key
+    }
+    return 0;
+}
 
-// monitors events, sets started and ended flags, attack and injected PID
-void post_parsing_checks(json& j) {
+// check when the first EDRi event is registered --> trace running
+bool check_traces_started(json& j) {
+    if (j.contains(TASK)) {
+        return j[TASK] == EDRi_TRACE_START_MARKER;
+    }
+    return false;
+}
+
+// monitors my events, sets started flag
+void post_my_parsing_checks(json& j) {
     // checks if the trace started
-    edr_profile_check_start(j);
+    if (!g_traces_started && check_traces_started(j)) {
+        if (g_debug) {
+            std::cout << "[+] ETW: Start marker detected\n";
+        }
+        g_traces_started = true;
+    }
+}
 
-    // checks if the attack is done
-    edr_profile_check_end(j);
+// monitors events, sets and ended flag, attack and injected PID
+void post_parsing_checks(json& j) {
+    int new_proc_id = check_new_proc(j);
 
-    // check if the attack_PID and injected_PID can be set, TODO etw independent way?
-    if (g_attack_PID == 0 && j[EVENT_ID] == PROCESS_START_STOP_EVENT_ID) {
+    // check if the attack_PID and injected_PID can be set
+    // TODO path independent?
+    if (g_attack_PID == 0 && new_proc_id != 0) {
         if (j.contains(FILEPATH) && j[FILEPATH] == attack_exe_path) {
-            g_attack_PID = j[PID];
+            g_attack_PID = new_proc_id;
+            g_tracking_PIDs.push_back(g_attack_PID);
             std::cout << "[+] ETW: Got attack PID: " << g_attack_PID << "\n";
         }
     }
-    if (g_injected_PID == 0 && j[EVENT_ID] == PROCESS_START_STOP_EVENT_ID) {
+    if (g_injected_PID == 0 && new_proc_id != 0) {
         if (j.contains(FILEPATH) && j[FILEPATH] == injected_exe_path) {
-            g_injected_PID = j[PID];
+            g_injected_PID = new_proc_id;
+            g_tracking_PIDs.push_back(g_injected_PID);
             std::cout << "[+] ETW: Got injected PID: " << g_injected_PID << "\n";
+        }
+    }
+
+    // checks if the attack is done
+    if (!g_attack_terminated) {
+        // check if the event contains the attack pid
+        if ((j.contains(KERNEL_PID) && j[KERNEL_PID] == g_attack_PID) ||
+            (j.contains(ORIGINATING_PID) && j[ORIGINATING_PID] == g_attack_PID)) {
+            // then check if this event is a terminate event
+            bool kernel_proc_stopped = j[PROVIDER_NAME] == KERNEL_PROCESS_PROVIDER && j[EVENT_ID] == KERNEL_PROC_STOP_EVENT_ID;
+            bool antimalware_proc_stopped = j[PROVIDER_NAME] == ANTIMALWARE_PROVIDER && j[EVENT_ID] == ANTIMALWARE_PROC_START_STOP_EVENT_ID && j[SOURCE] == ANTIMALWARE_PROC_STOP_MSG;
+            if (kernel_proc_stopped || antimalware_proc_stopped) {
+                if (g_debug) {
+                    std::cout << "[+] ETW: Attack termination detected\n";
+                }
+                g_attack_terminated = true;
+            }
         }
     }
 }

@@ -47,6 +47,9 @@ int get_PID_by_name(const std::string& name) {
 // thread-safe adding a proc (can overwrite old procs)
 void add_proc(int pid, const std::string& exe) {
     std::unique_lock<std::shared_mutex> lock(g_procs_mutex); // writer lock (one allowed, no readers)
+    if (g_running_procs.find(pid) != g_running_procs.end()) {
+        return; // already added (else the text below is printed twice)
+    }
     g_running_procs[pid] = exe;
     if (g_debug) {
         std::cout << "[+] Utils: New proc started at runtime (" << g_running_procs.size() << " procs now): " << pid << ":" << exe << "\n";
