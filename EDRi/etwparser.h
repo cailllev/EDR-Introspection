@@ -5,61 +5,105 @@
 #include <string>
 
 #include "globals.h"
+#include "utils.h"
 
+// do not add stacktrace to final results
+static const bool include_stacktrace = false;
 
+// magic numbers
+static const int KERNEL_PROC_START_EVENT_ID = 1;
+static const int KERNEL_PROC_STOP_EVENT_ID = 2;
+static const int ANTIMALWARE_PROC_START_STOP_EVENT_ID = 73;
+static const std::string ANTIMALWARE_PROC_START_MSG = "SyncStart";
+static const std::string ANTIMALWARE_PROC_STOP_MSG = "Termination";
+
+// my message field name (custom ETW events)
+static const std::string MY_MESSAGE = "message"; // this name must not be contained in the event header, else parsing of own emitted events breaks
+static const std::wstring MY_MESSAGE_W = std::wstring(MY_MESSAGE.begin(), MY_MESSAGE.end());
+
+// the names of the providers to track
+static const std::string KERNEL_PROCESS_PROVIDER = "Microsoft-Windows-Kernel-Process";
+static const std::wstring KERNEL_PROCESS_PROVIDER_W = std::wstring(KERNEL_PROCESS_PROVIDER.begin(), KERNEL_PROCESS_PROVIDER.end());
+static const std::string KERNEL_API_PROVIDER = "Microsoft-Windows-Kernel-Audit-API-Calls";
+static const std::wstring KERNEL_API_PROVIDER_W = std::wstring(KERNEL_API_PROVIDER.begin(), KERNEL_API_PROVIDER.end());
+static const std::string KERNEL_FILE_PROVIDER = "Microsoft-Windows-Kernel-File";
+static const std::wstring KERNEL_FILE_PROVIDER_W = std::wstring(KERNEL_FILE_PROVIDER.begin(), KERNEL_FILE_PROVIDER.end());
+static const std::string KERNEL_NETWORK_PROVIDER = "Microsoft-Windows-Kernel-Network";
+static const std::wstring KERNEL_NETWORK_PROVIDER_W = std::wstring(KERNEL_NETWORK_PROVIDER.begin(), KERNEL_NETWORK_PROVIDER.end());
 static const std::string ANTIMALWARE_PROVIDER = "Microsoft-Antimalware-Engine";
 static const std::wstring ANTIMALWARE_PROVIDER_W = std::wstring(ANTIMALWARE_PROVIDER.begin(), ANTIMALWARE_PROVIDER.end());
 
+// the struct that is passed from function to function (or as a json after parsing)
 struct Event {
     const EVENT_RECORD& record;
     const krabs::schema schema;
 };
 
+// fixed attributes inside the header and schema --> string can be chosen "freely", but must be unique over all properties!
 static const std::string TIMESTAMP = "timestamp";
 static const std::string TYPE = "type";
-static const std::string PROVIDER_NAME = "providername";
-static const std::string EVENT_ID = "eventid";
-static const std::string TASK = "task";
-static const std::string PID = "pid";
-static const std::string TID = "tid";
-static const std::string EXE = "exe";
+static const std::string PROVIDER_NAME = "provider_name";
+static const std::string EVENT_ID = "event_id";
+static const std::string TASK = "task_name";
+static const std::string PID = "process_id";
+static const std::string TID = "thread_id";
+
+// custom info --> string can be chosen "freely", but must be unique over all properties!
+static const std::string EXE = "exe"; // TODO just add this at print time for all pid fields
+
+// properties --> string cannot be changed!
 static const std::string TARGET_PID = "targetpid";
+static const std::string KERNEL_PID = "processid";
+static const std::string ORIGINATING_PID = "pid"; // for antimalware-traces
 static const std::string FILEPATH = "filepath";
 static const std::string MESSAGE = "message";
 static const std::string DATA = "data";
 static const std::string SOURCE = "source";
 
+// executables used for the attack
 static const std::string injected_exe_path = "C:\\Program Files\\WindowsApps\\Microsoft.WindowsNotepad_11.2506.35.0_x64__8wekyb3d8bbwe\\Notepad\\Notepad.exe";
 static const std::string shellcode_exe_path = "C:\\Program Files\\WindowsApps\\Microsoft.WindowsCalculator_11.2502.2.0_x64__8wekyb3d8bbwe\\CalculatorApp.exe";
-
 static const std::string attack_exe_name = attack_exe_path.substr(attack_exe_path.find_last_of("\\") + 1);
 static const std::string injected_exe_name = injected_exe_path.substr(injected_exe_path.find_last_of("\\") + 1);
 static const std::string shellcode_exe_name = shellcode_exe_path.substr(shellcode_exe_path.find_last_of("\\") + 1);
-
 static const std::vector<std::string> exe_paths_to_track = { attack_exe_path, injected_exe_path, shellcode_exe_path };
+
+// executables to track for kernel event filtering, i.e. their PIDs at runtime
+static const std::vector<std::string> exes_to_track = {
+    // attack_PID and injected_PID added at runtime
+    "MpDefenderCoreService.exe", "MsMpEng.exe",
+    "MsSense.exe", "SenseCnCProxy.exe", "SenseIR.exe", "SenseCE.exe", "SenseSampleUploader.exe", "SenseNdr.exe", "SenseSC.exe", "SenseCM.exe", "SenseTVM.exe",
+    "smartscreen.exe", "System"
+};
 
 // keys that get merged together
 struct MergeCategory {
     std::string merged_key;
     std::vector<std::string> keys_to_merge;
 };
-
-// keys to merge for PPID and FilePath
 extern MergeCategory ppid_keys;
 extern MergeCategory tpid_keys;
 extern MergeCategory filepath_keys;
 extern std::vector<MergeCategory> key_categories_to_merge;
 
+// getting the events
 std::vector<json> get_events();
 std::vector<json> get_events_unfiltered();
 void print_etw_counts();
 
+// internal functions
+int check_new_proc(json&);
+bool check_traces_started(json&);
 void my_event_callback(const EVENT_RECORD&, const krabs::trace_context&);
 void event_callback(const EVENT_RECORD&, const krabs::trace_context&);
 json parse_my_etw_event(Event);
 json parse_etw_event(Event);
 void count_event(json, bool);
+void post_my_parsing_checks(json&);
 void post_parsing_checks(json&);
 bool filter(json&);
-bool filter_antimalware_etw(json&);
-bool filter_kernel_api_calls(json&);
+bool filter_kernel_process(json&);
+bool filter_kernel_api_call(json&);
+bool filter_kernel_file(json&);
+bool filter_kernel_network(json&);
+bool filter_antimalware(json&);

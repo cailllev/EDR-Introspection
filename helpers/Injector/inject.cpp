@@ -13,7 +13,7 @@ LPCWSTR newProcessToInjectTo = L"C:\\Windows\\System32\\notepad.exe";
 // my attack provider
 TRACELOGGING_DEFINE_PROVIDER(
     g_hProvider,
-    "Injector-Attack", // name in the ETW
+    "Attack-Provider", // name in the ETW
     (0x72248466, 0x7166, 0x4feb, 0xa3, 0x86, 0x34, 0xd8, 0xf3, 0x5b, 0xb6, 0x37)  // a random GUID
 );
 
@@ -23,8 +23,8 @@ int sleep_between_steps_ms = 970; // time to wait between attack steps
 void print_and_emit_event(std::string msg) {
     TraceLoggingWrite(
         g_hProvider,
-        "Injector Event", // this is the event name
-		TraceLoggingValue(msg.c_str(), "message")
+        "Attack-Provider", // this is the event name
+		TraceLoggingValue(msg.c_str(), "message") // cannot be a variable
     );
     std::cout << msg << "\n";
 }

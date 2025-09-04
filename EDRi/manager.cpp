@@ -32,16 +32,15 @@
 // my provider
 TRACELOGGING_DEFINE_PROVIDER(
     g_hProvider,
-    "ETW-Parser", // name in the ETW
-    (0x72248477, 0x7177, 0x4feb, 0xa3, 0x86, 0x34, 0xd8, 0xf3, 0x5b, 0xb6, 0x37)  // a random GUID
-); // TODO get from EDRi_PROVIDER_GUID_W
+    "EDRi-Provider", // name in the ETW, cannot be a variable...
+    (0x72248477, 0x7177, 0x4feb, 0xa3, 0x86, 0x34, 0xd8, 0xf3, 0x5b, 0xb6, 0x37)  // this cannot be a variable
+);
 
 // globals
-int g_attack_PID = 0;  // is set with the incoming ETW events
-int g_injected_PID = 0;  // is set with the incoming ETW events
-
-// currently running processes
-std::map<int, std::string> g_running_procs;
+int g_main_EDR_PID = 0;
+std::vector<int> g_tracking_PIDs = {};
+std::map<int, std::string> g_running_procs = {};
+std::shared_mutex g_procs_mutex;
 
 // attack exe paths
 std::string attack_exe_path = "C:\\Users\\Public\\Downloads\\attack.exe";
@@ -51,16 +50,18 @@ std::string attack_exe_enc_path = attack_exe_path + ".enc";
 bool g_debug = false;
 bool g_super_debug = false;
 
-int wait_between_events_ms = 1000;
-int wait_after_termination_ms = 3000;
+static const int wait_after_traces_started_ms = 10000;
+static const int wait_between_events_ms = 1000;
+static const int wait_after_termination_ms = 5000;
+static const bool allow_pid_overwrite = true; // new processes may overwrite exe name for same pids
 
-void emit_etw_event(std::string msg) {
+void emit_etw_event(std::string msg, bool print_when_debug) {
     TraceLoggingWrite(
         g_hProvider,
-        "ETW-Parser Event", // this is the event name
-        TraceLoggingValue(msg.c_str(), "message")
+        "EDRi-Provider", // this is the event name
+        TraceLoggingValue(msg.c_str(), "message") // cannot be a variable
     );
-    if (g_debug) {
+    if (g_debug && print_when_debug) {
         std::cout << msg << "\n";
     }
 }
@@ -142,9 +143,9 @@ std::string create_timeline_csv(const std::vector<json>& events) {
     int num_events_final = 0;
 
     // print each event as a row
+    // TODO SORT BY TIMESTAMP??
+    // TODO add exe names for ORIGINATING_PID, tpid_merged, ...??
     for (const auto& ev : events) {
-		int num_keys_added = 0; // all rows must have the same number of columns (commas)
-
         // traverse keys IN ORDER OF CSV HEADER
 		// i.e. given: key from csv, check: if event has it, add value, else skip (add "")
         for (const auto& key : all_keys) {
@@ -176,7 +177,7 @@ int main(int argc, char* argv[]) {
         ("e,edr", "The EDR to track, supporting: " + available_edrs, cxxopts::value<std::string>())
         ("o,output", "The Path of the all-events.csv, default " + all_events_output_default, cxxopts::value<std::string>())
         ("a,attack-exe", "The path of the encrypted attack exe to execute", cxxopts::value<std::string>())
-        ("t,trace-etw", "Trace ETW")
+        ("t,trace-etw", "Trace ETW") // TODO, the kernel-proc trace must always be enabled for the start&stop filter
         ("i,trace-etw-ti", "Trace ETW-TI (needs PPL)")
         ("n,hook-ntdll", "Hook ntdll.dll (needs PPL)")
         ("d,debug", "Print debug info")
@@ -249,11 +250,10 @@ int main(int argc, char* argv[]) {
         g_super_debug = true;
 	}
 
-    // PREPARATION
+    // TRACKING PREPARATION
     TraceLoggingRegister(g_hProvider);
-    g_running_procs = snapshot_procs();
+    std::cout << "[+] EDRi: Own provider registered\n";
 
-    // TRACKING
     std::vector<HANDLE> threads;
     if (hook_ntdll) {
         // TODO
@@ -261,21 +261,37 @@ int main(int argc, char* argv[]) {
     if (trace_etw_ti) {
         // TODO
     }
-    if (trace_etw) {
+    if (trace_etw) { // todo refactor kernel proc out? kernel proc (and antimalware?) must always be enabled for proc tracking
         if (!start_etw_traces(threads)) { // try to start trace
             std::cerr << "[!] EDRi: Failed to start ETW traces(s)\n";
             exit(1);
         }
     }
-	// wait until traces are running
-	while (!edr_profile_is_trace_running()) {
-		Sleep(10);
+    std::cout << "[*] EDRi: Get running procs\n"; // for the first traces, until my trace is started
+    snapshot_procs(allow_pid_overwrite);
+
+    Sleep(wait_after_traces_started_ms);
+    std::cout << "[*] EDRi: Waiting until start marker is registered\n";
+	while (!g_traces_started) {
+        emit_etw_event(EDRi_TRACE_START_MARKER, false);
+		Sleep(100);
 	}
-	std::cout << "[*] EDRi: Trace started, starting attack...\n";
+	std::cout << "[*] EDRi: Trace started\n";
+
+    std::cout << "[*] EDRi: Update running procs\n"; // after my trace is live
+    snapshot_procs(allow_pid_overwrite);
+    g_main_EDR_PID = get_PID_by_name(get_edr_exe()); // todo this must also be in the profile
+    for (auto& e : exes_to_track) {
+        int pid = get_PID_by_name(e);
+        if (pid != 0) {
+            std::cout << "[+] EDRi: Got pid for " << e << ":" << pid << "\n";
+            g_tracking_PIDs.push_back(pid);
+        }
+    }
 
     // ATTACK
 	// decrypt the attack exe
-	emit_etw_event("[<] Before decrypting attack exe");
+	emit_etw_event("[<] Before decrypting attack exe", true);
     if (xor_file(attack_exe_enc_path, attack_exe_path)) {
         std::cout << "[*] EDRi: Decrypted attack exe: " << attack_exe_path << "\n";
     }
@@ -284,20 +300,19 @@ int main(int argc, char* argv[]) {
         stop_etw_traces();
         return 1;
     }
-    emit_etw_event("[>]  After decrypting attack exe");
+    emit_etw_event("[>]  After decrypting attack exe", true);
     Sleep(wait_between_events_ms);
 
     // start the attack via explorer (breaks process tree)
     std::string command = "explorer.exe \"" + attack_exe_path + "\"";
-    emit_etw_event("[<] Before executing attack exe");
+    emit_etw_event("[<] Before executing attack exe", true);
     Sleep(wait_between_events_ms);
 	std::cout << "[*] EDRi: Starting attack: " << command << "\n";
 	system(command.c_str());
 
-	// wait until the attack and injection is done, i.e. event_id 73 with "Termination"
-    // TODO non defender "attack done" filter
+	// wait until the attack.exe terminates again
     std::cout << "[+] EDRi: Waiting for attack to finish...\n";
-    while (!edr_profile_is_trace_stopped()) {
+    while (!g_attack_terminated) {
         Sleep(100);
 	}
     std::cout << "[+] EDRi: Waiting for any final events...\n";
@@ -305,7 +320,7 @@ int main(int argc, char* argv[]) {
 
     std::cout << "[*] EDRi: Stopping traces\n";
     stop_etw_traces();
-    DWORD res = WaitForMultipleObjects((DWORD)threads.size(), threads.data(), TRUE, INFINITE);
+    DWORD res = WaitForMultipleObjects((DWORD)threads.size(), threads.data(), TRUE, INFINITE); // TODO
     if (res == WAIT_FAILED) {
         std::cout << "[!] EDRi: Wait failed";
     }
@@ -318,7 +333,7 @@ int main(int argc, char* argv[]) {
 	out << csv_output;
 	out.close();
 
-    if (g_super_debug) {
+    if (g_debug) {
         std::vector<json> events_unfiltered = get_events_unfiltered();
         std::string csv_output_unfiltered = create_timeline_csv(events_unfiltered);
         std::string output_unfiltered = output.substr(0, output.find_last_of('.')) + "-unfiltered.csv";
