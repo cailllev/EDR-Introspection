@@ -4,35 +4,60 @@
 #include <iomanip>
 #include <sstream>
 #include <vector>
+#include <shared_mutex>
 #include <tlhelp32.h> // import after windows.h, else all breaks, that's crazy, yo
 
 #include "utils.h"
+#include "globals.h"
 
 
-std::string encrypt_password = "much signature bypass, such wow";
+static const std::string encrypt_password = "much signature bypass, such wow";
 
-
-std::map<int, std::string> snapshot_procs() {
-    std::map<int, std::string> pid_name_map;
+// thread-safe storing PID:EXE to global variable
+void snapshot_procs(bool allow_overwrite) {
     PROCESSENTRY32 pe;
     pe.dwSize = sizeof(PROCESSENTRY32);
     HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (Process32First(snapshot, &pe)) {
-        while (Process32Next(snapshot, &pe)) {
-            pid_name_map[pe.th32ProcessID] = wchar2string(pe.szExeFile);
-        }
+        std::unique_lock<std::shared_mutex> lock(g_procs_mutex); // one lock for entire update
+        do {
+            std::string exe = wchar2string(pe.szExeFile);
+            int pid = pe.th32ProcessID;
+            if (allow_overwrite) {
+                g_running_procs[pid] = exe;
+            }
+            else if (g_running_procs.find(pid) == g_running_procs.end()) {
+                g_running_procs[pid] = exe;
+            }
+        } while (Process32Next(snapshot, &pe));
     }
-    return pid_name_map;
 }
 
-// returns the PID of the first match, ignores other same-named processes
-int get_PID_by_name(std::map<int, std::string> procs, std::string name) {
-    for (auto it = procs.begin(); it != procs.end(); ++it) {
+// thread-safe retrieving the PID of the first match, ignores other same-named processes
+int get_PID_by_name(const std::string& name) {
+    std::shared_lock<std::shared_mutex> lock(g_procs_mutex); // reader lock (multiple allowed when no writers)
+    for (auto it = g_running_procs.begin(); it != g_running_procs.end(); ++it) {
         if (it->second == name) {
             return it->first;
         }
     }
     return 0; // not found
+}
+
+// thread-safe adding a proc (can overwrite old procs)
+void add_proc(int pid, const std::string& exe) {
+    std::unique_lock<std::shared_mutex> lock(g_procs_mutex); // writer lock (one allowed, no readers)
+    g_running_procs[pid] = exe;
+    if (g_debug) {
+        std::cout << "[+] Utils: New proc started at runtime (" << g_running_procs.size() << " procs now): " << pid << ":" << exe << "\n";
+    }
+}
+
+// thread-safe retrieving a proc
+std::string get_proc_name(int pid) {
+    std::shared_lock<std::shared_mutex> lock(g_procs_mutex); // reader lock (multiple allowed when no writers)
+    auto it = g_running_procs.find(pid);
+    return (it != g_running_procs.end()) ? it->second : PROC_NOT_FOUND;
 }
 
 // encrypt/decrypt a file with a static password
@@ -67,7 +92,6 @@ bool xor_file(std::string in_path, std::string out_path) {
 
 
 // all stolen from https://github.com/dobin/RedEdr
-
 std::string wchar2string(const wchar_t* wideString) {
     if (!wideString) {
         return "";
