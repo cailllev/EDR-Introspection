@@ -25,15 +25,19 @@ MergeCategory ppid_keys = {
     "ppid",
     {"parentpid"}
 };
-MergeCategory tpid_keys = { // both refer to yet another pid (event has an emitter (process_id), original proc (pid), and the target proc (tpid))
+MergeCategory tpid_keys = { // all refer to yet another pid (event has an emitter (process_id), original proc (pid), and the target proc (tpid))
     TARGET_PID,
-    {"tpid" }
+    {"processid", "tpid", "targetprocessid"} // TODO processid in kernel means tpid, processid in antimalware means pid (but only event 95 has this)
+};
+MergeCategory ttid_keys = { // both refer to yet another pid (event has an emitter (process_id), original proc (pid), and the target proc (tpid))
+    TARGET_TIP,
+    {"targetthreadid", "ttid"}
 };
 MergeCategory filepath_keys = {
     FILEPATH,
     {"basepath", "filename", "imagepath", "imagename", "path", "name", "reasonimagepath"}
 };
-std::vector<MergeCategory> key_categories_to_merge = { ppid_keys, tpid_keys, filepath_keys };
+std::vector<MergeCategory> key_categories_to_merge = { ppid_keys, tpid_keys, ttid_keys, filepath_keys };
 
 // pid fields that should have the exe name added at print time
 static const std::vector<std::string> fields_to_add_exe_name = { PID, ppid_keys.merged_key, tpid_keys.merged_key, KERNEL_PID, ORIGINATING_PID };
@@ -471,7 +475,7 @@ void add_exe_information(json& j) {
     }
 }
 
-// global filter for all etw providers
+// filter based on provider
 bool filter(json& ev) {
     if (ev[PROVIDER_NAME] == KERNEL_PROCESS_PROVIDER) {
         return filter_kernel_process(ev);
@@ -485,7 +489,7 @@ bool filter(json& ev) {
         return filter_kernel_file(ev);
     }
 
-    else if (ev[PROVIDER_NAME] == KERNEL_FILE_PROVIDER) {
+    else if (ev[PROVIDER_NAME] == KERNEL_NETWORK_PROVIDER) {
         return filter_kernel_network(ev);
     }
 
@@ -502,15 +506,18 @@ bool filter(json& ev) {
 
 // filter kernel process events
 bool filter_kernel_process(json& ev) {
-    if (std::find(kapi_event_ids_with_security_pids.begin(), kapi_event_ids_with_security_pids.end(), ev[EVENT_ID]) != kapi_event_ids_with_security_pids.end()) {
-        return std::find(g_tracking_PIDs.begin(), g_tracking_PIDs.end(), ev[PID]) == g_tracking_PIDs.end(); // filter out PIDs that are not in tracking (==true)
+    // all known kernel proc event ids are filtered for "interesting" ids --> TODO does not work
+    if (std::find(kproc_event_ids_with_pid_or_tpid.begin(), kproc_event_ids_with_pid_or_tpid.end(), ev[EVENT_ID]) != kproc_event_ids_with_pid_or_tpid.end()) {
+        bool in_pid = std::find(g_tracking_PIDs.begin(), g_tracking_PIDs.end(), ev[PID]) == g_tracking_PIDs.end();
+        bool in_tpid = std::find(g_tracking_PIDs.begin(), g_tracking_PIDs.end(), ev[tpid_keys.merged_key]) == g_tracking_PIDs.end();
+        return in_pid || in_tpid; // filter out PIDs that are not in tracking (==true)
     }
     return false; // keep the rest
 }
 
 // filter kernel api calls
 bool filter_kernel_api_call(json& ev) {
-    if (std::find(kapi_event_ids_with_security_pids.begin(), kapi_event_ids_with_security_pids.end(), ev[EVENT_ID]) != kapi_event_ids_with_security_pids.end()) {
+    if (std::find(kapi_event_ids_with_pid.begin(), kapi_event_ids_with_pid.end(), ev[EVENT_ID]) != kapi_event_ids_with_pid.end()) {
         return std::find(g_tracking_PIDs.begin(), g_tracking_PIDs.end(), ev[PID]) == g_tracking_PIDs.end(); // filter out PIDs that are not in tracking (==true)
     }
     return false; // keep the rest
@@ -518,7 +525,7 @@ bool filter_kernel_api_call(json& ev) {
 
 // filter kernel file events
 bool filter_kernel_file(json& ev) {
-    if (std::find(kfile_event_ids_with_security_pids.begin(), kfile_event_ids_with_security_pids.end(), ev[EVENT_ID]) != kfile_event_ids_with_security_pids.end()) {
+    if (std::find(kfile_event_ids_with_pid.begin(), kfile_event_ids_with_pid.end(), ev[EVENT_ID]) != kfile_event_ids_with_pid.end()) {
         return std::find(g_tracking_PIDs.begin(), g_tracking_PIDs.end(), ev[PID]) == g_tracking_PIDs.end(); // filter out PIDs that are not in tracking (==true)
     }
     return false; // keep the rest
@@ -526,7 +533,7 @@ bool filter_kernel_file(json& ev) {
 
 // filter kernel network events
 bool filter_kernel_network(json& ev) {
-    if (std::find(knetwork_event_ids_with_security_pids.begin(), knetwork_event_ids_with_security_pids.end(), ev[EVENT_ID]) != knetwork_event_ids_with_security_pids.end()) {
+    if (std::find(knetwork_event_ids_with_pid_or_pid.begin(), knetwork_event_ids_with_pid_or_pid.end(), ev[EVENT_ID]) != knetwork_event_ids_with_pid_or_pid.end()) {
         return std::find(g_tracking_PIDs.begin(), g_tracking_PIDs.end(), ev[PID]) == g_tracking_PIDs.end(); // filter out PIDs that are not in tracking (==true)
     }
     return false; // keep the rest

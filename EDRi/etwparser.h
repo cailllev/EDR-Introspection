@@ -50,6 +50,7 @@ static const std::string TID = "thread_id";
 
 // properties --> string cannot be changed!
 static const std::string TARGET_PID = "targetpid";
+static const std::string TARGET_TIP = "targettid";
 static const std::string KERNEL_PID = "processid";
 static const std::string ORIGINATING_PID = "pid"; // for antimalware-traces
 static const std::string FILEPATH = "filepath";
@@ -79,7 +80,7 @@ struct MergeCategory {
     std::string merged_key;
     std::vector<std::string> keys_to_merge;
 };
-extern MergeCategory ppid_keys, tpid_keys, filepath_keys;
+extern MergeCategory ppid_keys, tpid_keys, ttid_keys, filepath_keys;
 
 // getting the events
 std::vector<json> get_events();
