@@ -48,9 +48,6 @@ static const std::string TASK = "task_name";
 static const std::string PID = "process_id";
 static const std::string TID = "thread_id";
 
-// custom info --> string can be chosen "freely", but must be unique over all properties!
-static const std::string EXE = "exe"; // TODO just add this at print time for all pid fields
-
 // properties --> string cannot be changed!
 static const std::string TARGET_PID = "targetpid";
 static const std::string KERNEL_PID = "processid";
@@ -76,15 +73,13 @@ static const std::vector<std::string> exes_to_track = {
     "smartscreen.exe", "System"
 };
 
+
 // keys that get merged together
 struct MergeCategory {
     std::string merged_key;
     std::vector<std::string> keys_to_merge;
 };
-extern MergeCategory ppid_keys;
-extern MergeCategory tpid_keys;
-extern MergeCategory filepath_keys;
-extern std::vector<MergeCategory> key_categories_to_merge;
+extern MergeCategory ppid_keys, tpid_keys, filepath_keys;
 
 // getting the events
 std::vector<json> get_events();
@@ -92,18 +87,20 @@ std::vector<json> get_events_unfiltered();
 void print_etw_counts();
 
 // internal functions
-int check_new_proc(json&);
-bool check_traces_started(json&);
 void my_event_callback(const EVENT_RECORD&, const krabs::trace_context&);
 void event_callback(const EVENT_RECORD&, const krabs::trace_context&);
 json parse_my_etw_event(Event);
 json parse_etw_event(Event);
-void count_event(json, bool);
+std::string get_string_or_convert(const json&, const std::string&);
 void post_my_parsing_checks(json&);
 void post_parsing_checks(json&);
+void add_exe_information(json& j);
+int check_new_proc(json&);
+bool check_traces_started(json&);
 bool filter(json&);
 bool filter_kernel_process(json&);
 bool filter_kernel_api_call(json&);
 bool filter_kernel_file(json&);
 bool filter_kernel_network(json&);
 bool filter_antimalware(json&);
+void count_event(json, bool);

@@ -32,7 +32,7 @@
 // my provider
 TRACELOGGING_DEFINE_PROVIDER(
     g_hProvider,
-    "EDRi-Provider", // name in the ETW, cannot be a variable...
+    "EDRi-Provider", // name in the ETW, cannot be a variable
     (0x72248477, 0x7177, 0x4feb, 0xa3, 0x86, 0x34, 0xd8, 0xf3, 0x5b, 0xb6, 0x37)  // this cannot be a variable
 );
 
@@ -50,15 +50,18 @@ std::string attack_exe_enc_path = attack_exe_path + ".enc";
 bool g_debug = false;
 bool g_super_debug = false;
 
-static const int wait_after_traces_started_ms = 10000;
+// wait times
+static const int wait_after_traces_started_ms = 15000;
 static const int wait_between_events_ms = 1000;
 static const int wait_after_termination_ms = 5000;
+static const int wait_time_between_start_markers_ms = 250;
+
 static const bool allow_pid_overwrite = true; // new processes may overwrite exe name for same pids
 
 void emit_etw_event(std::string msg, bool print_when_debug) {
     TraceLoggingWrite(
         g_hProvider,
-        "EDRi-Provider", // this is the event name
+        "EDRi-Event", // this is the event name, can be anything with the current implementation
         TraceLoggingValue(msg.c_str(), "message") // cannot be a variable
     );
     if (g_debug && print_when_debug) {
@@ -144,7 +147,6 @@ std::string create_timeline_csv(const std::vector<json>& events) {
 
     // print each event as a row
     // TODO SORT BY TIMESTAMP??
-    // TODO add exe names for ORIGINATING_PID, tpid_merged, ...??
     for (const auto& ev : events) {
         // traverse keys IN ORDER OF CSV HEADER
 		// i.e. given: key from csv, check: if event has it, add value, else skip (add "")
@@ -274,7 +276,7 @@ int main(int argc, char* argv[]) {
     std::cout << "[*] EDRi: Waiting until start marker is registered\n";
 	while (!g_traces_started) {
         emit_etw_event(EDRi_TRACE_START_MARKER, false);
-		Sleep(100);
+		Sleep(wait_time_between_start_markers_ms);
 	}
 	std::cout << "[*] EDRi: Trace started\n";
 

@@ -1,0 +1,3 @@
+Antimalware filtered + EDRi
+Kernel partially filtered
+EXE name added to each PID field
