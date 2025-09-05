@@ -16,16 +16,15 @@ static const std::vector<int> am_event_ids_with_message = { 3 };
 static const std::vector<int> am_event_ids_with_filepath = { 30, 31, 35, 36, 37, 38 };
 static const std::vector<int> am_event_ids_with_signatures = { 59 }; // TODO find a way to filter event 59
 
-// TODO global variable for captured kernel event ids?
 
+// TODO many kernel events, create new (vebose) filter layout? --> minimal events, verbose events (kernel + antimalware 11), all events
+// TODO all kernel events should be filtered, are event ids still needed?
 // Kernel Process Trace
-static const std::vector<int> kproc_event_ids_with_pid_or_tpid = { 1, 2, 3, 4, 5, 6, 11 }; // todo thread start stop & image load unload (3456) also relevant for ALL security pids?
-
+static const std::vector<int> kproc_event_ids_with_tpid = { 1, 2, 3, 4, 5, 6, 11 }; // todo thread start stop & image load unload (3456) also relevant for ALL security pids?
 // Kernel API Calls Trace
-static const std::vector<int> kapi_event_ids_with_pid = { 2, 3, 5, 6 };
-
+static const std::vector<int> kapi_event_ids_with_tpid = { 2, 5, 6 };
+static const std::vector<int> kapi_event_ids_with_pid = { 3 };
 // Kernel File Trace
 static const std::vector<int> kfile_event_ids_with_pid = { 10, 30 };
-
 // Kernel Network Trace
-static const std::vector<int> knetwork_event_ids_with_pid_or_pid = { 12, 15, 28, 31, 42, 43, 58, 59 };
+static const std::vector<int> knetwork_event_ids_with_pid_or_opid = { 12, 15, 28, 31, 42, 43, 58, 59 };

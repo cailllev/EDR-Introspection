@@ -1,6 +1,9 @@
 #include <krabs.hpp>
 #include "helpers/json.hpp"
 #include <iostream>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#pragma comment(lib, "Ws2_32.lib")
 
 #include "globals.h"
 #include "utils.h"
@@ -22,16 +25,16 @@ bool g_attack_terminated = false;
 
 // keys that get merged together
 MergeCategory ppid_keys = {
-    "ppid",
+    PPID,
     {"parentpid"}
 };
 MergeCategory tpid_keys = { // all refer to yet another pid (event has an emitter (process_id), original proc (pid), and the target proc (tpid))
     TARGET_PID,
-    {"processid", "tpid", "targetprocessid"} // TODO processid in kernel means tpid, processid in antimalware means pid (but only event 95 has this)
+    {KERNEL_PID, "tpid", "targetprocessid"} // TODO processid in kernel means tpid, processid in antimalware means pid (but only event 95 has this)
 };
 MergeCategory ttid_keys = { // both refer to yet another pid (event has an emitter (process_id), original proc (pid), and the target proc (tpid))
-    TARGET_TIP,
-    {"targetthreadid", "ttid"}
+    TARGET_TID,
+    {"targetthreatid", "ttid"} // yes, threat with a t, this is a typo in the property name
 };
 MergeCategory filepath_keys = {
     FILEPATH,
@@ -40,7 +43,7 @@ MergeCategory filepath_keys = {
 std::vector<MergeCategory> key_categories_to_merge = { ppid_keys, tpid_keys, ttid_keys, filepath_keys };
 
 // pid fields that should have the exe name added at print time
-static const std::vector<std::string> fields_to_add_exe_name = { PID, ppid_keys.merged_key, tpid_keys.merged_key, KERNEL_PID, ORIGINATING_PID };
+static const std::vector<std::string> fields_to_add_exe_name = { PID, PPID, TARGET_PID, KERNEL_PID, ORIGINATING_PID };
 
 
 // hand over schema for parsing
@@ -77,7 +80,7 @@ void event_callback(const EVENT_RECORD& record, const krabs::trace_context& trac
         }
 
         // check if event can be filtered out
-        bool filter_out = filter(ev); // TODO filter after all events captured?
+        bool filter_out = filter(ev);
         add_exe_information(ev); // must be after all parsing checks and filtering but before adding it to events
         if (!filter_out) {
             etw_events.push_back(ev);
@@ -148,8 +151,10 @@ json parse_etw_event(Event e) {
         j[PROVIDER_NAME] = wchar2string(e.schema.provider_name());
 
         // task = task_name + opcode_name
+        // TODO lookup missing info if either is null?
         std::wstring combined = std::wstring(e.schema.task_name()) + std::wstring(e.schema.opcode_name());
         j[TASK] = wstring2string(combined);
+
         std::string last_key;
         int last_type;
         bool overwritten = false;
@@ -183,6 +188,9 @@ json parse_etw_event(Event e) {
                     overwritten = true;
                     overwritten_key = key;
                     overwritten_value = get_string_or_convert(j, key);
+                    if (g_debug) {
+                        std::cout << "[!] ETW: Warning: About to overwrite " << overwritten_key << ":" << overwritten_value << "\n";
+                    }
                 }
 
                 // Special cases
@@ -230,6 +238,33 @@ json parse_etw_event(Event e) {
                 case TDH_INTYPE_POINTER:
                     j[key] = (uint64_t)parser.parse<PVOID>(property_name);
                     break;
+
+                case TDH_INTYPE_BINARY:
+                {
+                    auto raw = parser.parse<std::vector<uint8_t>>(property_name);
+
+                    // Heuristic: IPv4 addresses are 4 bytes, IPv6 are 16 bytes
+                    if (raw.size() == 4) {
+                        char ipStr[INET_ADDRSTRLEN];
+                        inet_ntop(AF_INET, raw.data(), ipStr, sizeof(ipStr));
+                        j[key] = std::string(ipStr);
+                    }
+                    else if (raw.size() == 16) {
+                        char ipStr[INET6_ADDRSTRLEN];
+                        inet_ntop(AF_INET6, raw.data(), ipStr, sizeof(ipStr));
+                        j[key] = std::string(ipStr);
+                    }
+                    else {
+                        // fallback: hex dump
+                        std::ostringstream oss;
+                        oss << "0x";
+                        for (auto b : raw) {
+                            oss << std::hex << std::setw(2) << std::setfill('0') << (int)b;
+                        }
+                        j[key] = oss.str();
+                    }
+                    break;
+                }
 
                 case TDH_INTYPE_GUID:
                 {
@@ -367,7 +402,6 @@ json parse_etw_event(Event e) {
 }
 
 std::string get_string_or_convert(const json& j, const std::string& key) {
-    std::cout << "in get string\n";
     if (!j.contains(key)) {
         return ""; // key not present
     }
@@ -504,37 +538,51 @@ bool filter(json& ev) {
     return false; // do not filter unregistered providers
 }
 
+// returns true when key exists but value does not match --> should be filtered out
+bool to_filter_out(json& ev, std::string key, std::vector<int> list) {
+    if (ev.contains(key)) {
+        return std::find(list.begin(), list.end(), ev[key]) == list.end(); // true when value not found --> should be filtered
+    }
+    else if (g_debug) {
+        std::cout << "[-] ETW: Warning: Event with ID " << ev[EVENT_ID] << " missing " << key << " field to filter: " << ev.dump() << "\n";
+    }
+    return false; // expected key does not exists, do not filter out (for now)
+}
+
 // filter kernel process events
 bool filter_kernel_process(json& ev) {
-    // all known kernel proc event ids are filtered for "interesting" ids --> TODO does not work
-    if (std::find(kproc_event_ids_with_pid_or_tpid.begin(), kproc_event_ids_with_pid_or_tpid.end(), ev[EVENT_ID]) != kproc_event_ids_with_pid_or_tpid.end()) {
-        bool in_pid = std::find(g_tracking_PIDs.begin(), g_tracking_PIDs.end(), ev[PID]) == g_tracking_PIDs.end();
-        bool in_tpid = std::find(g_tracking_PIDs.begin(), g_tracking_PIDs.end(), ev[tpid_keys.merged_key]) == g_tracking_PIDs.end();
-        return in_pid || in_tpid; // filter out PIDs that are not in tracking (==true)
+    // the interesting info is in target pid, process_id of msmpeng.exe/attack.exe/smartscreen.exe etc is not enough to filter
+    if (std::find(kproc_event_ids_with_tpid.begin(), kproc_event_ids_with_tpid.end(), ev[EVENT_ID]) != kproc_event_ids_with_tpid.end()) {
+        return to_filter_out(ev, TARGET_PID, g_tracking_PIDs);
     }
     return false; // keep the rest
 }
 
 // filter kernel api calls
 bool filter_kernel_api_call(json& ev) {
+    // the interesting info is in target pid, process_id of msmpeng.exe/attack.exe/smartscreen.exe etc is not enough to filter
+    if (std::find(kapi_event_ids_with_tpid.begin(), kapi_event_ids_with_tpid.end(), ev[EVENT_ID]) != kapi_event_ids_with_tpid.end()) {
+        return to_filter_out(ev, TARGET_PID, g_tracking_PIDs);
+    }
     if (std::find(kapi_event_ids_with_pid.begin(), kapi_event_ids_with_pid.end(), ev[EVENT_ID]) != kapi_event_ids_with_pid.end()) {
-        return std::find(g_tracking_PIDs.begin(), g_tracking_PIDs.end(), ev[PID]) == g_tracking_PIDs.end(); // filter out PIDs that are not in tracking (==true)
+        return to_filter_out(ev, PID, g_tracking_PIDs);
     }
     return false; // keep the rest
 }
 
 // filter kernel file events
 bool filter_kernel_file(json& ev) {
+    // TODO also filters out Notepad.exe proc, why?
     if (std::find(kfile_event_ids_with_pid.begin(), kfile_event_ids_with_pid.end(), ev[EVENT_ID]) != kfile_event_ids_with_pid.end()) {
-        return std::find(g_tracking_PIDs.begin(), g_tracking_PIDs.end(), ev[PID]) == g_tracking_PIDs.end(); // filter out PIDs that are not in tracking (==true)
+        return to_filter_out(ev, PID, g_tracking_PIDs);
     }
     return false; // keep the rest
 }
 
 // filter kernel network events
 bool filter_kernel_network(json& ev) {
-    if (std::find(knetwork_event_ids_with_pid_or_pid.begin(), knetwork_event_ids_with_pid_or_pid.end(), ev[EVENT_ID]) != knetwork_event_ids_with_pid_or_pid.end()) {
-        return std::find(g_tracking_PIDs.begin(), g_tracking_PIDs.end(), ev[PID]) == g_tracking_PIDs.end(); // filter out PIDs that are not in tracking (==true)
+    if (std::find(knetwork_event_ids_with_pid_or_opid.begin(), knetwork_event_ids_with_pid_or_opid.end(), ev[EVENT_ID]) != knetwork_event_ids_with_pid_or_opid.end()) {
+        return to_filter_out(ev, PID, g_tracking_PIDs) && to_filter_out(ev, ORIGINATING_PID, g_tracking_PIDs); // neither PID nor originating PID match --> return true
     }
     return false; // keep the rest
 }
@@ -546,43 +594,22 @@ bool filter_antimalware(json& ev) {
         return true;
     }
 
-    // events to keep if PID matches
+    // events to keep if originating PID matches attack or injected PID
     if (std::find(am_event_ids_with_pid.begin(), am_event_ids_with_pid.end(), ev[EVENT_ID]) != am_event_ids_with_pid.end()) {
-        if (ev.contains(ORIGINATING_PID)) {
-            int pid = ev[ORIGINATING_PID];
-            return pid != g_attack_PID && pid != g_injected_PID;
-        }
-        else if (g_debug) {
-            std::cout << "[-] ETW: Warning: Event with ID " << ev[EVENT_ID] << " missing " << ORIGINATING_PID << " field: " << ev.dump() << "\n";
-        }
-        return false; // unexpected event fields, do not filter
+        return to_filter_out(ev, ORIGINATING_PID, { g_attack_PID, g_injected_PID });
     }
 
-    // events to keep if PID or TargetPID matches
+    // events to keep if originating PID or TargetPID matches attack PID or injected PID
     if (std::find(am_event_ids_with_pid_and_tpid.begin(), am_event_ids_with_pid_and_tpid.end(), ev[EVENT_ID]) != am_event_ids_with_pid_and_tpid.end()) {
-        if (ev.contains(TARGET_PID) && ev.contains(ORIGINATING_PID)) {
-            int pid = ev[ORIGINATING_PID];
-            int tpid = ev[TARGET_PID];
-            return ev[ORIGINATING_PID] != g_attack_PID && ev[ORIGINATING_PID] != g_injected_PID && ev[TARGET_PID] != g_attack_PID && ev[TARGET_PID] != g_injected_PID;
-        }
-        else if (g_debug) {
-            std::cout << "[-] ETW: Warning: Event with ID " << ev[EVENT_ID] << " missing " << ORIGINATING_PID << " or " << TARGET_PID << " field: " << ev.dump() << "\n";
-        }
-        return false; // unexpected event fields, do not filter
+        return to_filter_out(ev, ORIGINATING_PID, { g_attack_PID, g_injected_PID }) && to_filter_out(ev, TARGET_PID, { g_attack_PID, g_injected_PID });
     }
 
     // events to keep if PID in Data matches
     if (std::find(am_event_ids_with_pid_in_data.begin(), am_event_ids_with_pid_in_data.end(), ev[EVENT_ID]) != am_event_ids_with_pid_in_data.end()) {
-        if (ev.contains(DATA)) {
-            return ev[DATA] != g_attack_PID && ev[DATA] != g_injected_PID;
-        }
-        else if (g_debug) {
-            std::cout << "[-] ETW: Warning: Event with ID " << ev[EVENT_ID] << " missing " << DATA << " field: " << ev.dump() << "\n";
-        }
-        return false; // unexpected event fields, do not filter
+        return to_filter_out(ev, DATA, { g_attack_PID, g_injected_PID });
     }
 
-    // events to keep if Message contains filter string (case insensitive)
+    // events to keep if Message contains filter string (case insensitive) // TODO without magic values
     if (std::find(am_event_ids_with_message.begin(), am_event_ids_with_message.end(), ev[EVENT_ID]) != am_event_ids_with_message.end()) {
         if (ev.contains(MESSAGE)) {
             std::string msg = ev[MESSAGE].get<std::string>();
@@ -600,10 +627,10 @@ bool filter_antimalware(json& ev) {
         return false; // unexpected event fields, do not filter
     }
 
-    // events to keep if filepath matches
+    // events to keep if filepath matches (case insensitive)
     if (std::find(am_event_ids_with_filepath.begin(), am_event_ids_with_filepath.end(), ev[EVENT_ID]) != am_event_ids_with_filepath.end()) {
         if (ev.contains(FILEPATH)) {
-            return std::strcmp(ev[FILEPATH].get<std::string>().c_str(), attack_exe_path.c_str());
+            return _stricmp(ev[FILEPATH].get<std::string>().c_str(), attack_exe_path.c_str());
         }
         else if (g_debug) {
             std::cout << "[-] ETW: Warning: Event with ID " << ev[EVENT_ID] << " missing " << FILEPATH << " field: " << ev.dump() << "\n";

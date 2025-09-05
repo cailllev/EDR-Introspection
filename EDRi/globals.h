@@ -6,7 +6,7 @@
 #include "helpers/json.hpp"
 
 static const std::string EDRi_PROVIDER_NAME = "EDRi-Provider";
-static const int EDRi_PROVIDER_EVENT_ID = 911;
+static const int EDRi_PROVIDER_EVENT_ID = 4242;
 static const int ATTACK_PROVIDER_EVENT_ID = 1337;
 
 static const std::wstring EDRi_PROVIDER_GUID_W = L"{72248477-7177-4feb-a386-34d8f35bb637}";
