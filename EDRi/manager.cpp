@@ -285,7 +285,7 @@ int main(int argc, char* argv[]) {
     g_main_EDR_PID = get_PID_by_name(get_edr_exe()); // todo this must also be in the profile
     for (auto& e : exes_to_track) {
         int pid = get_PID_by_name(e);
-        if (pid != 0) {
+        if (pid != -1) {
             std::cout << "[+] EDRi: Got pid for " << e << ":" << pid << "\n";
             g_tracking_PIDs.push_back(pid);
         }

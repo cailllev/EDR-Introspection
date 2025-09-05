@@ -37,11 +37,11 @@ void snapshot_procs(bool allow_overwrite) {
 int get_PID_by_name(const std::string& name) {
     std::shared_lock<std::shared_mutex> lock(g_procs_mutex); // reader lock (multiple allowed when no writers)
     for (auto it = g_running_procs.begin(); it != g_running_procs.end(); ++it) {
-        if (it->second == name) {
+        if (_stricmp(it->second.c_str(), name.c_str()) == 0) {
             return it->first;
         }
     }
-    return 0; // not found
+    return -1; // not found
 }
 
 // thread-safe adding a proc (can overwrite old procs)

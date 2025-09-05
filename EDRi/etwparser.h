@@ -44,13 +44,14 @@ static const std::string TIMESTAMP = "timestamp";
 static const std::string TYPE = "type";
 static const std::string PROVIDER_NAME = "provider_name";
 static const std::string EVENT_ID = "event_id";
-static const std::string TASK = "task_name";
+static const std::string TASK = "task_info"; // task_name + opcode_name
 static const std::string PID = "process_id";
 static const std::string TID = "thread_id";
 
 // properties --> string cannot be changed!
+static const std::string PPID = "ppid";
 static const std::string TARGET_PID = "targetpid";
-static const std::string TARGET_TIP = "targettid";
+static const std::string TARGET_TID = "targettid";
 static const std::string KERNEL_PID = "processid";
 static const std::string ORIGINATING_PID = "pid"; // for antimalware-traces
 static const std::string FILEPATH = "filepath";
@@ -99,6 +100,7 @@ void add_exe_information(json& j);
 int check_new_proc(json&);
 bool check_traces_started(json&);
 bool filter(json&);
+bool to_filter_out(json&, std::string, std::vector<int>);
 bool filter_kernel_process(json&);
 bool filter_kernel_api_call(json&);
 bool filter_kernel_file(json&);
