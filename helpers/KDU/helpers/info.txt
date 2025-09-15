@@ -1,0 +1,5 @@
+Drivers that crash the System:
+4, 12
+
+Drivers that spwan a process, but no PPL:
+11, 13, 14, 20, 22, ....???, 52, 54
