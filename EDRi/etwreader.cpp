@@ -9,7 +9,8 @@
 #include "etwparser.h"
 
 
-krabs::user_trace trace_user(L"EDRi");
+krabs::user_trace trace_etw(L"EDRi");
+krabs::user_trace trace_etw_ti(L"EDRi-TI");
 
 DWORD WINAPI t_start_etw_traces(LPVOID param) {
     try {
@@ -31,7 +32,7 @@ DWORD WINAPI t_start_etw_traces(LPVOID param) {
         process_provider.trace_flags(process_provider.trace_flags() | EVENT_ENABLE_PROPERTY_STACK_TRACE);
         process_filter.add_on_event_callback(event_callback);
         process_provider.add_filter(process_filter);
-        trace_user.enable(process_provider);
+        trace_etw.enable(process_provider);
         std::cout << "[+] ETW: " << KERNEL_PROCESS_PROVIDER << ": 1, 2, 3, 4, 5, 6, 11\n";
 
         /*
@@ -50,7 +51,7 @@ DWORD WINAPI t_start_etw_traces(LPVOID param) {
         auditapi_provider.trace_flags(auditapi_provider.trace_flags() | EVENT_ENABLE_PROPERTY_STACK_TRACE);
         auditapi_filter.add_on_event_callback(event_callback);
         auditapi_provider.add_filter(auditapi_filter);
-        trace_user.enable(auditapi_provider);
+        trace_etw.enable(auditapi_provider);
         std::cout << "[+] ETW: " << KERNEL_API_PROVIDER << ": 1, 2, 3, 4, 5, 6, 7, 8\n"; // TODO check
 
         /*
@@ -76,7 +77,7 @@ DWORD WINAPI t_start_etw_traces(LPVOID param) {
         kernelfile_provider.trace_flags(kernelfile_provider.trace_flags() | EVENT_ENABLE_PROPERTY_STACK_TRACE);
         kernelfile_filter.add_on_event_callback(event_callback);
         kernelfile_provider.add_filter(kernelfile_filter);
-        trace_user.enable(kernelfile_provider);
+        trace_etw.enable(kernelfile_provider);
         std::cout << "[+] ETW: " << KERNEL_FILE_PROVIDER << ": 10, 30\n";
 
         /*
@@ -95,32 +96,59 @@ DWORD WINAPI t_start_etw_traces(LPVOID param) {
         kernelnetwork_provider.trace_flags(kernelnetwork_provider.trace_flags() | EVENT_ENABLE_PROPERTY_STACK_TRACE);
         kernelnetwork_filter.add_on_event_callback(event_callback);
         kernelnetwork_provider.add_filter(kernelnetwork_filter);
-        trace_user.enable(kernelnetwork_provider);
+        trace_etw.enable(kernelnetwork_provider);
         std::cout << "[+] ETW: " << KERNEL_NETWORK_PROVIDER << ": 12, 15, 28, 31, 42, 43, 58, 59\n";
 
         // Antimalware trace
         krabs::provider<> antimalwareengine_provider(ANTIMALWARE_PROVIDER_W);
         antimalwareengine_provider.add_on_event_callback(event_callback);
-        trace_user.enable(antimalwareengine_provider);
+        trace_etw.enable(antimalwareengine_provider);
         std::cout << "[+] ETW: " << ANTIMALWARE_PROVIDER << " (all)\n";
 
         // my attack trace
         krabs::guid attack_guid(L"{72248466-7166-4feb-a386-34d8f35bb637}");
         krabs::provider<> attack_provider(attack_guid);
         attack_provider.add_on_event_callback(my_event_callback);
-        trace_user.enable(attack_provider);
+        trace_etw.enable(attack_provider);
         std::cout << "[+] ETW: Injector-Attack (all)\n";
 
         // my EDRi trace, start last (start marker is consumed in this trace)
         krabs::guid parser_guid(EDRi_PROVIDER_GUID_W);
         krabs::provider<> parser_provider(parser_guid);
         parser_provider.add_on_event_callback(my_event_callback);
-        trace_user.enable(parser_provider);
+        trace_etw.enable(parser_provider);
         std::cout << "[+] ETW: EDRi (all)\n";
 
         // trace_start is blocking, hence threaded
         std::cout << "[+] ETW: Trace started...\n";
-        trace_user.start();
+        trace_etw.start();
+    }
+    catch (const std::exception& e) {
+        std::cout << "[!] ETW TraceProcessingThread exception: " << e.what() << "\n";
+    }
+    catch (...) {
+        std::cout << "[!] ETW TraceProcessingThread unknown exception\n";
+    }
+
+    std::cout << "[+] ETW: Thread finished\n";
+    return 0;
+}
+
+DWORD WINAPI t_start_etw_ti_traces(LPVOID param) {
+    try {
+        //TODO
+        krabs::provider<> process_provider(KERNEL_PROCESS_PROVIDER_W);
+        std::vector<unsigned short> process_event_ids = { 1, 2, 3, 4, 5, 6, 11 };
+        krabs::event_filter process_filter(process_event_ids);
+        process_provider.trace_flags(process_provider.trace_flags() | EVENT_ENABLE_PROPERTY_STACK_TRACE);
+        process_filter.add_on_event_callback(event_callback);
+        process_provider.add_filter(process_filter);
+        trace_etw_ti.enable(process_provider);
+        std::cout << "[+] ETW: " << KERNEL_PROCESS_PROVIDER << ": 1, 2, 3, 4, 5, 6, 11\n";
+
+        // trace_start is blocking, hence threaded
+        std::cout << "[+] ETW: Trace started...\n";
+        trace_etw_ti.start();
     }
     catch (const std::exception& e) {
         std::cout << "[!] ETW TraceProcessingThread exception: " << e.what() << "\n";
@@ -136,14 +164,26 @@ DWORD WINAPI t_start_etw_traces(LPVOID param) {
 bool start_etw_traces(std::vector<HANDLE>& threads) {
     HANDLE thread = CreateThread(NULL, 0, t_start_etw_traces, NULL, 0, NULL);
     if (thread == NULL) {
-        std::cerr << "[!] ETW: Could not start thread\n";
+        std::cerr << "[!] ETW: Could not start ETW thread\n";
         return false;
     }
-    std::cout << "[+] ETW: Started thread, wait for traces...\n";
+    std::cout << "[+] ETW: Started ETW thread, wait for traces...\n";
     threads.push_back(thread);
     return true;
 }
 
-void stop_etw_traces() {
-    trace_user.stop();
+bool start_etw_ti_traces(std::vector<HANDLE>& threads) {
+    HANDLE thread = CreateThread(NULL, 0, t_start_etw_ti_traces, NULL, 0, NULL);
+    if (thread == NULL) {
+        std::cerr << "[!] ETW: Could not start ETW-TI thread\n";
+        return false;
+    }
+    std::cout << "[+] ETW: Started ETW-TI thread, wait for traces...\n";
+    threads.push_back(thread);
+    return true;
+}
+
+void stop_all_etw_traces() {
+    trace_etw.stop();
+    trace_etw_ti.stop();
 }

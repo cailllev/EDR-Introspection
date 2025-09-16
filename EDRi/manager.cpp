@@ -261,7 +261,10 @@ int main(int argc, char* argv[]) {
         // TODO
     }
     if (trace_etw_ti) {
-        // TODO
+        if (!start_etw_ti_traces(threads)) { // try to start TI trace
+            std::cerr << "[!] EDRi: Failed to start ETW-TI traces\n";
+            exit(1);
+        }
     }
     if (trace_etw) { // todo refactor kernel proc out? kernel proc (and antimalware?) must always be enabled for proc tracking
         if (!start_etw_traces(threads)) { // try to start trace
@@ -299,7 +302,7 @@ int main(int argc, char* argv[]) {
     }
     else {
         std::cerr << "[!] EDRi: Failed to decrypt attack exe: " << attack_exe_enc_path << "\n";
-        stop_etw_traces();
+        stop_all_etw_traces();
         return 1;
     }
     emit_etw_event("[>]  After decrypting attack exe", true);
