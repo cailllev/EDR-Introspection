@@ -83,9 +83,11 @@ struct MergeCategory {
 };
 extern MergeCategory ppid_keys, tpid_keys, ttid_keys, filepath_keys;
 
+
 // getting the events
-std::vector<json> get_events();
-std::vector<json> get_events_unfiltered();
+enum Classifier;
+std::map<Classifier, std::vector<json>> get_events();
+std::string get_classifier_name(Classifier);
 void print_etw_counts();
 
 // internal functions
@@ -99,11 +101,11 @@ void post_parsing_checks(json&);
 void add_exe_information(json& j);
 int check_new_proc(json&);
 bool check_traces_started(json&);
-bool filter(json&);
-bool to_filter_out(json&, std::string, std::vector<int>);
-bool filter_kernel_process(json&);
-bool filter_kernel_api_call(json&);
-bool filter_kernel_file(json&);
-bool filter_kernel_network(json&);
-bool filter_antimalware(json&);
+Classifier filter(json&);
+Classifier to_filter_out(json&, std::string, std::vector<int>);
+Classifier filter_kernel_process(json&);
+Classifier filter_kernel_api_call(json&);
+Classifier filter_kernel_file(json&);
+Classifier filter_kernel_network(json&);
+Classifier filter_antimalware(json&);
 void count_event(json, bool);

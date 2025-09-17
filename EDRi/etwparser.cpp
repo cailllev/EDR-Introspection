@@ -12,10 +12,17 @@
 #include "etwparser.h"
 
 
-std::vector<json> etw_events;
-std::vector<json> all_etw_events;
-std::map<std::string, int> etw_events_counter;
-std::map<std::string, int> all_etw_events_counter;
+enum Classifier { All, Relevant, Minimal };
+std::map<Classifier, std::vector<json>> etw_events = {
+    { All, {} },
+    { Relevant, {} },
+    { Minimal, {} }
+};
+std::map<Classifier, std::string> classifier_names = {
+    { All, "All" },
+    { Relevant, "Relevant" },
+    { Minimal, "Minimal" }
+};
 
 // globals
 int g_attack_PID = 0;
@@ -54,9 +61,9 @@ void my_event_callback(const EVENT_RECORD& record, const krabs::trace_context& t
         post_my_parsing_checks(ev);
         add_exe_information(ev); // must be after all parsing checks and filtering but before adding it to events
 
-        count_event(ev, false);
-        etw_events.push_back(ev);
-        all_etw_events.push_back(ev);
+        etw_events[All].push_back(ev);
+        etw_events[Relevant].push_back(ev);
+        etw_events[Minimal].push_back(ev);
     }
     catch (const std::exception& e) {
         std::cerr << "[!] ETW: my_event_callback exception: " << e.what() << "\n";
@@ -80,16 +87,21 @@ void event_callback(const EVENT_RECORD& record, const krabs::trace_context& trac
         }
 
         // check if event can be filtered out
-        bool filter_out = filter(ev);
+        Classifier c = filter(ev);
         add_exe_information(ev); // must be after all parsing checks and filtering but before adding it to events
-        if (!filter_out) {
-            etw_events.push_back(ev);
-        }
-        else if (g_super_debug)  {
+
+        switch (c) {
+        case All:
+            etw_events[All].push_back(ev);
             std::cout << "[-] ETW: Filtered out event: " << ev.dump() << "\n";
+			// do not break, also add to relevant and minimal
+        case Relevant:
+            etw_events[Relevant].push_back(ev);
+            // do not break, also add to minimal
+        case Minimal:
+            etw_events[Minimal].push_back(ev);
+            break;
         }
-        count_event(ev, filter_out);
-        all_etw_events.push_back(ev);
     }
     catch (const std::exception& e) {
         std::cerr << "[!] ETW: event_callback exception: " << e.what() << "\n";
@@ -510,7 +522,7 @@ void add_exe_information(json& j) {
 }
 
 // filter based on provider
-bool filter(json& ev) {
+Classifier filter(json& ev) {
     if (ev[PROVIDER_NAME] == KERNEL_PROCESS_PROVIDER) {
         return filter_kernel_process(ev);
     }
@@ -535,31 +547,34 @@ bool filter(json& ev) {
         std::cout << "[+] ETW: Unfiltered provider " << ev[PROVIDER_NAME] << ", not filtering its event ID " << ev[EVENT_ID] << "\n";
     }
 
-    return false; // do not filter unregistered providers
+    return Relevant; // do not filter unregistered providers
 }
 
 // returns true when key exists but value does not match --> should be filtered out
-bool to_filter_out(json& ev, std::string key, std::vector<int> list) {
+Classifier to_filter_out(json& ev, std::string key, std::vector<int> list) {
     if (ev.contains(key)) {
-        return std::find(list.begin(), list.end(), ev[key]) == list.end(); // true when value not found --> should be filtered
+        if (std::find(list.begin(), list.end(), ev[key]) == list.end()) {
+            return All; // true when value not found --> should be filtered
+        }
+		return Minimal; // false when value found --> do not filter
     }
     else if (g_debug) {
         std::cout << "[-] ETW: Warning: Event with ID " << ev[EVENT_ID] << " missing " << key << " field to filter: " << ev.dump() << "\n";
     }
-    return false; // expected key does not exists, do not filter out (for now)
+    return Relevant; // expected key does not exists, do not filter out (for now)
 }
 
 // filter kernel process events
-bool filter_kernel_process(json& ev) {
+Classifier filter_kernel_process(json& ev) {
     // the interesting info is in target pid, process_id of msmpeng.exe/attack.exe/smartscreen.exe etc is not enough to filter
     if (std::find(kproc_event_ids_with_tpid.begin(), kproc_event_ids_with_tpid.end(), ev[EVENT_ID]) != kproc_event_ids_with_tpid.end()) {
         return to_filter_out(ev, TARGET_PID, g_tracking_PIDs);
     }
-    return false; // keep the rest
+	return Relevant; // put event ids without a filter into relevant
 }
 
 // filter kernel api calls
-bool filter_kernel_api_call(json& ev) {
+Classifier filter_kernel_api_call(json& ev) {
     // the interesting info is in target pid, process_id of msmpeng.exe/attack.exe/smartscreen.exe etc is not enough to filter
     if (std::find(kapi_event_ids_with_tpid.begin(), kapi_event_ids_with_tpid.end(), ev[EVENT_ID]) != kapi_event_ids_with_tpid.end()) {
         return to_filter_out(ev, TARGET_PID, g_tracking_PIDs);
@@ -567,31 +582,36 @@ bool filter_kernel_api_call(json& ev) {
     if (std::find(kapi_event_ids_with_pid.begin(), kapi_event_ids_with_pid.end(), ev[EVENT_ID]) != kapi_event_ids_with_pid.end()) {
         return to_filter_out(ev, PID, g_tracking_PIDs);
     }
-    return false; // keep the rest
+    return Relevant; // put event ids without a filter into relevant
 }
 
 // filter kernel file events
-bool filter_kernel_file(json& ev) {
+Classifier filter_kernel_file(json& ev) {
     // TODO also filters out Notepad.exe proc, why?
     if (std::find(kfile_event_ids_with_pid.begin(), kfile_event_ids_with_pid.end(), ev[EVENT_ID]) != kfile_event_ids_with_pid.end()) {
         return to_filter_out(ev, PID, g_tracking_PIDs);
     }
-    return false; // keep the rest
+    return Relevant; // put event ids without a filter into relevant
 }
 
 // filter kernel network events
-bool filter_kernel_network(json& ev) {
+Classifier filter_kernel_network(json& ev) {
+    // events to keep if PID or originating PID match
     if (std::find(knetwork_event_ids_with_pid_or_opid.begin(), knetwork_event_ids_with_pid_or_opid.end(), ev[EVENT_ID]) != knetwork_event_ids_with_pid_or_opid.end()) {
-        return to_filter_out(ev, PID, g_tracking_PIDs) && to_filter_out(ev, ORIGINATING_PID, g_tracking_PIDs); // neither PID nor originating PID match --> return true
+        Classifier c_pid = to_filter_out(ev, PID, g_tracking_PIDs);
+        Classifier c_orig = to_filter_out(ev, ORIGINATING_PID, g_tracking_PIDs); 
+        if (c_pid == Minimal || c_orig == Minimal) {
+            return Minimal; // put in minimal if either matches
+		} // else put it in relevant
     }
-    return false; // keep the rest
+    return Relevant; // put event ids without a filter into relevant
 }
 
 // filter events based on known exclude values (e.g. wrong PID for given event id)
-bool filter_antimalware(json& ev) {
+Classifier filter_antimalware(json& ev) {
     // events to remove
     if (std::find(am_event_ids_to_remove.begin(), am_event_ids_to_remove.end(), ev[EVENT_ID]) != am_event_ids_to_remove.end()) {
-        return true;
+        return All;
     }
 
     // events to keep if originating PID matches attack or injected PID
@@ -601,7 +621,12 @@ bool filter_antimalware(json& ev) {
 
     // events to keep if originating PID or TargetPID matches attack PID or injected PID
     if (std::find(am_event_ids_with_pid_and_tpid.begin(), am_event_ids_with_pid_and_tpid.end(), ev[EVENT_ID]) != am_event_ids_with_pid_and_tpid.end()) {
-        return to_filter_out(ev, ORIGINATING_PID, { g_attack_PID, g_injected_PID }) && to_filter_out(ev, TARGET_PID, { g_attack_PID, g_injected_PID });
+        Classifier c_orig = to_filter_out(ev, ORIGINATING_PID, { g_attack_PID, g_injected_PID });
+        Classifier c_target = to_filter_out(ev, TARGET_PID, { g_attack_PID, g_injected_PID });
+        if (c_orig == Minimal || c_target == Minimal) {
+            return Minimal; // put in minimal if either matches
+        } // else put it in relevant
+		return Relevant;
     }
 
     // events to keep if PID in Data matches
@@ -617,60 +642,60 @@ bool filter_antimalware(json& ev) {
             if (msg.find("injector.exe") != std::string::npos ||
                 msg.find("microsoft.windowsnotepad") != std::string::npos ||
                 msg.find("microsoft.windowscalculator") != std::string::npos) {
-                return false; // do not filter if any of the strings match
+                return Minimal; // do not filter if any of the strings match
             }
-            return true; // else filter out
+            return All; // else filter out
         }
         else if (g_debug) {
             std::cout << "[-] ETW: Warning: Event with ID " << ev[EVENT_ID] << " missing " << MESSAGE << " field: " << ev.dump() << "\n";
         }
-        return false; // unexpected event fields, do not filter
+        return Relevant; // unexpected event fields, do not filter
     }
 
     // events to keep if filepath matches (case insensitive)
     if (std::find(am_event_ids_with_filepath.begin(), am_event_ids_with_filepath.end(), ev[EVENT_ID]) != am_event_ids_with_filepath.end()) {
         if (ev.contains(FILEPATH)) {
-            return _stricmp(ev[FILEPATH].get<std::string>().c_str(), attack_exe_path.c_str());
+            if (_stricmp(ev[FILEPATH].get<std::string>().c_str(), attack_exe_path.c_str())) {
+				return Minimal; // do not filter if path matches
+            }
+			return All; // else filter out
         }
         else if (g_debug) {
             std::cout << "[-] ETW: Warning: Event with ID " << ev[EVENT_ID] << " missing " << FILEPATH << " field: " << ev.dump() << "\n";
         }
-        return false; // unexpected event fields, do not filter
+        return Relevant; // unexpected event fields, do not filter
     }
 
-    return false; // do not filter unregistered event ids
+    return Relevant; // put event ids without a filter into relevant
 }
 
-std::vector<json> get_events() {
-    std::cout << "[+] ETW: Got " << etw_events.size() << " filtered events\n";
+std::map<Classifier, std::vector<json>> get_events() {
     return etw_events;
 }
 
-std::vector<json> get_events_unfiltered() {
-    std::cout << "[+] ETW: Got " << all_etw_events.size() << " unfiltered events\n";
-    return all_etw_events;
-}
-
-void count_event(json ev, bool filtered_out) {
-    std::map<std::string, int>& m = filtered_out ? ::all_etw_events_counter : ::etw_events_counter;
-
-    if (m.find(ev[PROVIDER_NAME]) == m.end()) {
-        m[ev[PROVIDER_NAME]] = 1;
-    }
-    else {
-        m[ev[PROVIDER_NAME]]++;
-    }
+std::string get_classifier_name(Classifier c) {
+    return classifier_names[c];
 }
 
 void print_etw_counts() {
-    std::ostringstream oss;
-    for (auto it = etw_events_counter.begin(); it != etw_events_counter.end(); ++it) {
-        oss << it->first << "=" << it->second << ",";
-    }
-    std::cout << "[*] ETW: Filtered events per provider: " << oss.str() << "\n";
-    oss.str("");
-    for (auto it = all_etw_events_counter.begin(); it != all_etw_events_counter.end(); ++it) {
-        oss << it->first << "=" << it->second << ",";
-    }
-    std::cout << "[*] ETW: Filtered out events per provider: " << oss.str() << "\n";
+    for (auto& c : etw_events) {
+        std::ostringstream oss;
+		Classifier classifier = c.first;
+		std::vector<json>& events = c.second;
+
+        // count by provider
+		std::map<std::string, int> provider_counts;
+        for (auto it = events.begin(); it != events.end(); ++it) {
+			std::string provider = (*it)[PROVIDER_NAME];
+        }
+
+        for (auto it = provider_counts.begin(); it != provider_counts.end(); ++it) {
+            if (it != provider_counts.begin()) {
+                oss << ", ";
+            }
+            oss << it->first << ": " << it->second;
+		}
+        std::cout << "[*] ETW: Classification " << classifier_names[c.first] << ": " << events.size() << " events\n";
+        std::cout << "[*] ETW: Filtered events per provider : " << oss.str() << "\n";
+	}
 }
