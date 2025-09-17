@@ -136,15 +136,11 @@ DWORD WINAPI t_start_etw_traces(LPVOID param) {
 
 DWORD WINAPI t_start_etw_ti_traces(LPVOID param) {
     try {
-        //TODO
-        krabs::provider<> process_provider(KERNEL_PROCESS_PROVIDER_W);
-        std::vector<unsigned short> process_event_ids = { 1, 2, 3, 4, 5, 6, 11 };
-        krabs::event_filter process_filter(process_event_ids);
-        process_provider.trace_flags(process_provider.trace_flags() | EVENT_ENABLE_PROPERTY_STACK_TRACE);
-        process_filter.add_on_event_callback(event_callback);
-        process_provider.add_filter(process_filter);
-        trace_etw_ti.enable(process_provider);
-        std::cout << "[+] ETW: " << KERNEL_PROCESS_PROVIDER << ": 1, 2, 3, 4, 5, 6, 11\n";
+        krabs::guid ti_guid(ETW_TI_PROVIDER_GUID_W);
+        krabs::provider<> ti_provider(ti_guid);
+        ti_provider.add_on_event_callback(event_callback);
+        trace_etw.enable(ti_provider);
+        std::cout << "[+] ETW: Threat-Intel (all)\n";
 
         // trace_start is blocking, hence threaded
         std::cout << "[+] ETW: Trace started...\n";
