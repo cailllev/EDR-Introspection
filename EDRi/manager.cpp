@@ -324,7 +324,7 @@ int main(int argc, char* argv[]) {
     Sleep(wait_after_termination_ms);
 
     std::cout << "[*] EDRi: Stopping traces\n";
-    stop_etw_traces();
+    stop_all_etw_traces();
     DWORD res = WaitForMultipleObjects((DWORD)threads.size(), threads.data(), TRUE, INFINITE); // TODO
     if (res == WAIT_FAILED) {
         std::cout << "[!] EDRi: Wait failed";
@@ -332,19 +332,15 @@ int main(int argc, char* argv[]) {
     std::cout << "[*] EDRi: All " << threads.size() << " threads finished\n";
 
     print_etw_counts();
-    std::vector<json> events = get_events();
-    std::string csv_output = create_timeline_csv(events);
-	std::ofstream out(output);
-	out << csv_output;
-	out.close();
-
-    if (g_debug) {
-        std::vector<json> events_unfiltered = get_events_unfiltered();
-        std::string csv_output_unfiltered = create_timeline_csv(events_unfiltered);
-        std::string output_unfiltered = output.substr(0, output.find_last_of('.')) + "-unfiltered.csv";
-        std::ofstream out2(output_unfiltered);
-        out2 << csv_output_unfiltered;
-        out2.close();
+    std::map<Classifier, std::vector<json>> all_events = get_events();
+    for (auto& c : all_events) {
+        std::vector<json>& events = all_events[c.first];
+        std::string csv_output = create_timeline_csv(events);
+		std::string output_base = output.substr(0, output.find_last_of('.')); // without .csv
+		std::string output_final = output_base + "-" + get_classifier_name(c.first) + ".csv"; // add classifier to filename
+        std::ofstream out(output_final);
+        out << csv_output;
+        out.close();
 	}
 
     std::cout << "[*] EDRi: Done\n";
