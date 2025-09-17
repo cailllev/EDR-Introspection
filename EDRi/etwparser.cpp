@@ -698,7 +698,10 @@ void print_etw_counts() {
         // count by provider
 		std::map<std::string, int> provider_counts;
         for (auto it = events.begin(); it != events.end(); ++it) {
-			std::string provider = (*it)[PROVIDER_NAME];
+            std::string provider = "<empty provider>";
+            if (it->contains(PROVIDER_NAME)) {
+                provider = (*it)[PROVIDER_NAME];
+            }
             if (provider_counts.find(provider) == provider_counts.end()) {
                 provider_counts[provider] = 1;
             }

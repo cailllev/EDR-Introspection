@@ -32,6 +32,8 @@ static const std::string KERNEL_NETWORK_PROVIDER = "Microsoft-Windows-Kernel-Net
 static const std::wstring KERNEL_NETWORK_PROVIDER_W = std::wstring(KERNEL_NETWORK_PROVIDER.begin(), KERNEL_NETWORK_PROVIDER.end());
 static const std::string ANTIMALWARE_PROVIDER = "Microsoft-Antimalware-Engine";
 static const std::wstring ANTIMALWARE_PROVIDER_W = std::wstring(ANTIMALWARE_PROVIDER.begin(), ANTIMALWARE_PROVIDER.end());
+static const std::string ETW_TI_PROVIDER = "Microsoft-Windows-Threat-Intelligence";
+static const std::wstring ETW_TI_PROVIDER_W = std::wstring(ETW_TI_PROVIDER.begin(), ETW_TI_PROVIDER.end());
 
 // the struct that is passed from function to function (or as a json after parsing)
 struct Event {
