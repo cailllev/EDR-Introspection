@@ -12,7 +12,6 @@ static const int ATTACK_PROVIDER_EVENT_ID = 1337;
 static const std::wstring EDRi_PROVIDER_GUID_W = L"{72248477-7177-4feb-a386-34d8f35bb637}";
 static const std::string EDRi_TRACE_START_MARKER = "[+] EDRi START MARKER";
 
-extern int g_main_EDR_PID;
 extern std::vector<int> g_tracking_PIDs;
 extern int g_attack_PID;
 extern int g_injected_PID;

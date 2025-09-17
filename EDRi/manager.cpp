@@ -37,7 +37,6 @@ TRACELOGGING_DEFINE_PROVIDER(
 );
 
 // globals
-int g_main_EDR_PID = 0;
 std::vector<int> g_tracking_PIDs = {};
 std::map<int, std::string> g_running_procs = {};
 std::shared_mutex g_procs_mutex;
@@ -55,8 +54,6 @@ static const int wait_after_traces_started_ms = 15000;
 static const int wait_between_events_ms = 1000;
 static const int wait_after_termination_ms = 5000;
 static const int wait_time_between_start_markers_ms = 250;
-
-static const bool allow_pid_overwrite = true; // new processes may overwrite exe name for same pids
 
 void emit_etw_event(std::string msg, bool print_when_debug) {
     TraceLoggingWrite(
@@ -103,21 +100,21 @@ std::string create_timeline_csv(const std::vector<json>& events) {
     std::ostringstream csv_output;
 
     std::vector<std::string> all_keys;
-    if (g_debug) {
+    if (g_super_debug) {
         std::cout << "[+] EDRi: Adding predefined key for CSV header: ";
     }
     for (const auto& k : csv_header_start) {
         all_keys.push_back(k);
-        if (g_debug) {
+        if (g_super_debug) {
 			 std::cout << k << ", ";
         }
     }
-    if (g_debug) {
+    if (g_super_debug) {
         std::cout << "\n";
     }
 
     // collect all property keys except merged ones
-    if (g_debug) {
+    if (g_super_debug) {
         std::cout << "[+] EDRi: Adding new key for CSV header: ";
     }
     for (const auto& ev : events) {
@@ -127,12 +124,12 @@ std::string create_timeline_csv(const std::vector<json>& events) {
 
 			// or insert new key
             all_keys.push_back(it.key());
-            if (g_debug) {
+            if (g_super_debug) {
                 std::cout << it.key() << ", ";
             }
         }
     }
-    if (g_debug) {
+    if (g_super_debug) {
         std::cout << "\n";
     }
 
@@ -172,16 +169,15 @@ int main(int argc, char* argv[]) {
     cxxopts::Options options("EDRi", "EDR Introspection Framework");
     
     // PARSER OPTIONS
-    std::string available_edrs = get_edr_profiles();
-
     options.add_options()
         ("c,encrypt", "The path of the attack executable to encrypt", cxxopts::value<std::string>())
-        ("e,edr", "The EDR to track, supporting: " + available_edrs, cxxopts::value<std::string>())
+        ("e,edr", "The EDR to track, supporting: " + get_available_edrs(), cxxopts::value<std::string>())
         ("o,output", "The Path of the all-events.csv, default " + all_events_output_default, cxxopts::value<std::string>())
         ("a,attack-exe", "The path of the encrypted attack exe to execute", cxxopts::value<std::string>())
-        ("t,trace-etw", "Trace ETW") // TODO, the kernel-proc trace must always be enabled for the start&stop filter
+        ("m,trace-etw-misc", "Trace misc ETW")
         ("i,trace-etw-ti", "Trace ETW-TI (needs PPL)")
         ("n,hook-ntdll", "Hook ntdll.dll (needs PPL)")
+        ("t,track-all", "Trace misc ETW, ETW-TI and hooks ntdll.dll")
         ("d,debug", "Print debug info")
         ("v,verbose-debug", "Print very verbose debug info")
         ("h,help", "Print usage");
@@ -212,7 +208,7 @@ int main(int argc, char* argv[]) {
 
     // check edr profile, output, and attack exe
 	std::string edr_name = result["edr"].as<std::string>();
-    set_edr_profile(edr_name);
+    std::vector<std::string> edr_specific_exes = edr_profiles.at(edr_name);
 
     std::string output;
     if (result.count("output") == 0) {
@@ -228,20 +224,25 @@ int main(int argc, char* argv[]) {
 		std::cout << "[*] EDRi: Using non-default attack exe: " << attack_exe_enc_path << "\n";
     }
 
-    // check tracking options, default = all
-    bool trace_etw = false, trace_etw_ti = false, hook_ntdll = false;
-    if (result.count("trace-etw") > 0) {
-        trace_etw = true;
+    // check tracking options
+    bool trace_etw_misc = false, trace_etw_ti = false, hook_ntdll = false;
+    if (result.count("track-all") > 0) {
+        trace_etw_misc = true, trace_etw_ti = true, hook_ntdll = true;
     }
-    if (result.count("trace-etw-ti") > 0) {
-        trace_etw_ti = true;
+    else {
+        if (result.count("trace-etw-misc") > 0) {
+            trace_etw_misc = true;
+        }
+        if (result.count("trace-etw-ti") > 0) {
+            trace_etw_ti = true;
+        }
+        if (result.count("hook-ntdll") > 0) {
+            hook_ntdll = true;
+        }
     }
-    if (result.count("hook-ntdll") > 0) {
-        hook_ntdll = true;
-    }
-    if (!trace_etw && !trace_etw_ti && !hook_ntdll) {
-        trace_etw = true; trace_etw_ti = true; hook_ntdll = true;
-    }
+	std::cout << "[*] EDRi: Tracking options: ETW-Misc: " << (trace_etw_misc ? "Yes" : "No") 
+		<< ", ETW-TI: " << (trace_etw_ti ? "Yes" : "No")
+		<< ", Hook-ntdll: " << (hook_ntdll ? "Yes" : "No") << "\n";
 
     // debug
     if (result.count("debug") > 0) {
@@ -261,19 +262,38 @@ int main(int argc, char* argv[]) {
         // TODO
     }
     if (trace_etw_ti) {
-        if (!start_etw_ti_traces(threads)) { // try to start TI trace
+        if (!start_etw_ti_trace(threads)) {
             std::cerr << "[!] EDRi: Failed to start ETW-TI traces\n";
             exit(1);
         }
     }
-    if (trace_etw) { // todo refactor kernel proc out? kernel proc (and antimalware?) must always be enabled for proc tracking
-        if (!start_etw_traces(threads)) { // try to start trace
-            std::cerr << "[!] EDRi: Failed to start ETW traces(s)\n";
+    if (trace_etw_misc) {
+        if (!start_etw_misc_traces(threads)) {
+            std::cerr << "[!] EDRi: Failed to start misc ETW traces(s)\n";
             exit(1);
         }
     }
-    std::cout << "[*] EDRi: Get running procs\n"; // for the first traces, until my trace is started
-    snapshot_procs(allow_pid_overwrite);
+    if (!start_etw_default_traces(threads)) {
+        std::cerr << "[!] EDRi: Failed to start default ETW traces(s)\n";
+        exit(1);
+	}
+
+    std::cout << "[*] EDRi: Get running procs\n";
+    snapshot_procs();
+    for (auto& e : exes_to_track) {
+        int pid = get_PID_by_name(e);
+        if (pid != -1) {
+            std::cout << "[+] EDRi: Got pid for " << e << ":" << pid << "\n";
+            g_tracking_PIDs.push_back(pid);
+        }
+    }
+    for (auto& e : edr_specific_exes) {
+        int pid = get_PID_by_name(e);
+        if (pid != -1) {
+            std::cout << "[+] EDRi: Got pid for " << e << ":" << pid << "\n";
+            g_tracking_PIDs.push_back(pid);
+        }
+    }
 
     Sleep(wait_after_traces_started_ms);
     std::cout << "[*] EDRi: Waiting until start marker is registered\n";
@@ -282,17 +302,6 @@ int main(int argc, char* argv[]) {
 		Sleep(wait_time_between_start_markers_ms);
 	}
 	std::cout << "[*] EDRi: Trace started\n";
-
-    std::cout << "[*] EDRi: Update running procs\n"; // after my trace is live
-    snapshot_procs(allow_pid_overwrite);
-    g_main_EDR_PID = get_PID_by_name(get_edr_exe()); // todo this must also be in the profile
-    for (auto& e : exes_to_track) {
-        int pid = get_PID_by_name(e);
-        if (pid != -1) {
-            std::cout << "[+] EDRi: Got pid for " << e << ":" << pid << "\n";
-            g_tracking_PIDs.push_back(pid);
-        }
-    }
 
     // ATTACK
 	// decrypt the attack exe
@@ -323,13 +332,23 @@ int main(int argc, char* argv[]) {
     std::cout << "[+] EDRi: Waiting for any final events...\n";
     Sleep(wait_after_termination_ms);
 
+    // threading stop and cleanup
     std::cout << "[*] EDRi: Stopping traces\n";
     stop_all_etw_traces();
-    DWORD res = WaitForMultipleObjects((DWORD)threads.size(), threads.data(), TRUE, INFINITE); // TODO
+    DWORD res = WaitForMultipleObjects(
+        static_cast<DWORD>(threads.size()),
+        threads.data(),
+        TRUE,
+        INFINITE
+    ); // wait for all ETW threads to exit
     if (res == WAIT_FAILED) {
         std::cout << "[!] EDRi: Wait failed";
     }
     std::cout << "[*] EDRi: All " << threads.size() << " threads finished\n";
+    for (auto h : threads) {
+        CloseHandle(h);
+    }
+    threads.clear();
 
     print_etw_counts();
     std::map<Classifier, std::vector<json>> all_events = get_events();

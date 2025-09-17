@@ -15,9 +15,10 @@ std::string filetime_to_iso8601(__int64 timestamp);
 char* get_memory_region_protect(DWORD protect);
 
 // own cacophony
-void snapshot_procs(bool);
+void snapshot_procs();
 int get_PID_by_name(const std::string& name);
 void add_proc(int, const std::string&);
 std::string get_proc_name(int);
+bool filepath_match(std::string, std::string);
 
 bool xor_file(std::string, std::string);

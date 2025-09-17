@@ -52,8 +52,8 @@ static const std::string TID = "thread_id";
 static const std::string PPID = "ppid";
 static const std::string TARGET_PID = "targetpid";
 static const std::string TARGET_TID = "targettid";
-static const std::string KERNEL_PID = "processid";
-static const std::string ORIGINATING_PID = "pid"; // for antimalware-traces
+static const std::string KERNEL_PID = "processid"; // TARGET_PID for kernel-traces, DO NOT USE FURTHER, THIS IS MERGED INTO TARGET_PID! USE TARGET_PID INSTEAD!
+static const std::string ORIGINATING_PID = "pid"; // antimalware-traces
 static const std::string FILEPATH = "filepath";
 static const std::string MESSAGE = "message";
 static const std::string DATA = "data";
@@ -69,9 +69,7 @@ static const std::vector<std::string> exe_paths_to_track = { attack_exe_path, in
 
 // executables to track for kernel event filtering, i.e. their PIDs at runtime
 static const std::vector<std::string> exes_to_track = {
-    // attack_PID and injected_PID added at runtime
-    "MpDefenderCoreService.exe", "MsMpEng.exe",
-    "MsSense.exe", "SenseCnCProxy.exe", "SenseIR.exe", "SenseCE.exe", "SenseSampleUploader.exe", "SenseNdr.exe", "SenseSC.exe", "SenseCM.exe", "SenseTVM.exe",
+    // attack_PID and injected_PID are added to g_tracking_PIDs at runtime, not as exes here (they are not running at startup)
     "smartscreen.exe", "System"
 };
 
