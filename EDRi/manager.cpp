@@ -318,6 +318,7 @@ int main(int argc, char* argv[]) {
     Sleep(wait_between_events_ms);
 
     // start the attack via explorer (breaks process tree)
+    // TODO cannot invoke attack when running as a PPL
     std::string command = "explorer.exe \"" + attack_exe_path + "\"";
     emit_etw_event("[<] Before executing attack exe", true);
     Sleep(wait_between_events_ms);
