@@ -14,7 +14,7 @@
 static const std::string encrypt_password = "much signature bypass, such wow";
 
 // thread-safe storing PID:EXE to global variable
-void snapshot_procs(bool allow_overwrite) {
+void snapshot_procs() {
     PROCESSENTRY32 pe;
     pe.dwSize = sizeof(PROCESSENTRY32);
     HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
@@ -23,17 +23,12 @@ void snapshot_procs(bool allow_overwrite) {
         do {
             std::string exe = wchar2string(pe.szExeFile);
             int pid = pe.th32ProcessID;
-            if (allow_overwrite) {
-                g_running_procs[pid] = exe;
-            }
-            else if (g_running_procs.find(pid) == g_running_procs.end()) {
-                g_running_procs[pid] = exe;
-            }
+            g_running_procs[pid] = exe;
         } while (Process32Next(snapshot, &pe));
     }
 }
 
-// thread-safe retrieving the PID of the first match, ignores other same-named processes
+// thread-safe retrieving the PID of the first case-insensitive match, ignores other same-named processes
 int get_PID_by_name(const std::string& name) {
     std::shared_lock<std::shared_mutex> lock(g_procs_mutex); // reader lock (multiple allowed when no writers)
     for (auto it = g_running_procs.begin(); it != g_running_procs.end(); ++it) {
@@ -206,4 +201,33 @@ char* get_memory_region_protect(DWORD protect) {
 		break;
 	}
 	return (char*) memoryProtect;
+}
+
+bool filepath_match(std::string path1, std::string path2) {
+    auto normalize = [](const std::string& path) -> std::string {
+        std::string p = path;
+
+        // if it starts with "\Device\HarddiskVolumeX", remove it
+        const std::string device_prefix = "\\Device\\HarddiskVolume";
+        if (p.compare(0, device_prefix.size(), device_prefix) == 0) {
+            // find first backslash after volume number
+            size_t pos = p.find('\\', device_prefix.size());
+            if (pos != std::string::npos) {
+                p = p.substr(pos); // keep from first backslash
+            }
+            else {
+                p.clear(); // malformed path
+            }
+        }
+        // if it starts with "C:\" or other drive letter, remove it
+        else if (p.size() >= 3 && std::isalpha(p[0]) && p[1] == ':' && p[2] == '\\') {
+            p = p.substr(2); // keep from "\..." 
+        }
+        // and lowercase all
+        std::transform(p.begin(), p.end(), p.begin(), [](unsigned char c) { return std::tolower(c); });
+        return p;
+        };
+    std::string norm1 = normalize(path1);
+    std::string norm2 = normalize(path2);
+    return norm1 == norm2;
 }

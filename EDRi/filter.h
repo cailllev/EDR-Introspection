@@ -19,8 +19,9 @@ filter {
 */
 
 // Antimalware Trace
-static const std::vector<int> am_event_ids_to_remove = { 7, 44, 62 }; // TODO also remove 11, 111, 112? (noisy)
+static const std::vector<int> am_event_ids_to_remove = { 7, 44, 62 };
 static const std::vector<int> am_event_ids_with_pid = { 5, 6, 11, 15, 16, 26, 29, 104, 105, 109, 110, 111, 112, 60, 70, 71, 72, 73 };
+static const std::vector<int> am_event_ids_with_pid_but_noisy = { 11, 111, 112 };
 static const std::vector<int> am_event_ids_with_pid_and_tpid = { 53 };
 static const std::vector<int> am_event_ids_with_pid_in_data = { 43, 67 };
 static const std::vector<int> am_event_ids_with_message = { 3 };

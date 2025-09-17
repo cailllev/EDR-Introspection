@@ -37,7 +37,7 @@ MergeCategory ppid_keys = {
 };
 MergeCategory tpid_keys = { // all refer to yet another pid (event has an emitter (process_id), original proc (pid), and the target proc (tpid))
     TARGET_PID,
-    {KERNEL_PID, "tpid", "targetprocessid"} // TODO processid in kernel means tpid, processid in antimalware means pid (but only event 95 has this)
+    {KERNEL_PID, "tpid", "targetprocessid", "frozenprocessid"} // processid in kernel means tpid, processid in antimalware means pid (but only event 95 has this)
 };
 MergeCategory ttid_keys = { // both refer to yet another pid (event has an emitter (process_id), original proc (pid), and the target proc (tpid))
     TARGET_TID,
@@ -50,7 +50,7 @@ MergeCategory filepath_keys = {
 std::vector<MergeCategory> key_categories_to_merge = { ppid_keys, tpid_keys, ttid_keys, filepath_keys };
 
 // pid fields that should have the exe name added at print time
-static const std::vector<std::string> fields_to_add_exe_name = { PID, PPID, TARGET_PID, KERNEL_PID, ORIGINATING_PID };
+static const std::vector<std::string> fields_to_add_exe_name = { PID, PPID, TARGET_PID, ORIGINATING_PID };
 
 
 // hand over schema for parsing
@@ -91,15 +91,17 @@ void event_callback(const EVENT_RECORD& record, const krabs::trace_context& trac
         add_exe_information(ev); // must be after all parsing checks and filtering but before adding it to events
 
         switch (c) {
-        case All:
-            etw_events[All].push_back(ev);
-            std::cout << "[-] ETW: Filtered out event: " << ev.dump() << "\n";
-			// do not break, also add to relevant and minimal
-        case Relevant:
-            etw_events[Relevant].push_back(ev);
-            // do not break, also add to minimal
         case Minimal:
             etw_events[Minimal].push_back(ev);
+            // do not break, also add to relevant and all
+        case Relevant:
+            etw_events[Relevant].push_back(ev);
+            // do not break, also add to all
+        case All:
+            etw_events[All].push_back(ev);
+            if (g_super_debug) {
+                std::cout << "[-] ETW: Filtered out event: " << ev.dump() << "\n";
+            }
             break;
         }
     }
@@ -437,8 +439,8 @@ std::string get_string_or_convert(const json& j, const std::string& key) {
 
 // check proc started via kernel/antimalware etw
 int check_new_proc(json& j) {
-    if (j[PROVIDER_NAME] == KERNEL_PROCESS_PROVIDER && j[EVENT_ID] == KERNEL_PROC_START_EVENT_ID && j.contains(KERNEL_PID)) {
-        return j[KERNEL_PID]; // kernel proc uses this key
+    if (j[PROVIDER_NAME] == KERNEL_PROCESS_PROVIDER && j[EVENT_ID] == KERNEL_PROC_START_EVENT_ID && j.contains(TARGET_PID)) {
+        return j[TARGET_PID]; // kernel proc uses this key
     }
     if (j[PROVIDER_NAME] == ANTIMALWARE_PROVIDER && j[EVENT_ID] == ANTIMALWARE_PROC_START_STOP_EVENT_ID && j[SOURCE] == ANTIMALWARE_PROC_START_MSG && j.contains(ORIGINATING_PID)) {
         return j[ORIGINATING_PID]; // antimalware uses this key
@@ -472,14 +474,14 @@ void post_parsing_checks(json& j) {
     // check if the attack_PID and injected_PID can be set
     // TODO path independent?
     if (g_attack_PID == 0 && new_proc_id != 0) {
-        if (j.contains(FILEPATH) && j[FILEPATH] == attack_exe_path) {
+        if (j.contains(FILEPATH) && filepath_match(j[FILEPATH], attack_exe_path)) {
             g_attack_PID = new_proc_id;
             g_tracking_PIDs.push_back(g_attack_PID);
             std::cout << "[+] ETW: Got attack PID: " << g_attack_PID << "\n";
         }
     }
     if (g_injected_PID == 0 && new_proc_id != 0) {
-        if (j.contains(FILEPATH) && j[FILEPATH] == injected_exe_path) {
+        if (j.contains(FILEPATH) && filepath_match(j[FILEPATH], injected_exe_path)) {
             g_injected_PID = new_proc_id;
             g_tracking_PIDs.push_back(g_injected_PID);
             std::cout << "[+] ETW: Got injected PID: " << g_injected_PID << "\n";
@@ -488,22 +490,25 @@ void post_parsing_checks(json& j) {
 
     // checks if the attack is done
     if (!g_attack_terminated) {
-        // check if the event contains the attack pid
-        if ((j.contains(KERNEL_PID) && j[KERNEL_PID] == g_attack_PID) ||
-            (j.contains(ORIGINATING_PID) && j[ORIGINATING_PID] == g_attack_PID)) {
-            // then check if this event is a terminate event
-            bool kernel_proc_stopped = j[PROVIDER_NAME] == KERNEL_PROCESS_PROVIDER && j[EVENT_ID] == KERNEL_PROC_STOP_EVENT_ID;
-            bool antimalware_proc_stopped = j[PROVIDER_NAME] == ANTIMALWARE_PROVIDER && j[EVENT_ID] == ANTIMALWARE_PROC_START_STOP_EVENT_ID && j[SOURCE] == ANTIMALWARE_PROC_STOP_MSG;
-            if (kernel_proc_stopped || antimalware_proc_stopped) {
-                if (g_debug) {
-                    std::cout << "[+] ETW: Attack termination detected\n";
-                }
-                g_attack_terminated = true;
+		// kernel event: check if the event contains the attack pid and is a terminate event
+        bool kernel_proc_stopped = j[PROVIDER_NAME] == KERNEL_PROCESS_PROVIDER && j[EVENT_ID] == KERNEL_PROC_STOP_EVENT_ID &&
+            j.contains(TARGET_PID) && j[TARGET_PID] == g_attack_PID;
+
+        // am event: check if the event contains the attack pid and is a terminate event
+        bool antimalware_proc_stopped = j[PROVIDER_NAME] == ANTIMALWARE_PROVIDER && j[EVENT_ID] == ANTIMALWARE_PROC_START_STOP_EVENT_ID &&
+            j.contains(SOURCE) && j[SOURCE] == ANTIMALWARE_PROC_STOP_MSG &&
+            j.contains(ORIGINATING_PID) && j[ORIGINATING_PID] == g_attack_PID;
+        
+        if (kernel_proc_stopped || antimalware_proc_stopped) {
+            if (g_debug) {
+                std::cout << "[+] ETW: Attack termination detected\n";
             }
+            g_attack_terminated = true;
         }
     }
 }
 
+// adds exe name to all pid fields, only use AFTER filtering!
 void add_exe_information(json& j) {
     for (auto it = j.begin(); it != j.end(); ++it) {
         const std::string& key = it.key();
@@ -550,18 +555,18 @@ Classifier filter(json& ev) {
     return Relevant; // do not filter unregistered providers
 }
 
-// returns true when key exists but value does not match --> should be filtered out
+// returns a classifier based on if the value is in list
 Classifier to_filter_out(json& ev, std::string key, std::vector<int> list) {
     if (ev.contains(key)) {
         if (std::find(list.begin(), list.end(), ev[key]) == list.end()) {
-            return All; // true when value not found --> should be filtered
+            return All; // when value not found --> put in all
         }
-		return Minimal; // false when value found --> do not filter
+		return Minimal; // when value found --> do not filter
     }
     else if (g_debug) {
         std::cout << "[-] ETW: Warning: Event with ID " << ev[EVENT_ID] << " missing " << key << " field to filter: " << ev.dump() << "\n";
     }
-    return Relevant; // expected key does not exists, do not filter out (for now)
+	return Relevant; // expected key does not exists, classify as relevant (for now)
 }
 
 // filter kernel process events
@@ -616,7 +621,14 @@ Classifier filter_antimalware(json& ev) {
 
     // events to keep if originating PID matches attack or injected PID
     if (std::find(am_event_ids_with_pid.begin(), am_event_ids_with_pid.end(), ev[EVENT_ID]) != am_event_ids_with_pid.end()) {
-        return to_filter_out(ev, ORIGINATING_PID, { g_attack_PID, g_injected_PID });
+        Classifier c = to_filter_out(ev, ORIGINATING_PID, { g_attack_PID, g_injected_PID });
+        if (c == All) {
+			return All; // put in all if it does not match
+        }
+        if (std::find(am_event_ids_with_pid_but_noisy.begin(), am_event_ids_with_pid_but_noisy.end(), ev[EVENT_ID]) != am_event_ids_with_pid_but_noisy.end()) {
+			return Relevant; // put noisy events into relevant (can overwrite minimal from above)
+        }
+		return c; // else return as classified originally
     }
 
     // events to keep if originating PID or TargetPID matches attack PID or injected PID
@@ -687,6 +699,12 @@ void print_etw_counts() {
 		std::map<std::string, int> provider_counts;
         for (auto it = events.begin(); it != events.end(); ++it) {
 			std::string provider = (*it)[PROVIDER_NAME];
+            if (provider_counts.find(provider) == provider_counts.end()) {
+                provider_counts[provider] = 1;
+            }
+            else {
+                provider_counts[provider]++;
+			}
         }
 
         for (auto it = provider_counts.begin(); it != provider_counts.end(); ++it) {
@@ -695,7 +713,7 @@ void print_etw_counts() {
             }
             oss << it->first << ": " << it->second;
 		}
-        std::cout << "[*] ETW: Classification " << classifier_names[c.first] << ": " << events.size() << " events\n";
-        std::cout << "[*] ETW: Filtered events per provider : " << oss.str() << "\n";
+        std::cout << "[*] ETW: Classification " << classifier_names[c.first] << ": " << events.size() << " events.";
+        std::cout << " Filtered events per provider > " << oss.str() << "\n";
 	}
 }
