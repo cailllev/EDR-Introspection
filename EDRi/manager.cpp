@@ -134,10 +134,10 @@ std::string create_timeline_csv(const std::vector<json>& events) {
     }
 
     // add header to csv_output
-    for (const auto& key : all_keys) {
-        csv_output << key << ",";
+    for (size_t i = 0; i < all_keys.size(); ++i) {
+        csv_output << all_keys[i];
+        if (i + 1 < all_keys.size()) csv_output << ","; // only add comma if not last value
     }
-    csv_output.seekp(-1, std::ios_base::end); // remove the last ","
     csv_output << "\n";
 
     int num_events_final = 0;
@@ -147,7 +147,8 @@ std::string create_timeline_csv(const std::vector<json>& events) {
     for (const auto& ev : events) {
         // traverse keys IN ORDER OF CSV HEADER
 		// i.e. given: key from csv, check: if event has it, add value, else skip (add "")
-        for (const auto& key : all_keys) {
+        for (size_t i = 0; i < all_keys.size(); ++i) {
+			const auto& key = all_keys[i];
             // check if this event has a value for this key
             if (ev.contains(key)) {
                 csv_output << normalized_value(ev, key);
@@ -156,9 +157,8 @@ std::string create_timeline_csv(const std::vector<json>& events) {
             else {
                 csv_output << "";
             }
-            csv_output << ",";
+			if (i + 1 < all_keys.size()) csv_output << ","; // only add comma if not last value
         }
-        csv_output.seekp(-1, std::ios_base::end); // remove the last ","
         csv_output << "\n";
         num_events_final++;
     }
@@ -174,6 +174,7 @@ int main(int argc, char* argv[]) {
         ("e,edr", "The EDR to track, supporting: " + get_available_edrs(), cxxopts::value<std::string>())
         ("o,output", "The Path of the all-events.csv, default " + all_events_output_default, cxxopts::value<std::string>())
         ("a,attack-exe", "The path of the encrypted attack exe to execute", cxxopts::value<std::string>())
+        ("r,run-as-child", "If the attack should run (automatically) as a child of the EDRi.exe or if it should be executed manually")
         ("m,trace-etw-misc", "Trace misc ETW")
         ("i,trace-etw-ti", "Trace ETW-TI (needs PPL)")
         ("n,hook-ntdll", "Hook ntdll.dll (needs PPL)")
@@ -219,10 +220,14 @@ int main(int argc, char* argv[]) {
     }
     std::cout << "[*] EDRi: Writing events to: " << output << "\n";
 
+	bool run_as_child = false;
     if (result.count("attack-exe") > 0) {
 		attack_exe_enc_path = result["attack-exe"].as<std::string>();
 		std::cout << "[*] EDRi: Using non-default attack exe: " << attack_exe_enc_path << "\n";
     }
+    if (result.count("run-as-child") > 0) {
+        run_as_child = true;
+	}
 
     // check tracking options
     bool trace_etw_misc = false, trace_etw_ti = false, hook_ntdll = false;
@@ -305,30 +310,45 @@ int main(int argc, char* argv[]) {
 
     // ATTACK
 	// decrypt the attack exe
-	emit_etw_event("[<] Before decrypting attack exe", true);
+	emit_etw_event("[<] Before decrypting the attack exe", true);
     if (xor_file(attack_exe_enc_path, attack_exe_path)) {
-        std::cout << "[*] EDRi: Decrypted attack exe: " << attack_exe_path << "\n";
+        std::cout << "[*] EDRi: Decrypted the attack exe: " << attack_exe_path << "\n";
     }
     else {
-        std::cerr << "[!] EDRi: Failed to decrypt attack exe: " << attack_exe_enc_path << "\n";
+        std::cerr << "[!] EDRi: Failed to decrypt the attack exe: " << attack_exe_enc_path << "\n";
         stop_all_etw_traces();
         return 1;
     }
-    emit_etw_event("[>]  After decrypting attack exe", true);
+    emit_etw_event("[>]  After decrypting the attack exe", true);
     Sleep(wait_between_events_ms);
 
-    // start the attack via explorer (breaks process tree)
-    emit_etw_event("[<] Before executing attack exe", true);
+    // start the attack
+    emit_etw_event("[<] Before executing the attack exe", true);
     Sleep(wait_between_events_ms);
-    if (!launch_as_child(attack_exe_path)) {
-        std::cerr << "[!] EDRi: Failed to launch attack exe: " << attack_exe_path << "\n";
-        stop_all_etw_traces();
-		return 1;
+    if (run_as_child) {
+        if (!launch_as_child(attack_exe_path)) {
+            std::cerr << "[!] EDRi: Failed to launch the attack exe: " << attack_exe_path << "\n";
+            stop_all_etw_traces();
+            return 1;
+        }
     }
-	emit_etw_event("[>]  After executing attack exe", true);
+    else {
+        std::cout << "[*] EDRi: Execute " << attack_exe_path << " now manually\n";
+		int cnt_waited = 0;
+        while (g_attack_PID == 0) {
+            Sleep(100);
+            cnt_waited += 100;
+            if (cnt_waited > 20000) {
+                std::cerr << "[!] EDRi: Timeout waiting for attack PID, did you start the " << attack_exe_path << "?\n";
+                stop_all_etw_traces();
+				return 1;
+            }
+        }
+    }
+	emit_etw_event("[>]  After executing the attack exe", true);
 
 	// wait until the attack.exe terminates again
-    std::cout << "[+] EDRi: Waiting for attack to finish...\n";
+    std::cout << "[+] EDRi: Waiting for the attack exe to finish...\n";
     while (!g_attack_terminated) {
         Sleep(100);
 	}
