@@ -155,7 +155,6 @@ json parse_etw_event(Event e) {
         krabs::parser parser(e.schema);
         json j;
 
-        j[TYPE] = "ETW";
         j[TIMESTAMP] = filetime_to_iso8601(
             static_cast<__int64>(e.record.EventHeader.TimeStamp.QuadPart)
         );
@@ -163,6 +162,13 @@ json parse_etw_event(Event e) {
         j[TID] = e.record.EventHeader.ThreadId;
         j[EVENT_ID] = e.schema.event_id(); // opcode is the same as event_id, sometimes just a different number
         j[PROVIDER_NAME] = wchar2string(e.schema.provider_name());
+
+        if (j[PROVIDER_NAME] == ETW_TI_PROVIDER) {
+			j[TYPE] = "ETW-TI";
+        }
+        else {
+			j[TYPE] = "ETW";
+        }
 
         // task = task_name + opcode_name
         // TODO lookup missing info if either is null?

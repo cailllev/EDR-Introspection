@@ -318,12 +318,14 @@ int main(int argc, char* argv[]) {
     Sleep(wait_between_events_ms);
 
     // start the attack via explorer (breaks process tree)
-    // TODO cannot invoke attack when running as a PPL
-    std::string command = "explorer.exe \"" + attack_exe_path + "\"";
     emit_etw_event("[<] Before executing attack exe", true);
     Sleep(wait_between_events_ms);
-	std::cout << "[*] EDRi: Starting attack: " << command << "\n";
-	system(command.c_str());
+    if (!launch_as_child(attack_exe_path)) {
+        std::cerr << "[!] EDRi: Failed to launch attack exe: " << attack_exe_path << "\n";
+        stop_all_etw_traces();
+		return 1;
+    }
+	emit_etw_event("[>]  After executing attack exe", true);
 
 	// wait until the attack.exe terminates again
     std::cout << "[+] EDRi: Waiting for attack to finish...\n";
