@@ -153,7 +153,7 @@ DWORD WINAPI t_start_etw_misc_traces(LPVOID param) {
 
 DWORD WINAPI t_start_etw_ti_trace(LPVOID param) {
     try {
-        krabs::provider<> ti_provider(ETW_TI_PROVIDER_W); // "Microsoft-Windows-Threat-Intelligence"
+        krabs::provider<> ti_provider(THREAT_INTEL_PROVIDER_W); // "Microsoft-Windows-Threat-Intelligence"
         ti_provider.add_on_event_callback(event_callback);
         trace_etw_ti.enable(ti_provider);
         std::cout << "[+] ETW: Threat-Intel (all)\n";
