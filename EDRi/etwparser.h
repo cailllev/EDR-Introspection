@@ -32,8 +32,8 @@ static const std::string KERNEL_NETWORK_PROVIDER = "Microsoft-Windows-Kernel-Net
 static const std::wstring KERNEL_NETWORK_PROVIDER_W = std::wstring(KERNEL_NETWORK_PROVIDER.begin(), KERNEL_NETWORK_PROVIDER.end());
 static const std::string ANTIMALWARE_PROVIDER = "Microsoft-Antimalware-Engine";
 static const std::wstring ANTIMALWARE_PROVIDER_W = std::wstring(ANTIMALWARE_PROVIDER.begin(), ANTIMALWARE_PROVIDER.end());
-static const std::string ETW_TI_PROVIDER = "Microsoft-Windows-Threat-Intelligence";
-static const std::wstring ETW_TI_PROVIDER_W = std::wstring(ETW_TI_PROVIDER.begin(), ETW_TI_PROVIDER.end());
+static const std::string THREAT_INTEL_PROVIDER = "Microsoft-Windows-Threat-Intelligence";
+static const std::wstring THREAT_INTEL_PROVIDER_W = std::wstring(THREAT_INTEL_PROVIDER.begin(), THREAT_INTEL_PROVIDER.end());
 
 // the struct that is passed from function to function (or as a json after parsing)
 struct Event {
@@ -102,8 +102,9 @@ void add_exe_information(json& j);
 int check_new_proc(json&);
 bool check_traces_started(json&);
 Classifier filter(json&);
-Classifier to_filter_out(json&, std::string, std::vector<int>);
+Classifier classify_to(json&, std::string, std::vector<int>);
 Classifier filter_kernel_process(json&);
+Classifier filter_threat_intel(json&);
 Classifier filter_kernel_api_call(json&);
 Classifier filter_kernel_file(json&);
 Classifier filter_kernel_network(json&);

@@ -163,7 +163,7 @@ json parse_etw_event(Event e) {
         j[EVENT_ID] = e.schema.event_id(); // opcode is the same as event_id, sometimes just a different number
         j[PROVIDER_NAME] = wchar2string(e.schema.provider_name());
 
-        if (j[PROVIDER_NAME] == ETW_TI_PROVIDER) {
+        if (j[PROVIDER_NAME] == THREAT_INTEL_PROVIDER) {
 			j[TYPE] = "ETW-TI";
         }
         else {
@@ -538,6 +538,10 @@ Classifier filter(json& ev) {
         return filter_kernel_process(ev);
     }
 
+    else if (ev[PROVIDER_NAME] == THREAT_INTEL_PROVIDER) {
+        return filter_threat_intel(ev);
+    }
+
     else if (ev[PROVIDER_NAME] == KERNEL_API_PROVIDER) {
         return filter_kernel_api_call(ev);
     }
@@ -562,7 +566,7 @@ Classifier filter(json& ev) {
 }
 
 // returns a classifier based on if the value is in list
-Classifier to_filter_out(json& ev, std::string key, std::vector<int> list) {
+Classifier classify_to(json& ev, std::string key, std::vector<int> list) {
     if (ev.contains(key)) {
         if (std::find(list.begin(), list.end(), ev[key]) == list.end()) {
             return All; // when value not found --> put in all
@@ -579,19 +583,32 @@ Classifier to_filter_out(json& ev, std::string key, std::vector<int> list) {
 Classifier filter_kernel_process(json& ev) {
     // the interesting info is in target pid, process_id of msmpeng.exe/attack.exe/smartscreen.exe etc is not enough to filter
     if (std::find(kproc_event_ids_with_tpid.begin(), kproc_event_ids_with_tpid.end(), ev[EVENT_ID]) != kproc_event_ids_with_tpid.end()) {
-        return to_filter_out(ev, TARGET_PID, g_tracking_PIDs);
+        return classify_to(ev, TARGET_PID, g_tracking_PIDs);
     }
-	return Relevant; // put event ids without a filter into relevant
+    return Relevant; // put event ids without a filter into relevant
+}
+
+// filter threat intel events
+Classifier filter_threat_intel(json& ev) {
+	// either pid or tpid must match a tracked pid
+    if (std::find(ti_events_with_pid_or_tpid.begin(), ti_events_with_pid_or_tpid.end(), ev[EVENT_ID]) != ti_events_with_pid_or_tpid.end()) {
+        Classifier c_pid = classify_to(ev, PID, g_tracking_PIDs);
+        Classifier c_orig = classify_to(ev, TARGET_PID, g_tracking_PIDs);
+        if (c_pid == Minimal || c_orig == Minimal) {
+            return Minimal; // put in minimal if either matches
+        } // else put it in relevant
+    }
+    return Relevant; // put event ids without a filter into relevant
 }
 
 // filter kernel api calls
 Classifier filter_kernel_api_call(json& ev) {
     // the interesting info is in target pid, process_id of msmpeng.exe/attack.exe/smartscreen.exe etc is not enough to filter
     if (std::find(kapi_event_ids_with_tpid.begin(), kapi_event_ids_with_tpid.end(), ev[EVENT_ID]) != kapi_event_ids_with_tpid.end()) {
-        return to_filter_out(ev, TARGET_PID, g_tracking_PIDs);
+        return classify_to(ev, TARGET_PID, g_tracking_PIDs);
     }
     if (std::find(kapi_event_ids_with_pid.begin(), kapi_event_ids_with_pid.end(), ev[EVENT_ID]) != kapi_event_ids_with_pid.end()) {
-        return to_filter_out(ev, PID, g_tracking_PIDs);
+        return classify_to(ev, PID, g_tracking_PIDs);
     }
     return Relevant; // put event ids without a filter into relevant
 }
@@ -600,7 +617,7 @@ Classifier filter_kernel_api_call(json& ev) {
 Classifier filter_kernel_file(json& ev) {
     // TODO also filters out Notepad.exe proc, why?
     if (std::find(kfile_event_ids_with_pid.begin(), kfile_event_ids_with_pid.end(), ev[EVENT_ID]) != kfile_event_ids_with_pid.end()) {
-        return to_filter_out(ev, PID, g_tracking_PIDs);
+        return classify_to(ev, PID, g_tracking_PIDs);
     }
     return Relevant; // put event ids without a filter into relevant
 }
@@ -609,8 +626,8 @@ Classifier filter_kernel_file(json& ev) {
 Classifier filter_kernel_network(json& ev) {
     // events to keep if PID or originating PID match
     if (std::find(knetwork_event_ids_with_pid_or_opid.begin(), knetwork_event_ids_with_pid_or_opid.end(), ev[EVENT_ID]) != knetwork_event_ids_with_pid_or_opid.end()) {
-        Classifier c_pid = to_filter_out(ev, PID, g_tracking_PIDs);
-        Classifier c_orig = to_filter_out(ev, ORIGINATING_PID, g_tracking_PIDs); 
+        Classifier c_pid = classify_to(ev, PID, g_tracking_PIDs);
+        Classifier c_orig = classify_to(ev, ORIGINATING_PID, g_tracking_PIDs); 
         if (c_pid == Minimal || c_orig == Minimal) {
             return Minimal; // put in minimal if either matches
 		} // else put it in relevant
@@ -627,7 +644,7 @@ Classifier filter_antimalware(json& ev) {
 
     // events to keep if originating PID matches attack or injected PID
     if (std::find(am_event_ids_with_pid.begin(), am_event_ids_with_pid.end(), ev[EVENT_ID]) != am_event_ids_with_pid.end()) {
-        Classifier c = to_filter_out(ev, ORIGINATING_PID, { g_attack_PID, g_injected_PID });
+        Classifier c = classify_to(ev, ORIGINATING_PID, { g_attack_PID, g_injected_PID });
         if (c == All) {
 			return All; // put in all if it does not match
         }
@@ -639,8 +656,8 @@ Classifier filter_antimalware(json& ev) {
 
     // events to keep if originating PID or TargetPID matches attack PID or injected PID
     if (std::find(am_event_ids_with_pid_and_tpid.begin(), am_event_ids_with_pid_and_tpid.end(), ev[EVENT_ID]) != am_event_ids_with_pid_and_tpid.end()) {
-        Classifier c_orig = to_filter_out(ev, ORIGINATING_PID, { g_attack_PID, g_injected_PID });
-        Classifier c_target = to_filter_out(ev, TARGET_PID, { g_attack_PID, g_injected_PID });
+        Classifier c_orig = classify_to(ev, ORIGINATING_PID, { g_attack_PID, g_injected_PID });
+        Classifier c_target = classify_to(ev, TARGET_PID, { g_attack_PID, g_injected_PID });
         if (c_orig == Minimal || c_target == Minimal) {
             return Minimal; // put in minimal if either matches
         } // else put it in relevant
@@ -649,7 +666,7 @@ Classifier filter_antimalware(json& ev) {
 
     // events to keep if PID in Data matches
     if (std::find(am_event_ids_with_pid_in_data.begin(), am_event_ids_with_pid_in_data.end(), ev[EVENT_ID]) != am_event_ids_with_pid_in_data.end()) {
-        return to_filter_out(ev, DATA, { g_attack_PID, g_injected_PID });
+        return classify_to(ev, DATA, { g_attack_PID, g_injected_PID });
     }
 
     // events to keep if Message contains filter string (case insensitive) // TODO without magic values

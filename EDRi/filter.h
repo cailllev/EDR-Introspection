@@ -42,3 +42,4 @@ static const std::vector<int> kfile_event_ids_with_pid = { 10, 30 };
 static const std::vector<int> knetwork_event_ids_with_pid_or_opid = { 12, 15, 28, 31, 42, 43, 58, 59 };
 
 // TODO ETW-TI trace
+static const std::vector<int> ti_events_with_pid_or_tpid = { 2, 6, 12, 14, 16 };
