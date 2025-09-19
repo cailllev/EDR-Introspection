@@ -177,8 +177,7 @@ json parse_etw_event(Event e) {
 
         std::string last_key;
         int last_type;
-        bool overwritten = false;
-        std::string overwritten_key;
+        bool potential_overwrite = false;
         std::string overwritten_value;
 
         // Iterate over all properties defined in the schema
@@ -205,12 +204,8 @@ json parse_etw_event(Event e) {
                     }
                 }
                 if (j.contains(key)) {
-                    overwritten = true;
-                    overwritten_key = key;
+                    potential_overwrite = true;
                     overwritten_value = get_string_or_convert(j, key);
-                    if (g_debug) {
-                        std::cout << "[!] ETW: Warning, about to overwrite 'key:val': '" << overwritten_key << ":" << overwritten_value << "'\n";
-                    }
                 }
 
                 // Special cases
@@ -374,6 +369,12 @@ json parse_etw_event(Event e) {
 					j[ORIGINATING_PID] = -1; // orginating pid 0 does not make sense?
 				}
                 */
+                if (potential_overwrite) {
+                    if (overwritten_value != j[key]) { // only warn if the values differ
+                        std::cerr << "[!] ETW: Warning, " << j[PROVIDER_NAME] << ":" << j[EVENT_ID] << ", overwritten '"
+                            << key << ":" << j[key] << "' with '" << key << ":" << overwritten_value << "'\n";
+                    }
+                }
             }
             catch (const std::exception& ex) {
                 std::cerr <<
@@ -410,13 +411,6 @@ json parse_etw_event(Event e) {
             }
         }
 
-        if (overwritten) {
-            if (overwritten_value != j[overwritten_key]) { // only warn if the values differ
-                std::cerr << "[!] ETW: Warning, " << j[PROVIDER_NAME] << ":" << j[EVENT_ID] << ", overwritten value for "
-                    << overwritten_key << ":" << j[overwritten_key] << " with " << overwritten_value << "\n";
-            }
-        }
-
         return j;
     }
     catch (const std::exception& ex) {
@@ -425,7 +419,7 @@ json parse_etw_event(Event e) {
     }
 }
 
-std::string get_string_or_convert(const json& j, const std::string& key) {
+std::string get_string_or_convert(const json& j, std::string key) {
     if (!j.contains(key)) {
         return ""; // key not present
     }
