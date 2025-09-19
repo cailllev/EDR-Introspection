@@ -42,15 +42,16 @@ struct Event {
 };
 
 // fixed attributes inside the header and schema --> string can be chosen "freely", but must be unique over all properties!
+// most properties do not use _, it's safe to use _ for these fixed attributes here
 static const std::string TIMESTAMP = "timestamp";
-static const std::string TYPE = "type";
+static const std::string TYPE = "src_type";
 static const std::string PROVIDER_NAME = "provider_name";
 static const std::string EVENT_ID = "event_id";
 static const std::string TASK = "task_info"; // task_name + opcode_name
 static const std::string PID = "process_id";
 static const std::string TID = "thread_id";
 
-// properties --> string cannot be changed!
+// properties from the actual events --> values cannot be changed!
 static const std::string PPID = "ppid";
 static const std::string TARGET_PID = "targetpid";
 static const std::string TARGET_TID = "targettid";
@@ -62,12 +63,7 @@ static const std::string DATA = "data";
 static const std::string SOURCE = "source";
 
 // executables used for the attack
-static const std::string injected_exe_path = "C:\\Program Files\\WindowsApps\\Microsoft.WindowsNotepad_11.2506.35.0_x64__8wekyb3d8bbwe\\Notepad\\Notepad.exe";
-static const std::string shellcode_exe_path = "C:\\Program Files\\WindowsApps\\Microsoft.WindowsCalculator_11.2502.2.0_x64__8wekyb3d8bbwe\\CalculatorApp.exe";
-static const std::string attack_exe_name = attack_exe_path.substr(attack_exe_path.find_last_of("\\") + 1);
-static const std::string injected_exe_name = injected_exe_path.substr(injected_exe_path.find_last_of("\\") + 1);
-static const std::string shellcode_exe_name = shellcode_exe_path.substr(shellcode_exe_path.find_last_of("\\") + 1);
-static const std::vector<std::string> exe_paths_to_track = { attack_exe_path, injected_exe_path, shellcode_exe_path };
+static const std::string injected_exe = "notepad.exe"; // TODO add whole path? But must be Windows independent (is ...\WindowsApps\Microsoft.WindowsNotepad_8wekyb3d8bbwe\...) in the logs
 
 // executables to track for kernel event filtering, i.e. their PIDs at runtime
 static const std::vector<std::string> exes_to_track = {

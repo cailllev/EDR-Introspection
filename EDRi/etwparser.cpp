@@ -494,10 +494,14 @@ void post_parsing_checks(json& j) {
         }
     }
     if (g_injected_PID == 0 && new_proc_id != 0) {
-        if (j.contains(FILEPATH) && filepath_match(j[FILEPATH], injected_exe_path)) {
-            g_injected_PID = new_proc_id;
-            g_tracking_PIDs.push_back(g_injected_PID);
-            std::cout << "[+] ETW: Got injected PID: " << g_injected_PID << "\n";
+        if (j.contains(FILEPATH)) {
+			std::string event_exe = j[FILEPATH].get<std::string>();
+			event_exe = event_exe.substr(event_exe.find_last_of("\\") + 1); // only the exe name
+            if (_stricmp(event_exe.c_str(), injected_exe.c_str()) == 0) {
+                g_injected_PID = new_proc_id;
+                g_tracking_PIDs.push_back(g_injected_PID);
+                std::cout << "[+] ETW: Got injected PID: " << g_injected_PID << "\n";
+            }
         }
     }
 
