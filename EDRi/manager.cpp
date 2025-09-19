@@ -58,7 +58,7 @@ static const int wait_time_between_start_markers_ms = 250;
 void emit_etw_event(std::string msg, bool print_when_debug) {
     TraceLoggingWrite(
         g_hProvider,
-        "EDRi-Event", // this is the event name, can be anything with the current implementation
+        "EDRi-Event", // this is the event name, not further used
         TraceLoggingValue(msg.c_str(), "message") // cannot be a variable
     );
     if (g_debug && print_when_debug) {
@@ -323,7 +323,7 @@ int main(int argc, char* argv[]) {
     Sleep(wait_between_events_ms);
 
     // start the attack
-    emit_etw_event("[<] Before executing the attack exe", true);
+    emit_etw_event("[<] Before starting the attack exe", true);
     Sleep(wait_between_events_ms);
     if (run_as_child) {
         if (!launch_as_child(attack_exe_path)) {
@@ -339,13 +339,13 @@ int main(int argc, char* argv[]) {
             Sleep(100);
             cnt_waited += 100;
             if (cnt_waited > 20000) {
-                std::cerr << "[!] EDRi: Timeout waiting for attack PID, did you start the " << attack_exe_path << "?\n";
+                std::cerr << "[!] EDRi: Timeout waiting for attack PID, did you start " << attack_exe_path << "?\n";
                 stop_all_etw_traces();
 				return 1;
             }
         }
     }
-	emit_etw_event("[>]  After executing the attack exe", true);
+	emit_etw_event("[>]  After starting the attack exe", true);
 
 	// wait until the attack.exe terminates again
     std::cout << "[+] EDRi: Waiting for the attack exe to finish...\n";
