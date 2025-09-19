@@ -175,13 +175,12 @@ json parse_etw_event(Event e) {
         std::wstring combined = std::wstring(e.schema.task_name()) + std::wstring(e.schema.opcode_name());
         j[TASK] = wstring2string(combined);
 
-        std::string last_key;
-        int last_type;
-        bool potential_overwrite = false;
-        std::string overwritten_value;
 
         // Iterate over all properties defined in the schema
         for (const auto& property : parser.properties()) {
+            std::string last_key;
+            int last_type;
+
             try {
                 // get property name and type
                 const std::wstring& property_name = property.name();
@@ -192,7 +191,9 @@ json parse_etw_event(Event e) {
                 std::transform(key.begin(), key.end(), key.begin(),
                     [](unsigned char c) { return std::tolower(c); });
 
-                // for error messages
+				// for tracking potential overwrites & error messages
+                bool potential_overwrite = false;
+                std::string overwritten_value = "";
                 last_key = key;
                 last_type = property_type;
 
@@ -265,25 +266,27 @@ json parse_etw_event(Event e) {
                     auto raw = parser.parse<std::vector<uint8_t>>(property_name);
 
                     // Heuristic: IPv4 addresses are 4 bytes, IPv6 are 16 bytes
-                    if (raw.size() == 4) {
-                        char ipStr[INET_ADDRSTRLEN];
-                        inet_ntop(AF_INET, raw.data(), ipStr, sizeof(ipStr));
-                        j[key] = std::string(ipStr);
-                    }
-                    else if (raw.size() == 16) {
-                        char ipStr[INET6_ADDRSTRLEN];
-                        inet_ntop(AF_INET6, raw.data(), ipStr, sizeof(ipStr));
-                        j[key] = std::string(ipStr);
-                    }
-                    else {
-                        // fallback: hex dump
-                        std::ostringstream oss;
-                        oss << "0x";
-                        for (auto b : raw) {
-                            oss << std::hex << std::setw(2) << std::setfill('0') << (int)b;
+                    try {
+                        if (raw.size() == 4) {
+                            char ipStr[INET_ADDRSTRLEN];
+                            inet_ntop(AF_INET, raw.data(), ipStr, sizeof(ipStr));
+                            j[key] = std::string(ipStr);
                         }
-                        j[key] = oss.str();
+                        else if (raw.size() == 16) {
+                            char ipStr[INET6_ADDRSTRLEN];
+                            inet_ntop(AF_INET6, raw.data(), ipStr, sizeof(ipStr));
+                            j[key] = std::string(ipStr);
+                        }
+                    } catch (...) {
+                        // ignore conversion errors
+					}
+                    // fallback: hex dump
+                    std::ostringstream oss;
+                    oss << "0x";
+                    for (auto b : raw) {
+                        oss << std::hex << std::setw(2) << std::setfill('0') << (int)b;
                     }
+                    j[key] = oss.str();
                     break;
                 }
 
@@ -375,10 +378,10 @@ json parse_etw_event(Event e) {
 					j[ORIGINATING_PID] = -1; // orginating pid 0 does not make sense?
 				}
                 */
-                if (potential_overwrite) {
+                if (potential_overwrite && overwritten_value != "") {
                     if (overwritten_value != j[key]) { // only warn if the values differ
                         std::cerr << "[!] ETW: Warning, " << j[PROVIDER_NAME] << ":" << j[EVENT_ID] << ", overwritten '"
-                            << key << ":" << j[key] << "' with '" << key << ":" << overwritten_value << "'\n";
+                            << key << ":" << overwritten_value << "' with '" << key << ":" << j[key] << "'\n";
                     }
                 }
             }
