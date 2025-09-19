@@ -66,29 +66,12 @@ void emit_etw_event(std::string msg, bool print_when_debug) {
     }
 }
 
-// translate device paths to drive letters
-std::string translate_if_path(const std::string& s) {
-    std::vector<std::string> to_replace = { "\\Device\\HarddiskVolume4\\", "\\\\?\\C:\\" };
-    std::string replacement = "C:\\";
-	std::string s2 = s;
-    for (const auto& tr : to_replace) {
-        size_t idx = s.find(tr);
-        if (idx != std::string::npos) {
-            s2 = s2.substr(0, idx) + replacement + s2.substr(idx + tr.length());
-            if (g_super_debug) {
-                std::cout << "[~] EDRi: Translated path " << s << " to " << s2 << "\n";
-            }
-        }
-	}
-    return s2;
-}
-
 std::string normalized_value(json ev, std::string key) {
     if (ev[key].is_string()) {
         std::string s = ev[key].get<std::string>();
-        s = translate_if_path(s);
-        std::replace(s.begin(), s.end(), '"', '\'');
-        return "\"" + s + "\"";
+        std::string st = translate_if_path(s);
+        std::replace(st.begin(), st.end(), '"', '\'');
+        return "\"" + st + "\"";
     }
     else {
         return ev[key].dump();
@@ -221,6 +204,9 @@ int main(int argc, char* argv[]) {
         std::cout << options.help() << "\n";
         return 0;
     }
+
+	/* track \\Device\\HarddiskVolumeX and \\?C:\ */
+    build_device_map();
 
     // check edr profile, output, and attack exe
 	std::string edr_name = result["edr"].as<std::string>();
