@@ -179,6 +179,7 @@ json parse_etw_event(Event e) {
         // Iterate over all properties defined in the schema
         for (const auto& property : parser.properties()) {
             std::string last_key;
+            std::string original_key = "";
             int last_type;
 
             try {
@@ -192,7 +193,6 @@ json parse_etw_event(Event e) {
                     [](unsigned char c) { return std::tolower(c); });
 
 				// for tracking potential overwrites & error messages
-                bool potential_overwrite = false;
                 std::string overwritten_value = "";
                 last_key = key;
                 last_type = property_type;
@@ -200,12 +200,11 @@ json parse_etw_event(Event e) {
                 // check if it's a merged key --> write value to merged_key
                 for (const auto& cat : key_categories_to_merge) {
                     if (std::find(cat.keys_to_merge.begin(), cat.keys_to_merge.end(), key) != cat.keys_to_merge.end()) {
-                        std::string old_key = key;
+                        original_key = key;
                         key = cat.merged_key;
                     }
                 }
                 if (j.contains(key)) {
-                    potential_overwrite = true;
                     overwritten_value = get_string_or_convert(j, key);
                 }
 
@@ -375,13 +374,18 @@ json parse_etw_event(Event e) {
                 }
                 /*
                 if (key == ORIGINATING_PID && j[ORIGINATING_PID] == 0) {
-					j[ORIGINATING_PID] = -1; // orginating pid 0 does not make sense?
+					j[ORIGINATING_PID] = -1; // orginating pid=0 does not make sense?
 				}
                 */
-                if (potential_overwrite && overwritten_value != "") {
+                if (overwritten_value != "") {
                     if (overwritten_value != j[key]) { // only warn if the values differ
-                        std::cerr << "[!] ETW: Warning, " << j[PROVIDER_NAME] << ":" << j[EVENT_ID] << ", overwritten '"
-                            << key << ":" << overwritten_value << "' with '" << key << ":" << j[key] << "'\n";
+                        std::cerr << "[!] ETW: Warning, " << j[PROVIDER_NAME] << ":" << j[EVENT_ID] << 
+                            ", overwritten '" << key << ":" << overwritten_value << 
+                            "' with '" << key << ":" << j[key] << "'";
+                        if (original_key != "") { // include name of merged key (if overwrite was b.c. of a merge)
+                            std::cerr << " because of merged key '" << original_key << "'";
+                        }
+                        std::cerr << "\n";
                     }
                 }
             }
@@ -487,7 +491,7 @@ void post_parsing_checks(json& j) {
     // check if the attack_PID and injected_PID can be set
     // TODO path independent?
     if (g_attack_PID == 0 && new_proc_id != 0) {
-        if (j.contains(FILEPATH) && filepath_match(j[FILEPATH], attack_exe_path)) {
+        if (j.contains(FILEPATH) && filepath_match(j[FILEPATH], g_attack_exe_path)) {
             g_attack_PID = new_proc_id;
             g_tracking_PIDs.push_back(g_attack_PID);
             std::cout << "[+] ETW: Got attack PID: " << g_attack_PID << "\n";
@@ -701,7 +705,7 @@ Classifier filter_antimalware(json& ev) {
     // events to keep if filepath matches (case insensitive)
     if (std::find(am_event_ids_with_filepath.begin(), am_event_ids_with_filepath.end(), ev[EVENT_ID]) != am_event_ids_with_filepath.end()) {
         if (ev.contains(FILEPATH)) {
-            if (_stricmp(ev[FILEPATH].get<std::string>().c_str(), attack_exe_path.c_str())) {
+            if (_stricmp(ev[FILEPATH].get<std::string>().c_str(), g_attack_exe_path.c_str())) {
 				return Minimal; // do not filter if path matches
             }
 			return All; // else filter out
