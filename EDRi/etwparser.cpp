@@ -241,9 +241,15 @@ json parse_etw_event(Event e) {
                 case TDH_INTYPE_UINT16:
                     j[key] = (int32_t)parser.parse<USHORT>(property_name);
                     break;
+				case TDH_INTYPE_INT32:
+                    j[key] = (int32_t)parser.parse<int32_t>(property_name);
+					break;
                 case TDH_INTYPE_UINT32:
                     j[key] = (uint32_t)parser.parse<uint32_t>(property_name);
                     break;
+				case TDH_INTYPE_INT64:
+					j[key] = (int64_t)parser.parse<int64_t>(property_name);
+					break;
                 case TDH_INTYPE_UINT64:
                     j[key] = (uint64_t)parser.parse<uint64_t>(property_name);
                     break;
