@@ -6,6 +6,11 @@
 # TO INCLUDE
 !x64/Release/EDRi.exe
 
+# KDU drivers
+NeacSafe64.inf
+NeacSafe64.sys
+
+
 # User-specific files
 *.rsuser
 *.suo
