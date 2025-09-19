@@ -165,6 +165,21 @@ std::string create_timeline_csv(const std::vector<json>& events) {
 	return csv_output.str();
 }
 
+void store_results(std::string output) {
+    print_etw_counts();
+    std::map<Classifier, std::vector<json>> all_events = get_events();
+    for (auto& c : all_events) {
+        std::vector<json>& events = all_events[c.first];
+        std::string csv_output = create_timeline_csv(events);
+        std::string output_base = output.substr(0, output.find_last_of('.')); // without .csv
+        std::string output_final = output_base + "-" + get_classifier_name(c.first) + ".csv"; // add classifier to filename
+        std::ofstream out(output_final);
+        out << csv_output;
+        out.close();
+    }
+    std::cout << "[*] EDRi: Done\n";
+}
+
 int main(int argc, char* argv[]) {
     cxxopts::Options options("EDRi", "EDR Introspection Framework");
     
@@ -327,9 +342,10 @@ int main(int argc, char* argv[]) {
     Sleep(wait_between_events_ms);
     if (run_as_child) {
         if (!launch_as_child(attack_exe_path)) {
-            std::cerr << "[!] EDRi: Failed to launch the attack exe: " << attack_exe_path << "\n";
+            std::cerr << "[!] EDRi: Failed to launch the attack exe: " << attack_exe_path << ". Was it marked as a virus?\n";
             stop_all_etw_traces();
-            return 1;
+            store_results(output);
+            return 0;
         }
     }
     else {
@@ -339,9 +355,10 @@ int main(int argc, char* argv[]) {
             Sleep(100);
             cnt_waited += 100;
             if (cnt_waited > 20000) {
-                std::cerr << "[!] EDRi: Timeout waiting for attack PID, did you start " << attack_exe_path << "?\n";
+                std::cerr << "[!] EDRi: Timeout waiting for attack PID, did you start " << attack_exe_path << ", or was it marked as a virus?\n";
                 stop_all_etw_traces();
-				return 1;
+				store_results(output);
+                return 0;
             }
         }
     }
@@ -373,18 +390,6 @@ int main(int argc, char* argv[]) {
     }
     threads.clear();
 
-    print_etw_counts();
-    std::map<Classifier, std::vector<json>> all_events = get_events();
-    for (auto& c : all_events) {
-        std::vector<json>& events = all_events[c.first];
-        std::string csv_output = create_timeline_csv(events);
-		std::string output_base = output.substr(0, output.find_last_of('.')); // without .csv
-		std::string output_final = output_base + "-" + get_classifier_name(c.first) + ".csv"; // add classifier to filename
-        std::ofstream out(output_final);
-        out << csv_output;
-        out.close();
-	}
-
-    std::cout << "[*] EDRi: Done\n";
+    store_results(output);
 	return 0;
 }
