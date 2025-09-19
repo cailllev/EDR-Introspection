@@ -42,8 +42,8 @@ std::map<int, std::string> g_running_procs = {};
 std::shared_mutex g_procs_mutex;
 
 // attack exe paths
-std::string attack_exe_path = "C:\\Users\\Public\\Downloads\\attack.exe";
-std::string attack_exe_enc_path = attack_exe_path + ".enc";
+std::string g_attack_exe_path = "C:\\Users\\Public\\Downloads\\attack.exe";
+std::string g_attack_exe_enc_path = g_attack_exe_path + ".enc";
 
 // more debug info
 bool g_debug = false;
@@ -196,8 +196,8 @@ int main(int argc, char* argv[]) {
     // encrypt an exe
     if (result.count("c") > 0) {
         std::string in_path = result["encrypt"].as<std::string>();
-        xor_file(in_path, attack_exe_enc_path);
-        std::cout << "[*] EDRi: XOR encrypted " << in_path << " to " << attack_exe_enc_path << "\n";
+        xor_file(in_path, g_attack_exe_enc_path);
+        std::cout << "[*] EDRi: XOR encrypted " << in_path << " to " << g_attack_exe_enc_path << "\n";
         exit(0);
     }
     if (result.count("help") || result.count("edr") == 0) {
@@ -223,8 +223,8 @@ int main(int argc, char* argv[]) {
 
 	bool run_as_child = false;
     if (result.count("attack-exe") > 0) {
-		attack_exe_enc_path = result["attack-exe"].as<std::string>();
-		std::cout << "[*] EDRi: Using non-default attack exe: " << attack_exe_enc_path << "\n";
+		g_attack_exe_enc_path = result["attack-exe"].as<std::string>();
+		std::cout << "[*] EDRi: Using non-default attack exe: " << g_attack_exe_enc_path << "\n";
     }
     if (result.count("run-as-child") > 0) {
         run_as_child = true;
@@ -312,11 +312,11 @@ int main(int argc, char* argv[]) {
     // ATTACK
 	// decrypt the attack exe
 	emit_etw_event("[<] Before decrypting the attack exe", true);
-    if (xor_file(attack_exe_enc_path, attack_exe_path)) {
-        std::cout << "[*] EDRi: Decrypted the attack exe: " << attack_exe_path << "\n";
+    if (xor_file(g_attack_exe_enc_path, g_attack_exe_path)) {
+        std::cout << "[*] EDRi: Decrypted the attack exe: " << g_attack_exe_path << "\n";
     }
     else {
-        std::cerr << "[!] EDRi: Failed to decrypt the attack exe: " << attack_exe_enc_path << "\n";
+        std::cerr << "[!] EDRi: Failed to decrypt the attack exe: " << g_attack_exe_enc_path << "\n";
         stop_all_etw_traces();
         return 1;
     }
@@ -327,21 +327,21 @@ int main(int argc, char* argv[]) {
     emit_etw_event("[<] Before starting the attack exe", true);
     Sleep(wait_between_events_ms);
     if (run_as_child) {
-        if (!launch_as_child(attack_exe_path)) {
-            std::cerr << "[!] EDRi: Failed to launch the attack exe: " << attack_exe_path << ". Was it marked as a virus?\n";
+        if (!launch_as_child(g_attack_exe_path)) {
+            std::cerr << "[!] EDRi: Failed to launch the attack exe: " << g_attack_exe_path << ". Was it marked as a virus?\n";
             stop_all_etw_traces();
             store_results(output);
             return 0;
         }
     }
     else {
-        std::cout << "[*] EDRi: Execute " << attack_exe_path << " now manually\n";
+        std::cout << "[*] EDRi: Execute " << g_attack_exe_path << " now manually\n";
 		int cnt_waited = 0;
         while (g_attack_PID == 0) {
             Sleep(100);
             cnt_waited += 100;
             if (cnt_waited > 20000) {
-                std::cerr << "[!] EDRi: Timeout waiting for attack PID, did you start " << attack_exe_path << ", or was it marked as a virus?\n";
+                std::cerr << "[!] EDRi: Timeout waiting for attack PID, did you start " << g_attack_exe_path << ", or was it marked as a virus?\n";
                 stop_all_etw_traces();
 				store_results(output);
                 return 0;

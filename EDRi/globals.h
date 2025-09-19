@@ -25,7 +25,7 @@ extern bool g_attack_terminated;
 extern bool g_debug;
 extern bool g_super_debug;
 
-extern std::string attack_exe_path;
-extern std::string attack_exe_enc_path;
+extern std::string g_attack_exe_path;
+extern std::string g_attack_exe_enc_path;
 
 using json = nlohmann::json;
