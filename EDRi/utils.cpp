@@ -4,6 +4,9 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
+#include <string>
+#include <unordered_map>
+#include <regex>
 #include <vector>
 #include <shared_mutex>
 #include <tlhelp32.h> // import after windows.h, else all breaks, that's crazy, yo
@@ -13,6 +16,7 @@
 
 
 static const std::string encrypt_password = "much signature bypass, such wow";
+static std::unordered_map<std::string, std::string> g_deviceMap;
 
 // thread-safe storing PID:EXE to global variable
 void snapshot_procs() {
@@ -385,4 +389,56 @@ bool launch_with_explorer_impersonate_token(const std::string& path) {
     }
     CloseHandle(hUserToken);
     return ok == TRUE;
+}
+
+void build_device_map() {
+    if (!g_deviceMap.empty()) return; // build only once
+
+    WCHAR drives[512];
+    DWORD len = GetLogicalDriveStringsW(512, drives);
+    if (!len) return;
+
+    for (WCHAR* d = drives; *d; d += wcslen(d) + 1) {
+        // drive like L"C:\\"
+        std::wstring driveW(d, 2); // just "C:"
+        WCHAR target[MAX_PATH];
+        if (QueryDosDeviceW(driveW.c_str(), target, MAX_PATH)) {
+            std::wstring targetW(target);
+            // store as UTF-8
+            std::string drive = wstring2string(driveW); // "C:"
+            std::string ntpath = wstring2string(targetW); // "\Device\HarddiskVolume3"
+            g_deviceMap[ntpath] = drive + "\\"; // "C:\"
+        }
+    }
+}
+
+std::string translate_if_path(const std::string& s) {
+    std::string s2 = s;
+
+    // replace any \Device\HarddiskVolumeX\ with its actual drive letter
+    for (const auto& m : g_deviceMap) {
+		const std::string& nt = m.first;
+		const std::string& drive = m.second;
+        // build escaped regex like "\Device\HarddiskVolume3\"
+        std::string pattern;
+        for (char c : nt) {
+            if (c == '\\') pattern += "\\\\";
+            else pattern += c;
+        }
+        pattern += "\\\\"; // must end with slash
+
+        std::regex r(pattern, std::regex_constants::icase);
+        s2 = std::regex_replace(s2, r, drive);
+    }
+
+    // replace "\\?\X:\"  (any drive letter) with "X:\"
+    static const std::regex extendedPrefix(R"(\\\\\?\\([A-Za-z]:)\\)",
+    std::regex_constants::icase);
+    s2 = std::regex_replace(s2, extendedPrefix, "$1\\\\");
+
+    if (g_super_debug && s2 != s) {
+        std::cout << "[~] EDRi: Translated path " << s << " to " << s2 << "\n";
+    }
+
+    return s2;
 }
