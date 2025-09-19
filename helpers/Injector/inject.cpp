@@ -23,7 +23,7 @@ int sleep_between_steps_ms = 970; // time to wait between attack steps
 void print_and_emit_event(std::string msg) {
     TraceLoggingWrite(
         g_hProvider,
-        "Attack-Provider", // this is the event name
+        "Attack-Provider", // this is the event name, not further used
 		TraceLoggingValue(msg.c_str(), "message") // cannot be a variable
     );
     std::cout << msg << "\n";

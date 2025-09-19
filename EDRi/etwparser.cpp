@@ -119,7 +119,7 @@ json parse_my_etw_event(Event e) {
     json j;
 
     try {
-        j[TYPE] = "Custom";
+        j[TYPE] = "myETW";
         j[TIMESTAMP] = filetime_to_iso8601(
             static_cast<__int64>(e.record.EventHeader.TimeStamp.QuadPart)
         );
@@ -209,7 +209,7 @@ json parse_etw_event(Event e) {
                     overwritten_key = key;
                     overwritten_value = get_string_or_convert(j, key);
                     if (g_debug) {
-                        std::cout << "[!] ETW: Warning: About to overwrite " << overwritten_key << ":" << overwritten_value << "\n";
+                        std::cout << "[!] ETW: Warning, about to overwrite 'key:val': '" << overwritten_key << ":" << overwritten_value << "'\n";
                     }
                 }
 
@@ -369,7 +369,11 @@ json parse_etw_event(Event e) {
                     j[key] = "unsupported";
                     break;
                 }
-
+                /*
+                if (key == ORIGINATING_PID && j[ORIGINATING_PID] == 0) {
+					j[ORIGINATING_PID] = -1; // orginating pid 0 does not make sense?
+				}
+                */
             }
             catch (const std::exception& ex) {
                 std::cerr <<
@@ -408,7 +412,7 @@ json parse_etw_event(Event e) {
 
         if (overwritten) {
             if (overwritten_value != j[overwritten_key]) { // only warn if the values differ
-                std::cerr << "[!] ETW: Warning: Event ID " << j[EVENT_ID] << ", overwritten value for "
+                std::cerr << "[!] ETW: Warning, " << j[PROVIDER_NAME] << ":" << j[EVENT_ID] << ", overwritten value for "
                     << overwritten_key << ":" << j[overwritten_key] << " with " << overwritten_value << "\n";
             }
         }
