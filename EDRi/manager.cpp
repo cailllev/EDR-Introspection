@@ -201,14 +201,12 @@ int main(int argc, char* argv[]) {
         std::string in_path = result["encrypt"].as<std::string>();
         xor_file(in_path, g_attack_exe_enc_path);
         std::cout << "[*] EDRi: XOR encrypted " << in_path << " to " << g_attack_exe_enc_path << "\n";
-        exit(0);
+        return 0;
     }
     if (result.count("help") || result.count("edr") == 0) {
         std::cout << options.help() << "\n";
         return 0;
     }
-
-	/* track \\Device\\HarddiskVolumeX and \\?C:\ */
     build_device_map();
 
     // check edr profile, output, and attack exe
@@ -262,54 +260,46 @@ int main(int argc, char* argv[]) {
         g_super_debug = true;
 	}
 
-    // TRACKING PREPARATION
+    // TRACKING PREPARATION + INIT ETW TRACES
     TraceLoggingRegister(g_hProvider);
     std::cout << "[+] EDRi: Own provider registered\n";
-    std::cout << "[*] EDRi: Get running procs\n";
-    snapshot_procs();
 
     std::vector<HANDLE> threads;
     if (hook_ntdll) {
         if (!start_etw_hook_trace(threads)) {
             std::cerr << "[!] EDRi: Failed to start ETW-Hook traces\n";
-            exit(1);
-        }
-		//std::string main_edr_exe = edr_specific_exes[0]; // first exe is the main edr exe
-        std::string main_edr_exe = "WindowsTerminal.exe"; // TODO debug
-		int edr_pid = get_PID_by_name(main_edr_exe);
-        if (edr_pid == -1) {
-            std::cerr << "[!] EDRi: Could not find the EDR process " << main_edr_exe << ", is it running?\n";
             return 1;
         }
-        if (!inject_dll(edr_pid, hooker_dll_path)) {
-            std::cerr << "[!] EDRi: Failed to inject the hooker dll into " << main_edr_exe << "\n";
-            return 1;
-        }
-		std::cout << "[+] EDRi: Hooking ntdll.dll of " << main_edr_exe << " successful\n";
     }
     if (trace_etw_ti) {
         if (!start_etw_ti_trace(threads)) {
             std::cerr << "[!] EDRi: Failed to start ETW-TI traces\n";
-            exit(1);
+            return 1;
         }
     }
     if (trace_etw_misc) {
         if (!start_etw_misc_traces(threads)) {
             std::cerr << "[!] EDRi: Failed to start misc ETW traces(s)\n";
-            exit(1);
+            return 1;
         }
     }
     if (!start_etw_default_traces(threads)) {
         std::cerr << "[!] EDRi: Failed to start default ETW traces(s)\n";
-        exit(1);
+        return 1;
 	}
 
+    // GET PROCS TO TRACK
+    std::cout << "[*] EDRi: Get running procs\n";
+    snapshot_procs();
     for (auto& e : exes_to_track) {
         int pid = get_PID_by_name(e);
         if (pid != -1) {
             std::cout << "[+] EDRi: Got pid for " << e << ":" << pid << "\n";
             g_tracking_PIDs.push_back(pid);
         }
+        else if (g_debug) {
+            std::cout << "[-] EDRi: Could not find process " << e << "\n";
+		}
     }
     for (auto& e : edr_specific_exes) {
         int pid = get_PID_by_name(e);
@@ -317,8 +307,12 @@ int main(int argc, char* argv[]) {
             std::cout << "[+] EDRi: Got pid for " << e << ":" << pid << "\n";
             g_tracking_PIDs.push_back(pid);
         }
+        else if (g_debug) {
+            std::cout << "[-] EDRi: Could not find EDR specific process " << e << "\n";
+        }
     }
 
+    // WAIT UNTIL TRACES ARE READY
     Sleep(wait_after_traces_started_ms);
     std::cout << "[*] EDRi: Waiting until start marker is registered\n";
 	while (!g_traces_started) {
@@ -326,6 +320,24 @@ int main(int argc, char* argv[]) {
 		Sleep(wait_time_between_start_markers_ms);
 	}
 	std::cout << "[*] EDRi: Traces started\n";
+
+	// hooking emits etw events, so hooking must be done after the traces are started
+    if (hook_ntdll) {
+        //std::string main_edr_exe = edr_specific_exes[0]; // first exe is the main edr exe
+        std::string main_edr_exe = "WindowsTerminal.exe"; // TODO debug
+        int edr_pid = get_PID_by_name(main_edr_exe);
+        if (edr_pid == -1) {
+            std::cerr << "[!] EDRi: Could not find the EDR process " << main_edr_exe << ", is it running?\n";
+            stop_all_etw_traces();
+            return 1;
+        }
+        if (!inject_dll(edr_pid, hooker_dll_path)) {
+            std::cerr << "[!] EDRi: Failed to inject the hooker dll into " << main_edr_exe << "\n";
+            stop_all_etw_traces();
+            return 1;
+        }
+        std::cout << "[+] EDRi: Hooking ntdll.dll of " << main_edr_exe << " successful\n";
+    }
 
     // ATTACK
 	// decrypt the attack exe
