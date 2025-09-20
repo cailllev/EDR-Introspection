@@ -12,6 +12,7 @@
 krabs::user_trace trace_etw(L"EDRi");
 krabs::user_trace trace_etw_misc(L"EDRi-Misc");
 krabs::user_trace trace_etw_ti(L"EDRi-TI");
+krabs::user_trace trace_etw_hook(L"EDR-Hook");
 
 DWORD WINAPI t_start_default_traces(LPVOID param) {
     try {
@@ -173,6 +174,29 @@ DWORD WINAPI t_start_etw_ti_trace(LPVOID param) {
     return 0;
 }
 
+DWORD WINAPI t_start_etw_hook_trace(LPVOID param) {
+    try {
+        krabs::guid hooks_guid(L"{72248411-7166-4feb-a386-34d8f35bb637}");
+        krabs::provider<> hooks_provider(hooks_guid);
+        hooks_provider.add_on_event_callback(event_callback);
+        trace_etw.enable(hooks_provider);
+        std::cout << "[+] ETW: NTDLL-Hooks (all)\n";
+
+        // trace_start is blocking, hence threaded
+        std::cout << "[+] ETW: TI trace registered, starting...\n";
+        trace_etw_ti.start();
+    }
+    catch (const std::exception& e) {
+        std::cout << "[!] ETW: TI trace exception: " << e.what() << "\n";
+    }
+    catch (...) {
+        std::cout << "[!] ETW: TI trace unknown exception\n";
+    }
+
+    std::cout << "[+] ETW: TI trace thread finished\n";
+    return 0;
+}
+
 // always start the default traces
 bool start_etw_default_traces(std::vector<HANDLE>& threads) {
     HANDLE thread = CreateThread(NULL, 0, t_start_default_traces, NULL, 0, NULL);
@@ -204,11 +228,22 @@ bool start_etw_ti_trace(std::vector<HANDLE>& threads) {
     return true;
 }
 
+bool start_etw_hook_trace(std::vector<HANDLE>& threads) {
+    HANDLE thread = CreateThread(NULL, 0, t_start_etw_hook_trace, NULL, 0, NULL);
+    if (thread == NULL) {
+        std::cerr << "[!] ETW: Could not start ETW-Hook thread\n";
+        return false;
+    }
+    threads.push_back(thread);
+    return true;
+}
+
 void stop_all_etw_traces() {
     try {
         trace_etw.stop();
 		trace_etw_misc.stop();
         trace_etw_ti.stop();
+        trace_etw_hook.stop();
     }
     catch (...) {
         std::cerr << "[!] ETW: Failed to stop traces\n";

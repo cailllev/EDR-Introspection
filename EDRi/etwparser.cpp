@@ -166,6 +166,9 @@ json parse_etw_event(Event e) {
         if (j[PROVIDER_NAME] == THREAT_INTEL_PROVIDER) {
 			j[TYPE] = "ETW-TI";
         }
+        else if (j[PROVIDER_NAME] == "Hook-Provider") {
+            j[TYPE] = "EDR-Hook";
+        }
         else {
 			j[TYPE] = "ETW";
         }

@@ -128,6 +128,7 @@
   <ItemGroup>
     <ClCompile Include="etwparser.cpp" />
     <ClCompile Include="etwreader.cpp" />
+    <ClCompile Include="hooker.cpp" />
     <ClCompile Include="manager.cpp" />
     <ClCompile Include="profile.cpp" />
     <ClCompile Include="utils.cpp" />
@@ -139,6 +140,7 @@
     <ClInclude Include="globals.h" />
     <ClInclude Include="helpers\cxxopts.hpp" />
     <ClInclude Include="helpers\json.hpp" />
+    <ClInclude Include="hooker.h" />
     <ClInclude Include="manager.h" />
     <ClInclude Include="profile.h" />
     <ClInclude Include="utils.h" />

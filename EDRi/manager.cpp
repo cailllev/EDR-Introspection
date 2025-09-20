@@ -21,6 +21,7 @@
 #include "etwreader.h"
 #include "manager.h"
 #include "profile.h"
+#include "hooker.h"
 
 /*
 - creates krabs ETW traces for Antimalware, Kernel, etc. and the attack provider
@@ -44,6 +45,8 @@ std::shared_mutex g_procs_mutex;
 // attack exe paths
 std::string g_attack_exe_path = "C:\\Users\\Public\\Downloads\\attack.exe";
 std::string g_attack_exe_enc_path = g_attack_exe_path + ".enc";
+
+std::string hooker_dll_path = "C:\\Users\\hacker\\source\\repos\\EDR-Introspection\\x64\\Release\\EDRHooker.dll";
 
 // more debug info
 bool g_debug = false;
@@ -262,10 +265,27 @@ int main(int argc, char* argv[]) {
     // TRACKING PREPARATION
     TraceLoggingRegister(g_hProvider);
     std::cout << "[+] EDRi: Own provider registered\n";
+    std::cout << "[*] EDRi: Get running procs\n";
+    snapshot_procs();
 
     std::vector<HANDLE> threads;
     if (hook_ntdll) {
-        // TODO
+        if (!start_etw_hook_trace(threads)) {
+            std::cerr << "[!] EDRi: Failed to start ETW-Hook traces\n";
+            exit(1);
+        }
+		//std::string main_edr_exe = edr_specific_exes[0]; // first exe is the main edr exe
+        std::string main_edr_exe = "WindowsTerminal.exe"; // TODO debug
+		int edr_pid = get_PID_by_name(main_edr_exe);
+        if (edr_pid == -1) {
+            std::cerr << "[!] EDRi: Could not find the EDR process " << main_edr_exe << ", is it running?\n";
+            return 1;
+        }
+        if (!inject_dll(edr_pid, hooker_dll_path)) {
+            std::cerr << "[!] EDRi: Failed to inject the hooker dll into " << main_edr_exe << "\n";
+            return 1;
+        }
+		std::cout << "[+] EDRi: Hooking ntdll.dll of " << main_edr_exe << " successful\n";
     }
     if (trace_etw_ti) {
         if (!start_etw_ti_trace(threads)) {
@@ -284,8 +304,6 @@ int main(int argc, char* argv[]) {
         exit(1);
 	}
 
-    std::cout << "[*] EDRi: Get running procs\n";
-    snapshot_procs();
     for (auto& e : exes_to_track) {
         int pid = get_PID_by_name(e);
         if (pid != -1) {
@@ -307,7 +325,7 @@ int main(int argc, char* argv[]) {
         emit_etw_event(EDRi_TRACE_START_MARKER, false);
 		Sleep(wait_time_between_start_markers_ms);
 	}
-	std::cout << "[*] EDRi: Trace started\n";
+	std::cout << "[*] EDRi: Traces started\n";
 
     // ATTACK
 	// decrypt the attack exe
