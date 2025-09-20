@@ -3,6 +3,7 @@
 
 #include "profile.h"
 
+// the first exe is the main edr exe
 static const std::map<std::string, std::vector<std::string>> edr_profiles = {
 	{ "Defender", {"MsMpEng.exe", "MpDefenderCoreService.exe"} },
     { "MDE", {"MsMpEng.exe", "MpDefenderCoreService.exe", "MsSense.exe", "SenseCnCProxy.exe", "SenseIR.exe", "SenseCE.exe", "SenseSampleUploader.exe", "SenseNdr.exe", "SenseSC.exe", "SenseCM.exe", "SenseTVM.exe"} },

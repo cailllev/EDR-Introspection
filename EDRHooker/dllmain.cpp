@@ -6,10 +6,8 @@
 #include <atomic>
 
 #include <MinHook.h>
-
-// TraceLogging (manifestless ETW) - requires Windows SDK
 #include <TraceLoggingProvider.h>
-TRACELOGGING_DECLARE_PROVIDER(g_hProvider);
+
 TRACELOGGING_DEFINE_PROVIDER(
     g_hProvider,
     "Hook-Provider", // name in the ETW, cannot be a variable
@@ -44,7 +42,7 @@ void emit_etw_ok(std::string msg) {
     TraceLoggingWrite(
         g_hProvider,
         "NtSyscallEvent",
-        TraceLoggingValue(msg.c_str(), "message")
+        TraceLoggingValue(msg.c_str(), "task_name")
     );
     std::cout << "[+] Hook-DLL: " << msg << "\n";
 };
@@ -53,7 +51,7 @@ void emit_etw_error(std::string error) {
     TraceLoggingWrite(
         g_hProvider,
         "NtSyscallEvent",
-        TraceLoggingValue(error.c_str(), "error")
+        TraceLoggingValue(error.c_str(), "task_name")
 	);
 	std::cerr << "[!] Hook-DLL: " << error << "\n";
 };
@@ -192,6 +190,7 @@ void RemoveHooks()
 DWORD WINAPI t_InitHooks(LPVOID)
 {
     InstallHooks();
+	emit_etw_ok("Hooks initialized");
     return 0;
 }
 
