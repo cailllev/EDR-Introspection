@@ -18,8 +18,11 @@
 static const std::string encrypt_password = "much signature bypass, such wow";
 static std::unordered_map<std::string, std::string> g_deviceMap;
 
+static bool initialized = false;
+
 // thread-safe storing PID:EXE to global variable
 void snapshot_procs() {
+	initialized = true;
     PROCESSENTRY32 pe;
     pe.dwSize = sizeof(PROCESSENTRY32);
     HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
@@ -35,6 +38,10 @@ void snapshot_procs() {
 
 // thread-safe retrieving the PID of the first case-insensitive match, ignores other same-named processes
 int get_PID_by_name(const std::string& name) {
+    if (!initialized) {
+		std::cerr << "[!] Utils: Cannot use get_PID_by_name() before snapshot_procs()\n";
+        return -1;
+    }
     std::shared_lock<std::shared_mutex> lock(g_procs_mutex); // reader lock (multiple allowed when no writers)
     for (auto it = g_running_procs.begin(); it != g_running_procs.end(); ++it) {
         if (_stricmp(it->second.c_str(), name.c_str()) == 0) {
