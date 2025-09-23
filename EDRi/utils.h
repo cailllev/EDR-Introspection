@@ -24,6 +24,9 @@ bool filepath_match(std::string, std::string);
 bool launch_as_child(const std::string& path);
 
 bool xor_file(std::string, std::string);
+std::string get_available_attacks();
+bool is_attack_available(const std::string&);
+std::string get_attack_enc_path(const std::string&);
 
 void build_device_map();
 std::string translate_if_path(const std::string&);
