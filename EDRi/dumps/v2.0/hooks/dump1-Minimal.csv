@@ -1,0 +1,13 @@
+timestamp,src_type,provider_name,event_id,task_info,process_id,thread_id,ppid,pid,targetpid,targettid,message,filepath,cachename,result,vname,sigseq,sigsha,commandline,firstparam,secondparam,cycletime,stackbase,stacklimit,startaddr,subprocesstag,tebbase,threadid,userstackbase,userstacklimit,win32startaddr
+"2025-09-20 12:59:43.3495889Z","myETW","EDRi-Provider",4242,"[+] EDRi START MARKER","17948 EDRi.exe",,,,,,,,,,,,,,,,,,,,,,,,,
+"2025-09-20 12:59:43.6028510Z","myETW","EDRi-Provider",4242,"[+] EDRi START MARKER","17948 EDRi.exe",,,,,,,,,,,,,,,,,,,,,,,,,
+"2025-09-20 12:59:43.8563113Z","myETW","EDRi-Provider",4242,"[+] EDRi START MARKER","17948 EDRi.exe",,,,,,,,,,,,,,,,,,,,,,,,,
+"2025-09-20 12:59:44.1095692Z","myETW","EDRi-Provider",4242,"[+] EDRi START MARKER","17948 EDRi.exe",,,,,,,,,,,,,,,,,,,,,,,,,
+"2025-09-20 12:59:44.3631207Z","myETW","EDRi-Provider",4242,"[+] EDRi START MARKER","17948 EDRi.exe",,,,,,,,,,,,,,,,,,,,,,,,,
+"2025-09-20 12:59:44.6196870Z","myETW","EDRi-Provider",4242,"[<] Before decrypting the attack exe","17948 EDRi.exe",,,,,,,,,,,,,,,,,,,,,,,,,
+"2025-09-20 12:59:44.6218163Z","myETW","EDRi-Provider",4242,"[>]  After decrypting the attack exe","17948 EDRi.exe",,,,,,,,,,,,,,,,,,,,,,,,,
+"2025-09-20 12:59:45.1075973Z","ETW","Microsoft-Windows-Kernel-Process",4,"ThreadStopStop ","13288 MpDefenderCoreService.exe",13240,,,"13288 MpDefenderCoreService.exe",,,,,,,,,,,,22090160,18446712763331166208,18446712763331141632,140726305414320,0,705103929344,13240,705101889536,705101824000,140726305414320
+"2025-09-20 12:59:45.2977846Z","ETW","Microsoft-Windows-Kernel-Process",4,"ThreadStopStop ","12192 MsMpEng.exe",5808,,,"12192 MsMpEng.exe",,,,,,,,,,,,11879011660,18446712763279572992,18446712763279548416,140726305414320,0,1020386729984,5808,1020388704256,1020388638720,140726305414320
+"2025-09-20 12:59:45.6315898Z","myETW","EDRi-Provider",4242,"[<] Before starting the attack exe","17948 EDRi.exe",,,,,,,,,,,,,,,,,,,,,,,,,
+"2025-09-20 12:59:46.3131269Z","ETW","Microsoft-Windows-Kernel-Process",3,"ThreadStartStart ","13288 MpDefenderCoreService.exe",17304,,,"13288 MpDefenderCoreService.exe",,,,,,,,,,,,,18446712763263741952,18446712763263717376,140726305414320,107,705103937536,13076,705101889536,705101824000,140726305414320
+"2025-09-20 13:00:05.7504805Z","ETW","Microsoft-Windows-Kernel-Process",3,"ThreadStartStart ","    4 System",64,,,"    4 System",,,,,,,,,,,,,18446712763355148288,18446712763355123712,18446735309779519472,0,0,10776,0,0,18446735309779519472
