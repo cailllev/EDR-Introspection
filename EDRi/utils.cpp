@@ -123,7 +123,7 @@ std::string get_available_attacks() {
                 oss << " ";
             }
 			std::string f = wchar2string(findData.cFileName);
-			f = f.substr(0, f.find_last_of(attack_suffix)); // remove .exe.enc
+			f = f.substr(0, f.find(attack_suffix)); // remove .exe.enc
             oss << f;
             first = false;
         }
