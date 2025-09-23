@@ -170,18 +170,18 @@ int main(int argc, char* argv[]) {
     
     // PARSER OPTIONS
     options.add_options()
+        ("h,help", "Print usage")
         ("c,encrypt", "The path of the attack executable to encrypt", cxxopts::value<std::string>())
         ("e,edr", "The EDR to track, supporting: " + get_available_edrs(), cxxopts::value<std::string>())
-        ("o,output", "The Path of the all-events.csv, default " + all_events_output_default, cxxopts::value<std::string>())
         ("a,attack-exe", "The attack to execute, supporting: " + get_available_attacks(), cxxopts::value<std::string>())
         ("r,run-as-child", "If the attack should run (automatically) as a child of the EDRi.exe or if it should be executed manually")
+        ("o,output", "The Path of the all-events.csv, default " + all_events_output_default, cxxopts::value<std::string>())
         ("m,trace-etw-misc", "Trace misc ETW")
         ("i,trace-etw-ti", "Trace ETW-TI (needs PPL)")
         ("n,hook-ntdll", "Hook ntdll.dll (needs PPL)")
         ("t,track-all", "Trace misc ETW, ETW-TI and hooks ntdll.dll")
         ("d,debug", "Print debug info")
-        ("v,verbose-debug", "Print very verbose debug info")
-        ("h,help", "Print usage");
+        ("v,verbose-debug", "Print very verbose debug info");
 
     cxxopts::ParseResult result;
     try {
@@ -211,7 +211,7 @@ int main(int argc, char* argv[]) {
 
     // check edr profile, attack exe and output
     if (result.count("edr") == 0) {
-        std::cerr << "[!] EDRi: No EDR specified, use -e\n";
+        std::cerr << "[!] EDRi: No EDR specified, use -e and one of: " << get_available_edrs() << "\n";
         return 1;
 	}
 	std::string edr_name = result["edr"].as<std::string>();
@@ -221,7 +221,7 @@ int main(int argc, char* argv[]) {
     }
     std::vector<std::string> edr_specific_exes = edr_profiles.at(edr_name);
     if (result.count("attack-exe") == 0) {
-        std::cerr << "[!] EDRi: No attack specified, use -a\n";
+        std::cerr << "[!] EDRi: No attack specified, use -a and one of: " << get_available_attacks() << "\n";
         return 1;
 	}
 	std::string attack_name = result["attack-exe"].as<std::string>();

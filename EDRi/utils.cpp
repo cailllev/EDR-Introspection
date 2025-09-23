@@ -17,7 +17,7 @@
 
 static const std::string encrypt_password = "much signature bypass, such wow";
 static std::unordered_map<std::string, std::string> g_deviceMap;
-static std::wstring attack_exe_path_prefix = L"..\\..\\EDRi\\attacks\\";
+static std::wstring attacks_subfolder = L"attacks\\";
 static std::string attack_suffix = ".exe.enc";
 
 static bool initialized = false;
@@ -102,13 +102,29 @@ bool xor_file(std::string in_path, std::string out_path) {
     return true;
 }
 
+// get the EDRi.exe's path  
+std::wstring get_executable_path() {
+    wchar_t buffer[MAX_PATH];
+    // Get the full path of the executable
+    DWORD length = GetModuleFileNameW(NULL, buffer, MAX_PATH);
+    if (length == 0) {
+        return L"";
+    }
+
+    std::wstring exePath(buffer);
+    size_t pos = exePath.find_last_of(L"\\/");
+
+    // Return the directory part of the executable path
+    return exePath.substr(0, pos + 1);
+}
+
 // returns the files from /EDRi/attacks
 std::string get_available_attacks() {
     std::ostringstream oss;
     WIN32_FIND_DATA findData;
     HANDLE hFind = INVALID_HANDLE_VALUE;
 
-    std::wstring searchPath = attack_exe_path_prefix + L"*";
+    std::wstring searchPath = get_executable_path() + attacks_subfolder + L"*";
     hFind = FindFirstFile(searchPath.c_str(), &findData);
 
     if (hFind == INVALID_HANDLE_VALUE) {
@@ -123,7 +139,7 @@ std::string get_available_attacks() {
                 oss << " ";
             }
 			std::string f = wchar2string(findData.cFileName);
-			f = f.substr(0, f.find_last_of(attack_suffix)); // remove .exe.enc
+			f = f.substr(0, f.find(attack_suffix)); // remove .exe.enc
             oss << f;
             first = false;
         }
@@ -147,7 +163,7 @@ bool is_attack_available(const std::string& attack) {
 }
 
 std::string get_attack_enc_path(const std::string& attack) {
-    return wstring2string(attack_exe_path_prefix) + attack + attack_suffix;
+    return wstring2string(attacks_subfolder) + attack + attack_suffix;
 }
 
 
