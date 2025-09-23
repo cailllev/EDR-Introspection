@@ -157,7 +157,6 @@ DWORD WINAPI t_start_etw_ti_trace(LPVOID param) {
         krabs::provider<> ti_provider(THREAT_INTEL_PROVIDER_W); // "Microsoft-Windows-Threat-Intelligence"
         ti_provider.add_on_event_callback(event_callback);
         trace_etw_ti.enable(ti_provider);
-        std::cout << "[+] ETW: Threat-Intel (all)\n";
 
         // trace_start is blocking, hence threaded
         std::cout << "[+] ETW: TI trace registered, starting...\n";
@@ -178,22 +177,21 @@ DWORD WINAPI t_start_etw_hook_trace(LPVOID param) {
     try {
         krabs::guid hooks_guid(L"{72248411-7166-4feb-a386-34d8f35bb637}");
         krabs::provider<> hooks_provider(hooks_guid);
-        hooks_provider.add_on_event_callback(event_callback);
+        hooks_provider.add_on_event_callback(my_event_callback);
         trace_etw.enable(hooks_provider);
-        std::cout << "[+] ETW: NTDLL-Hooks (all)\n";
 
         // trace_start is blocking, hence threaded
-        std::cout << "[+] ETW: TI trace registered, starting...\n";
+        std::cout << "[+] ETW: NTDLL-Hook trace registered, starting...\n";
         trace_etw_ti.start();
     }
     catch (const std::exception& e) {
-        std::cout << "[!] ETW: TI trace exception: " << e.what() << "\n";
+        std::cout << "[!] ETW: NTDLL-Hook trace exception: " << e.what() << "\n";
     }
     catch (...) {
-        std::cout << "[!] ETW: TI trace unknown exception\n";
+        std::cout << "[!] ETW: NTDLL-Hook trace unknown exception\n";
     }
 
-    std::cout << "[+] ETW: TI trace thread finished\n";
+    std::cout << "[+] ETW: NTDLL-Hook trace thread finished\n";
     return 0;
 }
 

@@ -45,7 +45,7 @@ MergeCategory ttid_keys = { // both refer to yet another pid (event has an emitt
 };
 MergeCategory filepath_keys = {
     FILEPATH,
-    {"basepath", "filename", "imagepath", "imagename", "path", "name", "reasonimagepath"}
+    {"basepath", "filename", "imagename", "path", "name", "reasonimagepath"}
 };
 std::vector<MergeCategory> key_categories_to_merge = { ppid_keys, tpid_keys, ttid_keys, filepath_keys };
 
@@ -128,6 +128,9 @@ json parse_my_etw_event(Event e) {
         if (j[PROVIDER_NAME] == EDRi_PROVIDER_NAME) {
             j[EVENT_ID] = EDRi_PROVIDER_EVENT_ID;
         }
+        else if (j[PROVIDER_NAME] == "Hook-Provider") {
+            j[EVENT_ID] = HOOK_PROVIDER_EVENT_ID;
+        }
         else {
             j[EVENT_ID] = ATTACK_PROVIDER_EVENT_ID;
         }
@@ -141,6 +144,8 @@ json parse_my_etw_event(Event e) {
             std::cout << "[*] ETW: Warning: Custom event missing " << MY_MESSAGE << " field " << j.dump() << "\n";
         }
 
+		// if there are any other properties, parse them too
+        parse_all_properties(parser, j);
         return j;
     }
     catch (const std::exception& ex) {
@@ -166,9 +171,6 @@ json parse_etw_event(Event e) {
         if (j[PROVIDER_NAME] == THREAT_INTEL_PROVIDER) {
 			j[TYPE] = "ETW-TI";
         }
-        else if (j[PROVIDER_NAME] == "Hook-Provider") {
-            j[TYPE] = "EDR-Hook";
-        }
         else {
 			j[TYPE] = "ETW";
         }
@@ -178,228 +180,7 @@ json parse_etw_event(Event e) {
         std::wstring combined = std::wstring(e.schema.task_name()) + std::wstring(e.schema.opcode_name());
         j[TASK] = wstring2string(combined);
 
-
-        // Iterate over all properties defined in the schema
-        for (const auto& property : parser.properties()) {
-            std::string last_key;
-            std::string original_key = "";
-            int last_type;
-
-            try {
-                // get property name and type
-                const std::wstring& property_name = property.name();
-                const auto property_type = property.type();
-
-                // create key and convert it to lowercase
-                std::string key = wstring2string((std::wstring&)property_name);
-                std::transform(key.begin(), key.end(), key.begin(),
-                    [](unsigned char c) { return std::tolower(c); });
-
-				// for tracking potential overwrites & error messages
-                std::string overwritten_value = "";
-                last_key = key;
-                last_type = property_type;
-
-                // check if it's a merged key --> write value to merged_key
-                for (const auto& cat : key_categories_to_merge) {
-                    if (std::find(cat.keys_to_merge.begin(), cat.keys_to_merge.end(), key) != cat.keys_to_merge.end()) {
-                        original_key = key;
-                        key = cat.merged_key;
-                    }
-                }
-                if (j.contains(key)) {
-                    overwritten_value = get_string_or_convert(j, key);
-                }
-
-                // Special cases
-                if (key == "protectionmask" || key == "lastprotectionmask") {
-                    uint32_t protection_mask = parser.parse<uint32_t>(property_name);
-                    j[key] = get_memory_region_protect(protection_mask);
-                    continue;
-                }
-
-                switch (property_type) {
-
-                case TDH_INTYPE_UNICODESTRING:
-                {
-                    std::wstringstream wss;
-                    wss << parser.parse<std::wstring>(property_name);
-                    std::string s = wstring2string((std::wstring&)wss.str());
-                    j[key] = s;
-                    break;
-                }
-
-                case TDH_INTYPE_ANSISTRING:
-                    j[key] = parser.parse<std::string>(property_name);
-                    break;
-                case TDH_INTYPE_INT8:
-                    j[key] = (int32_t)parser.parse<CHAR>(property_name);
-                    break;
-                case TDH_INTYPE_UINT8:
-                    j[key] = (uint32_t)parser.parse<UCHAR>(property_name);
-                    break;
-                case TDH_INTYPE_INT16:
-                    j[key] = (int32_t)parser.parse<SHORT>(property_name);
-                    break;
-                case TDH_INTYPE_UINT16:
-                    j[key] = (int32_t)parser.parse<USHORT>(property_name);
-                    break;
-				case TDH_INTYPE_INT32:
-                    j[key] = (int32_t)parser.parse<int32_t>(property_name);
-					break;
-                case TDH_INTYPE_UINT32:
-                    j[key] = (uint32_t)parser.parse<uint32_t>(property_name);
-                    break;
-				case TDH_INTYPE_INT64:
-					j[key] = (int64_t)parser.parse<int64_t>(property_name);
-					break;
-                case TDH_INTYPE_UINT64:
-                    j[key] = (uint64_t)parser.parse<uint64_t>(property_name);
-                    break;
-                case TDH_INTYPE_BOOLEAN:
-                    j[key] = (bool)parser.parse<BOOL>(property_name);
-                    break;
-                case TDH_INTYPE_POINTER:
-                    j[key] = (uint64_t)parser.parse<PVOID>(property_name);
-                    break;
-
-                case TDH_INTYPE_BINARY:
-                {
-                    auto raw = parser.parse<std::vector<uint8_t>>(property_name);
-
-                    // Heuristic: IPv4 addresses are 4 bytes, IPv6 are 16 bytes
-                    try {
-                        if (raw.size() == 4) {
-                            char ipStr[INET_ADDRSTRLEN];
-                            inet_ntop(AF_INET, raw.data(), ipStr, sizeof(ipStr));
-                            j[key] = std::string(ipStr);
-                        }
-                        else if (raw.size() == 16) {
-                            char ipStr[INET6_ADDRSTRLEN];
-                            inet_ntop(AF_INET6, raw.data(), ipStr, sizeof(ipStr));
-                            j[key] = std::string(ipStr);
-                        }
-                    } catch (...) {
-                        // ignore conversion errors
-					}
-                    // fallback: hex dump
-                    std::ostringstream oss;
-                    oss << "0x";
-                    for (auto b : raw) {
-                        oss << std::hex << std::setw(2) << std::setfill('0') << (int)b;
-                    }
-                    j[key] = oss.str();
-                    break;
-                }
-
-                case TDH_INTYPE_GUID:
-                {
-                    GUID guid = parser.parse<GUID>(property_name);
-                    std::ostringstream oss;
-                    oss << std::hex << std::setfill('0')
-                        << std::setw(8) << guid.Data1 << "-"
-                        << std::setw(4) << guid.Data2 << "-"
-                        << std::setw(4) << guid.Data3 << "-";
-
-                    for (int i = 0; i < 2; i++)
-                        oss << std::setw(2) << static_cast<int>(guid.Data4[i]);
-                    oss << "-";
-                    for (int i = 2; i < 8; i++)
-                        oss << std::setw(2) << static_cast<int>(guid.Data4[i]);
-
-                    j[key] = oss.str();
-                    break;
-                }
-
-                case TDH_INTYPE_FILETIME:
-                {
-                    FILETIME fileTime = parser.parse<FILETIME>(property_name);
-                    ULARGE_INTEGER uli;
-                    uli.LowPart = fileTime.dwLowDateTime;
-                    uli.HighPart = fileTime.dwHighDateTime;
-                    j[key] = uli.QuadPart;
-                    break;
-                }
-
-                case TDH_INTYPE_SID:
-                {
-                    std::vector<uint8_t> raw;
-                    if (parser.try_parse(property_name, raw)) {
-                        // try to convert raw bytes to a SID string
-                        if (!raw.empty() && IsValidSid((PSID)raw.data())) {
-                            LPWSTR sidString = nullptr;
-                            if (ConvertSidToStringSidW((PSID)raw.data(), &sidString)) {
-                                std::wstring ws(sidString);
-                                j[key] = wstring2string(ws);
-                                LocalFree(sidString);
-                            }
-                            else {
-                                j[key] = "invalid_sid";
-                            }
-                        }
-                        else {
-                            // fallback: output raw data as hex
-                            std::ostringstream oss;
-                            oss << "0x";
-                            for (auto b : raw) {
-                                oss << std::hex << std::setw(2) << std::setfill('0') << (int)b;
-                            }
-                            j[key] = oss.str();
-                        }
-                    }
-                    else {
-                        // parsing failed, fallback: empty hex
-                        j[key] = "0x";
-                    }
-                    break;
-                }
-
-                case TDH_INTYPE_HEXINT32:
-                {
-                    std::ostringstream oss;
-                    oss << "0x" << std::hex << std::uppercase << parser.parse<uint32_t>(property_name);
-                    j[key] = oss.str();
-                    break;
-                }
-
-                case TDH_INTYPE_HEXINT64:
-                {
-                    std::ostringstream oss;
-                    oss << "0x" << std::hex << std::uppercase << parser.parse<uint64_t>(property_name);
-                    j[key] = oss.str();
-                    break;
-                }
-
-                default:
-                    std::cout << "[*] ETW: Warning: Unsupported property type " << property_type << " for " << j[TASK] << "'s " << key << "\n";
-                    j[key] = "unsupported";
-                    break;
-                }
-                /*
-                if (key == ORIGINATING_PID && j[ORIGINATING_PID] == 0) {
-					j[ORIGINATING_PID] = -1; // orginating pid=0 does not make sense?
-				}
-                */
-                if (overwritten_value != "") {
-                    if (overwritten_value != j[key]) { // only warn if the values differ
-                        std::cerr << "[!] ETW: Warning, " << j[PROVIDER_NAME] << ":" << j[EVENT_ID] << 
-                            ", overwritten '" << key << ":" << overwritten_value << 
-                            "' with '" << key << ":" << j[key] << "'";
-                        if (original_key != "") { // include name of merged key (if overwrite was b.c. of a merge)
-                            std::cerr << " because of merged key '" << original_key << "'";
-                        }
-                        std::cerr << "\n";
-                    }
-                }
-            }
-            catch (const std::exception& ex) {
-                std::cerr <<
-                    "[!] ETW: parse_etw_event failed to parse " << j[TASK] <<
-                    ", key: " << last_key <<
-                    ", type: " << last_type <<
-                    ", error: " << ex.what() << "\n";
-            }
-        }
+		parse_all_properties(parser, j);
 
         // add a newly spawned procs to process map
         int pid = check_new_proc(j);
@@ -432,6 +213,231 @@ json parse_etw_event(Event e) {
     catch (const std::exception& ex) {
         std::cerr << "[!] ETW: parse_etw_event general exception: " << ex.what() << "\n";
         return json();
+    }
+}
+
+void parse_all_properties(krabs::parser& parser, json& j) {
+    // parse all properties defined in the schema
+    for (const auto& property : parser.properties()) {
+        std::string last_key;
+        std::string original_key = "";
+        int last_type;
+
+        try {
+            // get property name and type
+            const std::wstring& property_name = property.name();
+            const auto property_type = property.type();
+
+            // create key and convert it to lowercase
+            std::string key = wstring2string((std::wstring&)property_name);
+            std::transform(key.begin(), key.end(), key.begin(),
+                [](unsigned char c) { return std::tolower(c); });
+
+            // for tracking potential overwrites & error messages
+            std::string overwritten_value = "";
+            last_key = key;
+            last_type = property_type;
+
+            // check if it's a merged key --> write value to merged_key
+            for (const auto& cat : key_categories_to_merge) {
+                if (std::find(cat.keys_to_merge.begin(), cat.keys_to_merge.end(), key) != cat.keys_to_merge.end()) {
+                    original_key = key;
+                    key = cat.merged_key;
+                }
+            }
+            if (j.contains(key)) {
+                overwritten_value = get_string_or_convert(j, key);
+            }
+
+            // Special cases
+            if (key == "protectionmask" || key == "lastprotectionmask") {
+                uint32_t protection_mask = parser.parse<uint32_t>(property_name);
+                j[key] = get_memory_region_protect(protection_mask);
+                continue;
+            }
+
+            switch (property_type) {
+
+            case TDH_INTYPE_UNICODESTRING:
+            {
+                std::wstringstream wss;
+                wss << parser.parse<std::wstring>(property_name);
+                std::string s = wstring2string((std::wstring&)wss.str());
+                j[key] = s;
+                break;
+            }
+
+            case TDH_INTYPE_ANSISTRING:
+                j[key] = parser.parse<std::string>(property_name);
+                break;
+            case TDH_INTYPE_INT8:
+                j[key] = (int32_t)parser.parse<CHAR>(property_name);
+                break;
+            case TDH_INTYPE_UINT8:
+                j[key] = (uint32_t)parser.parse<UCHAR>(property_name);
+                break;
+            case TDH_INTYPE_INT16:
+                j[key] = (int32_t)parser.parse<SHORT>(property_name);
+                break;
+            case TDH_INTYPE_UINT16:
+                j[key] = (int32_t)parser.parse<USHORT>(property_name);
+                break;
+            case TDH_INTYPE_INT32:
+                j[key] = (int32_t)parser.parse<int32_t>(property_name);
+                break;
+            case TDH_INTYPE_UINT32:
+                j[key] = (uint32_t)parser.parse<uint32_t>(property_name);
+                break;
+            case TDH_INTYPE_INT64:
+                j[key] = (int64_t)parser.parse<int64_t>(property_name);
+                break;
+            case TDH_INTYPE_UINT64:
+                j[key] = (uint64_t)parser.parse<uint64_t>(property_name);
+                break;
+            case TDH_INTYPE_BOOLEAN:
+                j[key] = (bool)parser.parse<BOOL>(property_name);
+                break;
+            case TDH_INTYPE_POINTER:
+                j[key] = (uint64_t)parser.parse<PVOID>(property_name);
+                break;
+
+            case TDH_INTYPE_BINARY:
+            {
+                auto raw = parser.parse<std::vector<uint8_t>>(property_name);
+
+                // Heuristic: IPv4 addresses are 4 bytes, IPv6 are 16 bytes
+                try {
+                    if (raw.size() == 4) {
+                        char ipStr[INET_ADDRSTRLEN];
+                        inet_ntop(AF_INET, raw.data(), ipStr, sizeof(ipStr));
+                        j[key] = std::string(ipStr);
+                    }
+                    else if (raw.size() == 16) {
+                        char ipStr[INET6_ADDRSTRLEN];
+                        inet_ntop(AF_INET6, raw.data(), ipStr, sizeof(ipStr));
+                        j[key] = std::string(ipStr);
+                    }
+                }
+                catch (...) {
+                    // ignore conversion errors
+                }
+                // fallback: hex dump
+                std::ostringstream oss;
+                oss << "0x";
+                for (auto b : raw) {
+                    oss << std::hex << std::setw(2) << std::setfill('0') << (int)b;
+                }
+                j[key] = oss.str();
+                break;
+            }
+
+            case TDH_INTYPE_GUID:
+            {
+                GUID guid = parser.parse<GUID>(property_name);
+                std::ostringstream oss;
+                oss << std::hex << std::setfill('0')
+                    << std::setw(8) << guid.Data1 << "-"
+                    << std::setw(4) << guid.Data2 << "-"
+                    << std::setw(4) << guid.Data3 << "-";
+
+                for (int i = 0; i < 2; i++)
+                    oss << std::setw(2) << static_cast<int>(guid.Data4[i]);
+                oss << "-";
+                for (int i = 2; i < 8; i++)
+                    oss << std::setw(2) << static_cast<int>(guid.Data4[i]);
+
+                j[key] = oss.str();
+                break;
+            }
+
+            case TDH_INTYPE_FILETIME:
+            {
+                FILETIME fileTime = parser.parse<FILETIME>(property_name);
+                ULARGE_INTEGER uli;
+                uli.LowPart = fileTime.dwLowDateTime;
+                uli.HighPart = fileTime.dwHighDateTime;
+                j[key] = uli.QuadPart;
+                break;
+            }
+
+            case TDH_INTYPE_SID:
+            {
+                std::vector<uint8_t> raw;
+                if (parser.try_parse(property_name, raw)) {
+                    // try to convert raw bytes to a SID string
+                    if (!raw.empty() && IsValidSid((PSID)raw.data())) {
+                        LPWSTR sidString = nullptr;
+                        if (ConvertSidToStringSidW((PSID)raw.data(), &sidString)) {
+                            std::wstring ws(sidString);
+                            j[key] = wstring2string(ws);
+                            LocalFree(sidString);
+                        }
+                        else {
+                            j[key] = "invalid_sid";
+                        }
+                    }
+                    else {
+                        // fallback: output raw data as hex
+                        std::ostringstream oss;
+                        oss << "0x";
+                        for (auto b : raw) {
+                            oss << std::hex << std::setw(2) << std::setfill('0') << (int)b;
+                        }
+                        j[key] = oss.str();
+                    }
+                }
+                else {
+                    // parsing failed, fallback: empty hex
+                    j[key] = "0x";
+                }
+                break;
+            }
+
+            case TDH_INTYPE_HEXINT32:
+            {
+                std::ostringstream oss;
+                oss << "0x" << std::hex << std::uppercase << parser.parse<uint32_t>(property_name);
+                j[key] = oss.str();
+                break;
+            }
+
+            case TDH_INTYPE_HEXINT64:
+            {
+                std::ostringstream oss;
+                oss << "0x" << std::hex << std::uppercase << parser.parse<uint64_t>(property_name);
+                j[key] = oss.str();
+                break;
+            }
+
+            default:
+                std::cout << "[*] ETW: Warning: Unsupported property type " << property_type << " for " << j[TASK] << "'s " << key << "\n";
+                j[key] = "unsupported";
+                break;
+            }
+            /*
+            if (key == ORIGINATING_PID && j[ORIGINATING_PID] == 0) {
+                j[ORIGINATING_PID] = -1; // orginating pid=0 does not make sense?
+            }
+            */
+            if (overwritten_value != "") {
+                if (overwritten_value != j[key]) { // only warn if the values differ
+                    std::cerr << "[!] ETW: Warning, " << j[PROVIDER_NAME] << ":" << j[EVENT_ID] <<
+                        ", overwritten '" << key << ":" << overwritten_value <<
+                        "' with '" << key << ":" << j[key] << "'";
+                    if (original_key != "") { // include name of merged key (if overwrite was b.c. of a merge)
+                        std::cerr << " because of merged key '" << original_key << "'";
+                    }
+                    std::cerr << "\n";
+                }
+            }
+        }
+        catch (const std::exception& ex) {
+            std::cerr <<
+                "[!] ETW: parse_etw_event failed to parse " << j[TASK] <<
+                ", key: " << last_key <<
+                ", type: " << last_type <<
+                ", error: " << ex.what() << "\n";
+        }
     }
 }
 
