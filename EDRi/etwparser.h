@@ -91,6 +91,7 @@ void my_event_callback(const EVENT_RECORD&, const krabs::trace_context&);
 void event_callback(const EVENT_RECORD&, const krabs::trace_context&);
 json parse_my_etw_event(Event);
 json parse_etw_event(Event);
+void parse_all_properties(krabs::parser&, json&);
 std::string get_string_or_convert(const json&, std::string);
 void post_my_parsing_checks(json&);
 void post_parsing_checks(json&);

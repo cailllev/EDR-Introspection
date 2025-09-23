@@ -11,11 +11,10 @@
 TRACELOGGING_DEFINE_PROVIDER(
     g_hProvider,
     "Hook-Provider", // name in the ETW, cannot be a variable
-    (0x72248411, 0x7177, 0x4feb, 0xa3, 0x86, 0x34, 0xd8, 0xf3, 0x5b, 0xb6, 0x37)  // this cannot be a variable
+    (0x72248411, 0x7166, 0x4feb, 0xa3, 0x86, 0x34, 0xd8, 0xf3, 0x5b, 0xb6, 0x37)  // this cannot be a variable
 );
 
 static std::atomic<bool> g_initialized(false);
-static HANDLE g_logFile = INVALID_HANDLE_VALUE;
 
 // types
 typedef LONG NTSTATUS;
@@ -34,15 +33,15 @@ typedef NTSTATUS(NTAPI* PFN_NtReadVirtualMemory)(
     PSIZE_T NumberOfBytesRead
     );
 
-// Originals (trampolines created by MinHook)
+// trampolines created by MinHook
 static PFN_NtOpenProcess g_origNtOpenProcess = nullptr;
 static PFN_NtReadVirtualMemory g_origNtReadVirtualMemory = nullptr;
 
 void emit_etw_ok(std::string msg) {
     TraceLoggingWrite(
         g_hProvider,
-        "NtSyscallEvent",
-        TraceLoggingValue(msg.c_str(), "task_name")
+        "EDRHookEvent",
+        TraceLoggingValue(msg.c_str(), "message")
     );
     std::cout << "[+] Hook-DLL: " << msg << "\n";
 };
@@ -50,8 +49,8 @@ void emit_etw_ok(std::string msg) {
 void emit_etw_error(std::string error) {
     TraceLoggingWrite(
         g_hProvider,
-        "NtSyscallEvent",
-        TraceLoggingValue(error.c_str(), "task_name")
+        "EDRHookEvent",
+        TraceLoggingValue(error.c_str(), "message")
 	);
 	std::cerr << "[!] Hook-DLL: " << error << "\n";
 };
@@ -59,7 +58,7 @@ void emit_etw_error(std::string error) {
 void emit_open_etw_event(uint64_t target_pid, unsigned long d_access, void* caller) {
     TraceLoggingWrite(
         g_hProvider,
-        "NtSyscallEvent",
+        "EDRHookEvent",
         TraceLoggingValue("NtOpenProcess", "event"),
         TraceLoggingUInt64(target_pid, "target_pid"),
         TraceLoggingULong(d_access, "d_acces"),
@@ -70,7 +69,7 @@ void emit_open_etw_event(uint64_t target_pid, unsigned long d_access, void* call
 void emit_read_etw_event(uint64_t target_pid, void* base_address, uint64_t read_size, void* caller) {
     TraceLoggingWrite(
         g_hProvider,
-        "NtSyscallEvent",
+        "EDRHookEvent",
         TraceLoggingValue("NtReadVirtualMemory", "event"),
         TraceLoggingUInt64(target_pid, "target_pid"),
         TraceLoggingPointer(base_address, "base_address"),
@@ -129,9 +128,7 @@ NTSTATUS NTAPI Hook_NtReadVirtualMemory(
 
 void InstallHooks()
 {
-    if (g_initialized.exchange(true)) return; // already
-    // Initialize TraceLogging provider (best-effort)
-    TraceLoggingRegister(g_hProvider);
+    if (g_initialized.exchange(true)) return; // only once
 
     // MinHook init
     if (MH_Initialize() != MH_OK) {
@@ -180,17 +177,11 @@ void RemoveHooks()
     if (!g_initialized.exchange(false)) return;
     MH_DisableHook(MH_ALL_HOOKS);
     MH_Uninitialize();
-    TraceLoggingUnregister(g_hProvider);
-    if (g_logFile != INVALID_HANDLE_VALUE) {
-        CloseHandle(g_logFile);
-        g_logFile = INVALID_HANDLE_VALUE;
-    }
 }
 
 DWORD WINAPI t_InitHooks(LPVOID)
 {
     InstallHooks();
-	emit_etw_ok("Hooks initialized");
     return 0;
 }
 
@@ -199,12 +190,13 @@ BOOL WINAPI DllMain(HINSTANCE hinst, DWORD reason, LPVOID reserved)
 {
     switch (reason) {
     case DLL_PROCESS_ATTACH:
-        // Disable thread notifications for perf
-        DisableThreadLibraryCalls(hinst);
+        TraceLoggingRegister(g_hProvider); // register ETW provider
+        DisableThreadLibraryCalls(hinst); // more performant?
         CreateThread(nullptr, 0, t_InitHooks, nullptr, 0, nullptr);
         break;
     case DLL_PROCESS_DETACH:
         RemoveHooks();
+        TraceLoggingUnregister(g_hProvider);
         break;
     }
     return TRUE;
