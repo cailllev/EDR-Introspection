@@ -163,7 +163,8 @@ bool is_attack_available(const std::string& attack) {
 }
 
 std::string get_attack_enc_path(const std::string& attack) {
-    return wstring2string(attacks_subfolder) + attack + attack_suffix;
+	std::wstring exe_path = get_executable_path();
+    return wstring2string(exe_path) + wstring2string(attacks_subfolder) + attack + attack_suffix;
 }
 
 
