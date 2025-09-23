@@ -5,6 +5,7 @@
 
 # TO INCLUDE
 !x64/Release/EDRi.exe
+!x64/Release/attacks
 
 # KDU drivers
 NeacSafe64.inf
