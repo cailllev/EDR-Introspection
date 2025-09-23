@@ -203,7 +203,7 @@ int main(int argc, char* argv[]) {
         std::cout << "[*] EDRi: XOR encrypted " << in_path << " to " << out_path << "\n";
         return 0;
     }
-    if (result.count("help") || result.count("edr") == 0) {
+    if (result.count("help")) {
         std::cout << options.help() << "\n";
         return 0;
     }
