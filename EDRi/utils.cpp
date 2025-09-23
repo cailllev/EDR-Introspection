@@ -17,6 +17,8 @@
 
 static const std::string encrypt_password = "much signature bypass, such wow";
 static std::unordered_map<std::string, std::string> g_deviceMap;
+static std::wstring attack_exe_path_prefix = L"..\\..\\EDRi\\attacks\\";
+static std::string attack_suffix = ".exe.enc";
 
 static bool initialized = false;
 
@@ -98,6 +100,54 @@ bool xor_file(std::string in_path, std::string out_path) {
     outfile.write(buffer.data(), buffer.size());
     outfile.close();
     return true;
+}
+
+// returns the files from /EDRi/attacks
+std::string get_available_attacks() {
+    std::ostringstream oss;
+    WIN32_FIND_DATA findData;
+    HANDLE hFind = INVALID_HANDLE_VALUE;
+
+    std::wstring searchPath = attack_exe_path_prefix + L"*";
+    hFind = FindFirstFile(searchPath.c_str(), &findData);
+
+    if (hFind == INVALID_HANDLE_VALUE) {
+        return ""; // Directory not found or empty
+    }
+
+    bool first = true;
+    do {
+        // Skip directories like "." and ".."
+        if (!(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+            if (!first) {
+                oss << " ";
+            }
+			std::string f = wchar2string(findData.cFileName);
+			f = f.substr(0, f.find_last_of(attack_suffix)); // remove .exe.enc
+            oss << f;
+            first = false;
+        }
+    } while (FindNextFile(hFind, &findData) != 0);
+
+    FindClose(hFind);
+    return oss.str();
+}
+
+
+bool is_attack_available(const std::string& attack) {
+    std::string attacks = get_available_attacks();
+    std::istringstream iss(attacks);
+    std::string token;
+    while (iss >> token) {
+        if (_stricmp(token.c_str(), attack.c_str()) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::string get_attack_enc_path(const std::string& attack) {
+    return wstring2string(attack_exe_path_prefix) + attack + attack_suffix;
 }
 
 

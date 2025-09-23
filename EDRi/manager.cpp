@@ -44,7 +44,6 @@ std::shared_mutex g_procs_mutex;
 
 // attack exe paths
 std::string g_attack_exe_path = "C:\\Users\\Public\\Downloads\\attack.exe";
-std::string g_attack_exe_enc_path = g_attack_exe_path + ".enc";
 
 std::string hooker_dll_path = "C:\\Users\\hacker\\source\\repos\\EDR-Introspection\\x64\\Release\\EDRHooker.dll";
 
@@ -174,7 +173,7 @@ int main(int argc, char* argv[]) {
         ("c,encrypt", "The path of the attack executable to encrypt", cxxopts::value<std::string>())
         ("e,edr", "The EDR to track, supporting: " + get_available_edrs(), cxxopts::value<std::string>())
         ("o,output", "The Path of the all-events.csv, default " + all_events_output_default, cxxopts::value<std::string>())
-        ("a,attack-exe", "The path of the encrypted attack exe to execute", cxxopts::value<std::string>())
+        ("a,attack-exe", "The attack to execute, supporting: " + get_available_attacks(), cxxopts::value<std::string>())
         ("r,run-as-child", "If the attack should run (automatically) as a child of the EDRi.exe or if it should be executed manually")
         ("m,trace-etw-misc", "Trace misc ETW")
         ("i,trace-etw-ti", "Trace ETW-TI (needs PPL)")
@@ -199,8 +198,9 @@ int main(int argc, char* argv[]) {
     // encrypt an exe
     if (result.count("c") > 0) {
         std::string in_path = result["encrypt"].as<std::string>();
-        xor_file(in_path, g_attack_exe_enc_path);
-        std::cout << "[*] EDRi: XOR encrypted " << in_path << " to " << g_attack_exe_enc_path << "\n";
+        std::string out_path = in_path + ".enc";
+        xor_file(in_path, out_path);
+        std::cout << "[*] EDRi: XOR encrypted " << in_path << " to " << out_path << "\n";
         return 0;
     }
     if (result.count("help") || result.count("edr") == 0) {
@@ -209,10 +209,27 @@ int main(int argc, char* argv[]) {
     }
     build_device_map();
 
-    // check edr profile, output, and attack exe
+    // check edr profile, attack exe and output
+    if (result.count("edr") == 0) {
+        std::cerr << "[!] EDRi: No EDR specified, use -e\n";
+        return 1;
+	}
 	std::string edr_name = result["edr"].as<std::string>();
+    if (edr_profiles.find(edr_name) == edr_profiles.end()) {
+        std::cerr << "[!] EDRi: Unsupported EDR specified, use one of: " << get_available_edrs() << "\n";
+        return 1;
+    }
     std::vector<std::string> edr_specific_exes = edr_profiles.at(edr_name);
-
+    if (result.count("attack-exe") == 0) {
+        std::cerr << "[!] EDRi: No attack specified, use -a\n";
+        return 1;
+	}
+	std::string attack_name = result["attack-exe"].as<std::string>();
+    if (!is_attack_available(attack_name)) {
+        std::cerr << "[!] EDRi: Unsupported attack specified, use one of: " << get_available_attacks() << "\n";
+        return 1;
+	}
+	std::string attack_exe_enc_path = get_attack_enc_path(attack_name);
     std::string output;
     if (result.count("output") == 0) {
         output = all_events_output_default;
@@ -222,11 +239,7 @@ int main(int argc, char* argv[]) {
     }
     std::cout << "[*] EDRi: Writing events to: " << output << "\n";
 
-	bool run_as_child = false;
-    if (result.count("attack-exe") > 0) {
-		g_attack_exe_enc_path = result["attack-exe"].as<std::string>();
-		std::cout << "[*] EDRi: Using non-default attack exe: " << g_attack_exe_enc_path << "\n";
-    }
+    bool run_as_child = false;
     if (result.count("run-as-child") > 0) {
         run_as_child = true;
 	}
@@ -298,7 +311,7 @@ int main(int argc, char* argv[]) {
             g_tracking_PIDs.push_back(pid);
         }
         else if (g_debug) {
-            std::cout << "[-] EDRi: Could not find process " << e << "\n";
+            std::cout << "[-] EDRi: Process tracking, could not find " << e << "\n";
 		}
     }
     for (auto& e : edr_specific_exes) {
@@ -308,7 +321,7 @@ int main(int argc, char* argv[]) {
             g_tracking_PIDs.push_back(pid);
         }
         else if (g_debug) {
-            std::cout << "[-] EDRi: Could not find EDR specific process " << e << "\n";
+            std::cout << "[-] EDRi: Process tracking, could not find EDR specific " << e << "\n";
         }
     }
 
@@ -323,8 +336,8 @@ int main(int argc, char* argv[]) {
 
 	// hooking emits etw events, so hooking must be done after the traces are started
     if (hook_ntdll) {
-        //std::string main_edr_exe = edr_specific_exes[0]; // first exe is the main edr exe
-        std::string main_edr_exe = "WindowsTerminal.exe"; // TODO debug
+        std::string main_edr_exe = edr_specific_exes[0]; // first exe is the main edr exe
+        //std::string main_edr_exe = "WindowsTerminal.exe"; // TODO debug
         int edr_pid = get_PID_by_name(main_edr_exe);
         if (edr_pid == -1) {
             std::cerr << "[!] EDRi: Could not find the EDR process " << main_edr_exe << ", is it running?\n";
@@ -342,11 +355,11 @@ int main(int argc, char* argv[]) {
     // ATTACK
 	// decrypt the attack exe
 	emit_etw_event("[<] Before decrypting the attack exe", true);
-    if (xor_file(g_attack_exe_enc_path, g_attack_exe_path)) {
+    if (xor_file(attack_exe_enc_path, g_attack_exe_path)) {
         std::cout << "[*] EDRi: Decrypted the attack exe: " << g_attack_exe_path << "\n";
     }
     else {
-        std::cerr << "[!] EDRi: Failed to decrypt the attack exe: " << g_attack_exe_enc_path << "\n";
+        std::cerr << "[!] EDRi: Failed to decrypt the attack exe: " << attack_exe_enc_path << "\n";
         stop_all_etw_traces();
         return 1;
     }
