@@ -428,5 +428,6 @@ int main(int argc, char* argv[]) {
     threads.clear();
 
     store_results(output);
+    dump_signatures();
 	return 0;
 }

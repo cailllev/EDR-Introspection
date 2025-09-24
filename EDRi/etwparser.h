@@ -59,6 +59,15 @@ static const std::string KERNEL_PID = "processid"; // TARGET_PID for kernel-trac
 static const std::string ORIGINATING_PID = "pid"; // antimalware-traces
 static const std::string FILEPATH = "filepath";
 static const std::string MESSAGE = "message";
+static const std::string SIGSEQ = "sigseq";
+static const std::string SIGSHA = "sigsha";
+static const std::string FIRST_PARAM = "firstparam";
+static const std::string SECOND_PARAM = "secondparam";
+static const std::string CLASSIFICATION = "classification";
+static const std::string DETERMINATION = "determination";
+static const std::string RESOURCESCHEMA = "resourceschema";
+static const std::string REALPATH = "realpath";
+static const std::string THREATNAME = "threatname";
 static const std::string DATA = "data";
 static const std::string SOURCE = "source";
 
@@ -116,3 +125,4 @@ Classifier filter_kernel_file(json&);
 Classifier filter_kernel_network(json&);
 Classifier filter_antimalware(json&);
 void count_event(json, bool);
+void dump_signatures();
