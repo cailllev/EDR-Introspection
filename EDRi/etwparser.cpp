@@ -794,4 +794,64 @@ std::string add_color_info(const json& ev) {
 	}
 }
 
-// TODO dump signatures
+void dump_signatures() {
+    std::cout << "[*] Parser: Dumping known signatures:\n";
+    for (const auto& ev : etw_events[Relevant]) {
+        if (!ev.contains(EVENT_ID)) {
+            if (g_debug) {
+                std::cout << "[-] Parser: Warning: Event missing " << EVENT_ID << " field: " << ev.dump() << "\n";
+			}
+            continue;
+        }
+        if (ev[EVENT_ID] == 3) {
+            if (!ev.contains(MESSAGE)) {
+                if (g_debug) {
+                    std::cout << "[-] Parser: Warning: Event with ID 3 missing " << MESSAGE << " field: " << ev.dump() << "\n";
+                }
+                continue;
+			}
+			std::string m = get_string_or_convert(ev, MESSAGE);
+            std::string s = "signame=";
+            std::string r = "resource=";
+            size_t ss = m.find(s);
+            size_t sr = m.find(r);
+            if (ss != std::string::npos && sr != std::string::npos) { // only some 3 events have signatures
+                size_t es = m.find(", ", ss);
+                size_t er = m.find(", ", sr);
+                ss += s.length();
+                sr += r.length();
+                std::string sig = m.substr(ss, es - ss);
+                std::string res = m.substr(sr, er - sr);
+                std::cout << "[+] Parser: Found signature: " << sig << " in " << res << "\n";
+            }
+        }
+        if (ev[EVENT_ID] == 8) {
+            if (!ev.contains(PID)) {
+                if (g_debug) {
+                    std::cout << "[-] Parser: Warning: Event with ID 8 missing " << PID << " field: " << ev.dump() << "\n";
+                }
+                continue;
+            }
+            std::cout << "[+] Parser: Behaviour Monitoring Detection: " <<
+                "pid=" << get_string_or_convert(ev, PID) << ", sig=" << get_string_or_convert(ev, FILEPATH); // THIS NEEDS DEBUGGING
+        }
+        if (ev[EVENT_ID] == 74) {
+			std::cout << "[+] Parser: Sense Remidiation" << 
+				": threatname=" << get_string_or_convert(ev, THREATNAME) <<
+				", signature=" << get_string_or_convert(ev, SIGSEQ) <<
+				", sigsha=" << get_string_or_convert(ev, SIGSHA) <<
+                ", classification=" << get_string_or_convert(ev, CLASSIFICATION) <<
+				", determination=" << get_string_or_convert(ev, DETERMINATION) <<
+				", realpath=" << get_string_or_convert(ev, REALPATH) <<
+				", resource=" << get_string_or_convert(ev, RESOURCESCHEMA) <<
+                "\n";
+        }
+        if (ev[EVENT_ID] == 104) {
+            if (!ev.contains(FIRST_PARAM) || !ev.contains(SECOND_PARAM)) {
+                if (g_debug) {
+                    std::cout << "[-] Parser: Warning: Event with ID 104 missing " << FIRST_PARAM << " or " << SECOND_PARAM << " field: " << ev.dump() << "\n";
+                }
+            }
+        }
+    }
+}
