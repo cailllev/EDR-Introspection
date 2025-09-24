@@ -119,9 +119,8 @@ std::string create_timeline_csv(const std::vector<json>& events) {
     }
 
     // add header to csv_output
-    for (size_t i = 0; i < all_keys.size(); ++i) {
-        csv_output << all_keys[i];
-        csv_output << ",";
+    for (const auto& key : all_keys) {
+        csv_output << key << ",";
     }
 	csv_output << COLOR_HEADER; // add color info column
     csv_output << "\n";
@@ -129,12 +128,11 @@ std::string create_timeline_csv(const std::vector<json>& events) {
     int num_events_final = 0;
 
     // print each event as a row
-    // TODO SORT BY TIMESTAMP??
+    // TODO SORT BY TIMESTAMP?
     for (const auto& ev : events) {
         // traverse keys IN ORDER OF CSV HEADER
 		// i.e. given: key from csv, check: if event has it, add value, else skip (add "")
-        for (size_t i = 0; i < all_keys.size(); ++i) {
-			const auto& key = all_keys[i];
+        for (const auto& key : all_keys) {
             // check if this event has a value for this key
             if (ev.contains(key)) {
                 csv_output << normalized_value(ev, key);
