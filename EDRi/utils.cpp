@@ -80,7 +80,9 @@ std::string unnecessary_tools_running() {
         return r;
 	}
     for (auto& p : { "procexp64.exe" }) {
-		r += get_proc_name(get_PID_by_name(p)) + " ";
+        std::string pn = get_proc_name(get_PID_by_name(p));
+		if (pn == PROC_NOT_FOUND) continue;
+		r += pn + " ";
     }
     return r;
 }
