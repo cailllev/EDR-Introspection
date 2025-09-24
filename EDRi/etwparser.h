@@ -79,6 +79,15 @@ struct MergeCategory {
 };
 extern MergeCategory ppid_keys, tpid_keys, ttid_keys, filepath_keys;
 
+// custom key for technicolor in timeline explorer
+static const std::string COLOR_HEADER = "Source Name";
+static const std::string COLOR_GREEN = "FILE";
+static const std::string COLOR_RED = "PREFETCH";
+static const std::string COLOR_BLUE = "REG";
+static const std::string COLOR_PURPLE = "ETW";
+static const std::string COLOR_YELLOW = "LNK";
+static const std::string COLOR_GRAY = "UNKNOWN";
+std::string add_color_info(const json&);
 
 // getting the events
 enum Classifier;

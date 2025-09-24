@@ -19,6 +19,7 @@ void snapshot_procs();
 int get_PID_by_name(const std::string& name);
 void add_proc(int, const std::string&);
 std::string get_proc_name(int);
+std::string unnecessary_tools_running();
 
 bool filepath_match(std::string, std::string);
 bool launch_as_child(const std::string& path);

@@ -121,8 +121,9 @@ std::string create_timeline_csv(const std::vector<json>& events) {
     // add header to csv_output
     for (size_t i = 0; i < all_keys.size(); ++i) {
         csv_output << all_keys[i];
-        if (i + 1 < all_keys.size()) csv_output << ","; // only add comma if not last value
+        csv_output << ",";
     }
+	csv_output << COLOR_HEADER; // add color info column
     csv_output << "\n";
 
     int num_events_final = 0;
@@ -142,8 +143,9 @@ std::string create_timeline_csv(const std::vector<json>& events) {
             else {
                 csv_output << "";
             }
-			if (i + 1 < all_keys.size()) csv_output << ","; // only add comma if not last value
+			csv_output << ",";
         }
+		csv_output << add_color_info(ev);
         csv_output << "\n";
         num_events_final++;
     }
@@ -324,6 +326,12 @@ int main(int argc, char* argv[]) {
             std::cout << "[-] EDRi: Process tracking, could not find EDR specific " << e << "\n";
         }
     }
+	std::string up = unnecessary_tools_running();
+    if (!up.empty()) {
+        std::cout << "[!] EDRi: Unnecessary tools running: " << up << "\n";
+        std::cout << "[!] EDRi: It is recommended to close them and start again, continuing in 3 sec...\n";
+		Sleep(3000);
+	}
 
     // WAIT UNTIL TRACES ARE READY
     Sleep(wait_after_traces_started_ms);
