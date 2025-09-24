@@ -5,7 +5,9 @@
 
 #include "helpers/json.hpp"
 
-static const std::string EDRi_PROVIDER_NAME = "EDRi-Provider";
+static const std::string EDRi_PROVIDER = "EDRi-Provider";
+static const std::string HOOK_PROVIDER = "Hook-Provider"; // must the same in the other project
+static const std::string ATTACK_PROVIDER = "Attack-Provider"; // must the same in the other project
 static const int EDRi_PROVIDER_EVENT_ID = 4242;
 static const int HOOK_PROVIDER_EVENT_ID = 7007;
 static const int ATTACK_PROVIDER_EVENT_ID = 1337;
