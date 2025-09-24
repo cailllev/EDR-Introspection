@@ -125,15 +125,17 @@ json parse_my_etw_event(Event e) {
         );
         j[PID] = e.record.EventHeader.ProcessId;
         j[PROVIDER_NAME] = wchar2string(e.schema.provider_name());
-        if (j[PROVIDER_NAME] == EDRi_PROVIDER_NAME) {
+        if (j[PROVIDER_NAME] == EDRi_PROVIDER) {
             j[EVENT_ID] = EDRi_PROVIDER_EVENT_ID;
         }
-        else if (j[PROVIDER_NAME] == "Hook-Provider") {
+        else if (j[PROVIDER_NAME] == HOOK_PROVIDER) {
             j[EVENT_ID] = HOOK_PROVIDER_EVENT_ID;
         }
-        else {
+        else if (j[PROVIDER_NAME] == ATTACK_PROVIDER) {
             j[EVENT_ID] = ATTACK_PROVIDER_EVENT_ID;
-        }
+        } else {
+            j[EVENT_ID] = -1; // unknown
+		}
 
         std::string msg;
         if (parser.try_parse(MY_MESSAGE_W, msg)) {
@@ -767,3 +769,29 @@ void print_etw_counts() {
         std::cout << " Filtered events per provider > " << oss.str() << "\n";
 	}
 }
+
+std::string add_color_info(const json& ev) {
+    if (!ev.contains(PROVIDER_NAME)) {
+        if (g_debug) {
+            std::cout << "[-] Utils: Warning: Event missing " << PROVIDER_NAME << " field: " << ev.dump() << "\n";
+        }
+        return COLOR_GRAY;
+    }
+    if (ev[PROVIDER_NAME] == EDRi_PROVIDER) {
+        return COLOR_GREEN;
+	}
+    if (ev[PROVIDER_NAME] == ANTIMALWARE_PROVIDER) {
+        return COLOR_BLUE;
+    }
+    if (ev[PROVIDER_NAME] == THREAT_INTEL_PROVIDER) {
+        return COLOR_PURPLE;
+	}
+    if (ev[PROVIDER_NAME] == ATTACK_PROVIDER) {
+        return COLOR_RED;
+	}
+    if (ev[PROVIDER_NAME] == HOOK_PROVIDER) {
+        return COLOR_YELLOW;
+	}
+}
+
+// TODO dump signatures
