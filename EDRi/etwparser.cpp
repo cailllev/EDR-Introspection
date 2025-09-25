@@ -125,15 +125,17 @@ json parse_my_etw_event(Event e) {
         );
         j[PID] = e.record.EventHeader.ProcessId;
         j[PROVIDER_NAME] = wchar2string(e.schema.provider_name());
-        if (j[PROVIDER_NAME] == EDRi_PROVIDER_NAME) {
+        if (j[PROVIDER_NAME] == EDRi_PROVIDER) {
             j[EVENT_ID] = EDRi_PROVIDER_EVENT_ID;
         }
-        else if (j[PROVIDER_NAME] == "Hook-Provider") {
+        else if (j[PROVIDER_NAME] == HOOK_PROVIDER) {
             j[EVENT_ID] = HOOK_PROVIDER_EVENT_ID;
         }
-        else {
+        else if (j[PROVIDER_NAME] == ATTACK_PROVIDER) {
             j[EVENT_ID] = ATTACK_PROVIDER_EVENT_ID;
-        }
+        } else {
+            j[EVENT_ID] = -1; // unknown
+		}
 
         std::string msg;
         if (parser.try_parse(MY_MESSAGE_W, msg)) {
@@ -246,7 +248,7 @@ void parse_all_properties(krabs::parser& parser, json& j) {
                 }
             }
             if (j.contains(key)) {
-                overwritten_value = get_string_or_convert(j, key);
+                overwritten_value = get_val(j, key);
             }
 
             // Special cases
@@ -303,31 +305,53 @@ void parse_all_properties(krabs::parser& parser, json& j) {
 
             case TDH_INTYPE_BINARY:
             {
-                auto raw = parser.parse<std::vector<uint8_t>>(property_name);
-
-                // Heuristic: IPv4 addresses are 4 bytes, IPv6 are 16 bytes
                 try {
-                    if (raw.size() == 4) {
-                        char ipStr[INET_ADDRSTRLEN];
-                        inet_ntop(AF_INET, raw.data(), ipStr, sizeof(ipStr));
-                        j[key] = std::string(ipStr);
+                    auto bin = parser.parse<krabs::binary>(property_name);
+                    const auto& bytes = bin.bytes();
+                    const auto size = bytes.size();
+                    const auto data = bytes.empty() ? nullptr : bytes.data();
+
+                    if (size == 4 && data) {
+                        char ipStr[INET_ADDRSTRLEN] = { 0 };
+                        if (inet_ntop(AF_INET, data, ipStr, sizeof(ipStr)))
+                            j[key] = std::string(ipStr);
+                        else
+                            j[key] = "<inet_ntop_AF_INET_failed>";
                     }
-                    else if (raw.size() == 16) {
-                        char ipStr[INET6_ADDRSTRLEN];
-                        inet_ntop(AF_INET6, raw.data(), ipStr, sizeof(ipStr));
-                        j[key] = std::string(ipStr);
+                    else if (size == 16 && data) {
+                        // detect IPv4-mapped IPv6 ::ffff:a.b.c.d (first 10 bytes 0, then 0xff,0xff)
+                        bool ipv4_mapped = (std::equal(bytes.begin(), bytes.begin() + 10, std::vector<BYTE>(10, 0).begin())
+                            && bytes[10] == 0xff && bytes[11] == 0xff);
+                        if (ipv4_mapped) {
+                            // convert last 4 bytes as IPv4
+                            char ipStr[INET_ADDRSTRLEN] = { 0 };
+                            if (inet_ntop(AF_INET, data + 12, ipStr, sizeof(ipStr)))
+                                j[key] = std::string("::ffff:") + std::string(ipStr); // or ipStr alone if you prefer
+                            else
+                                j[key] = "<inet_ntop_mapped_failed>";
+                        }
+                        else {
+                            char ipStr[INET6_ADDRSTRLEN] = { 0 };
+                            if (inet_ntop(AF_INET6, data, ipStr, sizeof(ipStr)))
+                                j[key] = std::string(ipStr);
+                            else
+                                j[key] = "<inet_ntop_AF_INET6_failed>";
+                        }
+                    }
+                    else {
+                        // fallback: hex dump
+                        std::ostringstream oss;
+                        oss << "0x" << std::hex << std::setfill('0');
+                        for (BYTE b : bytes) {
+                            oss << std::setw(2) << static_cast<int>(b);
+                        }
+                        j[key] = oss.str();
                     }
                 }
                 catch (...) {
                     // ignore conversion errors
+					j[key] = "<parse error>";
                 }
-                // fallback: hex dump
-                std::ostringstream oss;
-                oss << "0x";
-                for (auto b : raw) {
-                    oss << std::hex << std::setw(2) << std::setfill('0') << (int)b;
-                }
-                j[key] = oss.str();
                 break;
             }
 
@@ -441,7 +465,7 @@ void parse_all_properties(krabs::parser& parser, json& j) {
     }
 }
 
-std::string get_string_or_convert(const json& j, std::string key) {
+std::string get_val(const json& j, std::string key) {
     if (!j.contains(key)) {
         return ""; // key not present
     }
@@ -766,4 +790,99 @@ void print_etw_counts() {
         std::cout << "[*] ETW: Classification " << classifier_names[c.first] << ": " << events.size() << " events.";
         std::cout << " Filtered events per provider > " << oss.str() << "\n";
 	}
+}
+
+std::string add_color_info(const json& ev) {
+    if (!ev.contains(PROVIDER_NAME)) {
+        if (g_debug) {
+            std::cout << "[-] Utils: Warning: Event missing " << PROVIDER_NAME << " field: " << ev.dump() << "\n";
+        }
+        return COLOR_GRAY;
+    }
+    if (ev[PROVIDER_NAME] == EDRi_PROVIDER) {
+        return COLOR_GREEN;
+	}
+    if (ev[PROVIDER_NAME] == ANTIMALWARE_PROVIDER) {
+        return COLOR_BLUE;
+    }
+    if (ev[PROVIDER_NAME] == THREAT_INTEL_PROVIDER) {
+        return COLOR_PURPLE;
+	}
+    if (ev[PROVIDER_NAME] == ATTACK_PROVIDER) {
+        return COLOR_RED;
+	}
+    if (ev[PROVIDER_NAME] == HOOK_PROVIDER) {
+        return COLOR_YELLOW;
+	}
+	return ""; // event / provider not mapped
+}
+
+// dumps all relevant info from antimalware provider event id 3,8,74,104
+void dump_signatures() {
+    for (const auto& ev : etw_events[Relevant]) {
+        try {
+            if (!ev.contains(EVENT_ID) || !ev.contains(PROVIDER_NAME)) {
+                if (g_debug) {
+                    std::cout << "[-] Parser: Warning: Event missing " << EVENT_ID << " field: " << ev.dump() << "\n";
+                }
+                continue;
+            }
+            if (ev[PROVIDER_NAME] != ANTIMALWARE_PROVIDER) {
+                continue; // only this provider contains the signatures
+            }
+            if (ev[EVENT_ID] == 3) {
+                if (!ev.contains(MESSAGE)) {
+                    if (g_debug) {
+                        std::cout << "[-] Parser: Warning: Event with ID 3 missing " << MESSAGE << " field: " << ev.dump() << "\n";
+                    }
+                    continue;
+                }
+                std::string m = get_val(ev, MESSAGE);
+                std::string s = "signame=";
+                std::string r = "resource=";
+                size_t ss = m.find(s);
+                size_t sr = m.find(r);
+                if (ss != std::string::npos && sr != std::string::npos) { // only some 3 events have signatures
+                    size_t es = m.find(", ", ss);
+                    size_t er = m.find(", ", sr);
+                    ss += s.length();
+                    sr += r.length();
+                    std::string sig = m.substr(ss, es - ss);
+                    std::string res = m.substr(sr, er - sr);
+                    std::cout << "[+] Parser: Found signature: " << sig << " in " << res << "\n";
+                }
+            }
+            if (ev[EVENT_ID] == 8) {
+                if (!ev.contains(PID)) {
+                    if (g_debug) {
+                        std::cout << "[-] Parser: Warning: Event with ID 8 missing " << PID << " field: " << ev.dump() << "\n";
+                    }
+                    continue;
+                }
+                std::cout << "[+] Parser: Behaviour Monitoring Detection: " <<
+                    "pid=" << get_val(ev, PID) << ", sig=" << get_val(ev, FILEPATH); // THIS NEEDS DEBUGGING
+            }
+            if (ev[EVENT_ID] == 74) {
+                std::cout << "[+] Parser: Sense Remidiation" <<
+                    ": threatname=" << get_val(ev, THREATNAME) <<
+                    ", signature=" << get_val(ev, SIGSEQ) <<
+                    ", sigsha=" << get_val(ev, SIGSHA) <<
+                    ", classification=" << get_val(ev, CLASSIFICATION) <<
+                    ", determination=" << get_val(ev, DETERMINATION) <<
+                    ", realpath=" << get_val(ev, REALPATH) <<
+                    ", resource=" << get_val(ev, RESOURCESCHEMA) <<
+                    "\n";
+            }
+            if (ev[EVENT_ID] == 104) {
+                if (!ev.contains(FIRST_PARAM) || !ev.contains(SECOND_PARAM)) {
+                    if (g_debug) {
+                        std::cout << "[-] Parser: Warning: Event with ID 104 missing " << FIRST_PARAM << " or " << SECOND_PARAM << " field: " << ev.dump() << "\n";
+                    }
+                }
+            }
+        }
+        catch (const std::exception& ex) {
+            std::cerr << "[!] Parser: dump_signatures exception: " << ex.what() << "\n";
+		}
+    }
 }

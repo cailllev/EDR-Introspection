@@ -72,6 +72,21 @@ std::string get_proc_name(int pid) {
     return (it != g_running_procs.end()) ? it->second : PROC_NOT_FOUND;
 }
 
+// check if unnecessary tools are running --> make the output very large
+std::string unnecessary_tools_running() {
+    std::string r = "";
+	if (!initialized) {
+        std::cerr << "[!] Utils: Cannot use unnecessary_tools_running() before snapshot_procs()\n";
+        return r;
+	}
+    for (auto& p : { "procexp64.exe" }) {
+        std::string pn = get_proc_name(get_PID_by_name(p));
+		if (pn == PROC_NOT_FOUND) continue;
+		r += pn + " ";
+    }
+    return r;
+}
+
 // encrypt/decrypt a file with a static password
 bool xor_file(std::string in_path, std::string out_path) {
     // open input file in binary mode
