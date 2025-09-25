@@ -59,6 +59,15 @@ static const std::string KERNEL_PID = "processid"; // TARGET_PID for kernel-trac
 static const std::string ORIGINATING_PID = "pid"; // antimalware-traces
 static const std::string FILEPATH = "filepath";
 static const std::string MESSAGE = "message";
+static const std::string SIGSEQ = "sigseq";
+static const std::string SIGSHA = "sigsha";
+static const std::string FIRST_PARAM = "firstparam";
+static const std::string SECOND_PARAM = "secondparam";
+static const std::string CLASSIFICATION = "classification";
+static const std::string DETERMINATION = "determination";
+static const std::string RESOURCESCHEMA = "resourceschema";
+static const std::string REALPATH = "realpath";
+static const std::string THREATNAME = "threatname";
 static const std::string DATA = "data";
 static const std::string SOURCE = "source";
 
@@ -79,6 +88,16 @@ struct MergeCategory {
 };
 extern MergeCategory ppid_keys, tpid_keys, ttid_keys, filepath_keys;
 
+// custom key for technicolor in timeline explorer
+static const std::string COLOR_HEADER = "Source Name,Long Description,Timestamp";
+static const std::string FAKE_TIMESTAMP = "2020-20-20 20:20:20";
+static const std::string COLOR_GREEN = "FILE,Name:," + FAKE_TIMESTAMP;
+static const std::string COLOR_RED = "PREFETCH,was executed," + FAKE_TIMESTAMP;
+static const std::string COLOR_BLUE = "REG,Computer\\HKEY_LOCAL_MACHINE\\SYSTEM\\DUMMY," + FAKE_TIMESTAMP;
+static const std::string COLOR_PURPLE = "ETW,," + FAKE_TIMESTAMP;
+static const std::string COLOR_YELLOW = "LNK,," + FAKE_TIMESTAMP;
+static const std::string COLOR_GRAY = "UNKNOWN,," + FAKE_TIMESTAMP;
+std::string add_color_info(const json&);
 
 // getting the events
 enum Classifier;
@@ -92,7 +111,7 @@ void event_callback(const EVENT_RECORD&, const krabs::trace_context&);
 json parse_my_etw_event(Event);
 json parse_etw_event(Event);
 void parse_all_properties(krabs::parser&, json&);
-std::string get_string_or_convert(const json&, std::string);
+std::string get_val(const json&, std::string);
 void post_my_parsing_checks(json&);
 void post_parsing_checks(json&);
 void add_exe_information(json& j);
@@ -107,3 +126,4 @@ Classifier filter_kernel_file(json&);
 Classifier filter_kernel_network(json&);
 Classifier filter_antimalware(json&);
 void count_event(json, bool);
+void dump_signatures();

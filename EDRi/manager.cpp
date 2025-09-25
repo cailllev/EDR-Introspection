@@ -119,21 +119,20 @@ std::string create_timeline_csv(const std::vector<json>& events) {
     }
 
     // add header to csv_output
-    for (size_t i = 0; i < all_keys.size(); ++i) {
-        csv_output << all_keys[i];
-        if (i + 1 < all_keys.size()) csv_output << ","; // only add comma if not last value
+    for (const auto& key : all_keys) {
+        csv_output << key << ",";
     }
+	csv_output << COLOR_HEADER; // add color info column
     csv_output << "\n";
 
-    int num_events_final = 0;
-
     // print each event as a row
-    // TODO SORT BY TIMESTAMP??
+    // TODO SORT BY TIMESTAMP?
     for (const auto& ev : events) {
+		if (ev.is_null()) continue; // skip null events
+
         // traverse keys IN ORDER OF CSV HEADER
 		// i.e. given: key from csv, check: if event has it, add value, else skip (add "")
-        for (size_t i = 0; i < all_keys.size(); ++i) {
-			const auto& key = all_keys[i];
+        for (const auto& key : all_keys) {
             // check if this event has a value for this key
             if (ev.contains(key)) {
                 csv_output << normalized_value(ev, key);
@@ -142,10 +141,10 @@ std::string create_timeline_csv(const std::vector<json>& events) {
             else {
                 csv_output << "";
             }
-			if (i + 1 < all_keys.size()) csv_output << ","; // only add comma if not last value
+			csv_output << ",";
         }
+		csv_output << add_color_info(ev);
         csv_output << "\n";
-        num_events_final++;
     }
 	return csv_output.str();
 }
@@ -324,6 +323,12 @@ int main(int argc, char* argv[]) {
             std::cout << "[-] EDRi: Process tracking, could not find EDR specific " << e << "\n";
         }
     }
+	std::string up = unnecessary_tools_running();
+    if (!up.empty()) {
+        std::cout << "[!] EDRi: Unnecessary tools running: " << up << "\n";
+        std::cout << "[!] EDRi: It is recommended to close them and start again, continuing in 3 sec...\n";
+		Sleep(3000);
+	}
 
     // WAIT UNTIL TRACES ARE READY
     Sleep(wait_after_traces_started_ms);
@@ -420,5 +425,8 @@ int main(int argc, char* argv[]) {
     threads.clear();
 
     store_results(output);
+    if (trace_etw_misc) {
+        dump_signatures(); // can only dump from antimalware provider
+    }
 	return 0;
 }
