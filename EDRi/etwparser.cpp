@@ -305,31 +305,53 @@ void parse_all_properties(krabs::parser& parser, json& j) {
 
             case TDH_INTYPE_BINARY:
             {
-                auto raw = parser.parse<std::vector<uint8_t>>(property_name);
-
-                // Heuristic: IPv4 addresses are 4 bytes, IPv6 are 16 bytes
                 try {
-                    if (raw.size() == 4) {
-                        char ipStr[INET_ADDRSTRLEN];
-                        inet_ntop(AF_INET, raw.data(), ipStr, sizeof(ipStr));
-                        j[key] = std::string(ipStr);
+                    auto bin = parser.parse<krabs::binary>(property_name);
+                    const auto& bytes = bin.bytes();
+                    const auto size = bytes.size();
+                    const auto data = bytes.empty() ? nullptr : bytes.data();
+
+                    if (size == 4 && data) {
+                        char ipStr[INET_ADDRSTRLEN] = { 0 };
+                        if (inet_ntop(AF_INET, data, ipStr, sizeof(ipStr)))
+                            j[key] = std::string(ipStr);
+                        else
+                            j[key] = "<inet_ntop_AF_INET_failed>";
                     }
-                    else if (raw.size() == 16) {
-                        char ipStr[INET6_ADDRSTRLEN];
-                        inet_ntop(AF_INET6, raw.data(), ipStr, sizeof(ipStr));
-                        j[key] = std::string(ipStr);
+                    else if (size == 16 && data) {
+                        // detect IPv4-mapped IPv6 ::ffff:a.b.c.d (first 10 bytes 0, then 0xff,0xff)
+                        bool ipv4_mapped = (std::equal(bytes.begin(), bytes.begin() + 10, std::vector<BYTE>(10, 0).begin())
+                            && bytes[10] == 0xff && bytes[11] == 0xff);
+                        if (ipv4_mapped) {
+                            // convert last 4 bytes as IPv4
+                            char ipStr[INET_ADDRSTRLEN] = { 0 };
+                            if (inet_ntop(AF_INET, data + 12, ipStr, sizeof(ipStr)))
+                                j[key] = std::string("::ffff:") + std::string(ipStr); // or ipStr alone if you prefer
+                            else
+                                j[key] = "<inet_ntop_mapped_failed>";
+                        }
+                        else {
+                            char ipStr[INET6_ADDRSTRLEN] = { 0 };
+                            if (inet_ntop(AF_INET6, data, ipStr, sizeof(ipStr)))
+                                j[key] = std::string(ipStr);
+                            else
+                                j[key] = "<inet_ntop_AF_INET6_failed>";
+                        }
+                    }
+                    else {
+                        // fallback: hex dump
+                        std::ostringstream oss;
+                        oss << "0x" << std::hex << std::setfill('0');
+                        for (BYTE b : bytes) {
+                            oss << std::setw(2) << static_cast<int>(b);
+                        }
+                        j[key] = oss.str();
                     }
                 }
                 catch (...) {
                     // ignore conversion errors
+					j[key] = "<parse error>";
                 }
-                // fallback: hex dump
-                std::ostringstream oss;
-                oss << "0x";
-                for (auto b : raw) {
-                    oss << std::hex << std::setw(2) << std::setfill('0') << (int)b;
-                }
-                j[key] = oss.str();
                 break;
             }
 
@@ -795,14 +817,18 @@ std::string add_color_info(const json& ev) {
 	return ""; // event / provider not mapped
 }
 
+// dumps all relevant info from antimalware provider event id 3,8,74,104
 void dump_signatures() {
     for (const auto& ev : etw_events[Relevant]) {
         try {
-            if (!ev.contains(EVENT_ID)) {
+            if (!ev.contains(EVENT_ID) || !ev.contains(PROVIDER_NAME)) {
                 if (g_debug) {
                     std::cout << "[-] Parser: Warning: Event missing " << EVENT_ID << " field: " << ev.dump() << "\n";
                 }
                 continue;
+            }
+            if (ev[PROVIDER_NAME] != ANTIMALWARE_PROVIDER) {
+                continue; // only this provider contains the signatures
             }
             if (ev[EVENT_ID] == 3) {
                 if (!ev.contains(MESSAGE)) {
