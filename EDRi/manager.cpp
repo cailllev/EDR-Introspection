@@ -125,11 +125,11 @@ std::string create_timeline_csv(const std::vector<json>& events) {
 	csv_output << COLOR_HEADER; // add color info column
     csv_output << "\n";
 
-    int num_events_final = 0;
-
     // print each event as a row
     // TODO SORT BY TIMESTAMP?
     for (const auto& ev : events) {
+		if (ev.is_null()) continue; // skip null events
+
         // traverse keys IN ORDER OF CSV HEADER
 		// i.e. given: key from csv, check: if event has it, add value, else skip (add "")
         for (const auto& key : all_keys) {
@@ -145,7 +145,6 @@ std::string create_timeline_csv(const std::vector<json>& events) {
         }
 		csv_output << add_color_info(ev);
         csv_output << "\n";
-        num_events_final++;
     }
 	return csv_output.str();
 }
@@ -426,6 +425,8 @@ int main(int argc, char* argv[]) {
     threads.clear();
 
     store_results(output);
-    dump_signatures();
+    if (trace_etw_misc) {
+        dump_signatures(); // can only dump from antimalware provider
+    }
 	return 0;
 }
