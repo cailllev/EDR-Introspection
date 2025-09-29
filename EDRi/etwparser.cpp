@@ -457,7 +457,7 @@ void parse_all_properties(krabs::parser& parser, json& j) {
         }
         catch (const std::exception& ex) {
             std::cerr <<
-                "[!] ETW: parse_etw_event failed to parse " << j[TASK] <<
+                "[!] ETW: parse_all_properties failed to parse " << j[TASK] <<
                 ", key: " << last_key <<
                 ", type: " << last_type <<
                 ", error: " << ex.what() << "\n";
