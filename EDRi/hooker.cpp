@@ -1,4 +1,5 @@
 #include <windows.h>
+#include <winternl.h>
 #include <tlhelp32.h>
 #include <string>
 #include <iostream>
@@ -40,12 +41,89 @@ bool enable_debug_privilege()
     return true;
 }
 
+// Minimal OBJECT_BASIC_INFORMATION from winternl
+typedef struct _OBJECT_BASIC_INFORMATION {
+    ULONG Attributes;
+    ACCESS_MASK GrantedAccess;
+    ULONG HandleCount;
+    ULONG PointerCount;
+    ULONG Reserved[10];
+} OBJECT_BASIC_INFORMATION;
+
+extern "C" NTSTATUS NTAPI NtQueryObject(
+    HANDLE Handle,
+    OBJECT_INFORMATION_CLASS ObjectInformationClass,
+    PVOID ObjectInformation,
+    ULONG ObjectInformationLength,
+    PULONG ReturnLength
+);
+
+std::string get_proc_access_details(DWORD granted) {
+    struct { DWORD mask; const char* name; } flags[] = {
+        {0x0001, "PROCESS_TERMINATE"},
+        {0x0002, "PROCESS_CREATE_THREAD"},
+        {0x0004, "PROCESS_SET_SESSIONID"},
+        {0x0008, "PROCESS_VM_OPERATION"},
+        {0x0010, "PROCESS_VM_READ"},
+        {0x0020, "PROCESS_VM_WRITE"},
+        {0x0040, "PROCESS_DUP_HANDLE"},
+        {0x0080, "PROCESS_CREATE_PROCESS"},
+        {0x0100, "PROCESS_SET_QUOTA"},
+        {0x0200, "PROCESS_SET_INFORMATION"},
+        {0x0400, "PROCESS_QUERY_INFORMATION"},
+        {0x0800, "PROCESS_SUSPEND_RESUME"},
+        {0x1000, "PROCESS_QUERY_LIMITED_INFORMATION"},
+        {0x2000, "PROCESS_SET_LIMITED_INFORMATION"}
+    };
+
+    std::string access = "";
+    for (auto& f : flags) {
+        if (granted & f.mask) {
+            access += std::string(f.name) + " | ";
+        }
+    }
+    if (!access.empty()) {
+        access = access.substr(0, access.size() - 3); // remove last " | "
+    }
+    else {
+		return "no access";
+    }
+    std::string no_access = "";
+    for (auto& f : flags) {
+        if (!(granted & f.mask)) {
+            no_access += std::string(f.name) + " | ";
+        }
+    }
+    if (!no_access.empty()) {
+        no_access = no_access.substr(0, no_access.size() - 3); // remove last " | "
+    }
+    else {
+        return "full access";
+    }
+    return access + ", not including: " + no_access;
+}
+
+void print_granted_access(HANDLE h) {
+    OBJECT_BASIC_INFORMATION obi = {};
+    ULONG ret = 0;
+    NTSTATUS st = NtQueryObject(h, ObjectBasicInformation, &obi, sizeof(obi), &ret);
+    if (st < 0) {
+        std::cerr << "[!] Hooker: NtQueryObject failed: 0x" << std::hex << st << "\n";
+    }
+    else {
+		std::string details = get_proc_access_details(obi.GrantedAccess);
+        std::cout << "[+] Hooker: GrantedAccess: 0x" << std::hex << obi.GrantedAccess << std::dec << " -> " << details << "\n";
+    }
+}
+
 // Inject DLL into target process
 bool inject_dll(int pid, const std::string& dllPath)
 {
+    // TODO either patch the hProcess access rights via system driver or strip protections completely
     HANDLE hProcess = OpenProcess(
-        PROCESS_CREATE_THREAD | PROCESS_QUERY_INFORMATION |
-        PROCESS_VM_OPERATION | PROCESS_VM_WRITE, FALSE, pid);
+        //PROCESS_CREATE_THREAD | PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION | PROCESS_VM_WRITE,
+        PROCESS_ALL_ACCESS,
+        FALSE, pid);
 
     if (!hProcess) {
         std::cerr << "[!] Hooker: Failed to open target process. Error: " << GetLastError() << "\n";
@@ -64,24 +142,15 @@ bool inject_dll(int pid, const std::string& dllPath)
         CloseHandle(hProcess);
         return false;
     }
+    print_granted_access(hProcess);
 
     // Allocate memory for DLL path in target
     size_t size = dllPath.length() + 1;
     LPVOID remoteMem = VirtualAllocEx(hProcess, nullptr, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     if (!remoteMem) {
         std::cerr << "[!] Hooker: VirtualAllocEx failed. Error: " << GetLastError() << "\n";
-		std::cout << "[+] Hooker: Trying to enable SeDebugPrivilege and retry...\n";
-        if (!enable_debug_privilege()) {
-            std::cerr << "[!] Hooker: Failed to enable SeDebugPrivilege\n";
-            return false;
-        }
-        // try again
-        remoteMem = VirtualAllocEx(hProcess, nullptr, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-        if (!remoteMem) {
-            std::cerr << "[!] Hooker: VirtualAllocEx failed again! Error: " << GetLastError() << "\n";
-            CloseHandle(hProcess);
-            return false;
-        }
+        CloseHandle(hProcess);
+        return false;
     }
 
     // Write DLL path into target
@@ -94,6 +163,12 @@ bool inject_dll(int pid, const std::string& dllPath)
 
     // Get LoadLibraryA address
     HMODULE lpModuleHandle = GetModuleHandleA("kernel32.dll");
+    if (!lpModuleHandle) {
+        std::cerr << "[!] Hooker: GetModuleHandle failed\n";
+        VirtualFreeEx(hProcess, remoteMem, 0, MEM_RELEASE);
+        CloseHandle(hProcess);
+        return false;
+    }
     LPVOID loadLibAddr = (LPVOID)GetProcAddress(lpModuleHandle, "LoadLibraryA");
     if (!loadLibAddr) {
         std::cerr << "[!] Hooker: GetProcAddress failed\n";
