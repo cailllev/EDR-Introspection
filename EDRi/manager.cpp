@@ -125,8 +125,7 @@ std::string create_timeline_csv(const std::vector<json>& events) {
 	csv_output << COLOR_HEADER; // add color info column
     csv_output << "\n";
 
-    // print each event as a row
-    // TODO SORT BY TIMESTAMP?
+    // print each event as a row    
     for (const auto& ev : events) {
 		if (ev.is_null()) continue; // skip null events
 
@@ -151,9 +150,18 @@ std::string create_timeline_csv(const std::vector<json>& events) {
 
 void store_results(std::string output) {
     print_etw_counts();
+
     std::map<Classifier, std::vector<json>> all_events = get_events();
     for (auto& c : all_events) {
+
         std::vector<json>& events = all_events[c.first];
+        // sort events by timestamp
+        std::sort(events.begin(), events.end(), [](const nlohmann::json& a, const nlohmann::json& b) {
+            const std::string& ts1 = a["timestamp"];
+            const std::string& ts2 = b["timestamp"];
+            return ts1 < ts2; // lexicographical compare works for ISO-like timestamps
+            });
+
         std::string csv_output = create_timeline_csv(events);
         std::string output_base = output.substr(0, output.find_last_of('.')); // without .csv
         std::string output_final = output_base + "-" + get_classifier_name(c.first) + ".csv"; // add classifier to filename
@@ -339,10 +347,10 @@ int main(int argc, char* argv[]) {
 	}
 	std::cout << "[*] EDRi: Traces started\n";
 
-	// hooking emits etw events, so hooking must be done after the traces are started
+    // hooking emits etw events, so hooking must be done after the traces are started
     if (hook_ntdll) {
         std::string main_edr_exe = edr_specific_exes[0]; // first exe is the main edr exe
-        //std::string main_edr_exe = "WindowsTerminal.exe"; // TODO debug
+        //std::string main_edr_exe = "lsass.exe"; // TODO debug
         int edr_pid = get_PID_by_name(main_edr_exe);
         if (edr_pid == -1) {
             std::cerr << "[!] EDRi: Could not find the EDR process " << main_edr_exe << ", is it running?\n";
