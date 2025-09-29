@@ -178,11 +178,11 @@ DWORD WINAPI t_start_etw_hook_trace(LPVOID param) {
         krabs::guid hooks_guid(L"{72248411-7166-4feb-a386-34d8f35bb637}");
         krabs::provider<> hooks_provider(hooks_guid);
         hooks_provider.add_on_event_callback(my_event_callback);
-        trace_etw.enable(hooks_provider);
+        trace_etw_hook.enable(hooks_provider);
 
         // trace_start is blocking, hence threaded
         std::cout << "[+] ETW: NTDLL-Hook trace registered, starting...\n";
-        trace_etw_ti.start();
+        trace_etw_hook.start();
     }
     catch (const std::exception& e) {
         std::cout << "[!] ETW: NTDLL-Hook trace exception: " << e.what() << "\n";
