@@ -9,9 +9,3 @@
 
 // defaults
 static const std::string all_events_output_default = "C:\\Users\\Public\\Downloads\\all-events.csv";
-
-// define start of CSV header, all other keys are added in order later
-std::vector<std::string> csv_header_start = { 
-    TIMESTAMP, TYPE, PROVIDER_NAME, EVENT_ID, TASK, PID, TID, PPID, ORIGINATING_PID, TARGET_PID, TARGET_TID, MESSAGE,
-    FILEPATH, "cachename", "result", "vname", "sigseq", "sigsha", "commandline", "firstparam", "secondparam",
-};

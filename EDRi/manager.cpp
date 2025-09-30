@@ -1,7 +1,6 @@
 #define WIN32_LEAN_AND_MEAN // wtf c++
 #include <windows.h>
 #include <iostream>
-#include <fstream>
 #include <map>
 #include <regex>
 #include <set>
@@ -68,106 +67,14 @@ void emit_etw_event(std::string msg, bool print_when_debug) {
     }
 }
 
-std::string normalized_value(json ev, std::string key) {
-    if (ev[key].is_string()) {
-        std::string s = ev[key].get<std::string>();
-        std::string st = translate_if_path(s);
-        std::replace(st.begin(), st.end(), '"', '\'');
-        return "\"" + st + "\"";
-    }
-    else {
-        return ev[key].dump();
-    }
-}
-
-// output all events as a sparse CSV timeline with merged PPID and FilePath
-std::string create_timeline_csv(const std::vector<json>& events) {
-    std::ostringstream csv_output;
-
-    std::vector<std::string> all_keys;
-    if (g_super_debug) {
-        std::cout << "[+] EDRi: Adding predefined key for CSV header: ";
-    }
-    for (const auto& k : csv_header_start) {
-        all_keys.push_back(k);
-        if (g_super_debug) {
-			 std::cout << k << ", ";
-        }
-    }
-    if (g_super_debug) {
-        std::cout << "\n";
-    }
-
-    // collect all property keys except merged ones
-    if (g_super_debug) {
-        std::cout << "[+] EDRi: Adding new key for CSV header: ";
-    }
-    for (const auto& ev : events) {
-        for (auto it = ev.begin(); it != ev.end(); ++it) {
-            // skip already inserted keys
-            if (std::find(all_keys.begin(), all_keys.end(), it.key()) != all_keys.end()) continue;
-
-			// or insert new key
-            all_keys.push_back(it.key());
-            if (g_super_debug) {
-                std::cout << it.key() << ", ";
-            }
-        }
-    }
-    if (g_super_debug) {
-        std::cout << "\n";
-    }
-
-    // add header to csv_output
-    for (const auto& key : all_keys) {
-        csv_output << key << ",";
-    }
-	csv_output << COLOR_HEADER; // add color info column
-    csv_output << "\n";
-
-    // print each event as a row    
-    for (const auto& ev : events) {
-		if (ev.is_null()) continue; // skip null events
-
-        // traverse keys IN ORDER OF CSV HEADER
-		// i.e. given: key from csv, check: if event has it, add value, else skip (add "")
-        for (const auto& key : all_keys) {
-            // check if this event has a value for this key
-            if (ev.contains(key)) {
-                csv_output << normalized_value(ev, key);
-            }
-            // else print "" to skip it
-            else {
-                csv_output << "";
-            }
-			csv_output << ",";
-        }
-		csv_output << add_color_info(ev);
-        csv_output << "\n";
-    }
-	return csv_output.str();
-}
-
-void store_results(std::string output) {
+void process_results(std::string output, bool dump_sig) {
+    std::map<Classifier, std::vector<json>> cleaned_events = get_cleaned_events();
     print_etw_counts();
 
-    std::map<Classifier, std::vector<json>> all_events = get_events();
-    for (auto& c : all_events) {
+    write_events_to_file(output);
 
-        std::vector<json>& events = all_events[c.first];
-        // sort events by timestamp
-        std::sort(events.begin(), events.end(), [](const nlohmann::json& a, const nlohmann::json& b) {
-            const std::string& ts1 = a["timestamp"];
-            const std::string& ts2 = b["timestamp"];
-            return ts1 < ts2; // lexicographical compare works for ISO-like timestamps
-            });
-
-        std::string csv_output = create_timeline_csv(events);
-        std::string output_base = output.substr(0, output.find_last_of('.')); // without .csv
-        std::string output_final = output_base + "-" + get_classifier_name(c.first) + ".csv"; // add classifier to filename
-        std::ofstream out(output_final);
-        out << csv_output;
-        out.close();
+    if (dump_sig) {
+        dump_signatures(); // can only dump from antimalware provider
     }
     std::cout << "[*] EDRi: Done\n";
 }
@@ -270,6 +177,7 @@ int main(int argc, char* argv[]) {
 	std::cout << "[*] EDRi: Tracking options: ETW-Misc: " << (trace_etw_misc ? "Yes" : "No") 
 		<< ", ETW-TI: " << (trace_etw_ti ? "Yes" : "No")
 		<< ", Hook-ntdll: " << (hook_ntdll ? "Yes" : "No") << "\n";
+	bool dump_sig = trace_etw_misc; // can only dump signatures if antimalware provider is traced
 
     // debug
     if (result.count("debug") > 0) {
@@ -349,8 +257,8 @@ int main(int argc, char* argv[]) {
 
     // hooking emits etw events, so hooking must be done after the traces are started
     if (hook_ntdll) {
-        std::string main_edr_exe = edr_specific_exes[0]; // first exe is the main edr exe
-        //std::string main_edr_exe = "lsass.exe"; // TODO debug
+        //std::string main_edr_exe = edr_specific_exes[0]; // first exe is the main edr exe
+        std::string main_edr_exe = "attack.exe"; // TODO debug
         int edr_pid = get_PID_by_name(main_edr_exe);
         if (edr_pid == -1) {
             std::cerr << "[!] EDRi: Could not find the EDR process " << main_edr_exe << ", is it running?\n";
@@ -386,7 +294,7 @@ int main(int argc, char* argv[]) {
         if (!launch_as_child(g_attack_exe_path)) {
             std::cerr << "[!] EDRi: Failed to launch the attack exe: " << g_attack_exe_path << ". Was it marked as a virus?\n";
             stop_all_etw_traces();
-            store_results(output);
+            process_results(output, dump_sig);
             return 0;
         }
     }
@@ -399,7 +307,7 @@ int main(int argc, char* argv[]) {
             if (cnt_waited > 20000) {
                 std::cerr << "[!] EDRi: Timeout waiting for attack PID, did you start " << g_attack_exe_path << ", or was it marked as a virus?\n";
                 stop_all_etw_traces();
-				store_results(output);
+				process_results(output, dump_sig);
                 return 0;
             }
         }
@@ -428,13 +336,15 @@ int main(int argc, char* argv[]) {
     }
     std::cout << "[*] EDRi: All " << threads.size() << " threads finished\n";
     for (auto h : threads) {
-        CloseHandle(h);
+        try {
+            CloseHandle(h);
+        }
+		catch (...) {
+			std::cerr << "[!] EDRi: Closing thread handle failed, ignoring...\n";
+        }
     }
     threads.clear();
 
-    store_results(output);
-    if (trace_etw_misc) {
-        dump_signatures(); // can only dump from antimalware provider
-    }
+    process_results(output, dump_sig);
 	return 0;
 }

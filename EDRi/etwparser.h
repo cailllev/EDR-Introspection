@@ -88,22 +88,12 @@ struct MergeCategory {
 };
 extern MergeCategory ppid_keys, tpid_keys, ttid_keys, filepath_keys;
 
-// custom key for technicolor in timeline explorer
-static const std::string COLOR_HEADER = "Source Name,Long Description,Timestamp";
-static const std::string FAKE_TIMESTAMP = "2020-20-20 20:20:20";
-static const std::string COLOR_GREEN = "FILE,Name:," + FAKE_TIMESTAMP;
-static const std::string COLOR_RED = "PREFETCH,was executed," + FAKE_TIMESTAMP;
-static const std::string COLOR_BLUE = "REG,Computer\\HKEY_LOCAL_MACHINE\\SYSTEM\\DUMMY," + FAKE_TIMESTAMP;
-static const std::string COLOR_PURPLE = "ETW,," + FAKE_TIMESTAMP;
-static const std::string COLOR_YELLOW = "LNK,," + FAKE_TIMESTAMP;
-static const std::string COLOR_GRAY = "UNKNOWN,," + FAKE_TIMESTAMP;
-std::string add_color_info(const json&);
-
-// getting the events
+// processing the events
 enum Classifier;
-std::map<Classifier, std::vector<json>> get_events();
+std::map<Classifier, std::vector<json>> get_cleaned_events();
 std::string get_classifier_name(Classifier);
 void print_etw_counts();
+void dump_signatures();
 
 // internal functions
 void my_event_callback(const EVENT_RECORD&, const krabs::trace_context&);
@@ -126,4 +116,4 @@ Classifier filter_kernel_file(json&);
 Classifier filter_kernel_network(json&);
 Classifier filter_antimalware(json&);
 void count_event(json, bool);
-void dump_signatures();
+void clean_events();

@@ -1,6 +1,7 @@
 #include <krabs.hpp>
 #include "helpers/json.hpp"
 #include <iostream>
+#include <fstream>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #pragma comment(lib, "Ws2_32.lib")
@@ -30,6 +31,9 @@ int g_injected_PID = 0;
 bool g_traces_started = false;
 bool g_attack_terminated = false;
 
+// static
+static bool cleaned_events = false;
+
 // keys that get merged together
 MergeCategory ppid_keys = {
     PPID,
@@ -52,12 +56,21 @@ std::vector<MergeCategory> key_categories_to_merge = { ppid_keys, tpid_keys, tti
 // pid fields that should have the exe name added at print time
 static const std::vector<std::string> fields_to_add_exe_name = { PID, PPID, TARGET_PID, ORIGINATING_PID };
 
+// define start of CSV header, all other keys are added in order later
+std::vector<std::string> csv_header_start = {
+    TIMESTAMP, TYPE, PROVIDER_NAME, EVENT_ID, TASK, PID, TID, PPID, ORIGINATING_PID, TARGET_PID, TARGET_TID, MESSAGE,
+    FILEPATH, "cachename", "result", "vname", "sigseq", "sigsha", "commandline", "firstparam", "secondparam",
+};
+
 
 // hand over schema for parsing
 void my_event_callback(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
     try {
         krabs::schema schema(record, trace_context.schema_locator);
         json ev = parse_my_etw_event(Event{ record, schema });
+        if (ev.is_null()) {
+            return; // ignore empty events
+		}
         post_my_parsing_checks(ev);
         add_exe_information(ev); // must be after all parsing checks and filtering but before adding it to events
 
@@ -78,6 +91,9 @@ void event_callback(const EVENT_RECORD& record, const krabs::trace_context& trac
     try {
         krabs::schema schema(record, trace_context.schema_locator);
         json ev = parse_etw_event(Event{ record, schema });
+        if (ev.is_null()) {
+            return; // ignore empty events
+        }
         post_parsing_checks(ev);
 
         if (!g_traces_started) {
@@ -752,8 +768,30 @@ Classifier filter_antimalware(json& ev) {
     return Relevant; // put event ids without a filter into relevant
 }
 
-std::map<Classifier, std::vector<json>> get_events() {
-    return etw_events;
+std::map<Classifier, std::vector<json>> get_cleaned_events() {
+    if (!cleaned_events) {
+        clean_events();
+    }
+	return etw_events;
+}
+
+// remove empty events or events without timestamp
+void clean_events() {
+    if (g_debug) {
+        std::cout << "[*] Parser: Cleaning events, removing empty events or events without " << TIMESTAMP << " field\n";
+	}
+    for (auto& c : etw_events) {
+		std::vector<json>& events = etw_events[c.first]; // this must be a reference to modify the events vectors
+        size_t before = events.size();
+        events.erase(std::remove_if(events.begin(), events.end(), [](const json& e) {
+            return e.is_null() || !e.contains(TIMESTAMP) || !e[TIMESTAMP].is_string();
+            }), events.end());
+        size_t removed = before - events.size();
+        if (removed > 0 && g_debug) {
+            std::cout << "[-] Parser: Removed " << removed << " empty events or events without " << TIMESTAMP << " in " << classifier_names[c.first] << "\n";
+        }
+    }
+	cleaned_events = true;
 }
 
 std::string get_classifier_name(Classifier c) {
@@ -761,6 +799,9 @@ std::string get_classifier_name(Classifier c) {
 }
 
 void print_etw_counts() {
+    if (!cleaned_events) {
+		clean_events();
+    }
     for (auto& c : etw_events) {
         std::ostringstream oss;
 		Classifier classifier = c.first;
@@ -768,10 +809,10 @@ void print_etw_counts() {
 
         // count by provider
 		std::map<std::string, int> provider_counts;
-        for (auto it = events.begin(); it != events.end(); ++it) {
+        for (auto& ev : events) {
             std::string provider = "<empty provider>";
-            if (it->contains(PROVIDER_NAME)) {
-                provider = (*it)[PROVIDER_NAME];
+            if (ev.contains(PROVIDER_NAME)) {
+                provider = ev[PROVIDER_NAME];
             }
             if (provider_counts.find(provider) == provider_counts.end()) {
                 provider_counts[provider] = 1;
@@ -817,16 +858,49 @@ std::string add_color_info(const json& ev) {
 	return ""; // event / provider not mapped
 }
 
+void write_events_to_file(const std::string& output) {
+    if (!cleaned_events) {
+        clean_events();
+    }
+    for (auto& c : etw_events) {
+        std::vector<json>& events = etw_events[c.first];
+        try {
+            // sort events by timestamp
+            std::sort(events.begin(), events.end(), [](const json& a, const json& b) {
+                const std::string& ts1 = a[TIMESTAMP];
+                const std::string& ts2 = b[TIMESTAMP];
+                return ts1 < ts2; // lexicographical compare works for ISO-like timestamps
+                });
+
+            // write to csv
+            std::string csv_output = create_timeline_csv(events, csv_header_start);
+            std::string output_base = output.substr(0, output.find_last_of('.')); // without .csv
+            std::string output_final = output_base + "-" + get_classifier_name(c.first) + ".csv"; // add classifier to filename
+            std::ofstream out(output_final);
+            if (!out.is_open()) {
+                std::cerr << "[!] EDRi: Failed to open output file: " << output_final << "\n";
+            }
+            else {
+                out << csv_output;
+                out.close();
+            }
+        }
+        catch (const std::exception& ex) {
+            std::cerr << "[!] Parser: write_events_to_file exception: " << ex.what() << "\n";
+        }
+        catch (...) {
+            std::cerr << "[!] Parser: write_events_to_file unknown exception\n";
+        }
+    }
+}
+
 // dumps all relevant info from antimalware provider event id 3,8,74,104
 void dump_signatures() {
+    if (!cleaned_events) {
+        clean_events();
+    }
     for (const auto& ev : etw_events[Relevant]) {
         try {
-            if (!ev.contains(EVENT_ID) || !ev.contains(PROVIDER_NAME)) {
-                if (g_debug) {
-                    std::cout << "[-] Parser: Warning: Event missing " << EVENT_ID << " field: " << ev.dump() << "\n";
-                }
-                continue;
-            }
             if (ev[PROVIDER_NAME] != ANTIMALWARE_PROVIDER) {
                 continue; // only this provider contains the signatures
             }
