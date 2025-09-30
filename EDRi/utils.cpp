@@ -531,3 +531,83 @@ std::string translate_if_path(const std::string& s) {
 
     return s2;
 }
+
+std::string normalized_value(json ev, std::string key) {
+    if (ev[key].is_string()) {
+        std::string s = ev[key].get<std::string>();
+        std::string st = translate_if_path(s);
+        std::replace(st.begin(), st.end(), '"', '\'');
+        return "\"" + st + "\"";
+    }
+    else {
+        return ev[key].dump();
+    }
+}
+
+// output all events as a sparse CSV timeline with merged PPID and FilePath
+std::string create_timeline_csv(const std::vector<json>& events, std::vector<std::string> header_start) {
+    std::ostringstream csv_output;
+
+    std::vector<std::string> all_keys;
+    if (g_super_debug) {
+        std::cout << "[+] EDRi: Adding predefined key for CSV header: ";
+    }
+    for (const auto& k : header_start) {
+        all_keys.push_back(k);
+        if (g_super_debug) {
+            std::cout << k << ", ";
+        }
+    }
+    if (g_super_debug) {
+        std::cout << "\n";
+    }
+
+    // collect all property keys except merged ones
+    if (g_super_debug) {
+        std::cout << "[+] EDRi: Adding new key for CSV header: ";
+    }
+    for (const auto& ev : events) {
+        for (auto it = ev.begin(); it != ev.end(); ++it) {
+            // skip already inserted keys
+            if (std::find(all_keys.begin(), all_keys.end(), it.key()) != all_keys.end()) continue;
+
+            // or insert new key
+            all_keys.push_back(it.key());
+            if (g_super_debug) {
+                std::cout << it.key() << ", ";
+            }
+        }
+    }
+    if (g_super_debug) {
+        std::cout << "\n";
+    }
+
+    // add header to csv_output
+    for (const auto& key : all_keys) {
+        csv_output << key << ",";
+    }
+    csv_output << COLOR_HEADER; // add color info column
+    csv_output << "\n";
+
+    // print each event as a row    
+    for (const auto& ev : events) {
+        if (ev.is_null()) continue; // skip null events
+
+        // traverse keys IN ORDER OF CSV HEADER
+        // i.e. given: key from csv, check: if event has it, add value, else skip (add "")
+        for (const auto& key : all_keys) {
+            // check if this event has a value for this key
+            if (ev.contains(key)) {
+                csv_output << normalized_value(ev, key);
+            }
+            // else print "" to skip it
+            else {
+                csv_output << "";
+            }
+            csv_output << ",";
+        }
+        csv_output << add_color_info(ev);
+        csv_output << "\n";
+    }
+    return csv_output.str();
+}

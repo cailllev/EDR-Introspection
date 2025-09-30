@@ -31,3 +31,16 @@ std::string get_attack_enc_path(const std::string&);
 
 void build_device_map();
 std::string translate_if_path(const std::string&);
+
+// custom key for technicolor in timeline explorer
+static const std::string COLOR_HEADER = "Source Name,Long Description,Timestamp";
+static const std::string FAKE_TIMESTAMP = "2020-20-20 20:20:20";
+static const std::string COLOR_GREEN = "FILE,Name:," + FAKE_TIMESTAMP;
+static const std::string COLOR_RED = "PREFETCH,was executed," + FAKE_TIMESTAMP;
+static const std::string COLOR_BLUE = "REG,Computer\\HKEY_LOCAL_MACHINE\\SYSTEM\\DUMMY," + FAKE_TIMESTAMP;
+static const std::string COLOR_PURPLE = "ETW,," + FAKE_TIMESTAMP;
+static const std::string COLOR_YELLOW = "LNK,," + FAKE_TIMESTAMP;
+static const std::string COLOR_GRAY = "UNKNOWN,," + FAKE_TIMESTAMP;
+std::string add_color_info(const json&);
+void write_events_to_file(const std::string&);
+std::string create_timeline_csv(const std::vector<json>&, std::vector<std::string>);
