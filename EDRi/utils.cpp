@@ -526,7 +526,7 @@ std::string translate_if_path(const std::string& s) {
     s2 = std::regex_replace(s2, extendedPrefix, "$1\\\\");
 
     if (g_super_debug && s2 != s) {
-        std::cout << "[~] EDRi: Translated path " << s << " to " << s2 << "\n";
+        std::cout << "[~] Utils: Translated path " << s << " to " << s2 << "\n";
     }
 
     return s2;
@@ -550,7 +550,7 @@ std::string create_timeline_csv(const std::vector<json>& events, std::vector<std
 
     std::vector<std::string> all_keys;
     if (g_super_debug) {
-        std::cout << "[+] EDRi: Adding predefined key for CSV header: ";
+        std::cout << "[+] Utils: Adding predefined key for CSV header: ";
     }
     for (const auto& k : header_start) {
         all_keys.push_back(k);
@@ -564,7 +564,7 @@ std::string create_timeline_csv(const std::vector<json>& events, std::vector<std
 
     // collect all property keys except merged ones
     if (g_super_debug) {
-        std::cout << "[+] EDRi: Adding new key for CSV header: ";
+        std::cout << "[+] Utils: Adding new key for CSV header: ";
     }
     for (const auto& ev : events) {
         for (auto it = ev.begin(); it != ev.end(); ++it) {

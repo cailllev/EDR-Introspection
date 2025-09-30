@@ -257,8 +257,8 @@ int main(int argc, char* argv[]) {
 
     // hooking emits etw events, so hooking must be done after the traces are started
     if (hook_ntdll) {
-        //std::string main_edr_exe = edr_specific_exes[0]; // first exe is the main edr exe
-        std::string main_edr_exe = "attack.exe"; // TODO debug
+        std::string main_edr_exe = edr_specific_exes[0]; // first exe is the main edr exe
+        //std::string main_edr_exe = "attack.exe"; // TODO debug
         int edr_pid = get_PID_by_name(main_edr_exe);
         if (edr_pid == -1) {
             std::cerr << "[!] EDRi: Could not find the EDR process " << main_edr_exe << ", is it running?\n";
