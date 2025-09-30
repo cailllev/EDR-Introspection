@@ -778,7 +778,7 @@ std::map<Classifier, std::vector<json>> get_cleaned_events() {
 // remove empty events or events without timestamp
 void clean_events() {
     if (g_debug) {
-        std::cout << "[*] Parser: Cleaning events, removing empty events or events without " << TIMESTAMP << " field\n";
+        std::cout << "[-] ETW: Cleaning events, removing empty events or events without " << TIMESTAMP << " field\n";
 	}
     for (auto& c : etw_events) {
 		std::vector<json>& events = etw_events[c.first]; // this must be a reference to modify the events vectors
@@ -788,7 +788,7 @@ void clean_events() {
             }), events.end());
         size_t removed = before - events.size();
         if (removed > 0 && g_debug) {
-            std::cout << "[-] Parser: Removed " << removed << " empty events or events without " << TIMESTAMP << " in " << classifier_names[c.first] << "\n";
+            std::cout << "[-] ETW: Removed " << removed << " empty events or events without " << TIMESTAMP << " in " << classifier_names[c.first] << "\n";
         }
     }
 	cleaned_events = true;
@@ -836,7 +836,7 @@ void print_etw_counts() {
 std::string add_color_info(const json& ev) {
     if (!ev.contains(PROVIDER_NAME)) {
         if (g_debug) {
-            std::cout << "[-] Utils: Warning: Event missing " << PROVIDER_NAME << " field: " << ev.dump() << "\n";
+            std::cout << "[-] ETW: Warning: Event missing " << PROVIDER_NAME << " field: " << ev.dump() << "\n";
         }
         return COLOR_GRAY;
     }
@@ -878,7 +878,7 @@ void write_events_to_file(const std::string& output) {
             std::string output_final = output_base + "-" + get_classifier_name(c.first) + ".csv"; // add classifier to filename
             std::ofstream out(output_final);
             if (!out.is_open()) {
-                std::cerr << "[!] EDRi: Failed to open output file: " << output_final << "\n";
+                std::cerr << "[!] ETW: Failed to open output file: " << output_final << "\n";
             }
             else {
                 out << csv_output;
@@ -886,10 +886,10 @@ void write_events_to_file(const std::string& output) {
             }
         }
         catch (const std::exception& ex) {
-            std::cerr << "[!] Parser: write_events_to_file exception: " << ex.what() << "\n";
+            std::cerr << "[!] ETW: write_events_to_file exception: " << ex.what() << "\n";
         }
         catch (...) {
-            std::cerr << "[!] Parser: write_events_to_file unknown exception\n";
+            std::cerr << "[!] ETW: write_events_to_file unknown exception\n";
         }
     }
 }
@@ -907,7 +907,7 @@ void dump_signatures() {
             if (ev[EVENT_ID] == 3) {
                 if (!ev.contains(MESSAGE)) {
                     if (g_debug) {
-                        std::cout << "[-] Parser: Warning: Event with ID 3 missing " << MESSAGE << " field: " << ev.dump() << "\n";
+                        std::cout << "[-] ETW: Warning: Event with ID 3 missing " << MESSAGE << " field: " << ev.dump() << "\n";
                     }
                     continue;
                 }
@@ -923,21 +923,21 @@ void dump_signatures() {
                     sr += r.length();
                     std::string sig = m.substr(ss, es - ss);
                     std::string res = m.substr(sr, er - sr);
-                    std::cout << "[+] Parser: Found signature: " << sig << " in " << res << "\n";
+                    std::cout << "[*] ETW: Found signature: " << sig << " in " << res << "\n";
                 }
             }
             if (ev[EVENT_ID] == 8) {
                 if (!ev.contains(PID)) {
                     if (g_debug) {
-                        std::cout << "[-] Parser: Warning: Event with ID 8 missing " << PID << " field: " << ev.dump() << "\n";
+                        std::cout << "[-] ETW: Warning: Event with ID 8 missing " << PID << " field: " << ev.dump() << "\n";
                     }
                     continue;
                 }
-                std::cout << "[+] Parser: Behaviour Monitoring Detection: " <<
-                    "pid=" << get_val(ev, PID) << ", sig=" << get_val(ev, FILEPATH); // THIS NEEDS DEBUGGING
+                std::cout << "[*] ETW: Behaviour Monitoring Detection: " <<
+                    "pid=" << get_val(ev, PID) << ", sig=" << get_val(ev, FILEPATH) << "\n"; // TODO debugging, correct field??
             }
             if (ev[EVENT_ID] == 74) {
-                std::cout << "[+] Parser: Sense Remidiation" <<
+                std::cout << "[*] ETW: Sense Remidiation" <<
                     ": threatname=" << get_val(ev, THREATNAME) <<
                     ", signature=" << get_val(ev, SIGSEQ) <<
                     ", sigsha=" << get_val(ev, SIGSHA) <<
@@ -950,13 +950,13 @@ void dump_signatures() {
             if (ev[EVENT_ID] == 104) {
                 if (!ev.contains(FIRST_PARAM) || !ev.contains(SECOND_PARAM)) {
                     if (g_debug) {
-                        std::cout << "[-] Parser: Warning: Event with ID 104 missing " << FIRST_PARAM << " or " << SECOND_PARAM << " field: " << ev.dump() << "\n";
+                        std::cout << "[-] ETW: Warning: Event with ID 104 missing " << FIRST_PARAM << " or " << SECOND_PARAM << " field: " << ev.dump() << "\n";
                     }
                 }
             }
         }
         catch (const std::exception& ex) {
-            std::cerr << "[!] Parser: dump_signatures exception: " << ex.what() << "\n";
+            std::cerr << "[!] ETW: dump_signatures exception: " << ex.what() << "\n";
 		}
     }
 }
