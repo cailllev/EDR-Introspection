@@ -44,8 +44,6 @@ std::shared_mutex g_procs_mutex;
 // attack exe paths
 std::string g_attack_exe_path = "C:\\Users\\Public\\Downloads\\attack.exe";
 
-std::string hooker_dll_path = "C:\\Users\\hacker\\source\\repos\\EDR-Introspection\\x64\\Release\\EDRHooker.dll";
-
 // more debug info
 bool g_debug = false;
 bool g_super_debug = false;
@@ -264,12 +262,12 @@ int main(int argc, char* argv[]) {
             std::cerr << "[!] EDRi: Could not find the EDR process " << main_edr_exe << ", is it running?\n";
             stop_all_etw_traces();
             return 1;
-        }
-        if (!inject_dll(edr_pid, hooker_dll_path)) {
+        }/*
+        if (!inject_dll(edr_pid, get_hook_dll_path())) {
             std::cerr << "[!] EDRi: Failed to inject the hooker dll into " << main_edr_exe << "\n";
             stop_all_etw_traces();
             return 1;
-        }
+        }*/
         std::cout << "[+] EDRi: Hooking ntdll.dll of " << main_edr_exe << " successful\n";
     }
 

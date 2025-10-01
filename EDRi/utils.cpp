@@ -118,7 +118,7 @@ bool xor_file(std::string in_path, std::string out_path) {
 }
 
 // get the EDRi.exe's path  
-std::wstring get_executable_path() {
+std::wstring get_base_path() {
     wchar_t buffer[MAX_PATH];
     // Get the full path of the executable
     DWORD length = GetModuleFileNameW(NULL, buffer, MAX_PATH);
@@ -133,13 +133,18 @@ std::wstring get_executable_path() {
     return exePath.substr(0, pos + 1);
 }
 
+std::string get_hook_dll_path() {
+    std::wstring exe_path = get_base_path();
+    return wstring2string(exe_path) + "Hooks.dll";
+}
+
 // returns the files from /EDRi/attacks
 std::string get_available_attacks() {
     std::ostringstream oss;
     WIN32_FIND_DATA findData;
     HANDLE hFind = INVALID_HANDLE_VALUE;
 
-    std::wstring searchPath = get_executable_path() + attacks_subfolder + L"*";
+    std::wstring searchPath = get_base_path() + attacks_subfolder + L"*";
     hFind = FindFirstFile(searchPath.c_str(), &findData);
 
     if (hFind == INVALID_HANDLE_VALUE) {
@@ -178,7 +183,7 @@ bool is_attack_available(const std::string& attack) {
 }
 
 std::string get_attack_enc_path(const std::string& attack) {
-	std::wstring exe_path = get_executable_path();
+	std::wstring exe_path = get_base_path();
     return wstring2string(exe_path) + wstring2string(attacks_subfolder) + attack + attack_suffix;
 }
 
