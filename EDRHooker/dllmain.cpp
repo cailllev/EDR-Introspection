@@ -245,7 +245,7 @@ DWORD WINAPI t_InitHooks(LPVOID param)
 }
 
 DWORD WINAPI t_selfUnloadThread(LPVOID hinst) {
-    Sleep(10000); // give the loader time to release the lock
+    Sleep(2000); // give the loader time to release the lock
     FreeLibraryAndExitThread((HMODULE)hinst, 0);
     return 0;
 }
