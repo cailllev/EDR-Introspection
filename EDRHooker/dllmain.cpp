@@ -244,8 +244,8 @@ DWORD WINAPI t_InitHooks(LPVOID param)
     return 0;
 }
 
-DWORD WINAPI SelfUnloadThread(LPVOID hinst) {
-    Sleep(2000); // give the loader time to release the lock
+DWORD WINAPI t_selfUnloadThread(LPVOID hinst) {
+    Sleep(10000); // give the loader time to release the lock
     FreeLibraryAndExitThread((HMODULE)hinst, 0);
     return 0;
 }
@@ -258,7 +258,7 @@ BOOL WINAPI DllMain(HINSTANCE hinst, DWORD reason, LPVOID reserved) {
         TCHAR processName[MAX_PATH] = { 0 };
         if (GetModuleBaseName(GetCurrentProcess(), nullptr, processName, MAX_PATH)) {
             bool allowed = false;
-            for (auto& s : { _T("attack.exe"), _T("WindowsTerminal.exe"), _T("MsMpEng.exe") }) {
+            for (auto& s : { _T("attack.exe"), _T("PowerShell.exe"), _T("MsMpEng.exe") }) {
                 if (_tcsicmp(processName, s) == 0) {
                     allowed = true;
                     break;
@@ -271,7 +271,7 @@ BOOL WINAPI DllMain(HINSTANCE hinst, DWORD reason, LPVOID reserved) {
             }
             else {
                 // Only start the unload thread AFTER DllMain finishes
-                HANDLE hThread = CreateThread(nullptr, 0, SelfUnloadThread, (LPVOID)hinst, 0, nullptr);
+                HANDLE hThread = CreateThread(nullptr, 0, t_selfUnloadThread, (LPVOID)hinst, 0, nullptr);
                 if (hThread) CloseHandle(hThread);
             }
         }
