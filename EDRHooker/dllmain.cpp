@@ -1,4 +1,6 @@
 #include <windows.h>
+#include <psapi.h>
+#include <tchar.h>
 #include <iostream>
 #include <map>
 #include <stdio.h>
@@ -190,7 +192,6 @@ NTSTATUS NTAPI Hook_NtClose(HANDLE Handle)
 void InstallHooks()
 {
     if (g_initialized.exchange(true)) return; // only once
-	std::cout << "[*] Hook-DLL: Installing hooks\n";
 
     // MinHook init
     if (MH_Initialize() != MH_OK) {
@@ -239,7 +240,15 @@ void RemoveHooks()
 
 DWORD WINAPI t_InitHooks(LPVOID)
 {
-    InstallHooks();
+    TCHAR processName[MAX_PATH] = { 0 };
+    if (GetModuleBaseName(GetCurrentProcess(), nullptr, processName, MAX_PATH)) {
+		// limit hooking to certain processes only
+        for (auto& s : { _T("attack.exe"), _T("WindowsTerminal.exe"), _T("MsMpEng.exe") }) {  // TODO via config / env var / reg key?
+            if (_tcsicmp(processName, s) == 0) {
+                InstallHooks();
+            }
+        }
+    }
     return 0;
 }
 
