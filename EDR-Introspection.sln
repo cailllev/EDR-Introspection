@@ -9,7 +9,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Injector", "helpers\Injecto
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RunAsUser", "RunAsUser\RunAsUser.vcxproj", "{006C0FFD-5CBF-4845-92A1-497F2621C000}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EDRHooker", "EDRHooker\EDRHooker.vcxproj", "{96B3FD15-CE31-433B-B93B-75DFA28A7525}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Hooks", "EDRHooker\EDRHooker.vcxproj", "{96B3FD15-CE31-433B-B93B-75DFA28A7525}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

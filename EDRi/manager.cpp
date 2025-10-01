@@ -254,22 +254,6 @@ int main(int argc, char* argv[]) {
 	std::cout << "[*] EDRi: Traces started\n";
 
     // hooking emits etw events, so hooking must be done after the traces are started
-    if (hook_ntdll) {
-        std::string main_edr_exe = edr_specific_exes[0]; // first exe is the main edr exe
-        //std::string main_edr_exe = "attack.exe"; // TODO debug
-        int edr_pid = get_PID_by_name(main_edr_exe);
-        if (edr_pid == -1) {
-            std::cerr << "[!] EDRi: Could not find the EDR process " << main_edr_exe << ", is it running?\n";
-            stop_all_etw_traces();
-            return 1;
-        }/*
-        if (!inject_dll(edr_pid, get_hook_dll_path())) {
-            std::cerr << "[!] EDRi: Failed to inject the hooker dll into " << main_edr_exe << "\n";
-            stop_all_etw_traces();
-            return 1;
-        }*/
-        std::cout << "[+] EDRi: Hooking ntdll.dll of " << main_edr_exe << " successful\n";
-    }
 
     // ATTACK
 	// decrypt the attack exe
@@ -311,6 +295,23 @@ int main(int argc, char* argv[]) {
         }
     }
 	emit_etw_event("[>]  After starting the attack exe", true);
+    Sleep(1000);
+    if (hook_ntdll) {
+        //std::string main_edr_exe = edr_specific_exes[0]; // first exe is the main edr exe
+        std::string main_edr_exe = "attack.exe"; // TODO debug
+        int edr_pid = get_PID_by_name(main_edr_exe);
+        if (edr_pid == -1) {
+            std::cerr << "[!] EDRi: Could not find the EDR process " << main_edr_exe << ", is it running?\n";
+            stop_all_etw_traces();
+            return 1;
+        }
+        if (!inject_dll(edr_pid, get_hook_dll_path())) {
+            std::cerr << "[!] EDRi: Failed to inject the hooker dll into " << main_edr_exe << "\n";
+            stop_all_etw_traces();
+            return 1;
+        }
+        std::cout << "[+] EDRi: Hooking ntdll.dll of " << main_edr_exe << " successful\n";
+    }
 
 	// wait until the attack.exe terminates again
     std::cout << "[+] EDRi: Waiting for the attack exe to finish...\n";
