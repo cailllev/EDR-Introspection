@@ -24,6 +24,7 @@ std::string unnecessary_tools_running();
 bool filepath_match(std::string, std::string);
 bool launch_as_child(const std::string& path);
 
+std::string get_hook_dll_path();
 bool xor_file(std::string, std::string);
 std::string get_available_attacks();
 bool is_attack_available(const std::string&);
