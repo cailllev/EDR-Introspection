@@ -119,9 +119,7 @@ void print_granted_access(HANDLE h) {
 // Inject DLL into target process
 bool inject_dll(int pid, const std::string& dllPath)
 {
-    // TODO either patch the hProcess access rights via system driver or strip protections completely
     HANDLE hProcess = OpenProcess(
-        //PROCESS_CREATE_THREAD | PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION | PROCESS_VM_WRITE,
         PROCESS_ALL_ACCESS,
         FALSE, pid);
 
