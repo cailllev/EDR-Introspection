@@ -24,7 +24,7 @@
     <ProjectGuid>{96b3fd15-ce31-433b-b93b-75dfa28a7525}</ProjectGuid>
     <RootNamespace>EDRHooker</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectName>Hooks</ProjectName>
+    <ProjectName>EDRHooker</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
