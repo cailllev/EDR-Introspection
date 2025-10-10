@@ -273,6 +273,7 @@ int main(int argc, char* argv[]) {
 		std::cout << "[+] EDRi: Disabled kernel callbacks. Injecting the hooker dll into " << edr_pid << ":" << main_edr_exe << "\n";
         if (!inject_dll(edr_pid, get_hook_dll_path())) {
             std::cerr << "[!] EDRi: Failed to inject the hooker dll into " << main_edr_exe << "\n";
+			enable_kernel_callbacks(); // try to re-enable callbacks (cleanup)
             stop_all_etw_traces();
             return 1;
         }
