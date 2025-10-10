@@ -66,41 +66,32 @@ bool disable_kernel_callbacks() {
 
     while (true)
     {
-        std::cout << "while...\n";
         BOOL success = ReadFile(childStdOutRead, buffer, sizeof(buffer) - 1, &bytesRead, nullptr);
         if (!success || bytesRead == 0) {
             std::cerr << "[!] Sandblast: Child process closed output or failed.\n";
             break;
         }
-        std::cout << "read buffer\n";
 
         buffer[bytesRead] = 0;
         output += buffer;
 
-		std::cout << buffer; // print output in real-time
-		std::cout << "printed buffer\n";
-
         if (output.find("Press ENTER to enable callbacks again:") != std::string::npos) {
             std::cout << "[+] Sandblast: Kernel callbacks disabled\n";
             disabled = true;
-            return true;
+            break;
         }
         if (output.find("No EDR callbacks found, nothing to disable") != std::string::npos) {
-            std::cerr << "[+] Sandblast: No EDR callbacks found, continuing...\n";
+            std::cout << "[+] Sandblast: No EDR callbacks found, continuing...\n";
             notFound = true;
-            return true;
+            break;
 		}
-        std::cout << "looping...\n";
 
         Sleep(100); // avoid busy waiting
     }
-
-    CloseHandle(childStdOutRead);
-    CloseHandle(childStdInWrite);
+	CloseHandle(childStdOutRead);
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
-
-    return false;
+	return true;
 }
 
 bool enable_kernel_callbacks() {
