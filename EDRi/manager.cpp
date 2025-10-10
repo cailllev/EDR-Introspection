@@ -264,6 +264,7 @@ int main(int argc, char* argv[]) {
             stop_all_etw_traces();
             return 1;
         }
+		std::cout << "[*] EDRi: Found the EDR process " << main_edr_exe << " with PID " << edr_pid << "\n";
         if (!disable_kernel_callbacks()) {
             std::cerr << "[!] EDRi: Failed to disable kernel callbacks\n";
             stop_all_etw_traces();
@@ -277,7 +278,7 @@ int main(int argc, char* argv[]) {
         }
         std::cout << "[+] EDRi: Hooking ntdll.dll of " << main_edr_exe << " successful\n";
 		Sleep(2000); // wait a bit until the dll is loaded
-        enable_kernel_callacks();
+        enable_kernel_callbacks();
     }
 
     // ATTACK
@@ -320,7 +321,6 @@ int main(int argc, char* argv[]) {
         }
     }
 	emit_etw_event("[>]  After starting the attack exe", true);
-    //Sleep(1000);
 
 	// wait until the attack.exe terminates again
     std::cout << "[+] EDRi: Waiting for the attack exe to finish...\n";
