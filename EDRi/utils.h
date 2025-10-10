@@ -24,6 +24,7 @@ std::string unnecessary_tools_running();
 bool filepath_match(std::string, std::string);
 bool launch_as_child(const std::string& path);
 
+std::wstring get_base_path();
 std::string get_hook_dll_path();
 bool xor_file(std::string, std::string);
 std::string get_available_attacks();
@@ -33,7 +34,7 @@ std::string get_attack_enc_path(const std::string&);
 void build_device_map();
 std::string translate_if_path(const std::string&);
 
-// custom key for technicolor in timeline explorer
+// custom key for technicolor in timeline explorer TODO enable disable flag
 static const std::string COLOR_HEADER = "Source Name,Long Description,Timestamp";
 static const std::string FAKE_TIMESTAMP = "2020-20-20 20:20:20";
 static const std::string COLOR_GREEN = "FILE,Name:," + FAKE_TIMESTAMP;
