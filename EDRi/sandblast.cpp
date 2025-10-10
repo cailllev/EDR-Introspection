@@ -41,7 +41,7 @@ bool disable_kernel_callbacks() {
     if (!CreateProcessW(
         nullptr,
         &cmd[0],
-        nullptr, nullptr, TRUE, 0, nullptr, nullptr,
+		nullptr, nullptr, TRUE, 0, nullptr, nullptr, // TODO has to inherit handles, but a PPL (EDRi.exe) cannot spawn a non-PPL child
         &si, &pi))
     {
         std::cerr << "[!] Sandblast: Failed to start child process. Error: " << GetLastError() << "\n";
