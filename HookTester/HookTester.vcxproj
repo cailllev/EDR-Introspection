@@ -21,10 +21,9 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{5148ab9f-922a-48da-a335-dd6bddcef143}</ProjectGuid>
-    <RootNamespace>ETWParser</RootNamespace>
+    <ProjectGuid>{377aa798-10d4-47ea-a2ba-406dece3dcb5}</ProjectGuid>
+    <RootNamespace>HookTester</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectName>EDRi</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -92,6 +91,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>$(SolutionDir)EDRiShared</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -104,7 +104,6 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Users\hacker\source\repos\vcpkg\installed\x64-windows\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -119,7 +118,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Users\hacker\source\repos\vcpkg\installed\x64-windows\include; $(SolutionDir)EDRiShared</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)EDRiShared</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -128,24 +127,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="etwparser.cpp" />
-    <ClCompile Include="etwreader.cpp" />
-    <ClCompile Include="manager.cpp" />
-    <ClCompile Include="profile.cpp" />
-    <ClCompile Include="sandblast.cpp" />
-    <ClCompile Include="utils.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="etwparser.h" />
-    <ClInclude Include="etwreader.h" />
-    <ClInclude Include="filter.h" />
-    <ClInclude Include="globals.h" />
-    <ClInclude Include="helpers\cxxopts.hpp" />
-    <ClInclude Include="helpers\json.hpp" />
-    <ClInclude Include="manager.h" />
-    <ClInclude Include="profile.h" />
-    <ClInclude Include="sandblast.h" />
-    <ClInclude Include="utils.h" />
+    <ClCompile Include="HookTester.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
