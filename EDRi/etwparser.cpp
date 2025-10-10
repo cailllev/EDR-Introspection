@@ -622,6 +622,8 @@ Classifier filter(json& ev) {
         return filter_antimalware(ev);
     }
 
+    // TODO filter hook provider
+
     if (g_super_debug) {
         std::cout << "[+] ETW: Unfiltered provider " << ev[PROVIDER_NAME] << ", not filtering its event ID " << ev[EVENT_ID] << "\n";
     }
