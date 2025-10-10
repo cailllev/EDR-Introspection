@@ -254,27 +254,8 @@ BOOL WINAPI DllMain(HINSTANCE hinst, DWORD reason, LPVOID reserved) {
     switch (reason) {
     case DLL_PROCESS_ATTACH: {
         DisableThreadLibraryCalls(hinst);
-
-        TCHAR processName[MAX_PATH] = { 0 };
-        if (GetModuleBaseName(GetCurrentProcess(), nullptr, processName, MAX_PATH)) {
-            bool allowed = false; // TODO env switch?
-            for (auto& s : { _T("attack.exe"), _T("PowerShell.exe"), _T("MsMpEng.exe") }) {
-                if (_tcsicmp(processName, s) == 0) {
-                    allowed = true;
-                    break;
-                }
-            }
-
-            if (allowed) {
-                TraceLoggingRegister(g_hProvider);
-                CreateThread(nullptr, 0, t_InitHooks, nullptr, 0, nullptr);
-            }
-            else {
-                // Only start the unload thread AFTER DllMain finishes
-                HANDLE hThread = CreateThread(nullptr, 0, t_selfUnloadThread, (LPVOID)hinst, 0, nullptr);
-                if (hThread) CloseHandle(hThread);
-            }
-        }
+        TraceLoggingRegister(g_hProvider);
+        CreateThread(nullptr, 0, t_InitHooks, nullptr, 0, nullptr);
         break;
     }
     case DLL_PROCESS_DETACH:
