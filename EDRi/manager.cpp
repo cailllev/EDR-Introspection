@@ -21,6 +21,7 @@
 #include "manager.h"
 #include "profile.h"
 #include "hooker.h"
+#include "sandblast.h"
 
 /*
 - creates krabs ETW traces for Antimalware, Kernel, etc. and the attack provider
@@ -263,12 +264,20 @@ int main(int argc, char* argv[]) {
             stop_all_etw_traces();
             return 1;
         }
+        if (!disable_kernel_callbacks()) {
+            std::cerr << "[!] EDRi: Failed to disable kernel callbacks\n";
+            stop_all_etw_traces();
+			return 1;
+        }
+		std::cout << "[+] EDRi: Disabled kernel callbacks. Injecting the hooker dll into " << edr_pid << ":" << main_edr_exe << "\n";
         if (!inject_dll(edr_pid, get_hook_dll_path())) {
             std::cerr << "[!] EDRi: Failed to inject the hooker dll into " << main_edr_exe << "\n";
             stop_all_etw_traces();
             return 1;
         }
         std::cout << "[+] EDRi: Hooking ntdll.dll of " << main_edr_exe << " successful\n";
+		Sleep(2000); // wait a bit until the dll is loaded
+        enable_kernel_callacks();
     }
 
     // ATTACK

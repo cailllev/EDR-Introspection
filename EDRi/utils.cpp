@@ -39,7 +39,7 @@ void snapshot_procs() {
 }
 
 // thread-safe retrieving the PID of the first case-insensitive match, ignores other same-named processes
-int get_PID_by_name(const std::string& name) {
+int get_PID_by_name(const std::string& name) { // TODO return all PIDs!
     if (!initialized) {
 		std::cerr << "[!] Utils: Cannot use get_PID_by_name() before snapshot_procs()\n";
         return -1;
@@ -57,7 +57,7 @@ int get_PID_by_name(const std::string& name) {
 void add_proc(int pid, const std::string& exe) {
     std::unique_lock<std::shared_mutex> lock(g_procs_mutex); // writer lock (one allowed, no readers)
     if (g_running_procs.find(pid) != g_running_procs.end()) {
-        return; // already added (else the text below is printed twice)
+        return;
     }
     g_running_procs[pid] = exe;
     if (g_debug) {
@@ -134,8 +134,8 @@ std::wstring get_base_path() {
 }
 
 std::string get_hook_dll_path() {
-    std::wstring exe_path = get_base_path();
-    return wstring2string(exe_path) + "Hooks.dll";
+    std::wstring base_path = get_base_path();
+    return wstring2string(base_path) + "Hooks.dll";
 }
 
 // returns the files from /EDRi/attacks
