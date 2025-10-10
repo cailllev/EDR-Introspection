@@ -30,7 +30,7 @@
     <ClCompile Include="etwparser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="hooker.cpp">
+    <ClCompile Include="sandblast.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -62,7 +62,7 @@
     <ClInclude Include="helpers\json.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="hooker.h">
+    <ClInclude Include="sandblast.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
