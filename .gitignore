@@ -5,12 +5,14 @@
 
 # TO INCLUDE
 !x64/Release/EDRi.exe
+!x64/Release/Hooks.dll
+!x64/Release/HookTester.exe
 !x64/Release/attacks/*
+!x64/Release/tools/*
 
 # KDU drivers
-NeacSafe64.inf
-NeacSafe64.sys
-
+*NeacSafe64.inf
+*NeacSafe64.sys
 
 # User-specific files
 *.rsuser
@@ -370,5 +372,3 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
-/helpers/KDU/NeacSafe64.inf
-/helpers/KDU/NeacSafe64.sys
