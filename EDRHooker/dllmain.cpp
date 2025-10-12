@@ -229,6 +229,7 @@ void InstallHooks()
             emit_etw_ok("Hooked " + name);
         }
     }
+    emit_etw_ok("++ NTDLL-HOOKER STARTED ++");
 }
 
 void RemoveHooks()
