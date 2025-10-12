@@ -116,5 +116,6 @@ Classifier filter_kernel_api_call(json&);
 Classifier filter_kernel_file(json&);
 Classifier filter_kernel_network(json&);
 Classifier filter_antimalware(json&);
+Classifier filter_hooks(json&);
 void count_event(json, bool);
 void clean_events();

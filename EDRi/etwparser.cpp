@@ -540,17 +540,18 @@ void post_my_parsing_checks(json& j) {
         }
         g_traces_started = true;
     }
+}
+
+// monitors events, sets and ended flag, attack and injected PID
+void post_parsing_checks(json& j) {
     // checks if the hooker is started
-    if (!g_hooker_started && check_hooker_started(j)) {
+    if (g_with_hooks && !g_hooker_started && check_hooker_started(j)) {
         if (g_debug) {
             std::cout << "[+] ETW: Hooker initialization detected\n";
         }
         g_hooker_started = true;
     }
-}
 
-// monitors events, sets and ended flag, attack and injected PID
-void post_parsing_checks(json& j) {
     int new_proc_id = check_new_proc(j);
 
     // check if the attack_PID and injected_PID can be set
@@ -638,7 +639,9 @@ Classifier filter(json& ev) {
         return filter_antimalware(ev);
     }
 
-    // TODO filter hook provider
+    else if (ev[PROVIDER_NAME] == HOOK_PROVIDER) {
+        return filter_hooks(ev);
+    }
 
     if (g_super_debug) {
         std::cout << "[+] ETW: Unfiltered provider " << ev[PROVIDER_NAME] << ", not filtering its event ID " << ev[EVENT_ID] << "\n";
@@ -784,6 +787,11 @@ Classifier filter_antimalware(json& ev) {
     }
 
     return Relevant; // put event ids without a filter into relevant
+}
+
+// filter hook provider for relevant processes
+Classifier filter_hooks(json& ev) {
+	return Relevant; // TODO filter for pid of attack/injected
 }
 
 std::map<Classifier, std::vector<json>> get_cleaned_events() {
