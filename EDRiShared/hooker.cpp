@@ -103,21 +103,21 @@ std::string get_proc_access_details(DWORD granted) {
     return access + ", not including: " + no_access;
 }
 
-void print_granted_access(HANDLE h) {
+void print_granted_access(HANDLE h, int pid) {
     OBJECT_BASIC_INFORMATION obi = {};
     ULONG ret = 0;
     NTSTATUS st = NtQueryObject(h, ObjectBasicInformation, &obi, sizeof(obi), &ret);
     if (st < 0) {
-        std::cerr << "[!] Hooker: NtQueryObject failed: 0x" << std::hex << st << "\n";
+        std::cerr << "[!] Hooker: NtQueryObject failed at pid " << pid << ": 0x" << std::hex << st << "\n";
     }
     else {
 		std::string details = get_proc_access_details(obi.GrantedAccess);
-        std::cout << "[+] Hooker: GrantedAccess: 0x" << std::hex << obi.GrantedAccess << std::dec << " -> " << details << "\n";
+        std::cout << "[+] Hooker: GrantedAccess to pid " << pid << ": 0x" << std::hex << obi.GrantedAccess << std::dec << " -> " << details << "\n";
     }
 }
 
 // Inject DLL into target process
-bool inject_dll(int pid, const std::string& dllPath)
+bool inject_dll(int pid, const std::string& dllPath, bool debug)
 {
     HANDLE hProcess = OpenProcess(
         PROCESS_ALL_ACCESS,
@@ -140,7 +140,7 @@ bool inject_dll(int pid, const std::string& dllPath)
         CloseHandle(hProcess);
         return false;
     }
-    print_granted_access(hProcess);
+    print_granted_access(hProcess, pid);
 
     // Allocate memory for DLL path in target
     size_t size = dllPath.length() + 1;
@@ -150,6 +150,9 @@ bool inject_dll(int pid, const std::string& dllPath)
         CloseHandle(hProcess);
         return false;
     }
+    if (debug) {
+		std::cout << "[*] Hooker: Allocated memory in target process at " << remoteMem << "\n";
+    }
 
     // Write DLL path into target
     if (!WriteProcessMemory(hProcess, remoteMem, dllPath.c_str(), size, nullptr)) {
@@ -158,6 +161,9 @@ bool inject_dll(int pid, const std::string& dllPath)
         CloseHandle(hProcess);
         return false;
     }
+    if (debug) {
+        std::cout << "[*] Hooker: Wrote DLL path to target process memory\n";
+	}
 
     // Get LoadLibraryA address
     HMODULE lpModuleHandle = GetModuleHandleA("kernel32.dll");
@@ -175,16 +181,18 @@ bool inject_dll(int pid, const std::string& dllPath)
         return false;
     }
 
-    // Create remote thread
-    HANDLE hThread = CreateRemoteThread(hProcess, nullptr, 0,
-        (LPTHREAD_START_ROUTINE)loadLibAddr, remoteMem, 0, nullptr);
-
-    if (!hThread) {
-        std::cerr << "[!] Hooker: CreateRemoteThread failed. Error: " << GetLastError() << "\n";
+    // Create remote thread (start the DLL)
+	HANDLE hThread = CreateRemoteThread(hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE)loadLibAddr, remoteMem, 0, nullptr);
+    DWORD err = GetLastError();
+    if (!hThread || err != 0) {
+        std::cerr << "[!] Hooker: CreateRemoteThread failed. Error: " << err << "\n";
         VirtualFreeEx(hProcess, remoteMem, 0, MEM_RELEASE);
         CloseHandle(hProcess);
         return false;
     }
+    if (debug) {
+        std::cout << "[*] Hooker: Created remote thread in target process\n";
+	}
 
     return true;
 }

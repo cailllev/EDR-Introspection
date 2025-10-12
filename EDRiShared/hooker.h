@@ -2,4 +2,4 @@
 
 #include <string>
 
-bool inject_dll(int, const std::string&);
+bool inject_dll(int, const std::string&, bool);
