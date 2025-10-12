@@ -107,6 +107,7 @@ void post_parsing_checks(json&);
 void add_exe_information(json& j);
 int check_new_proc(json&);
 bool check_traces_started(json&);
+bool check_hooker_started(json&);
 Classifier filter(json&);
 Classifier classify_to(json&, std::string, std::vector<int>);
 Classifier filter_kernel_process(json&);
