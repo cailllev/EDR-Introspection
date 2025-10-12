@@ -9,7 +9,7 @@
 static std::wstring out_file = get_base_path() + L"tools\\sandblast-status.txt";
 
 // disables kernel callbacks
-RETURN_CODE disable_wait_enable_kernel_callbacks() {
+RETURN_CODE disable_kernel_callbacks() {
     HANDLE hFile = CreateFile(
         out_file.c_str(),
         GENERIC_WRITE,
@@ -42,7 +42,7 @@ RETURN_CODE disable_wait_enable_kernel_callbacks() {
         CloseHandle(hFile);
         return RETURN_CODE::FAILED;
     }
-
+	std::cout << "[+] Sandblast: Started '" << wstring2string(cmd) << "'\n";
     CloseHandle(hFile);
 
     // Now monitor out.txt
@@ -75,4 +75,22 @@ RETURN_CODE disable_wait_enable_kernel_callbacks() {
 		waited_seconds += 0.1;
     }
     return RETURN_CODE::TIMEOUT;
+}
+
+bool check_if_kernel_callbacks_enabled() {
+    std::ifstream in(out_file);
+    if (!in || !in.is_open()) {
+        std::cerr << "[!] Sandblast: Failed to open " << wstring2string(out_file) << "\n";
+        return false;
+    }
+    std::string line;
+    while (std::getline(in, line)) {
+        if (line.find("[*] Re-enabling all EDR callbacks...") != std::string::npos) {
+            return true;
+        }
+        if (line.find("[*] No EDR callbacks found, nothing to disable") != std::string::npos) {
+            return true;
+        }
+    }
+    return false;
 }
