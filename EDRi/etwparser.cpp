@@ -29,6 +29,7 @@ std::map<Classifier, std::string> classifier_names = {
 int g_attack_PID = 0;
 int g_injected_PID = 0;
 bool g_traces_started = false;
+bool g_hooker_started = false;
 bool g_attack_terminated = false;
 
 // static
@@ -522,6 +523,14 @@ bool check_traces_started(json& j) {
     return false;
 }
 
+// check if the hooker emits ETW messages --> hookes installed
+bool check_hooker_started(json& j) {
+    if (j.contains(TASK)) {
+        return j[TASK] == NTDLL_HOOKER_TRACE_START_MARKER;
+    }
+    return false;
+}
+
 // monitors my events, sets started flag
 void post_my_parsing_checks(json& j) {
     // checks if the trace started
@@ -530,6 +539,13 @@ void post_my_parsing_checks(json& j) {
             std::cout << "[+] ETW: Start marker detected\n";
         }
         g_traces_started = true;
+    }
+    // checks if the hooker is started
+    if (!g_hooker_started && check_hooker_started(j)) {
+        if (g_debug) {
+            std::cout << "[+] ETW: Hooker initialization detected\n";
+        }
+        g_hooker_started = true;
     }
 }
 
