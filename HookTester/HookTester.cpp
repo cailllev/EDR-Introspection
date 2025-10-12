@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    if (inject_dll(pid, dllPath)) {
+    if (inject_dll(pid, dllPath, true)) {
         std::cout << "[*] HookTester: DLL injection succeeded.\n";
     }
     else {

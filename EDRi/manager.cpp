@@ -41,6 +41,7 @@ TRACELOGGING_DEFINE_PROVIDER(
 std::vector<int> g_tracking_PIDs = {};
 std::map<int, std::string> g_running_procs = {};
 std::shared_mutex g_procs_mutex;
+bool g_with_hooks = false;
 
 // attack exe paths
 std::string g_attack_exe_path = "C:\\Users\\Public\\Downloads\\attack.exe";
@@ -55,7 +56,7 @@ static const int wait_between_events_ms = 1000;
 static const int wait_after_termination_ms = 5000;
 static const int wait_time_between_start_markers_ms = 250;
 static const int wait_callbacks_reenable_ms = 10000;
-static const int timeout_for_hooker_init = 20;
+static const int timeout_for_hooker_init = 30;
 
 void emit_etw_event(std::string msg, bool print_when_debug) {
     TraceLoggingWrite(
@@ -82,7 +83,7 @@ void process_results(std::string output, bool dump_sig) {
 
 void inject_hooker(int edr_pid, std::string main_edr_exe) {
     std::cout << "[+] EDRi: Injecting the hooker dll into " << edr_pid << ":" << main_edr_exe << "\n";
-    if (!inject_dll(edr_pid, get_hook_dll_path())) {
+    if (!inject_dll(edr_pid, get_hook_dll_path(), g_debug)) {
         std::cerr << "[!] EDRi: Failed to inject the hooker dll into " << main_edr_exe << "\n";
         stop_all_etw_traces();
         exit(1);
@@ -182,6 +183,7 @@ int main(int argc, char* argv[]) {
         }
         if (result.count("hook-ntdll") > 0) {
             hook_ntdll = true;
+			g_with_hooks = true;
         }
     }
 	std::cout << "[*] EDRi: Tracking options: ETW-Misc: " << (trace_etw_misc ? "Yes" : "No") 
@@ -290,7 +292,7 @@ int main(int argc, char* argv[]) {
         while (!g_hooker_started) {
 			Sleep(1000);
             if (++wait > timeout_for_hooker_init) {
-                std::cerr << "[!] EDRi: Cannot detect a successful initialization of the hooker!\n";
+                std::cerr << "[!] EDRi: Could not detect a successful initialization of the hooker!\n";
                 stop_all_etw_traces();
                 return 1;
 			}
