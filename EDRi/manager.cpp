@@ -54,6 +54,8 @@ static const int wait_after_traces_started_ms = 15000;
 static const int wait_between_events_ms = 1000;
 static const int wait_after_termination_ms = 5000;
 static const int wait_time_between_start_markers_ms = 250;
+static const int timeout_for_reenable_callbacks = 20;
+static const int timeout_for_hooker_init = 20;
 
 void emit_etw_event(std::string msg, bool print_when_debug) {
     TraceLoggingWrite(
@@ -274,7 +276,7 @@ int main(int argc, char* argv[]) {
             return 1;
         }
 		std::cout << "[*] EDRi: Found the EDR process " << main_edr_exe << " with PID " << edr_pid << "\n";
-		RETURN_CODE ret = disable_wait_enable_kernel_callbacks();
+		RETURN_CODE ret = disable_kernel_callbacks();
         switch (ret)
         {
         case SUCCESS_NO_WAIT:
@@ -282,11 +284,25 @@ int main(int argc, char* argv[]) {
             inject_hooker(edr_pid, main_edr_exe);
             break;
         case SUCCESS_WAIT:
-			std::cout << "[+] EDRi: Callbacks disabled, continuing...\n";
+        {
+            std::cout << "[+] EDRi: Callbacks disabled, continuing...\n";
             inject_hooker(edr_pid, main_edr_exe);
-			Sleep(30 * 1000); // wait for callbacks to be enabled again
-			std::cout << "[+] EDRi: Re-enabled kernel callbacks, continuing...\n"; // TODO check output of sandblast again
+            Sleep(10 * 1000); // 10sec = wait time until callbacks are re-enabled
+			// now check if callbacks are re-enabled
+            int wait = 0;
+            while (true) { // wait max 10 seconds
+                if (check_if_kernel_callbacks_enabled()) {
+                    break;
+                }
+                Sleep(100);
+                if (++wait > timeout_for_reenable_callbacks) {
+                    std::cerr << "[!] EDRi: Expected callbacks to be re-enabled, please check manually\n";
+                    Sleep(1000);
+                    break;
+                }
+            }
             break;
+        }
         case FAILED:
 			std::cerr << "[!] EDRi: Failed to disable kernel callbacks, cannot continue\n";
             stop_all_etw_traces();
@@ -298,8 +314,18 @@ int main(int argc, char* argv[]) {
         default:
             break;
         }
+
+		// check if the hooker is successfully initialized
+        int wait = 0;
+        while (!g_hooker_started) {
+			Sleep(1000);
+            if (++wait > timeout_for_hooker_init) {
+                std::cerr << "[!] EDRi: Cannot detect a successful initialization of the hooker!\n";
+                stop_all_etw_traces();
+                return 1;
+			}
+        }
     }
-    // TODO check if the hooked process emited etw events
 
     // ATTACK
 	// decrypt the attack exe
