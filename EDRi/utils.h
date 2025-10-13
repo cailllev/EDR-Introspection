@@ -16,7 +16,7 @@ char* get_memory_region_protect(DWORD protect);
 
 // own cacophony
 void snapshot_procs();
-int get_PID_by_name(const std::string& name);
+std::vector<int> get_PID_by_name(const std::string& name);
 void add_proc(int, const std::string&);
 std::string get_proc_name(int);
 std::string unnecessary_tools_running();
@@ -34,7 +34,7 @@ std::string get_attack_enc_path(const std::string&);
 void build_device_map();
 std::string translate_if_path(const std::string&);
 
-// custom key for technicolor in timeline explorer TODO enable disable flag
+// custom key for technicolor in timeline explorer
 static const std::string COLOR_HEADER = "Source Name,Long Description,Timestamp";
 static const std::string FAKE_TIMESTAMP = "2020-20-20 20:20:20";
 static const std::string COLOR_GREEN = "FILE,Name:," + FAKE_TIMESTAMP;

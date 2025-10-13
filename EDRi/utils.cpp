@@ -39,18 +39,19 @@ void snapshot_procs() {
 }
 
 // thread-safe retrieving the PID of the first case-insensitive match, ignores other same-named processes
-int get_PID_by_name(const std::string& name) { // TODO return all PIDs!
+std::vector<int> get_PID_by_name(const std::string& name) {
     if (!initialized) {
 		std::cerr << "[!] Utils: Cannot use get_PID_by_name() before snapshot_procs()\n";
-        return -1;
+        return {};
     }
+    std::vector<int> p = {};
     std::shared_lock<std::shared_mutex> lock(g_procs_mutex); // reader lock (multiple allowed when no writers)
     for (auto it = g_running_procs.begin(); it != g_running_procs.end(); ++it) {
         if (_stricmp(it->second.c_str(), name.c_str()) == 0) {
-            return it->first;
+            p.push_back(it->first);
         }
     }
-    return -1; // not found
+    return p;
 }
 
 // thread-safe adding a proc (can overwrite old procs)
@@ -72,17 +73,18 @@ std::string get_proc_name(int pid) {
     return (it != g_running_procs.end()) ? it->second : PROC_NOT_FOUND;
 }
 
-// check if unnecessary tools are running --> make the output very large
+// check if unnecessary tools are running --> these inflate the csv output
 std::string unnecessary_tools_running() {
     std::string r = "";
 	if (!initialized) {
         std::cerr << "[!] Utils: Cannot use unnecessary_tools_running() before snapshot_procs()\n";
         return r;
 	}
-    for (auto& p : { "procexp64.exe" }) {
-        std::string pn = get_proc_name(get_PID_by_name(p));
-		if (pn == PROC_NOT_FOUND) continue;
-		r += pn + " ";
+    std::vector<std::string> procs = { "procexp64.exe" };
+    for (auto& p : procs) {
+        if (!get_PID_by_name(p).empty()) {
+            r += p + " ";
+        }
     }
     return r;
 }
@@ -455,7 +457,9 @@ std::string create_timeline_csv(const std::vector<json>& events, std::vector<std
     for (const auto& key : all_keys) {
         csv_output << key << ",";
     }
-    csv_output << COLOR_HEADER; // add color info column
+    if (g_technicolor) {
+        csv_output << COLOR_HEADER; // add color info column,  TODO debug
+    }
     csv_output << "\n";
 
     // print each event as a row    
@@ -475,7 +479,9 @@ std::string create_timeline_csv(const std::vector<json>& events, std::vector<std
             }
             csv_output << ",";
         }
-        csv_output << add_color_info(ev);
+        if (g_technicolor) {
+            csv_output << add_color_info(ev);
+        }
         csv_output << "\n";
     }
     return csv_output.str();
