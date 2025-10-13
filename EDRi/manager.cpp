@@ -44,11 +44,13 @@ std::shared_mutex g_procs_mutex;
 bool g_with_hooks = false;
 
 // attack exe paths
-std::string g_attack_exe_path = "C:\\Users\\Public\\Downloads\\attack.exe";
+std::string g_attack_exe_name = "attack.exe";
+std::string g_attack_exe_path = "C:\\Users\\Public\\Downloads\\" + g_attack_exe_name;
 
 // more debug info
 bool g_debug = false;
 bool g_super_debug = false;
+bool g_technicolor = false;
 
 // wait times
 static const int wait_after_traces_started_ms = 15000;
@@ -81,23 +83,14 @@ void process_results(std::string output, bool dump_sig) {
     std::cout << "[*] EDRi: Done\n";
 }
 
-void inject_hooker(int edr_pid, std::string main_edr_exe) {
-    std::cout << "[+] EDRi: Injecting the hooker dll into " << edr_pid << ":" << main_edr_exe << "\n";
-    if (!inject_dll(edr_pid, get_hook_dll_path(), g_debug)) {
-        std::cerr << "[!] EDRi: Failed to inject the hooker dll into " << main_edr_exe << "\n";
-        stop_all_etw_traces();
-        exit(1);
-    }
-}
-
 int main(int argc, char* argv[]) {
     cxxopts::Options options("EDRi", "EDR Introspection Framework");
     
     // PARSER OPTIONS
     options.add_options()
         ("h,help", "Print usage")
-        ("c,encrypt", "The path of the attack executable to encrypt", cxxopts::value<std::string>())
-        ("e,edr", "The EDR to track, supporting: " + get_available_edrs(), cxxopts::value<std::string>())
+        ("e,encrypt", "The path of the attack executable to encrypt", cxxopts::value<std::string>())
+        ("p,edr-profile", "The EDR to track, supporting: " + get_available_edrs(), cxxopts::value<std::string>())
         ("a,attack-exe", "The attack to execute, supporting: " + get_available_attacks(), cxxopts::value<std::string>())
         ("r,run-as-child", "If the attack should run (automatically) as a child of the EDRi.exe or if it should be executed manually")
         ("o,output", "The Path of the all-events.csv, default " + all_events_output_default, cxxopts::value<std::string>())
@@ -107,6 +100,7 @@ int main(int argc, char* argv[]) {
         ("t,track-all", "Trace misc ETW, ETW-TI and hooks ntdll.dll")
         ("d,debug", "Print debug info")
         ("v,verbose-debug", "Print very verbose debug info");
+        ("c,technicolor", "Store CSV with Timeline-Explorer technicolor markup");
 
     cxxopts::ParseResult result;
     try {
@@ -135,16 +129,16 @@ int main(int argc, char* argv[]) {
     build_device_map();
 
     // check edr profile, attack exe and output
-    if (result.count("edr") == 0) {
-        std::cerr << "[!] EDRi: No EDR specified, use -e and one of: " << get_available_edrs() << "\n";
+    if (result.count("edr-profile") == 0) {
+        std::cerr << "[!] EDRi: No EDR specified, use -p and one of: " << get_available_edrs() << "\n";
         return 1;
 	}
-	std::string edr_name = result["edr"].as<std::string>();
+	std::string edr_name = result["edr-profile"].as<std::string>();
     if (edr_profiles.find(edr_name) == edr_profiles.end()) {
         std::cerr << "[!] EDRi: Unsupported EDR specified, use one of: " << get_available_edrs() << "\n";
         return 1;
     }
-    std::vector<std::string> edr_specific_exes = edr_profiles.at(edr_name);
+    EDR_Profile edr_profile = edr_profiles.at(edr_name);
     if (result.count("attack-exe") == 0) {
         std::cerr << "[!] EDRi: No attack specified, use -a and one of: " << get_available_attacks() << "\n";
         return 1;
@@ -198,7 +192,10 @@ int main(int argc, char* argv[]) {
     if (result.count("verbose-debug") > 0) {
         g_debug = true;
         g_super_debug = true;
-	}
+    }
+    if (result.count("technicolor") > 0) {
+        g_technicolor = true;
+    }
 
     // TRACKING PREPARATION + INIT ETW TRACES
     TraceLoggingRegister(g_hProvider);
@@ -232,22 +229,22 @@ int main(int argc, char* argv[]) {
     std::cout << "[*] EDRi: Get running procs\n";
     snapshot_procs();
     for (auto& e : exes_to_track) {
-        int pid = get_PID_by_name(e);
-        if (pid != -1) {
-            std::cout << "[+] EDRi: Got pid for " << e << ":" << pid << "\n";
-            g_tracking_PIDs.push_back(pid);
+        std::vector<int> pids = get_PID_by_name(e);
+        for (auto& p : pids) {
+            std::cout << "[+] EDRi: Got pid for " << e << ":" << p << "\n";
+            g_tracking_PIDs.push_back(p);
         }
-        else if (g_debug) {
+        if (pids.empty() && g_debug) {
             std::cout << "[-] EDRi: Process tracking, could not find " << e << "\n";
 		}
     }
-    for (auto& e : edr_specific_exes) {
-        int pid = get_PID_by_name(e);
-        if (pid != -1) {
-            std::cout << "[+] EDRi: Got pid for " << e << ":" << pid << "\n";
-            g_tracking_PIDs.push_back(pid);
+    for (auto& e : get_all_edr_exes(edr_profile)) {
+        std::vector<int> pids = get_PID_by_name(e);
+        for (auto& p : pids) {
+            std::cout << "[+] EDRi: Got pid for " << e << ":" << p << "\n";
+            g_tracking_PIDs.push_back(p);
         }
-        else if (g_debug) {
+        if (pids.empty() && g_debug) {
             std::cout << "[-] EDRi: Process tracking, could not find EDR specific " << e << "\n";
         }
     }
@@ -269,25 +266,39 @@ int main(int argc, char* argv[]) {
 
     // hooking emits etw events, so hooking must be done after the traces are started
     if (hook_ntdll) {
-        std::string main_edr_exe = edr_specific_exes[0]; // first exe is the main edr exe
-        //std::string main_edr_exe = "MpDefenderCoreService.exe"; // TODO debug
-        int edr_pid = get_PID_by_name(main_edr_exe);
-        if (edr_pid == -1) {
-            std::cerr << "[!] EDRi: Could not find the EDR process " << main_edr_exe << ", is it running?\n";
+        if (!disable_kernel_callbacks_ok()) {
+            std::cerr << "[!] EDRi: Failed to disable kernel callbacks, check manually if needed\n";
             stop_all_etw_traces();
             return 1;
         }
-		std::cout << "[*] EDRi: Found the EDR process " << main_edr_exe << " with PID " << edr_pid << "\n";
-		if (disable_kernel_callbacks_ok()) {
-            inject_hooker(edr_pid, main_edr_exe);
-        } 
-        else {
-            std::cerr << "[!] EDRi: Failed to disable kernel callbacks, check manually if needed\n";
+
+		// get main edr processes and inject the hooker
+        std::vector<std::string> main_edr_exes = edr_profile.main_exes;
+        //std::vector<std::string> main_edr_exes = { "cmd.exe" } ; // TODO debug
+        bool found_none = true;
+        for (auto& exe : main_edr_exes) {
+            std::vector<int> pids = get_PID_by_name(exe);
+            if (pids.empty()) {
+                std::cerr << "[!] EDRi: Could not find the EDR process " << exe << ", is it running?\n";
+                continue;
+            }
+            found_none = false;
+            for (auto& pid : pids) {
+                std::cout << "[*] EDRi: Found the EDR process " << exe << ":" << pid << ". Injecting...\n";
+                if (!inject_dll(pid, get_hook_dll_path(), g_debug)) {
+                    std::cerr << "[!] EDRi: Failed to inject the hooker dll into " << exe << "\n";
+                    stop_all_etw_traces();
+                    exit(1);
+                }
+            }
+        }
+        if (found_none) {
+			std::cerr << "[!] EDRi: Could not find any of the main EDR processes";
             stop_all_etw_traces();
             return 1;
 		}
 
-		// check if the hooker is successfully initialized
+        // check if the hooker is successfully initialized // TODO check all procs not just one start marker
         int wait = 0;
         while (!g_hooker_started) {
 			Sleep(1000);
