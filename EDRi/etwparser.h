@@ -71,15 +71,6 @@ static const std::string THREATNAME = "threatname";
 static const std::string DATA = "data";
 static const std::string SOURCE = "source";
 
-// executables used for the attack
-static const std::string injected_exe = "notepad.exe"; // TODO add whole path? But must be Windows independent (is ...\WindowsApps\Microsoft.WindowsNotepad_8wekyb3d8bbwe\...) in the logs
-
-// executables to track for kernel event filtering, i.e. their PIDs at runtime
-static const std::vector<std::string> exes_to_track = {
-    // attack_PID and injected_PID are added to g_tracking_PIDs at runtime, not as exes here (they are not running at startup)
-    "smartscreen.exe", "System"
-};
-
 
 // keys that get merged together
 struct MergeCategory {

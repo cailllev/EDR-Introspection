@@ -7,6 +7,7 @@
 #include "utils.h"
 
 
+// TODO check return of EDRSandblast, maybe with > out.txt or named pipes
 // disables kernel callbacks
 bool disable_kernel_callbacks_ok() {
     STARTUPINFO si{};
@@ -25,4 +26,4 @@ bool disable_kernel_callbacks_ok() {
 	Sleep(12000); // on this system it takes ~9 sec until callbacks are disabled, the handle and injection must take place between 9-19 sec
 	CloseHandle(pi.hProcess);
     return true;
-} // TODO check return of EDRSandblast, maybe with > out.txt or named pipes
+}

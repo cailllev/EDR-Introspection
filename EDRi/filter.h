@@ -7,17 +7,6 @@ struct ProcessStartFilter {
 	int event_id;
 };
 
-// TODO organize filters per provider and fields?
-/*
-filter {
-	am : {
-		remove: ...
-		filter for pid: ...
-		filter for pid and tpid: ...
-		filter for pid in data: ...
-	}
-*/
-
 // Antimalware Trace
 static const std::vector<int> am_event_ids_to_remove = { 7, 44, 62 };
 static const std::vector<int> am_event_ids_with_pid = { 5, 6, 11, 15, 16, 26, 29, 104, 105, 109, 110, 111, 112, 60, 70, 71, 72, 73 };
@@ -29,7 +18,6 @@ static const std::vector<int> am_event_ids_with_filepath = { 30, 31, 35, 36, 37,
 static const std::vector<int> am_event_ids_with_signatures = { 59 }; // TODO find a way to filter event 59
 
 
-// TODO many kernel events, create new (vebose) filter layout? --> minimal events, verbose events (kernel + antimalware 11), all events
 // TODO all kernel events should be filtered, are event ids still needed?
 // Kernel Process Trace
 static const std::vector<int> kproc_event_ids_with_tpid = { 1, 2, 3, 4, 5, 6, 11 }; // todo thread start stop & image load unload (3456) also relevant for ALL security pids?

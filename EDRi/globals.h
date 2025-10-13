@@ -16,6 +16,11 @@ static const std::wstring EDRi_PROVIDER_GUID_W = L"{72248477-7177-4feb-a386-34d8
 static const std::string EDRi_TRACE_START_MARKER = "++ EDRi START MARKER ++";
 static const std::string NTDLL_HOOKER_TRACE_START_MARKER = "++ NTDLL-HOOKER STARTED ++";
 
+// executables used for the attack (must be Windows independent (is ...\WindowsApps\Microsoft.WindowsNotepad_8wekyb3d8bbwe\...) in the logs)
+static const std::string injected_name = "microsoft.windowsnotepad";
+static const std::string injected_exe = "notepad.exe";
+static const std::string invoked_name = "microsoft.windowscalculator";
+
 extern std::vector<int> g_tracking_PIDs;
 extern int g_attack_PID;
 extern int g_injected_PID;
@@ -30,7 +35,9 @@ extern bool g_attack_terminated;
 
 extern bool g_debug;
 extern bool g_super_debug;
+extern bool g_technicolor;
 
+extern std::string g_attack_exe_name;
 extern std::string g_attack_exe_path;
 
 using json = nlohmann::json;
