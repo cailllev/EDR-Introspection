@@ -193,7 +193,27 @@ bool inject_dll(int pid, const std::string& dllPath, bool debug)
     if (debug) {
         std::cout << "[*] Hooker: Created remote thread in target process\n";
 	}
+    
+    DWORD wait = WaitForSingleObject(hThread, 10000); // 5 sec timeout for hooks to init
+    if (wait == WAIT_TIMEOUT) {
+        std::cerr << "[!] Hooker: remote thread did not finish within timeout\n";
+		return false;
+    }
 
+    // Get exit code (for LoadLibrary, exit code == HMODULE returned)
+    DWORD exitCode = 0;
+    if (!GetExitCodeThread(hThread, &exitCode)) {
+        std::cerr << "[!] Hooker: GetExitCodeThread failed. Error: " << GetLastError() << "\n";
+    }
+    else {
+        if (exitCode == 0) {
+            std::cerr << "[!] Hooker: remote routine (e.g. LoadLibrary) failed: " << GetLastError() << "\n";
+        }
+        else {
+            std::cout << "[*] Hooker: remote routine succeeded, module handle: " << std::hex << exitCode << "\n";
+        }
+    }
+    CloseHandle(hThread);
     return true;
 }
 
