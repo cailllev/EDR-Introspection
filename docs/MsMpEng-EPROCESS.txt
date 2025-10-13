@@ -1,0 +1,262 @@
+0: kd> dt nt!_EPROCESS ffffe60182aa1080
+   +0x000 Pcb              : _KPROCESS
+   +0x1c8 ProcessLock      : _EX_PUSH_LOCK
+   +0x1d0 UniqueProcessId  : 0x00000000`00000d44 Void
+   +0x1d8 ActiveProcessLinks : _LIST_ENTRY [ 0xffffe601`82aa7258 - 0xffffe601`82a9a418 ]
+   +0x1e8 RundownProtect   : _EX_RUNDOWN_REF
+   +0x1f0 Flags2           : 0xd014
+   +0x1f0 JobNotReallyActive : 0y0
+   +0x1f0 AccountingFolded : 0y0
+   +0x1f0 NewProcessReported : 0y1
+   +0x1f0 ExitProcessReported : 0y0
+   +0x1f0 ReportCommitChanges : 0y1
+   +0x1f0 LastReportMemory : 0y0
+   +0x1f0 ForceWakeCharge  : 0y0
+   +0x1f0 CrossSessionCreate : 0y0
+   +0x1f0 NeedsHandleRundown : 0y0
+   +0x1f0 RefTraceEnabled  : 0y0
+   +0x1f0 PicoCreated      : 0y0
+   +0x1f0 EmptyJobEvaluated : 0y0
+   +0x1f0 DefaultPagePriority : 0y101
+   +0x1f0 PrimaryTokenFrozen : 0y1
+   +0x1f0 ProcessVerifierTarget : 0y0
+   +0x1f0 RestrictSetThreadContext : 0y0
+   +0x1f0 AffinityPermanent : 0y0
+   +0x1f0 AffinityUpdateEnable : 0y0
+   +0x1f0 PropagateNode    : 0y0
+   +0x1f0 ExplicitAffinity : 0y0
+   +0x1f0 Flags2Available1 : 0y00
+   +0x1f0 EnableReadVmLogging : 0y0
+   +0x1f0 EnableWriteVmLogging : 0y0
+   +0x1f0 FatalAccessTerminationRequested : 0y0
+   +0x1f0 DisableSystemAllowedCpuSet : 0y0
+   +0x1f0 Flags2Available2 : 0y000
+   +0x1f0 InPrivate        : 0y0
+   +0x1f4 Flags            : 0x144d0c01
+   +0x1f4 CreateReported   : 0y1
+   +0x1f4 NoDebugInherit   : 0y0
+   +0x1f4 ProcessExiting   : 0y0
+   +0x1f4 ProcessDelete    : 0y0
+   +0x1f4 ManageExecutableMemoryWrites : 0y0
+   +0x1f4 VmDeleted        : 0y0
+   +0x1f4 OutswapEnabled   : 0y0
+   +0x1f4 Outswapped       : 0y0
+   +0x1f4 FailFastOnCommitFail : 0y0
+   +0x1f4 Wow64VaSpace4Gb  : 0y0
+   +0x1f4 AddressSpaceInitialized : 0y11
+   +0x1f4 SetTimerResolution : 0y0
+   +0x1f4 BreakOnTermination : 0y0
+   +0x1f4 DeprioritizeViews : 0y0
+   +0x1f4 WriteWatch       : 0y0
+   +0x1f4 ProcessInSession : 0y1
+   +0x1f4 OverrideAddressSpace : 0y0
+   +0x1f4 HasAddressSpace  : 0y1
+   +0x1f4 LaunchPrefetched : 0y1
+   +0x1f4 Reserved         : 0y0
+   +0x1f4 VmTopDown        : 0y0
+   +0x1f4 ImageNotifyDone  : 0y1
+   +0x1f4 PdeUpdateNeeded  : 0y0
+   +0x1f4 VdmAllowed       : 0y0
+   +0x1f4 ProcessRundown   : 0y0
+   +0x1f4 ProcessInserted  : 0y1
+   +0x1f4 DefaultIoPriority : 0y010
+   +0x1f4 ProcessSelfDelete : 0y0
+   +0x1f4 SetTimerResolutionLink : 0y0
+   +0x1f8 CreateTime       : _LARGE_INTEGER 0x01dc3c5b`87ff7b3f
+   +0x200 ProcessQuotaUsage : [2] 0x36580
+   +0x210 ProcessQuotaPeak : [2] 0x47b58
+   +0x220 PeakVirtualSize  : 0x00000201`4d755000
+   +0x228 VirtualSize      : 0x00000201`47d06000
+   +0x230 SessionProcessLinks : _LIST_ENTRY [ 0xffffe601`82b022f0 - 0xffffe601`82a9a470 ]
+   +0x240 ExceptionPortData : 0xffffe601`7db7fd30 Void
+   +0x240 ExceptionPortValue : 0xffffe601`7db7fd30
+   +0x240 ExceptionPortState : 0y000
+   +0x248 Token            : _EX_FAST_REF
+   +0x250 MmReserved       : 0
+   +0x258 AddressCreationLock : _EX_PUSH_LOCK
+   +0x260 PageTableCommitmentLock : _EX_PUSH_LOCK
+   +0x268 RotateInProgress : (null) 
+   +0x270 ForkInProgress   : (null) 
+   +0x278 CommitChargeJob  : 0xffffe601`83e08060 _EJOB
+   +0x280 CloneRoot        : _RTL_AVL_TREE
+   +0x288 NumberOfPrivatePages : 0xf62d
+   +0x290 NumberOfLockedPages : 0
+   +0x298 Win32Process     : 0xffff8484`8cf1b9a0 Void
+   +0x2a0 Job              : 0xffffe601`83e08060 _EJOB
+   +0x2a8 SectionObject    : 0xffff8484`8cc299d0 Void
+   +0x2b0 SectionBaseAddress : 0x00007ff6`e3290000 Void
+   +0x2b8 Cookie           : 0x23ed2c32
+   +0x2c0 WorkingSetWatch  : (null) 
+   +0x2c8 Win32WindowStation : 0x00000000`0000022c Void
+   +0x2d0 InheritedFromUniqueProcessId : 0x00000000`00000364 Void
+   +0x2d8 OwnerProcessId   : 0x366
+   +0x2e0 Peb              : 0x0000008a`31dbc000 _PEB
+   +0x2e8 Session          : 0xffffe601`7d58f120 _PSP_SESSION_SPACE
+   +0x2f0 Spare1           : (null) 
+   +0x2f8 QuotaBlock       : 0xfffff807`e8a27c40 _EPROCESS_QUOTA_BLOCK
+   +0x300 ObjectTable      : 0xffff8484`8ccb3400 _HANDLE_TABLE
+   +0x308 DebugPort        : (null) 
+   +0x310 WoW64Process     : (null) 
+   +0x318 DeviceMap        : _EX_FAST_REF
+   +0x320 EtwDataSource    : 0xffffe601`82582090 Void
+   +0x328 PageDirectoryPte : 0
+   +0x330 ImageFilePointer : 0xffffe601`82881460 _FILE_OBJECT
+   +0x338 ImageFileName    : [15]  "MsMpEng.exe"
+   +0x347 PriorityClass    : 0x2 ''
+   +0x348 SecurityPort     : (null) 
+   +0x350 SeAuditProcessCreationInfo : _SE_AUDIT_PROCESS_CREATION_INFO
+   +0x358 JobLinks         : _LIST_ENTRY [ 0xffffe601`83e08088 - 0xffffe601`83e08088 ]
+   +0x368 HighestUserAddress : 0x00007fff`ffff0000 Void
+   +0x370 ThreadListHead   : _LIST_ENTRY [ 0xffffe601`82aa25f8 - 0xffffe601`84279638 ]
+   +0x380 ActiveThreads    : 0x20
+   +0x384 ImagePathHash    : 0xf9080403
+   +0x388 DefaultHardErrorProcessing : 0x8000
+   +0x38c LastThreadExitStatus : 0n0
+   +0x390 PrefetchTrace    : _EX_FAST_REF
+   +0x398 LockedPagesList  : (null) 
+   +0x3a0 ReadOperationCount : _LARGE_INTEGER 0x0
+   +0x3a8 WriteOperationCount : _LARGE_INTEGER 0x0
+   +0x3b0 OtherOperationCount : _LARGE_INTEGER 0xfc
+   +0x3b8 ReadTransferCount : _LARGE_INTEGER 0x0
+   +0x3c0 WriteTransferCount : _LARGE_INTEGER 0x0
+   +0x3c8 OtherTransferCount : _LARGE_INTEGER 0x1f1a
+   +0x3d0 CommitChargeLimit : 0x100000
+   +0x3d8 CommitCharge     : 0x1052e
+   +0x3e0 CommitChargePeak : 0x33364
+   +0x400 Vm               : _MMSUPPORT_FULL
+   +0x540 MmProcessLinks   : _LIST_ENTRY [ 0xffffe601`82b02600 - 0xffffe601`82a9a780 ]
+   +0x550 ModifiedPageCount : 0x19ddb
+   +0x554 ExitStatus       : 0n259
+   +0x558 VadRoot          : _RTL_AVL_TREE
+   +0x560 VadHint          : 0xffffe601`82ba9710 Void
+   +0x568 VadCount         : 0x653
+   +0x570 VadPhysicalPages : 0
+   +0x578 VadPhysicalPagesLimit : 0
+   +0x580 AlpcContext      : _ALPC_PROCESS_CONTEXT
+   +0x5a0 TimerResolutionLink : _LIST_ENTRY [ 0x00000000`00000000 - 0x00000000`00000000 ]
+   +0x5b0 TimerResolutionStackRecord : (null) 
+   +0x5b8 RequestedTimerResolution : 0
+   +0x5bc SmallestTimerResolution : 0
+   +0x5c0 ExitTime         : _LARGE_INTEGER 0x0
+   +0x5c8 InvertedFunctionTable : 0xffff8484`8f6ed650 _INVERTED_FUNCTION_TABLE_KERNEL_MODE
+   +0x5d0 InvertedFunctionTableLock : _EX_PUSH_LOCK
+   +0x5d8 ActiveThreadsHighWatermark : 0x20
+   +0x5dc LargePrivateVadCount : 0
+   +0x5e0 ThreadListLock   : _EX_PUSH_LOCK
+   +0x5e8 WnfContext       : 0xffff8484`8cc065c0 Void
+   +0x5f0 ServerSilo       : (null) 
+   +0x5f8 SignatureLevel   : 0x37 '7'
+   +0x5f9 SectionSignatureLevel : 0x7 ''
+   +0x5fa Protection       : _PS_PROTECTION
+   +0x5fb HangCount        : 0y000
+   +0x5fb GhostCount       : 0y000
+   +0x5fb PrefilterException : 0y0
+   +0x5fc Flags3           : 0x40c008
+   +0x5fc Minimal          : 0y0
+   +0x5fc ReplacingPageRoot : 0y0
+   +0x5fc Crashed          : 0y0
+   +0x5fc JobVadsAreTracked : 0y1
+   +0x5fc VadTrackingDisabled : 0y0
+   +0x5fc AuxiliaryProcess : 0y0
+   +0x5fc SubsystemProcess : 0y0
+   +0x5fc IndirectCpuSets  : 0y0
+   +0x5fc RelinquishedCommit : 0y0
+   +0x5fc HighGraphicsPriority : 0y0
+   +0x5fc CommitFailLogged : 0y0
+   +0x5fc ReserveFailLogged : 0y0
+   +0x5fc SystemProcess    : 0y0
+   +0x5fc AllImagesAtBasePristineBase : 0y0
+   +0x5fc AddressPolicyFrozen : 0y1
+   +0x5fc ProcessFirstResume : 0y1
+   +0x5fc ForegroundExternal : 0y0
+   +0x5fc ForegroundSystem : 0y0
+   +0x5fc HighMemoryPriority : 0y0
+   +0x5fc EnableProcessSuspendResumeLogging : 0y0
+   +0x5fc EnableThreadSuspendResumeLogging : 0y0
+   +0x5fc SecurityDomainChanged : 0y0
+   +0x5fc SecurityFreezeComplete : 0y1
+   +0x5fc VmProcessorHost  : 0y0
+   +0x5fc VmProcessorHostTransition : 0y0
+   +0x5fc AltSyscall       : 0y0
+   +0x5fc TimerResolutionIgnore : 0y0
+   +0x5fc DisallowUserTerminate : 0y0
+   +0x5fc EnableProcessRemoteExecProtectVmLogging : 0y0
+   +0x5fc EnableProcessLocalExecProtectVmLogging : 0y0
+   +0x5fc MemoryCompressionProcess : 0y0
+   +0x5fc EnableProcessImpersonationLogging : 0y0
+   +0x600 DeviceAsid       : 0n0
+   +0x608 SvmData          : (null) 
+   +0x610 SvmProcessLock   : _EX_PUSH_LOCK
+   +0x618 SvmLock          : 0
+   +0x620 SvmProcessDeviceListHead : _LIST_ENTRY [ 0xffffe601`82aa16a0 - 0xffffe601`82aa16a0 ]
+   +0x630 LastFreezeInterruptTime : 0
+   +0x638 DiskCounters     : 0xffffe601`82aa18c0 _PROCESS_DISK_COUNTERS
+   +0x640 PicoContext      : (null) 
+   +0x648 EnclaveTable     : (null) 
+   +0x650 EnclaveNumber    : 0
+   +0x658 EnclaveLock      : _EX_PUSH_LOCK
+   +0x660 HighPriorityFaultsAllowed : 0
+   +0x668 EnergyContext    : 0xffffe601`82aa18f8 _PO_PROCESS_ENERGY_CONTEXT
+   +0x670 VmContext        : (null) 
+   +0x678 SequenceNumber   : 0x49
+   +0x680 CreateInterruptTime : 0x983e1b9
+   +0x688 CreateUnbiasedInterruptTime : 0x983e1b9
+   +0x690 TotalUnbiasedFrozenTime : 0
+   +0x698 LastAppStateUpdateTime : 0x983e1b9
+   +0x6a0 LastAppStateUptime : 0y0000000000000000000000000000000000000000000000000000000000000 (0)
+   +0x6a0 LastAppState     : 0y000
+   +0x6a8 SharedCommitCharge : 0x1ec
+   +0x6b0 SharedCommitLock : _EX_PUSH_LOCK
+   +0x6b8 SharedCommitLinks : _LIST_ENTRY [ 0xffff8484`8efb7078 - 0xffff8484`8efb7e38 ]
+   +0x6c8 AllowedCpuSets   : 0
+   +0x6d0 DefaultCpuSets   : 0
+   +0x6c8 AllowedCpuSetsIndirect : (null) 
+   +0x6d0 DefaultCpuSetsIndirect : (null) 
+   +0x6d8 DiskIoAttribution : (null) 
+   +0x6e0 DxgProcess       : 0xffff8484`8ce04d70 Void
+   +0x6e8 Win32KFilterSet  : 0
+   +0x6ec Machine          : 0x8664
+   +0x6ee MmSlabIdentity   : 0xff ''
+   +0x6ef Spare0           : 0 ''
+   +0x6f0 ProcessTimerDelay : _PS_INTERLOCKED_TIMER_DELAY_VALUES
+   +0x6f8 KTimerSets       : 0
+   +0x6fc KTimer2Sets      : 0
+   +0x700 ThreadTimerSets  : 0x705
+   +0x708 VirtualTimerListLock : 0
+   +0x710 VirtualTimerListHead : _LIST_ENTRY [ 0xffffe601`82aa1790 - 0xffffe601`82aa1790 ]
+   +0x720 WakeChannel      : _WNF_STATE_NAME
+   +0x720 WakeInfo         : _PS_PROCESS_WAKE_INFORMATION
+   +0x750 MitigationFlags  : 0x800a1
+   +0x750 MitigationFlagsValues : <unnamed-tag>
+   +0x754 MitigationFlags2 : 0x40000000
+   +0x754 MitigationFlags2Values : <unnamed-tag>
+   +0x758 PartitionObject  : 0xffffe601`7b689f30 Void
+   +0x760 SecurityDomain   : 0
+   +0x768 ParentSecurityDomain : 0
+   +0x770 CoverageSamplerContext : (null) 
+   +0x778 MmHotPatchContext : (null) 
+   +0x780 DynamicEHContinuationTargetsTree : _RTL_AVL_TREE
+   +0x788 DynamicEHContinuationTargetsLock : _EX_PUSH_LOCK
+   +0x790 DynamicEnforcedCetCompatibleRanges : _PS_DYNAMIC_ENFORCED_ADDRESS_RANGES
+   +0x7a0 DisabledComponentFlags : 0
+   +0x7a4 PageCombineSequence : 0n1
+   +0x7a8 EnableOptionalXStateFeaturesLock : _EX_PUSH_LOCK
+   +0x7b0 PathRedirectionHashes : (null) 
+   +0x7b8 SyscallProvider  : (null) 
+   +0x7c0 SyscallProviderProcessLinks : _LIST_ENTRY [ 0x00000000`00000000 - 0x00000000`00000000 ]
+   +0x7d0 SyscallProviderDispatchContext : _PSP_SYSCALL_PROVIDER_DISPATCH_CONTEXT
+   +0x7d8 MitigationFlags3 : 0
+   +0x7d8 MitigationFlags3Values : <unnamed-tag>
+   +0x7dc Flags4           : 1
+   +0x7dc ThreadWasActive  : 0y1
+   +0x7dc MinimalTerminate : 0y0
+   +0x7dc ImageExpansionDisable : 0y0
+   +0x7dc SessionFirstProcess : 0y0
+   +0x7e0 SyscallUsage     : 0
+   +0x7e0 SyscallUsageValues : <unnamed-tag>
+   +0x7e4 SupervisorDeviceAsid : 0n0
+   +0x7e8 SupervisorSvmData : (null) 
+   +0x7f0 NetworkCounters  : 0xffffe601`82aa18e8 _PROCESS_NETWORK_COUNTERS
+   +0x7f8 Execution        : _PROCESS_EXECUTION
+   +0x800 ThreadIndexTable : (null) 
+   +0x808 FreezeWorkLinks  : _LIST_ENTRY [ 0x00000000`00000000 - 0x00000000`00000000 ]
