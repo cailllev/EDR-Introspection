@@ -204,17 +204,20 @@ bool inject_dll(int pid, const std::string& dllPath, bool debug)
     DWORD exitCode = 0;
     if (!GetExitCodeThread(hThread, &exitCode)) {
         std::cerr << "[!] Hooker: GetExitCodeThread failed. Error: " << GetLastError() << "\n";
+        CloseHandle(hThread);
+        return false;
     }
     else {
+        CloseHandle(hThread);
         if (exitCode == 0) {
             std::cerr << "[!] Hooker: remote routine (e.g. LoadLibrary) failed: " << GetLastError() << "\n";
+            return false;
         }
         else {
             std::cout << "[*] Hooker: remote routine succeeded, module handle: " << std::hex << exitCode << "\n";
+            return true;
         }
     }
-    CloseHandle(hThread);
-    return true;
 }
 
 bool unload_dll(HANDLE hProcess, HANDLE hThread, LPVOID remoteMem){
