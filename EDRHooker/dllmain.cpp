@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <string>
 #include <atomic>
+#include <fstream>
 
 #include <MinHook.h>
 #include <TraceLoggingProvider.h>
@@ -54,6 +55,15 @@ static PFN_NtReadVirtualMemory g_origNtReadVirtualMemory = nullptr;
 static PFN_NtWriteVirtualMemory g_origNtWriteVirtualMemory = nullptr;
 static PFN_NtClose g_origNtClose = nullptr;
 
+
+void write_file(std::string msg) {
+    std::ofstream outfile("C:\\Users\\Public\\Downloads\\out.txt");
+    if (outfile.is_open())
+    {
+        outfile << msg;
+        outfile.close();
+    }
+}
 
 void emit_etw_ok(std::string msg) {
     TraceLoggingWrite(
@@ -192,6 +202,7 @@ NTSTATUS NTAPI Hook_NtClose(HANDLE Handle)
 void InstallHooks()
 {
     if (g_initialized.exchange(true)) return; // only once
+    write_file("3");
 
     // MinHook init
     if (MH_Initialize() != MH_OK) {
@@ -204,6 +215,7 @@ void InstallHooks()
         emit_etw_error("ntdll not loaded");
         return;
     }
+    write_file("4");
 
     // all functions to hook
     std::map<std::string, std::pair<void*, void**>> funcs = {
@@ -229,6 +241,7 @@ void InstallHooks()
             emit_etw_ok("Hooked " + name);
         }
     }
+    write_file("5");
     emit_etw_ok("++ NTDLL-HOOKER STARTED ++");
 }
 
@@ -241,6 +254,9 @@ void RemoveHooks()
 
 DWORD WINAPI t_InitHooks(LPVOID param)
 {
+    //DisableThreadLibraryCalls(hinst);
+    TraceLoggingRegister(g_hProvider);
+    write_file("2");
 	InstallHooks();
     return 0;
 }
@@ -253,15 +269,23 @@ DWORD WINAPI t_selfUnloadThread(LPVOID hinst) {
 
 BOOL WINAPI DllMain(HINSTANCE hinst, DWORD reason, LPVOID reserved) {
     switch (reason) {
-    case DLL_PROCESS_ATTACH: {
-        DisableThreadLibraryCalls(hinst);
-        TraceLoggingRegister(g_hProvider);
-        CreateThread(nullptr, 0, t_InitHooks, nullptr, 0, nullptr);
+    case DLL_PROCESS_ATTACH: 
+    {
+        HANDLE hTread = CreateThread(nullptr, 0, t_InitHooks, nullptr, 0, nullptr);
+        if (!hTread) {
+			std::cerr << "[!] Hook-DLL: Failed to create init thread\n";
+			return FALSE;
+        }
+        std::cout << "[+] Hook-DLL: Created init thread\n";
         break;
     }
+	case DLL_THREAD_ATTACH:
+        break;
+	case DLL_THREAD_DETACH:
+		break;
     case DLL_PROCESS_DETACH:
-        RemoveHooks();
-        TraceLoggingUnregister(g_hProvider);
+        //RemoveHooks();
+        //TraceLoggingUnregister(g_hProvider);
         break;
     }
     return TRUE;
