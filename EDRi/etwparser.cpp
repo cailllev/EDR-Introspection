@@ -555,9 +555,8 @@ void post_parsing_checks(json& j) {
     int new_proc_id = check_new_proc(j);
 
     // check if the attack_PID and injected_PID can be set
-    // TODO path independent?
     if (g_attack_PID == 0 && new_proc_id != 0) {
-        if (j.contains(FILEPATH) && filepath_match(j[FILEPATH], g_attack_exe_path)) {
+        if (j.contains(FILEPATH) && filepath_match(j[FILEPATH], g_attack_exe_path)) { // depends on the attack path, but this is fixed
             g_attack_PID = new_proc_id;
             g_tracking_PIDs.push_back(g_attack_PID);
             std::cout << "[+] ETW: Got attack PID: " << g_attack_PID << "\n";
@@ -754,14 +753,14 @@ Classifier filter_antimalware(json& ev) {
         return classify_to(ev, DATA, { g_attack_PID, g_injected_PID });
     }
 
-    // events to keep if Message contains filter string (case insensitive) // TODO without magic values
+    // events to keep if Message contains filter string (case insensitive)
     if (std::find(am_event_ids_with_message.begin(), am_event_ids_with_message.end(), ev[EVENT_ID]) != am_event_ids_with_message.end()) {
         if (ev.contains(MESSAGE)) {
             std::string msg = ev[MESSAGE].get<std::string>();
             std::transform(msg.begin(), msg.end(), msg.begin(), [](unsigned char c) { return std::tolower(c); });
-            if (msg.find("injector.exe") != std::string::npos ||
-                msg.find("microsoft.windowsnotepad") != std::string::npos ||
-                msg.find("microsoft.windowscalculator") != std::string::npos) {
+            if (msg.find(g_attack_exe_name) != std::string::npos ||
+                msg.find(injected_name) != std::string::npos ||
+                msg.find(invoked_name) != std::string::npos) {
                 return Minimal; // do not filter if any of the strings match
             }
             return All; // else filter out

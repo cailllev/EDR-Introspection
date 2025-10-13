@@ -162,7 +162,7 @@ bool inject_dll(int pid, const std::string& dllPath, bool debug)
         return false;
     }
     if (debug) {
-        std::cout << "[*] Hooker: Wrote DLL path to target process memory\n";
+        std::cout << "[*] Hooker: Wrote '" << dllPath << "' to target process memory\n";
 	}
 
     // Get LoadLibraryA address
