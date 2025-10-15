@@ -1,0 +1,71 @@
+0: kd> dt nt!_EPROCESS ffffa80e6815f080 MitigationFlags2
+   +0x754 MitigationFlags2 : 0x40000000
+0: kd> dt nt!_EPROCESS ffffa80e6815f080 MitigationFlags
+   +0x750 MitigationFlags : 0x8800a1
+0: kd> ba w4 ffffa80e6815f080 + 0x0754
+0: kd> bl
+     0 e Disable Clear  ffffa80e`6815f7d4 w 4 0001 (0001) 
+
+0: kd> g
+14:08:21.044	ERR	#0	    4	 5168	System         	KiKernelExit not found
+14:08:21.055	ERR	#1	    4	 5168	System         	KiKernelExit not found
+14:08:21.070	ERR	#0	    4	 5168	System         	ExpLargePoolTableLock not found
+14:08:21.077	ERR	#1	    4	 5168	System         	PoolBigPageTable not found
+14:08:21.083	ERR	#2	    4	 5168	System         	PoolBigPageTableSize not found
+14:08:21.166	ERR	#0	    4	 5168	System         	ObReferenceProcessHandleTable not found
+14:08:21.174	ERR	#1	    4	 5168	System         	HandleTable not found
+14:08:21.194	ERR	#2	    4	 5168	System         	MmSession not found
+14:08:21.200	ERR	#0	    4	 5168	System         	ImageNotify maxcount not found
+14:08:21.206	ERR	#0	    4	 5168	System         	ProcessNotify maxcount not found
+14:08:21.217	ERR	#1	    4	 5168	System         	KiIdleLoop not found
+14:08:25.619	INF	#1	    4	 5168	System         	The NeacSafe driver has been installed 
+Breakpoint 0 hit
+NeacSafe64+0x53931:
+fffff804`62f93931 75f0            jne     NeacSafe64+0x53923 (fffff804`62f93923)
+0: kd> r
+rax=ffffa80e6815f7d4 rbx=ffffa80e6815f7d4 rcx=ffffa80e6815f7d4
+rdx=ffffd87285f976d4 rsi=0000000000000000 rdi=0000000000000001
+rip=fffff80462f93931 rsp=ffffca8afd333438 rbp=ffffca8afd333480
+ r8=0000000000000000  r9=ffffb80000000020 r10=0000000000000001
+r11=ffffa80e6815f700 r12=ffffa80e62691bd0 r13=0000000000000002
+r14=ffffa80e62691bb0 r15=00000000c000000d
+iopl=0         nv up ei pl zr na po nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000246
+NeacSafe64+0x53931:
+fffff804`62f93931 75f0            jne     NeacSafe64+0x53923 (fffff804`62f93923) [br=0]
+0: kd> k
+ # Child-SP          RetAddr               Call Site
+00 ffffca8a`fd333438 fffff804`62f58e58     NeacSafe64+0x53931
+01 ffffca8a`fd333440 fffff804`62f5cb60     NeacSafe64+0x18e58
+02 ffffca8a`fd3334b0 fffff804`5c8c3c32     NeacSafe64+0x1cb60
+03 ffffca8a`fd333520 fffff804`5c9104a2     FLTMGR!FltpFilterMessage+0x162
+04 ffffca8a`fd333590 fffff804`5c8cc053     FLTMGR!FltpMsgDispatch+0xf2
+05 ffffca8a`fd333600 fffff804`cafab63d     FLTMGR!FltpDispatch+0x133
+06 ffffca8a`fd3336a0 fffff804`cb4d0cc8     nt!IofCallDriver+0xcd
+07 ffffca8a`fd3336e0 fffff804`cb4cfb12     nt!IopSynchronousServiceTail+0x1c8
+08 ffffca8a`fd333790 fffff804`cb4cf19e     nt!IopXxxControlFile+0x962
+09 ffffca8a`fd333a00 fffff804`cb2b1455     nt!NtDeviceIoControlFile+0x5e
+0a ffffca8a`fd333a70 00007ffd`f3801cd4     nt!KiSystemServiceCopyEnd+0x25
+0b 0000004a`cfefecc8 00007ffd`e5e63bc2     0x00007ffd`f3801cd4
+0c 0000004a`cfefecd0 00007ff6`317060f8     0x00007ffd`e5e63bc2
+0d 0000004a`cfefecd8 00007ffd`e5e63bc2     0x00007ff6`317060f8
+0e 0000004a`cfefece0 00000000`00000000     0x00007ffd`e5e63bc2
+0: kd> u rip
+NeacSafe64+0x53931:
+fffff804`62f93931 75f0            jne     NeacSafe64+0x53923 (fffff804`62f93923)
+fffff804`62f93933 c3              ret
+fffff804`62f93934 666666660f1f840000000000 nop word ptr [rax+rax]
+fffff804`62f93940 4e8d1c02        lea     r11,[rdx+r8]
+fffff804`62f93944 482bd1          sub     rdx,rcx
+fffff804`62f93947 7309            jae     NeacSafe64+0x53952 (fffff804`62f93952)
+fffff804`62f93949 4c3bd9          cmp     r11,rcx
+fffff804`62f9394c 0f876e010000    ja      NeacSafe64+0x53ac0 (fffff804`62f93ac0)
+0: kd> dd
+fffff804`62f93931  66c3f075 0f666666 0000841f 4e000000
+fffff804`62f93941  48021c8d 0973d12b 0fd93b4c 00016e87
+fffff804`62f93951  04100f00 c1834811 0fc1f610 83481274
+fffff804`62f93961  100ff0e1 110f110c c1280f00 10c18348
+fffff804`62f93971  4cc0034c 8b4dc12b e9c149c8 496f7406
+fffff804`62f93981  1000f981 870f0000 000000b3 3fe08349
+fffff804`62f93991  66662deb 66666666 841f0f66 00000000
+fffff804`62f939a1  66666600 66666666 00841f0f 00000000
