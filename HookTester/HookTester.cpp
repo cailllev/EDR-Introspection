@@ -48,22 +48,11 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    if (unload) {
-		std::string dllName = dllPath.substr(dllPath.find_last_of("\\/") + 1);
-        if (unload_dll(pid, dllName)) {
-            std::cout << "[*] HookTester: DLL unloaded successfully.\n";
-        }
-        else {
-            std::cerr << "[!] HookTester: DLL unload failed.\n";
-        }
+    if (inject_dll(pid, dllPath, true)) {
+        std::cout << "[*] HookTester: DLL injection succeeded.\n";
     }
     else {
-        if (inject_dll(pid, dllPath, true)) {
-            std::cout << "[*] HookTester: DLL injection succeeded.\n";
-        }
-        else {
-            std::cerr << "[!] HookTester: DLL injection failed.\n";
-        }
+        std::cerr << "[!] HookTester: DLL injection failed.\n";
     }
 
     return 0;
