@@ -6,8 +6,9 @@
 int main(int argc, char* argv[]) {
     int pid = 0;
     std::string dllPath;
+    bool unload = false;
 
-    if (argc == 3) {
+    if (argc >= 3) {
         try {
             pid = std::stoi(argv[1]);
         }
@@ -16,6 +17,10 @@ int main(int argc, char* argv[]) {
             return 1;
         }
         dllPath = argv[2];
+
+        if (argc >= 4) {
+            unload = true;
+        }
     }
     else {
         // Interactive fallback
@@ -43,11 +48,22 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    if (inject_dll(pid, dllPath, true)) {
-        std::cout << "[*] HookTester: DLL injection succeeded.\n";
+    if (unload) {
+		std::string dllName = dllPath.substr(dllPath.find_last_of("\\/") + 1);
+        if (unload_dll(pid, dllName)) {
+            std::cout << "[*] HookTester: DLL unloaded successfully.\n";
+        }
+        else {
+            std::cerr << "[!] HookTester: DLL unload failed.\n";
+        }
     }
     else {
-        std::cerr << "[!] HookTester: DLL injection failed.\n";
+        if (inject_dll(pid, dllPath, true)) {
+            std::cout << "[*] HookTester: DLL injection succeeded.\n";
+        }
+        else {
+            std::cerr << "[!] HookTester: DLL injection failed.\n";
+        }
     }
 
     return 0;

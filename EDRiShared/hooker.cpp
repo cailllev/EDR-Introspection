@@ -144,20 +144,20 @@ bool inject_dll(int pid, const std::string& dllPath, bool debug)
 
     // Allocate memory for DLL path in target
     size_t size = dllPath.length() + 1;
-    LPVOID remoteMem = VirtualAllocEx(hProcess, nullptr, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-    if (!remoteMem) {
+    LPVOID dllPathAddr = VirtualAllocEx(hProcess, nullptr, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    if (!dllPathAddr) {
         std::cerr << "[!] Hooker: VirtualAllocEx failed. Error: " << GetLastError() << "\n";
         CloseHandle(hProcess);
         return false;
     }
     if (debug) {
-		std::cout << "[*] Hooker: Allocated memory in target process at " << remoteMem << "\n";
+		std::cout << "[*] Hooker: Allocated memory in target process at " << dllPathAddr << "\n";
     }
 
     // Write DLL path into target
-    if (!WriteProcessMemory(hProcess, remoteMem, dllPath.c_str(), size, nullptr)) {
+    if (!WriteProcessMemory(hProcess, dllPathAddr, dllPath.c_str(), size, nullptr)) {
         std::cerr << "[!] Hooker: WriteProcessMemory failed. Error: " << GetLastError() << "\n";
-        VirtualFreeEx(hProcess, remoteMem, 0, MEM_RELEASE);
+        VirtualFreeEx(hProcess, dllPathAddr, 0, MEM_RELEASE);
         CloseHandle(hProcess);
         return false;
     }
@@ -169,24 +169,24 @@ bool inject_dll(int pid, const std::string& dllPath, bool debug)
     HMODULE lpModuleHandle = GetModuleHandleA("kernel32.dll");
     if (!lpModuleHandle) {
         std::cerr << "[!] Hooker: GetModuleHandle failed\n";
-        VirtualFreeEx(hProcess, remoteMem, 0, MEM_RELEASE);
+        VirtualFreeEx(hProcess, dllPathAddr, 0, MEM_RELEASE);
         CloseHandle(hProcess);
         return false;
     }
     LPVOID loadLibAddr = (LPVOID)GetProcAddress(lpModuleHandle, "LoadLibraryA");
     if (!loadLibAddr) {
-        std::cerr << "[!] Hooker: GetProcAddress failed\n";
-        VirtualFreeEx(hProcess, remoteMem, 0, MEM_RELEASE);
+        std::cerr << "[!] Hooker: GetProcAddress of LoadLibrary failed\n";
+        VirtualFreeEx(hProcess, dllPathAddr, 0, MEM_RELEASE);
         CloseHandle(hProcess);
         return false;
     }
 
     // Create remote thread (start the DLL)
-	HANDLE hThread = CreateRemoteThread(hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE)loadLibAddr, remoteMem, 0, nullptr);
+	HANDLE hThread = CreateRemoteThread(hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE)loadLibAddr, dllPathAddr, 0, nullptr);
     DWORD err = GetLastError();
     if (!hThread || err != 0) {
         std::cerr << "[!] Hooker: CreateRemoteThread failed. Error: " << err << "\n";
-        VirtualFreeEx(hProcess, remoteMem, 0, MEM_RELEASE);
+        VirtualFreeEx(hProcess, dllPathAddr, 0, MEM_RELEASE);
         CloseHandle(hProcess);
         return false;
     }
@@ -201,28 +201,153 @@ bool inject_dll(int pid, const std::string& dllPath, bool debug)
     }
 
     // Get exit code (for LoadLibrary, exit code == HMODULE returned)
-    DWORD exitCode = 0;
-    if (!GetExitCodeThread(hThread, &exitCode)) {
+    DWORD hModule = 0;
+    if (!GetExitCodeThread(hThread, &hModule)) {
         std::cerr << "[!] Hooker: GetExitCodeThread failed. Error: " << GetLastError() << "\n";
         CloseHandle(hThread);
         return false;
     }
-    else {
-        CloseHandle(hThread);
-        if (exitCode == 0) {
-            std::cerr << "[!] Hooker: remote routine (e.g. LoadLibrary) failed: " << GetLastError() << "\n";
-            return false;
-        }
-        else {
-            std::cout << "[*] Hooker: remote routine succeeded, module handle: " << std::hex << exitCode << "\n";
-            return true;
-        }
+    CloseHandle(hThread);
+    if (hModule == 0) {
+        std::cerr << "[!] Hooker: remote routine (e.g. LoadLibrary) failed: " << GetLastError() << "\n";
+        return false;
     }
+
+    std::cout << "[*] Hooker: remote routine succeeded, module handle: " << std::hex << hModule << "\n";
+    return true;
 }
 
-bool unload_dll(HANDLE hProcess, HANDLE hThread, LPVOID remoteMem){
-    VirtualFreeEx(hProcess, remoteMem, 0, MEM_RELEASE);
+static HMODULE GetRemoteModuleBase(HANDLE hProcess, const std::wstring& moduleName) {
+    DWORD pid = GetProcessId(hProcess);
+    HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, pid);
+    if (snap == INVALID_HANDLE_VALUE) return nullptr;
+
+    MODULEENTRY32W me;
+    me.dwSize = sizeof(me);
+    HMODULE base = nullptr;
+    if (Module32FirstW(snap, &me)) {
+        do {
+            if (_wcsicmp(me.szModule, moduleName.c_str()) == 0) {
+                base = (HMODULE)me.modBaseAddr;
+                break;
+            }
+        } while (Module32NextW(snap, &me));
+    }
+    CloseHandle(snap);
+    return base;
+}
+
+bool unload_dll(int pid, const std::string& dllName)
+{
+    HANDLE hProcess = OpenProcess(
+        PROCESS_ALL_ACCESS,
+        FALSE, pid);
+
+    if (!hProcess) {
+        std::cerr << "[!] Hooker: Failed to open target process. Error: " << GetLastError() << "\n";
+        return false;
+    }
+
+    // Ensure target bitness compatibility
+    BOOL isWow = FALSE;
+    if (!IsWow64Process(hProcess, &isWow)) {
+        std::cerr << "[!] Hooker: IsWow64Process failed. Error: " << GetLastError() << "\n";
+        CloseHandle(hProcess);
+        return false;
+    }
+    if (isWow) {
+        std::cerr << "[!] Hooker: Target process is 32-bit, but this injector is 64-bit. Cannot operate.\n";
+        CloseHandle(hProcess);
+        return false;
+    }
+
+    // Convert dllName (narrow) to wide for comparison with module names from Toolhelp
+    std::wstring wDllName;
+    {
+        int req = MultiByteToWideChar(CP_UTF8, 0, dllName.c_str(), -1, nullptr, 0);
+        if (req <= 0) {
+            std::cerr << "[!] Hooker: Failed to convert dll name to wide string\n";
+            CloseHandle(hProcess);
+            return false;
+        }
+        wDllName.resize(req - 1);
+        MultiByteToWideChar(CP_UTF8, 0, dllName.c_str(), -1, &wDllName[0], req);
+    }
+
+    // Find the remote module base (the injected DLL base in the target process)
+    HMODULE remoteModuleBase = GetRemoteModuleBase(hProcess, wDllName);
+    if (!remoteModuleBase) {
+        std::cerr << "[!] Hooker: Could not find remote module '" << dllName << "' in target process.\n";
+        CloseHandle(hProcess);
+        return false;
+    }
+    std::cout << "[*] Hooker: Remote module base: " << std::hex << (uintptr_t)remoteModuleBase << std::dec << "\n";
+
+    // Get local addresses for kernel32 and FreeLibraryAndExitThread
+    HMODULE localKernel32 = GetModuleHandleW(L"kernel32.dll");
+    if (!localKernel32) {
+        std::cerr << "[!] Hooker: GetModuleHandle(kernel32) failed: " << GetLastError() << "\n";
+        CloseHandle(hProcess);
+        return false;
+    }
+    FARPROC localFreeAndExit = GetProcAddress(localKernel32, "FreeLibraryAndExitThread");
+    if (!localFreeAndExit) {
+        std::cerr << "[!] Hooker: GetProcAddress(FreeLibraryAndExitThread) failed: " << GetLastError() << "\n";
+        CloseHandle(hProcess);
+        return false;
+    }
+
+    // Compute offset of FreeLibraryAndExitThread within local kernel32
+    uintptr_t offsetFree = (uintptr_t)localFreeAndExit - (uintptr_t)localKernel32;
+
+    // Find remote kernel32 base
+    HMODULE remoteKernel32 = GetRemoteModuleBase(hProcess, L"kernel32.dll");
+    if (!remoteKernel32) {
+        std::cerr << "[!] Hooker: Could not find kernel32.dll in target process\n";
+        CloseHandle(hProcess);
+        return false;
+    }
+
+    // Compute remote address of FreeLibraryAndExitThread
+    LPTHREAD_START_ROUTINE remoteFreeAndExit = (LPTHREAD_START_ROUTINE)((uintptr_t)remoteKernel32 + offsetFree);
+
+    std::cout << "[*] Hooker: remote FreeLibraryAndExitThread addr = " << std::hex << (uintptr_t)remoteFreeAndExit << std::dec << "\n";
+
+    // Create remote thread that calls FreeLibraryAndExitThread(remoteModuleBase, 0)
+    HANDLE hThread = CreateRemoteThread(hProcess, nullptr, 0, remoteFreeAndExit, (LPVOID)remoteModuleBase, 0, nullptr);
+    if (!hThread) {
+        std::cerr << "[!] Hooker: CreateRemoteThread for FreeLibrary failed: " << GetLastError() << "\n";
+        CloseHandle(hProcess);
+        return false;
+    }
+
+    // Wait for the thread to exit (reasonable timeout)
+    DWORD wait = WaitForSingleObject(hThread, 10000); // 10s
+    if (wait == WAIT_TIMEOUT) {
+        std::cerr << "[!] Hooker: FreeLibrary thread timed out\n";
+        // Optionally, try TerminateThread (not recommended). We'll continue to check state below.
+    }
+
+    // Optionally get exit code (FreeLibraryAndExitThread calls ExitThread with last parameter,
+    // but we mainly want to verify module is gone)
+    DWORD exitCode = 0;
+    if (GetExitCodeThread(hThread, &exitCode)) {
+        std::cout << "[*] Hooker: FreeLibrary thread exit code: " << exitCode << "\n";
+    }
+
     CloseHandle(hThread);
+
+    // Verify module is unloaded
+    HMODULE stillThere = GetRemoteModuleBase(hProcess, wDllName);
+    if (stillThere) {
+        std::cerr << "[!] Hooker: Module still present after FreeLibrary: " << std::hex << (uintptr_t)stillThere << std::dec << "\n";
+        CloseHandle(hProcess);
+        return false;
+    }
+
+    std::cout << "[+] Hooker: Successfully unloaded module '" << dllName << "'\n";
     CloseHandle(hProcess);
     return true;
 }
+
+
