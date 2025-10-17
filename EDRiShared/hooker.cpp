@@ -41,23 +41,6 @@ bool enable_debug_privilege()
     return true;
 }
 
-// Minimal OBJECT_BASIC_INFORMATION from winternl
-typedef struct _OBJECT_BASIC_INFORMATION {
-    ULONG Attributes;
-    ACCESS_MASK GrantedAccess;
-    ULONG HandleCount;
-    ULONG PointerCount;
-    ULONG Reserved[10];
-} OBJECT_BASIC_INFORMATION;
-
-extern "C" NTSTATUS NTAPI NtQueryObject(
-    HANDLE Handle,
-    OBJECT_INFORMATION_CLASS ObjectInformationClass,
-    PVOID ObjectInformation,
-    ULONG ObjectInformationLength,
-    PULONG ReturnLength
-);
-
 std::string get_proc_access_details(DWORD granted) {
     struct { DWORD mask; const char* name; } flags[] = {
         {0x0001, "PROCESS_TERMINATE"},
@@ -104,7 +87,7 @@ std::string get_proc_access_details(DWORD granted) {
 }
 
 void print_granted_access(HANDLE h, int pid) {
-    OBJECT_BASIC_INFORMATION obi = {};
+    PUBLIC_OBJECT_BASIC_INFORMATION obi = {};
     ULONG ret = 0;
     NTSTATUS st = NtQueryObject(h, ObjectBasicInformation, &obi, sizeof(obi), &ret);
     if (st < 0) {
@@ -200,7 +183,7 @@ bool inject_dll(int pid, const std::string& dllPath, bool debug)
 		return false;
     }
 
-    // Get exit code (for LoadLibrary, exit code == HMODULE returned)
+    // Get exit code (for LoadLibrary, exit code == hModule handle)
     DWORD hModule = 0;
     if (!GetExitCodeThread(hThread, &hModule)) {
         std::cerr << "[!] Hooker: GetExitCodeThread failed. Error: " << GetLastError() << "\n";
@@ -209,7 +192,7 @@ bool inject_dll(int pid, const std::string& dllPath, bool debug)
     }
     CloseHandle(hThread);
     if (hModule == 0) {
-        std::cerr << "[!] Hooker: remote routine (e.g. LoadLibrary) failed: " << GetLastError() << "\n";
+        std::cerr << "[!] Hooker: LoadLibrary) failed: " << GetLastError() << "\n";
         return false;
     }
 
