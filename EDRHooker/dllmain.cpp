@@ -21,7 +21,6 @@ TRACELOGGING_DEFINE_PROVIDER(
 static std::atomic<bool> g_initialized(false);
 
 // types
-typedef LONG NTSTATUS;
 typedef NTSTATUS(NTAPI* PFN_NtOpenProcess)(
     PHANDLE ProcessHandle,
     ACCESS_MASK DesiredAccess,
@@ -65,64 +64,25 @@ void write_file(std::string msg) {
     }
 }
 
-void emit_etw_ok(std::string msg) {
+void emit_etw_ok(std::string msg, bool print = false) {
     TraceLoggingWrite(
         g_hProvider,
-        "EDRHookOk",
-        TraceLoggingValue(msg.c_str(), "message")
+        "EDRHookOk2",
+        TraceLoggingString(msg.c_str(), "message")
     );
-    std::cout << "[+] Hook-DLL: " << msg << "\n";
+	if (print)
+        std::cout << "[+] Hook-DLL: " << msg << "\n";
 };
 
-void emit_etw_error(std::string error) {
+void emit_etw_error(std::string error, bool print = false) {
     TraceLoggingWrite(
         g_hProvider,
         "EDRHookError",
-        TraceLoggingValue(error.c_str(), "message")
+        TraceLoggingString(error.c_str(), "message")
 	);
-	std::cerr << "[!] Hook-DLL: " << error << "\n";
+    if (print)
+	    std::cerr << "[!] Hook-DLL: " << error << "\n";
 };
-
-void emit_open_etw_event(uint64_t target_pid, unsigned long d_access) {
-    TraceLoggingWrite(
-        g_hProvider,
-        "EDRHookOpenProc",
-        TraceLoggingValue("NtOpenProcess", "message"),
-        TraceLoggingUInt64(target_pid, "targetpid"),
-        TraceLoggingULong(d_access, "d_acces")
-    );
-}
-
-void emit_readvm_etw_event(uint64_t target_pid, void* base_address, uint64_t read_size) {
-    TraceLoggingWrite(
-        g_hProvider,
-        "EDRHookReadVM",
-        TraceLoggingValue("NtReadVirtualMemory", "message"),
-        TraceLoggingUInt64(target_pid, "targetpid"),
-        TraceLoggingPointer(base_address, "base_address"),
-        TraceLoggingUInt64(read_size, "read_size")
-    );
-}
-
-void emit_writevm_etw_event(uint64_t target_pid, void* base_address, uint64_t read_size) {
-    TraceLoggingWrite(
-        g_hProvider,
-        "EDRHookWriteVM",
-        TraceLoggingValue("NtWriteVirtualMemory", "message"),
-        TraceLoggingUInt64(target_pid, "targetpid"),
-        TraceLoggingPointer(base_address, "base_address"),
-        TraceLoggingUInt64(read_size, "read_size")
-    );
-}
-
-void emit_close_etw_event(uint64_t target_pid) {
-    TraceLoggingWrite(
-        g_hProvider,
-        "EDRHookCloseProc",
-        TraceLoggingValue("NtCloseProcess", "message"),
-        TraceLoggingUInt64(target_pid, "targetpid")
-    );
-}
 
 NTSTATUS NTAPI Hook_NtOpenProcess(
     PHANDLE ProcessHandle,
@@ -131,13 +91,18 @@ NTSTATUS NTAPI Hook_NtOpenProcess(
     PVOID ClientId
 )
 {
-    // ClientId is a CLIENT_ID* in normal defs: { UniqueProcess (HANDLE), UniqueThread (HANDLE) }
+	// ProcessHandle points to the current process, ClientId to the target TODO confirm
     uint64_t pid = 0;
     if (ClientId) {
-        // CLIENT_ID layout: two pointers. Read first pointer as pid (works in most cases).
         pid = *(uintptr_t*)ClientId;
     }
-    emit_open_etw_event(pid, DesiredAccess);
+    TraceLoggingWrite(
+        g_hProvider,
+        "EDRHookOpenProc",
+        TraceLoggingString("NtOpenProcess", "message"),
+        TraceLoggingUInt64(pid, "targetpid"),
+        TraceLoggingULong(DesiredAccess, "d_acces")
+    );
 
     // Call original
     return g_origNtOpenProcess(ProcessHandle, DesiredAccess, ObjectAttributes, ClientId);
@@ -151,16 +116,15 @@ NTSTATUS NTAPI Hook_NtReadVirtualMemory(
     PSIZE_T NumberOfBytesRead
 )
 {
-    // Resolve target PID from handle (safe-ish)
-    DWORD pid = 0;
-    if (ProcessHandle && ProcessHandle != GetCurrentProcess()) {
-        pid = GetProcessId(ProcessHandle);
-    }
-    else if (ProcessHandle == GetCurrentProcess()) {
-        pid = GetCurrentProcessId();
-    }
-
-    emit_readvm_etw_event(pid, BaseAddress, NumberOfBytesToRead);
+    DWORD pid = GetProcessId(ProcessHandle);
+    TraceLoggingWrite(
+        g_hProvider,
+        "EDRHookReadVM",
+        TraceLoggingString("NtReadVirtualMemory", "message"),
+        TraceLoggingUInt64(pid, "targetpid"),
+        TraceLoggingPointer(BaseAddress, "base_address"),
+        TraceLoggingUInt64(NumberOfBytesToRead, "read_size")
+    );
 
     // Call original
     return g_origNtReadVirtualMemory(ProcessHandle, BaseAddress, Buffer, NumberOfBytesToRead, NumberOfBytesRead);
@@ -174,15 +138,15 @@ NTSTATUS NTAPI Hook_NtWriteVirtualMemory(
     PSIZE_T NumberOfBytesWritten
 )
 {
-    DWORD pid = 0;
-    if (ProcessHandle && ProcessHandle != GetCurrentProcess()) {
-        pid = GetProcessId(ProcessHandle);
-    }
-    else if (ProcessHandle == GetCurrentProcess()) {
-        pid = GetCurrentProcessId();
-    }
-
-    emit_writevm_etw_event(pid, BaseAddress, NumberOfBytesToWrite);
+    DWORD pid = GetProcessId(ProcessHandle);
+    TraceLoggingWrite(
+        g_hProvider,
+        "EDRHookWriteVM",
+        TraceLoggingString("NtWriteVirtualMemory", "message"),
+        TraceLoggingUInt64(pid, "targetpid"),
+        TraceLoggingPointer(BaseAddress, "base_address"),
+        TraceLoggingUInt64(NumberOfBytesToWrite, "write_size")
+    );
 
     // Call original
     return g_origNtWriteVirtualMemory(ProcessHandle, BaseAddress, Buffer, NumberOfBytesToWrite, NumberOfBytesWritten);
@@ -190,11 +154,15 @@ NTSTATUS NTAPI Hook_NtWriteVirtualMemory(
 
 NTSTATUS NTAPI Hook_NtClose(HANDLE Handle)
 {
-    DWORD targetPid = 0;
-    targetPid = GetProcessId(Handle);
-    if (targetPid != 0) {
-        emit_close_etw_event(targetPid);
-	} // else it is not a process handle, ignore
+    DWORD targetPid = GetProcessId(Handle);
+    if (targetPid != 0) { // too many closing events of non procs
+        TraceLoggingWrite(
+            g_hProvider,
+            "EDRHookCloseProc",
+            TraceLoggingString("NtCloseProcess", "message"),
+            TraceLoggingUInt64(targetPid, "targetpid")
+        );
+    }
     return g_origNtClose(Handle);
 }
 
@@ -202,7 +170,9 @@ NTSTATUS NTAPI Hook_NtClose(HANDLE Handle)
 void InstallHooks()
 {
     if (g_initialized.exchange(true)) return; // only once
+
     write_file("3");
+    bool print_stdout = true;
 
     // MinHook init
     if (MH_Initialize() != MH_OK) {
@@ -230,15 +200,15 @@ void InstallHooks()
 		std::pair<void*, void**> fn = it.second;
         FARPROC target = GetProcAddress(hNtdll, name.c_str());
         if (!target) {
-            emit_etw_error(name + " not found in ntdll");
+            emit_etw_error(name + " not found in ntdll", print_stdout);
             continue;
         }
 
         if (MH_CreateHook(target, fn.first, (LPVOID*)fn.second) != MH_OK || MH_EnableHook(target) != MH_OK) {
-            emit_etw_error("Failed to hook " + name);
+            emit_etw_error("Failed to hook " + name, print_stdout);
         }
         else {
-            emit_etw_ok("Hooked " + name);
+            emit_etw_ok("Hooked " + name, print_stdout);
         }
     }
     write_file("5");
