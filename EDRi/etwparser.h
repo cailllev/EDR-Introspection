@@ -17,6 +17,10 @@ static const int ANTIMALWARE_PROC_START_STOP_EVENT_ID = 73;
 static const std::string ANTIMALWARE_PROC_START_MSG = "SyncStart";
 static const std::string ANTIMALWARE_PROC_STOP_MSG = "Termination";
 
+// my providers (from other projects)
+static const std::wstring ATTACK_GUID = L"{72248466-7166-4feb-a386-34d8f35bb637}";
+static const std::wstring HOOKS_GUID = L"{72248411-7166-4feb-a386-34d8f35bb637}";
+
 // my message field name (custom ETW events)
 static const std::string MY_MESSAGE = "message"; // this name must not be contained in the event header, else parsing of own emitted events breaks
 static const std::wstring MY_MESSAGE_W = std::wstring(MY_MESSAGE.begin(), MY_MESSAGE.end());

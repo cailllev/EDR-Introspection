@@ -36,7 +36,7 @@ DWORD WINAPI t_start_default_traces(LPVOID param) {
         trace_etw.enable(process_provider);
 
         // my attack trace
-        krabs::guid attack_guid(L"{72248466-7166-4feb-a386-34d8f35bb637}");
+        krabs::guid attack_guid(ATTACK_GUID);
         krabs::provider<> attack_provider(attack_guid);
         attack_provider.add_on_event_callback(my_event_callback);
         std::cout << "[+] ETW: Enabling Injector-Attack: (all)\n";
@@ -176,7 +176,7 @@ DWORD WINAPI t_start_etw_ti_trace(LPVOID param) {
 
 DWORD WINAPI t_start_etw_hook_trace(LPVOID param) {
     try {
-        krabs::guid hooks_guid(L"{72248411-7166-4feb-a386-34d8f35bb637}");
+        krabs::guid hooks_guid(HOOKS_GUID);
         krabs::provider<> hooks_provider(hooks_guid);
         hooks_provider.add_on_event_callback(event_callback);
         std::cout << "[+] ETW: Enabling Hook-Provider: (all)\n";
