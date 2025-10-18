@@ -3,6 +3,8 @@
 #include <tchar.h>
 #include <iostream>
 #include <map>
+#include <iomanip>
+#include <sstream>
 #include <stdio.h>
 #include <stdint.h>
 #include <string>
@@ -18,6 +20,7 @@ TRACELOGGING_DEFINE_PROVIDER(
     (0x72248411, 0x7166, 0x4feb, 0xa3, 0x86, 0x34, 0xd8, 0xf3, 0x5b, 0xb6, 0x37)  // this cannot be a variable
 );
 
+static UINT64 pid;
 static std::atomic<bool> g_initialized(false);
 
 // types
@@ -67,8 +70,9 @@ void write_file(std::string msg) {
 void emit_etw_ok(std::string msg, bool print = false) {
     TraceLoggingWrite(
         g_hProvider,
-        "EDRHookOk2",
-        TraceLoggingString(msg.c_str(), "message")
+        "EDRHookTask", // the first definition will be the task of each emitted event (unless using a manifest file?)
+        TraceLoggingString(msg.c_str(), "message"),
+        TraceLoggingUInt64(pid, "targetpid")
     );
 	if (print)
         std::cout << "[+] Hook-DLL: " << msg << "\n";
@@ -78,7 +82,8 @@ void emit_etw_error(std::string error, bool print = false) {
     TraceLoggingWrite(
         g_hProvider,
         "EDRHookError",
-        TraceLoggingString(error.c_str(), "message")
+        TraceLoggingString(error.c_str(), "message"),
+        TraceLoggingUInt64(pid, "targetpid")
 	);
     if (print)
 	    std::cerr << "[!] Hook-DLL: " << error << "\n";
@@ -91,17 +96,16 @@ NTSTATUS NTAPI Hook_NtOpenProcess(
     PVOID ClientId
 )
 {
-	// ProcessHandle points to the current process, ClientId to the target TODO confirm
-    uint64_t pid = 0;
+    UINT64 tpid = 0;
     if (ClientId) {
-        pid = *(uintptr_t*)ClientId;
+        tpid = *(uintptr_t*)ClientId;
     }
+    std::string msg = "NtOpenProcess with " + DesiredAccess;
     TraceLoggingWrite(
         g_hProvider,
         "EDRHookOpenProc",
-        TraceLoggingString("NtOpenProcess", "message"),
-        TraceLoggingUInt64(pid, "targetpid"),
-        TraceLoggingULong(DesiredAccess, "d_acces")
+        TraceLoggingString(msg.c_str(), "message"),
+        TraceLoggingUInt64(tpid, "targetpid")
     );
 
     // Call original
@@ -116,14 +120,19 @@ NTSTATUS NTAPI Hook_NtReadVirtualMemory(
     PSIZE_T NumberOfBytesRead
 )
 {
-    DWORD pid = GetProcessId(ProcessHandle);
+    DWORD tpid = GetProcessId(ProcessHandle); 
+    uintptr_t addr = reinterpret_cast<uintptr_t>(BaseAddress);
+
+    std::ostringstream oss;
+    oss << "NtReadVirtualMemory " << NumberOfBytesToRead << " bytes at 0x"
+        << std::hex << std::setw(sizeof(uintptr_t) * 2) << std::setfill('0') << addr;
+    std::string msg = oss.str();
+
     TraceLoggingWrite(
         g_hProvider,
         "EDRHookReadVM",
-        TraceLoggingString("NtReadVirtualMemory", "message"),
-        TraceLoggingUInt64(pid, "targetpid"),
-        TraceLoggingPointer(BaseAddress, "base_address"),
-        TraceLoggingUInt64(NumberOfBytesToRead, "read_size")
+        TraceLoggingString(msg.c_str(), "message"),
+        TraceLoggingUInt64(tpid, "targetpid")
     );
 
     // Call original
@@ -138,14 +147,19 @@ NTSTATUS NTAPI Hook_NtWriteVirtualMemory(
     PSIZE_T NumberOfBytesWritten
 )
 {
-    DWORD pid = GetProcessId(ProcessHandle);
+    DWORD tpid = GetProcessId(ProcessHandle);
+
+    uintptr_t addr = reinterpret_cast<uintptr_t>(BaseAddress);
+    std::ostringstream oss;
+    oss << "NtReadVirtualMemory " << NumberOfBytesToWrite << " bytes at 0x"
+        << std::hex << std::setw(sizeof(uintptr_t) * 2) << std::setfill('0') << addr;
+    std::string msg = oss.str();
+
     TraceLoggingWrite(
         g_hProvider,
         "EDRHookWriteVM",
-        TraceLoggingString("NtWriteVirtualMemory", "message"),
-        TraceLoggingUInt64(pid, "targetpid"),
-        TraceLoggingPointer(BaseAddress, "base_address"),
-        TraceLoggingUInt64(NumberOfBytesToWrite, "write_size")
+        TraceLoggingString(msg.c_str(), "message"),
+        TraceLoggingUInt64(tpid, "targetpid")
     );
 
     // Call original
@@ -154,13 +168,13 @@ NTSTATUS NTAPI Hook_NtWriteVirtualMemory(
 
 NTSTATUS NTAPI Hook_NtClose(HANDLE Handle)
 {
-    DWORD targetPid = GetProcessId(Handle);
-    if (targetPid != 0) { // too many closing events of non procs
+    DWORD tpid = GetProcessId(Handle);
+    if (tpid != 0) { // too many closing events of non procs
         TraceLoggingWrite(
             g_hProvider,
             "EDRHookCloseProc",
             TraceLoggingString("NtCloseProcess", "message"),
-            TraceLoggingUInt64(targetPid, "targetpid")
+            TraceLoggingUInt64(tpid, "targetpid")
         );
     }
     return g_origNtClose(Handle);
@@ -225,6 +239,7 @@ void RemoveHooks()
 DWORD WINAPI t_InitHooks(LPVOID param)
 {
     //DisableThreadLibraryCalls(hinst);
+    pid = GetCurrentProcessId();
     TraceLoggingRegister(g_hProvider);
     write_file("2");
 	InstallHooks();
