@@ -3,6 +3,10 @@
 #include <string>
 #include <windows.h>
 
+struct {
+    uint64_t pid;
+} payload;
+
 int main(int argc, wchar_t* argv[]) {
     try {
         // Create provider
@@ -13,33 +17,26 @@ int main(int argc, wchar_t* argv[]) {
         // Callback to dump all event fields
         provider.add_on_event_callback([](const EVENT_RECORD& record, const krabs::trace_context& ctx) {
             krabs::schema schema(record, ctx.schema_locator);
-            krabs::parser parser(schema);
 
-            std::wcout << L"PID: " << record.EventHeader.ProcessId << L" : " << std::wstring(schema.task_name()) << std::endl;
+            const BYTE* data = (const BYTE*)record.UserData;
+            ULONG size = record.UserDataLength;
 
-            for (const auto& prop : parser.properties()) {
-                const std::wstring& name = prop.name();
-                const auto type = prop.type();
+            const char* msg = reinterpret_cast<const char*>(data);
+            size_t msg_len = strnlen(msg, size);
 
-                std::wcout << "  " << prop.name() << ": ";
-                try {
-                    switch (prop.type()) {
-                    case TDH_INTYPE_INT32: std::cout << (int32_t)parser.parse<int32_t>(name); break;
-                    case TDH_INTYPE_UINT32: std::cout << (uint32_t)parser.parse<uint32_t>(name); break;
-                    case TDH_INTYPE_INT64: std::cout << (int64_t)parser.parse<int64_t>(name); break;
-                    case TDH_INTYPE_UINT64: std::cout << (uint64_t)parser.parse<uint64_t>(name); break;
-                    case TDH_INTYPE_POINTER: std::cout << (uint64_t)parser.parse<PVOID>(name); break;
-                    case TDH_INTYPE_ANSISTRING: std::cout << parser.parse<std::string>(name); break;
-                    default: std::cout << "<unsupported type>"; break;
-                    }
-                }
-                catch (...) {
-                    std::cout << "<error reading>";
-                }
-                std::cout << std::endl;
+            const BYTE* pid_ptr = data + msg_len + 1;
+            uint64_t targetpid = 0;
+            if (pid_ptr + sizeof(uint64_t) <= data + size) {
+                memcpy(&targetpid, pid_ptr, sizeof(uint64_t));
             }
+
+            std::wcout << L"PID: " << record.EventHeader.ProcessId
+                << L" : " << std::wstring(schema.task_name()) << std::endl;
+            std::cout << "  message: " << msg << std::endl;
+            std::cout << "  targetpid: " << targetpid << std::endl;
             std::cout << "--------------------------\n";
-            });
+        });
+
 
         // Trace session
         krabs::user_trace trace(L"SimpleKrabsTrace");
