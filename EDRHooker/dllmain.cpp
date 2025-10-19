@@ -3,8 +3,6 @@
 #include <tchar.h>
 #include <iostream>
 #include <map>
-#include <iomanip>
-#include <sstream>
 #include <stdio.h>
 #include <stdint.h>
 #include <string>
@@ -99,14 +97,17 @@ NTSTATUS NTAPI Hook_NtOpenProcess(
     UINT64 tpid = 0;
     if (ClientId) {
         tpid = *(uintptr_t*)ClientId;
+
+        char msg[64];
+		_snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenProcess with 0x%X", static_cast<unsigned int>(DesiredAccess));
+        TraceLoggingWrite(
+            g_hProvider,
+            "EDRHookOpenProc",
+            TraceLoggingString(msg, "message"),
+            TraceLoggingUInt64(tpid, "targetpid"),
+			TraceLoggingULong(DesiredAccess, "d_acces") // is not parsed unless manifest is used
+        );
     }
-    std::string msg = "NtOpenProcess with " + DesiredAccess;
-    TraceLoggingWrite(
-        g_hProvider,
-        "EDRHookOpenProc",
-        TraceLoggingString(msg.c_str(), "message"),
-        TraceLoggingUInt64(tpid, "targetpid")
-    );
 
     // Call original
     return g_origNtOpenProcess(ProcessHandle, DesiredAccess, ObjectAttributes, ClientId);
@@ -122,17 +123,20 @@ NTSTATUS NTAPI Hook_NtReadVirtualMemory(
 {
     DWORD tpid = GetProcessId(ProcessHandle); 
     uintptr_t addr = reinterpret_cast<uintptr_t>(BaseAddress);
-
-    std::ostringstream oss;
-    oss << "NtReadVirtualMemory " << NumberOfBytesToRead << " bytes at 0x"
-        << std::hex << std::setw(sizeof(uintptr_t) * 2) << std::setfill('0') << addr;
-    std::string msg = oss.str();
+    char msg[128];
+    _snprintf_s(msg, sizeof(msg), _TRUNCATE,
+        "NtReadVirtualMemory %llu bytes at 0x%0*llx",
+        static_cast<unsigned long long>(NumberOfBytesToRead),
+        static_cast<int>(sizeof(uintptr_t) * 2),
+        static_cast<unsigned long long>(addr));
 
     TraceLoggingWrite(
         g_hProvider,
         "EDRHookReadVM",
-        TraceLoggingString(msg.c_str(), "message"),
-        TraceLoggingUInt64(tpid, "targetpid")
+        TraceLoggingString(msg, "message"),
+        TraceLoggingUInt64(tpid, "targetpid"),
+        TraceLoggingPointer(BaseAddress, "base_address"), // is not parsed unless manifest is used
+        TraceLoggingUInt64(NumberOfBytesToRead, "write_size") // is not parsed unless manifest is used
     );
 
     // Call original
@@ -148,18 +152,21 @@ NTSTATUS NTAPI Hook_NtWriteVirtualMemory(
 )
 {
     DWORD tpid = GetProcessId(ProcessHandle);
-
     uintptr_t addr = reinterpret_cast<uintptr_t>(BaseAddress);
-    std::ostringstream oss;
-    oss << "NtReadVirtualMemory " << NumberOfBytesToWrite << " bytes at 0x"
-        << std::hex << std::setw(sizeof(uintptr_t) * 2) << std::setfill('0') << addr;
-    std::string msg = oss.str();
+    char msg[128];
+    _snprintf_s(msg, sizeof(msg), _TRUNCATE,
+        "NtWriteVirtualMemory %llu bytes at 0x%0*llx",
+        static_cast<unsigned long long>(NumberOfBytesToWrite),
+        static_cast<int>(sizeof(uintptr_t) * 2),
+        static_cast<unsigned long long>(addr));
 
     TraceLoggingWrite(
         g_hProvider,
         "EDRHookWriteVM",
-        TraceLoggingString(msg.c_str(), "message"),
-        TraceLoggingUInt64(tpid, "targetpid")
+        TraceLoggingString(msg, "message"),
+        TraceLoggingUInt64(tpid, "targetpid"),
+        TraceLoggingPointer(BaseAddress, "base_address"), // is not parsed unless manifest is used
+        TraceLoggingUInt64(NumberOfBytesToWrite, "write_size") // is not parsed unless manifest is used
     );
 
     // Call original
@@ -169,7 +176,7 @@ NTSTATUS NTAPI Hook_NtWriteVirtualMemory(
 NTSTATUS NTAPI Hook_NtClose(HANDLE Handle)
 {
     DWORD tpid = GetProcessId(Handle);
-    if (tpid != 0) { // too many closing events of non procs
+    if (tpid != 0) { // ignore closing events of non proc handles 
         TraceLoggingWrite(
             g_hProvider,
             "EDRHookCloseProc",
