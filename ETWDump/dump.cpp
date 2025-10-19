@@ -3,10 +3,6 @@
 #include <string>
 #include <windows.h>
 
-struct {
-    uint64_t pid;
-} payload;
-
 int main(int argc, wchar_t* argv[]) {
     try {
         // Create provider
@@ -18,15 +14,16 @@ int main(int argc, wchar_t* argv[]) {
         provider.add_on_event_callback([](const EVENT_RECORD& record, const krabs::trace_context& ctx) {
             krabs::schema schema(record, ctx.schema_locator);
 
+			// custom parsing when not using manifest based ETW --> cannot use property parsing
             const BYTE* data = (const BYTE*)record.UserData;
             ULONG size = record.UserDataLength;
 
-            const char* msg = reinterpret_cast<const char*>(data);
+            const char* msg = reinterpret_cast<const char*>(data); // read until first null byte
             size_t msg_len = strnlen(msg, size);
 
-            const BYTE* pid_ptr = data + msg_len + 1;
+			const BYTE* pid_ptr = data + msg_len + 1; // get pointer to targetpid field
             uint64_t targetpid = 0;
-            if (pid_ptr + sizeof(uint64_t) <= data + size) {
+			if (pid_ptr + sizeof(uint64_t) <= data + size) { // parse pid if still inside user data
                 memcpy(&targetpid, pid_ptr, sizeof(uint64_t));
             }
 
