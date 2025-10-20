@@ -1,4 +1,3 @@
-// corrected_loader.cpp (x64 -> compile as x64 if target is x64)
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -60,12 +59,14 @@ int main(int argc, char* argv[])
     // 1) open file
     HANDLE file_handle = CreateFileA(dllPath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (file_handle == INVALID_HANDLE_VALUE) { printf("CreateFile failed: %lu\n", GetLastError()); return 1; }
+	printf("Injecting DLL '%s' into process %lu\n", dllPath.c_str(), (unsigned long)pid);
 
     // 2) get file size
     LARGE_INTEGER fileSize = { 0 };
     if (!GetFileSizeEx(file_handle, &fileSize)) { printf("GetFileSizeEx failed: %lu\n", GetLastError()); CloseHandle(file_handle); return 1; }
     SIZE_T sz = (SIZE_T)fileSize.QuadPart;
     if (sz == 0) { printf("Empty file\n"); CloseHandle(file_handle); return 1; }
+	printf("DLL size: %llu bytes\n", (unsigned long long)sz);
 
     // 3) allocate buffer and read
     LPBYTE file_buf = (LPBYTE)HeapAlloc(GetProcessHeap(), 0, sz);
@@ -76,18 +77,22 @@ int main(int argc, char* argv[])
         HeapFree(GetProcessHeap(), 0, file_buf); CloseHandle(file_handle); return 1;
     }
     CloseHandle(file_handle);
+	printf("DLL read into memory.\n");
 
     // 4) find reflective loader offset in raw file
     DWORD64 reflective_loader_offset = get_reflective_loader_offset((DWORD64)file_buf, "ReflectiveLoader");
     if (!reflective_loader_offset) { printf("ReflectiveLoader export not found\n"); HeapFree(GetProcessHeap(), 0, file_buf); return 1; }
+	printf("ReflectiveLoader offset: 0x%llx\n", (unsigned long long)reflective_loader_offset);
 
     // 5) open target process
     HANDLE process_handle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pid);
     if (!process_handle) { printf("OpenProcess failed: %lu\n", GetLastError()); HeapFree(GetProcessHeap(), 0, file_buf); return 1; }
+	printf("Target process opened.\n");
 
     // 6) allocate remote memory (use the file size)
     LPVOID remote_file_buf_address = VirtualAllocEx(process_handle, NULL, sz, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
     if (!remote_file_buf_address) { printf("VirtualAllocEx failed: %lu\n", GetLastError()); CloseHandle(process_handle); HeapFree(GetProcessHeap(), 0, file_buf); return 1; }
+	printf("Remote memory allocated at %p\n", remote_file_buf_address);
 
     // 7) write file into remote process
     SIZE_T written = 0;
@@ -98,6 +103,7 @@ int main(int argc, char* argv[])
         HeapFree(GetProcessHeap(), 0, file_buf);
         return 1;
     }
+	printf("DLL written into remote process memory.\n");
 
     // 8) make memory executable
     DWORD oldProt = 0;
@@ -105,12 +111,14 @@ int main(int argc, char* argv[])
         // If this fails, try PAGE_EXECUTE_READWRITE (some targets)
         VirtualProtectEx(process_handle, remote_file_buf_address, sz, PAGE_EXECUTE_READWRITE, &oldProt);
     }
+	printf("Remote memory protection changed to executable.\n");
 
     // 9) compute remote address of reflective loader and create remote thread
     LPTHREAD_START_ROUTINE remote_start = (LPTHREAD_START_ROUTINE)((ULONG_PTR)remote_file_buf_address + (ULONG_PTR)reflective_loader_offset);
 
     HANDLE thread_handle = CreateRemoteThread(process_handle, NULL, 0, remote_start, NULL, 0, NULL);
     if (!thread_handle) { printf("CreateRemoteThread failed: %lu\n", GetLastError()); VirtualFreeEx(process_handle, remote_file_buf_address, 0, MEM_RELEASE); CloseHandle(process_handle); HeapFree(GetProcessHeap(), 0, file_buf); return 1; }
+	printf("Remote thread created.\n");
 
     WaitForSingleObject(thread_handle, INFINITE);
     CloseHandle(thread_handle);
