@@ -389,7 +389,6 @@ void ReflectiveLoader()
     // dummy_va - dummy_base = rva
     // (dummy_va - dummy_base) + true_base = rva + true_base
     // dummy_va + (true_base - dummy_base) = rva + true_base
-
     DWORD64 base_diff = dll_base - nt_headers_address->OptionalHeader.ImageBase; // true_base - dummy_base
 
     IMAGE_DATA_DIRECTORY reloc_data_directory = nt_headers_address->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC];
@@ -416,15 +415,12 @@ void ReflectiveLoader()
 
                 reloc_entry_address = (PBASE_RELOCATION_ENTRY)((DWORD64)reloc_entry_address + sizeof(BASE_RELOCATION_ENTRY));
             }
-
             base_reloc_address = (PIMAGE_BASE_RELOCATION)((DWORD64)base_reloc_address + base_reloc_address->SizeOfBlock);
         }
     }
 
     // 7. call entry point
-
     DWORD64 entrypoint_address = dll_base + nt_headers_address->OptionalHeader.AddressOfEntryPoint;
-
     ((entry_DLLMAIN)entrypoint_address)((HINSTANCE)dll_base, DLL_PROCESS_ATTACH, NULL);
 }
 
@@ -674,10 +670,6 @@ DWORD WINAPI t_selfUnloadThread(LPVOID hinst) {
     Sleep(2000); // give the loader time to release the lock
     FreeLibraryAndExitThread((HMODULE)hinst, 0);
     return 0;
-}
-
-void Show() {
-    MessageBoxA(NULL, "Hello via DllMain() -> Show()", "Reflective Dll Injection", MB_OK);
 }
 
 BOOL WINAPI DllMain(HINSTANCE hinst, DWORD reason, LPVOID reserved) {
