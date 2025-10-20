@@ -414,8 +414,12 @@ void ReflectiveLoader()
     ((entry_DLLMAIN)entrypoint_address)((HINSTANCE)dll_base, DLL_PROCESS_ATTACH, NULL);
 }
 
+void Show() {
+    MessageBoxA(NULL, "Hello via DllMain() -> Show()", "Reflective Dll Injection", MB_OK);
+}
+
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
-    MessageBoxA(NULL, "Hello from DllMain!", "Reflective Dll Injection", MB_OK);
+    Show();
     return TRUE;
 }
