@@ -42,6 +42,7 @@ std::vector<int> g_tracking_PIDs = {};
 std::map<int, std::string> g_running_procs = {};
 std::shared_mutex g_procs_mutex;
 bool g_with_hooks = false;
+bool reflective_inject = true;
 
 // attack exe paths
 std::string g_attack_exe_name = "attack.exe";
@@ -285,7 +286,7 @@ int main(int argc, char* argv[]) {
             found_none = false;
             for (auto& pid : pids) {
                 std::cout << "[*] EDRi: Found the EDR process " << exe << ":" << pid << ". Injecting...\n";
-                if (!inject_dll(pid, get_hook_dll_path(), g_debug)) {
+                if (!inject_dll(pid, get_hook_dll_path(), g_debug, reflective_inject)) { // TODO per profile?
                     std::cerr << "[!] EDRi: Failed to inject the hooker dll into " << exe << "\n";
                     stop_all_etw_traces();
                     exit(1);

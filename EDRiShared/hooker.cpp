@@ -5,42 +5,6 @@
 #include <iostream>
 #include <cctype>
 
-bool enable_debug_privilege()
-{
-    HANDLE hToken = NULL;
-    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hToken)) {
-        std::cerr << "OpenProcessToken failed: " << GetLastError() << "\n";
-        return false;
-    }
-
-    TOKEN_PRIVILEGES tp = { 0 };
-    LUID luid;
-    if (!LookupPrivilegeValueA(nullptr, "SeDebugPrivilege", &luid)) {
-        std::cerr << "LookupPrivilegeValueA failed: " << GetLastError() << "\n";
-        CloseHandle(hToken);
-        return false;
-    }
-
-    tp.PrivilegeCount = 1;
-    tp.Privileges[0].Luid = luid;
-    tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
-
-    if (!AdjustTokenPrivileges(hToken, FALSE, &tp, sizeof(tp), nullptr, nullptr)) {
-        std::cerr << "AdjustTokenPrivileges failed: " << GetLastError() << "\n";
-        CloseHandle(hToken);
-        return false;
-    }
-
-    if (GetLastError() == ERROR_NOT_ALL_ASSIGNED) {
-        std::cerr << "SeDebugPrivilege not assigned to this token\n";
-        CloseHandle(hToken);
-        return false;
-    }
-
-    CloseHandle(hToken);
-    return true;
-}
-
 std::string get_proc_access_details(DWORD granted) {
     struct { DWORD mask; const char* name; } flags[] = {
         {0x0001, "PROCESS_TERMINATE"},
@@ -99,9 +63,191 @@ void print_granted_access(HANDLE h, int pid) {
     }
 }
 
-// Inject DLL into target process
-bool inject_dll(int pid, const std::string& dllPath, bool debug)
+// Inject DLL into target process via CreateRemoteThread + LoadLibrary onto DLL path
+bool normal_inject(HANDLE hProcess, const std::string& dllPath, bool debug)
 {
+    // Allocate memory for DLL path in target
+    size_t size = dllPath.length() + 1;
+    LPVOID dllPathAddr = VirtualAllocEx(hProcess, nullptr, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    if (!dllPathAddr) {
+        std::cerr << "[!] Hooker: VirtualAllocEx failed. Error: " << GetLastError() << "\n";
+        CloseHandle(hProcess);
+        return false;
+    }
+    if (debug) {
+        std::cout << "[*] Hooker: Allocated memory in target process at " << dllPathAddr << "\n";
+    }
+
+    // Write DLL path into target
+    if (!WriteProcessMemory(hProcess, dllPathAddr, dllPath.c_str(), size, nullptr)) {
+        std::cerr << "[!] Hooker: WriteProcessMemory failed. Error: " << GetLastError() << "\n";
+        VirtualFreeEx(hProcess, dllPathAddr, 0, MEM_RELEASE);
+        CloseHandle(hProcess);
+        return false;
+    }
+    if (debug) {
+        std::cout << "[*] Hooker: Wrote '" << dllPath << "' to target process memory\n";
+    }
+
+    // Get LoadLibraryA address
+    HMODULE lpModuleHandle = GetModuleHandleA("kernel32.dll");
+    if (!lpModuleHandle) {
+        std::cerr << "[!] Hooker: GetModuleHandle failed\n";
+        VirtualFreeEx(hProcess, dllPathAddr, 0, MEM_RELEASE);
+        CloseHandle(hProcess);
+        return false;
+    }
+    LPVOID loadLibAddr = (LPVOID)GetProcAddress(lpModuleHandle, "LoadLibraryA");
+    if (!loadLibAddr) {
+        std::cerr << "[!] Hooker: GetProcAddress of LoadLibrary failed\n";
+        VirtualFreeEx(hProcess, dllPathAddr, 0, MEM_RELEASE);
+        CloseHandle(hProcess);
+        return false;
+    }
+
+    // Create remote thread (start the DLL)
+    HANDLE hThread = CreateRemoteThread(hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE)loadLibAddr, dllPathAddr, 0, nullptr);
+    DWORD err = GetLastError();
+    if (!hThread || err != 0) {
+        std::cerr << "[!] Hooker: CreateRemoteThread failed. Error: " << err << "\n";
+        VirtualFreeEx(hProcess, dllPathAddr, 0, MEM_RELEASE);
+        CloseHandle(hProcess);
+        return false;
+    }
+    if (debug) {
+        std::cout << "[*] Hooker: Created remote thread in target process\n";
+    }
+
+    DWORD wait = WaitForSingleObject(hThread, 10000); // 5 sec timeout for hooks to init
+    if (wait == WAIT_TIMEOUT) {
+        std::cerr << "[!] Hooker: remote thread did not finish within timeout\n";
+        return false;
+    }
+
+    // Get exit code (for LoadLibrary, exit code == hModule handle)
+    DWORD hModule = 0;
+    if (!GetExitCodeThread(hThread, &hModule)) {
+        std::cerr << "[!] Hooker: GetExitCodeThread failed. Error: " << GetLastError() << "\n";
+        CloseHandle(hThread);
+        return false;
+    }
+    CloseHandle(hThread);
+    if (hModule == 0) {
+        std::cerr << "[!] Hooker: LoadLibrary) failed: " << GetLastError() << "\n";
+        return false;
+    }
+
+    std::cout << "[*] Hooker: remote routine succeeded, module handle: " << std::hex << hModule << "\n";
+    return true;
+}
+
+// reflective loader helper
+DWORD64 rva_to_offset(DWORD64 rva, DWORD64 base_address)
+{
+    PIMAGE_DOS_HEADER dos = (PIMAGE_DOS_HEADER)base_address;
+    PIMAGE_NT_HEADERS64 nt = (PIMAGE_NT_HEADERS64)(base_address + dos->e_lfanew);
+    PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION(nt);
+
+    if (rva < section->PointerToRawData) // pointer into PE header area
+        return rva;
+
+    for (; section->SizeOfRawData != 0; section++)
+    {
+        if (rva >= section->VirtualAddress && rva < (section->VirtualAddress + section->SizeOfRawData))
+            return rva - section->VirtualAddress + section->PointerToRawData;
+    }
+    return 0;
+}
+
+// reflective loader helper
+DWORD64 get_reflective_loader_offset(DWORD64 base_address, LPCSTR ReflectiveLoader_name)
+{
+    PIMAGE_NT_HEADERS64 nt = (PIMAGE_NT_HEADERS64)(base_address + ((PIMAGE_DOS_HEADER)base_address)->e_lfanew);
+    IMAGE_DATA_DIRECTORY exports_data_directory = nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT];
+    if (exports_data_directory.VirtualAddress == 0) return 0;
+
+    PIMAGE_EXPORT_DIRECTORY export_directory = (PIMAGE_EXPORT_DIRECTORY)(base_address + rva_to_offset(exports_data_directory.VirtualAddress, base_address));
+    DWORD* functions = (DWORD*)(base_address + rva_to_offset(export_directory->AddressOfFunctions, base_address));
+    DWORD* names = (DWORD*)(base_address + rva_to_offset(export_directory->AddressOfNames, base_address));
+    WORD* ords = (WORD*)(base_address + rva_to_offset(export_directory->AddressOfNameOrdinals, base_address));
+
+    for (DWORD i = 0; i < export_directory->NumberOfNames; ++i)
+    {
+        char* name = (char*)(base_address + rva_to_offset(names[i], base_address));
+        if (_stricmp(name, ReflectiveLoader_name) == 0) // case-insensitive
+        {
+            DWORD func_rva = functions[ords[i]];
+            return rva_to_offset(func_rva, base_address);
+        }
+    }
+    return 0;
+}
+
+// Inject DLL into target process via Reflective DLL Injection
+bool reflective_inject(HANDLE hProcess, const std::string& dllPath, bool debug)
+{
+    // open dll file
+    HANDLE file_handle = CreateFileA(dllPath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (file_handle == INVALID_HANDLE_VALUE) { printf("CreateFile failed: %lu\n", GetLastError()); return false; }
+
+    // get file size
+    LARGE_INTEGER fileSize = { 0 };
+    if (!GetFileSizeEx(file_handle, &fileSize)) { printf("GetFileSizeEx failed: %lu\n", GetLastError()); CloseHandle(file_handle); return false; }
+    SIZE_T sz = (SIZE_T)fileSize.QuadPart;
+    if (sz == 0) { printf("Empty file\n"); CloseHandle(file_handle); return false; }
+
+    // allocate buffer and read
+    LPBYTE file_buf = (LPBYTE)HeapAlloc(GetProcessHeap(), 0, sz);
+    if (!file_buf) { printf("HeapAlloc failed\n"); CloseHandle(file_handle); return false; }
+    DWORD bytesRead = 0;
+    if (!ReadFile(file_handle, file_buf, (DWORD)sz, &bytesRead, NULL) || bytesRead != (DWORD)sz) {
+        printf("ReadFile failed or incomplete: %lu bytesRead=%lu\n", GetLastError(), bytesRead);
+        HeapFree(GetProcessHeap(), 0, file_buf); CloseHandle(file_handle); return false;
+    }
+    CloseHandle(file_handle);
+
+    // find reflective loader offset in raw file
+    DWORD64 reflective_loader_offset = get_reflective_loader_offset((DWORD64)file_buf, "ReflectiveLoader");
+    if (!reflective_loader_offset) { printf("ReflectiveLoader export not found\n"); HeapFree(GetProcessHeap(), 0, file_buf); return false; }
+
+    // allocate remote memory (use the file size)
+    LPVOID remote_file_buf_address = VirtualAllocEx(hProcess, NULL, sz, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+    if (!remote_file_buf_address) { printf("VirtualAllocEx failed: %lu\n", GetLastError()); CloseHandle(hProcess); HeapFree(GetProcessHeap(), 0, file_buf); return false; }
+
+    // write file into remote process
+    SIZE_T written = 0;
+    if (!WriteProcessMemory(hProcess, remote_file_buf_address, file_buf, sz, (SIZE_T*)&written) || written != sz) {
+        printf("WriteProcessMemory failed: %lu written=%llu\n", GetLastError(), (unsigned long long)written);
+        VirtualFreeEx(hProcess, remote_file_buf_address, 0, MEM_RELEASE);
+        CloseHandle(hProcess);
+        HeapFree(GetProcessHeap(), 0, file_buf);
+        return false;
+    }
+
+    // 8) make memory executable
+    DWORD oldProt = 0;
+    if (!VirtualProtectEx(hProcess, remote_file_buf_address, sz, PAGE_EXECUTE_READ, &oldProt)) {
+        // If this fails, try PAGE_EXECUTE_READWRITE (some targets)
+        VirtualProtectEx(hProcess, remote_file_buf_address, sz, PAGE_EXECUTE_READWRITE, &oldProt);
+    }
+
+    // 9) compute remote address of reflective loader and create remote thread
+    LPTHREAD_START_ROUTINE remote_start = (LPTHREAD_START_ROUTINE)((ULONG_PTR)remote_file_buf_address + (ULONG_PTR)reflective_loader_offset);
+
+    HANDLE thread_handle = CreateRemoteThread(hProcess, NULL, 0, remote_start, NULL, 0, NULL);
+    if (!thread_handle) { printf("CreateRemoteThread failed: %lu\n", GetLastError()); VirtualFreeEx(hProcess, remote_file_buf_address, 0, MEM_RELEASE); CloseHandle(hProcess); HeapFree(GetProcessHeap(), 0, file_buf); return false; }
+
+    WaitForSingleObject(thread_handle, INFINITE);
+    CloseHandle(thread_handle);
+    CloseHandle(hProcess);
+    HeapFree(GetProcessHeap(), 0, file_buf);
+
+    //printf("done.\n");
+    return true;
+}
+
+// Preparation for DLL injection
+bool inject_dll(int pid, const std::string& dllPath, bool debug, bool reflective) {
     HANDLE hProcess = OpenProcess(
         PROCESS_ALL_ACCESS,
         FALSE, pid);
@@ -124,78 +270,10 @@ bool inject_dll(int pid, const std::string& dllPath, bool debug)
         return false;
     }
     print_granted_access(hProcess, pid);
-
-    // Allocate memory for DLL path in target
-    size_t size = dllPath.length() + 1;
-    LPVOID dllPathAddr = VirtualAllocEx(hProcess, nullptr, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-    if (!dllPathAddr) {
-        std::cerr << "[!] Hooker: VirtualAllocEx failed. Error: " << GetLastError() << "\n";
-        CloseHandle(hProcess);
-        return false;
+    if (reflective) {
+		return reflective_inject(hProcess, dllPath, debug);
     }
-    if (debug) {
-		std::cout << "[*] Hooker: Allocated memory in target process at " << dllPathAddr << "\n";
+    else {
+		return normal_inject(hProcess, dllPath, debug);
     }
-
-    // Write DLL path into target
-    if (!WriteProcessMemory(hProcess, dllPathAddr, dllPath.c_str(), size, nullptr)) {
-        std::cerr << "[!] Hooker: WriteProcessMemory failed. Error: " << GetLastError() << "\n";
-        VirtualFreeEx(hProcess, dllPathAddr, 0, MEM_RELEASE);
-        CloseHandle(hProcess);
-        return false;
-    }
-    if (debug) {
-        std::cout << "[*] Hooker: Wrote '" << dllPath << "' to target process memory\n";
-	}
-
-    // Get LoadLibraryA address
-    HMODULE lpModuleHandle = GetModuleHandleA("kernel32.dll");
-    if (!lpModuleHandle) {
-        std::cerr << "[!] Hooker: GetModuleHandle failed\n";
-        VirtualFreeEx(hProcess, dllPathAddr, 0, MEM_RELEASE);
-        CloseHandle(hProcess);
-        return false;
-    }
-    LPVOID loadLibAddr = (LPVOID)GetProcAddress(lpModuleHandle, "LoadLibraryA");
-    if (!loadLibAddr) {
-        std::cerr << "[!] Hooker: GetProcAddress of LoadLibrary failed\n";
-        VirtualFreeEx(hProcess, dllPathAddr, 0, MEM_RELEASE);
-        CloseHandle(hProcess);
-        return false;
-    }
-
-    // Create remote thread (start the DLL)
-	HANDLE hThread = CreateRemoteThread(hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE)loadLibAddr, dllPathAddr, 0, nullptr);
-    DWORD err = GetLastError();
-    if (!hThread || err != 0) {
-        std::cerr << "[!] Hooker: CreateRemoteThread failed. Error: " << err << "\n";
-        VirtualFreeEx(hProcess, dllPathAddr, 0, MEM_RELEASE);
-        CloseHandle(hProcess);
-        return false;
-    }
-    if (debug) {
-        std::cout << "[*] Hooker: Created remote thread in target process\n";
-	}
-    
-    DWORD wait = WaitForSingleObject(hThread, 10000); // 5 sec timeout for hooks to init
-    if (wait == WAIT_TIMEOUT) {
-        std::cerr << "[!] Hooker: remote thread did not finish within timeout\n";
-		return false;
-    }
-
-    // Get exit code (for LoadLibrary, exit code == hModule handle)
-    DWORD hModule = 0;
-    if (!GetExitCodeThread(hThread, &hModule)) {
-        std::cerr << "[!] Hooker: GetExitCodeThread failed. Error: " << GetLastError() << "\n";
-        CloseHandle(hThread);
-        return false;
-    }
-    CloseHandle(hThread);
-    if (hModule == 0) {
-        std::cerr << "[!] Hooker: LoadLibrary) failed: " << GetLastError() << "\n";
-        return false;
-    }
-
-    std::cout << "[*] Hooker: remote routine succeeded, module handle: " << std::hex << hModule << "\n";
-    return true;
 }
