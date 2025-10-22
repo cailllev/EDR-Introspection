@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string>
-#include <atomic>
 #include <fstream>
 
 #include <MinHook.h>
@@ -432,7 +431,7 @@ TRACELOGGING_DEFINE_PROVIDER(
 );
 
 static UINT64 pid;
-static std::atomic<bool> g_initialized(false);
+bool print_stdout = true;
 
 // types
 typedef NTSTATUS(NTAPI* PFN_NtOpenProcess)(
@@ -468,36 +467,24 @@ static PFN_NtReadVirtualMemory g_origNtReadVirtualMemory = nullptr;
 static PFN_NtWriteVirtualMemory g_origNtWriteVirtualMemory = nullptr;
 static PFN_NtClose g_origNtClose = nullptr;
 
-
-void write_file(std::string msg) {
-    std::ofstream outfile("C:\\Users\\Public\\Downloads\\out.txt");
-    if (outfile.is_open())
-    {
-        outfile << msg;
-        outfile.close();
-    }
-}
-
-void emit_etw_ok(std::string msg, bool print = false) {
+void emit_etw_ok(std::string msg) {
     TraceLoggingWrite(
         g_hProvider,
         "EDRHookTask", // the first definition will be the task of each emitted event (unless using a manifest file?)
         TraceLoggingString(msg.c_str(), "message"),
         TraceLoggingUInt64(pid, "targetpid")
     );
-    if (print)
-        std::cout << "[+] Hook-DLL: " << msg << "\n";
+    std::cout << "[+] Hook-DLL: " << msg << "\n";
 };
 
-void emit_etw_error(std::string error, bool print = false) {
+void emit_etw_error(std::string error) {
     TraceLoggingWrite(
         g_hProvider,
         "EDRHookError",
         TraceLoggingString(error.c_str(), "message"),
         TraceLoggingUInt64(pid, "targetpid")
     );
-    if (print)
-        std::cerr << "[!] Hook-DLL: " << error << "\n";
+    std::cerr << "[!] Hook-DLL: " << error << "\n";
 };
 
 NTSTATUS NTAPI Hook_NtOpenProcess(
@@ -603,10 +590,7 @@ NTSTATUS NTAPI Hook_NtClose(HANDLE Handle)
 
 void InstallHooks()
 {
-    if (g_initialized.exchange(true)) return; // only once
-
-    write_file("3");
-    bool print_stdout = true;
+    std::cout << "[+] Hook-DLL: Installing hooks...\n";
 
     // MinHook init
     if (MH_Initialize() != MH_OK) {
@@ -619,7 +603,6 @@ void InstallHooks()
         emit_etw_error("ntdll not loaded");
         return;
     }
-    write_file("4");
 
     // all functions to hook
     std::map<std::string, std::pair<void*, void**>> funcs = {
@@ -634,34 +617,31 @@ void InstallHooks()
         std::pair<void*, void**> fn = it.second;
         FARPROC target = GetProcAddress(hNtdll, name.c_str());
         if (!target) {
-            emit_etw_error(name + " not found in ntdll", print_stdout);
+            emit_etw_error(name + " not found in ntdll");
             continue;
         }
 
         if (MH_CreateHook(target, fn.first, (LPVOID*)fn.second) != MH_OK || MH_EnableHook(target) != MH_OK) {
-            emit_etw_error("Failed to hook " + name, print_stdout);
+            emit_etw_error("Failed to hook " + name);
         }
         else {
-            emit_etw_ok("Hooked " + name, print_stdout);
+            emit_etw_ok("Hooked " + name);
         }
     }
-    write_file("5");
     emit_etw_ok("++ NTDLL-HOOKER STARTED ++");
 }
 
 void RemoveHooks()
 {
-    if (!g_initialized.exchange(false)) return;
     MH_DisableHook(MH_ALL_HOOKS);
     MH_Uninitialize();
 }
 
 DWORD WINAPI t_InitHooks(LPVOID param)
 {
-    //DisableThreadLibraryCalls(hinst);
-    pid = GetCurrentProcessId();
+    std::cout << "[+] Hook-DLL: Executing init thread...\n";
     TraceLoggingRegister(g_hProvider);
-    write_file("2");
+    pid = GetCurrentProcessId();
     InstallHooks();
     return 0;
 }
@@ -676,6 +656,7 @@ BOOL WINAPI DllMain(HINSTANCE hinst, DWORD reason, LPVOID reserved) {
     switch (reason) {
     case DLL_PROCESS_ATTACH:
     {
+        //DisableThreadLibraryCalls(hinst);
         HANDLE hTread = CreateThread(nullptr, 0, t_InitHooks, nullptr, 0, nullptr);
         if (!hTread) {
             std::cerr << "[!] Hook-DLL: Failed to create init thread\n";
