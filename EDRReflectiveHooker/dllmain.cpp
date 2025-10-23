@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string>
-#include <fstream>
+#include <chrono>
 
 #include <MinHook.h>
 #include <TraceLoggingProvider.h>
@@ -424,68 +424,193 @@ void ReflectiveLoader()
 }
 
 // ------------------ HOOKS ------------------ //
+static UINT64 pid;
+
 TRACELOGGING_DEFINE_PROVIDER(
     g_hProvider,
     "Hook-Provider", // name in the ETW, cannot be a variable
     (0x72248411, 0x7166, 0x4feb, 0xa3, 0x86, 0x34, 0xd8, 0xf3, 0x5b, 0xb6, 0x37)  // this cannot be a variable
 );
 
-static UINT64 pid;
-bool print_stdout = true;
+typedef LONG NTSTATUS;
+#define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
 
-// types
+typedef struct _IO_STATUS_BLOCK {
+    union {
+        NTSTATUS Status;
+        PVOID    Pointer;
+    } DUMMYUNIONNAME;
+    ULONG_PTR Information;
+} IO_STATUS_BLOCK, * PIO_STATUS_BLOCK;
+
+typedef VOID(NTAPI* PIO_APC_ROUTINE)(
+    PVOID           ApcContext,
+    PIO_STATUS_BLOCK IoStatusBlock,
+    ULONG           Reserved
+    );
+
+// hooked function definitions
+typedef NTSTATUS(NTAPI* PFN_NtOpenFile)(
+    PHANDLE            FileHandle,
+    ACCESS_MASK        DesiredAccess,
+    POBJECT_ATTRIBUTES ObjectAttributes,
+    PIO_STATUS_BLOCK   IoStatusBlock,
+    ULONG              ShareAccess,
+    ULONG              OpenOptions
+    );
+
+typedef NTSTATUS(NTAPI* PFN_NtReadFile)(
+    HANDLE           FileHandle,
+    HANDLE           Event,
+    PIO_APC_ROUTINE  ApcRoutine,
+    PVOID            ApcContext,
+    PIO_STATUS_BLOCK IoStatusBlock,
+    PVOID            Buffer,
+    ULONG            Length,
+    PLARGE_INTEGER   ByteOffset,
+    PULONG           Key
+    );
+
 typedef NTSTATUS(NTAPI* PFN_NtOpenProcess)(
-    PHANDLE ProcessHandle,
+    PHANDLE     ProcessHandle,
     ACCESS_MASK DesiredAccess,
-    PVOID ObjectAttributes,
-    PVOID ClientId
+    PVOID       ObjectAttributes,
+    PVOID       ClientId
     );
 
 typedef NTSTATUS(NTAPI* PFN_NtReadVirtualMemory)(
-    HANDLE ProcessHandle,
-    PVOID BaseAddress,
-    PVOID Buffer,
-    SIZE_T NumberOfBytesToRead,
+    HANDLE  ProcessHandle,
+    PVOID   BaseAddress,
+    PVOID   Buffer,
+    SIZE_T  NumberOfBytesToRead,
     PSIZE_T NumberOfBytesRead
     );
 
 typedef NTSTATUS(NTAPI* PFN_NtWriteVirtualMemory)(
-    HANDLE ProcessHandle,
-    PVOID BaseAddress,
-    PVOID Buffer,
-    SIZE_T NumberOfBytesToWrite,
+    HANDLE  ProcessHandle,
+    PVOID   BaseAddress,
+    PVOID   Buffer,
+    SIZE_T  NumberOfBytesToWrite,
     PSIZE_T NumberOfBytesWritten
     );
 
 typedef NTSTATUS(NTAPI* PFN_NtClose)(
-    HANDLE ProcessHandle
+    HANDLE Handle
+    );
+
+typedef NTSTATUS(NTAPI* PFN_NtTerminateProcess)(
+    HANDLE   ProcessHandle,
+    NTSTATUS ExitStatus
     );
 
 // trampolines created by MinHook
+static PFN_NtOpenFile g_origNtOpenFile = nullptr;
+static PFN_NtReadFile g_origNtReadFile = nullptr;
 static PFN_NtOpenProcess g_origNtOpenProcess = nullptr;
 static PFN_NtReadVirtualMemory g_origNtReadVirtualMemory = nullptr;
 static PFN_NtWriteVirtualMemory g_origNtWriteVirtualMemory = nullptr;
 static PFN_NtClose g_origNtClose = nullptr;
+static PFN_NtTerminateProcess g_origNtTerminateProcess = nullptr;
+
+int64_t get_ns_time() {
+    auto now = std::chrono::system_clock::now();
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
+}
 
 void emit_etw_ok(std::string msg) {
+    int64_t ns = get_ns_time();
     TraceLoggingWrite(
         g_hProvider,
         "EDRHookTask", // the first definition will be the task of each emitted event (unless using a manifest file?)
         TraceLoggingString(msg.c_str(), "message"),
-        TraceLoggingUInt64(pid, "targetpid")
+        TraceLoggingUInt64(pid, "targetpid"),
+        TraceLoggingInt64(ns, "ns_since_epoch")
     );
     std::cout << "[+] Hook-DLL: " << msg << "\n";
 };
 
 void emit_etw_error(std::string error) {
+    int64_t ns = get_ns_time();
     TraceLoggingWrite(
         g_hProvider,
         "EDRHookError",
         TraceLoggingString(error.c_str(), "message"),
-        TraceLoggingUInt64(pid, "targetpid")
+        TraceLoggingUInt64(pid, "targetpid"),
+        TraceLoggingInt64(ns, "ns_since_epoch")
     );
     std::cerr << "[!] Hook-DLL: " << error << "\n";
 };
+
+void emit_etw_msg(const char msg[], UINT64 tpid) {
+    int64_t ns = get_ns_time();
+    TraceLoggingWrite(
+        g_hProvider,
+        "EDRHookTask", // the first definition will be the task of each emitted event (unless using a manifest file?)
+        TraceLoggingString(msg, "message"),
+        TraceLoggingUInt64(tpid, "targetpid"),
+		TraceLoggingInt64(ns, "ns_since_epoch")
+    );
+};
+
+NTSTATUS NTAPI Hook_NtOpenFile(
+    PHANDLE            FileHandle,
+    ACCESS_MASK        DesiredAccess,
+    POBJECT_ATTRIBUTES ObjectAttributes,
+    PIO_STATUS_BLOCK   IoStatusBlock,
+    ULONG              ShareAccess,
+    ULONG              OpenOptions
+) {
+    char msg[128];
+    wchar_t filename[512] = L"(unknown)";
+
+    if (FileHandle && *FileHandle) {
+        HANDLE h = *FileHandle;
+        // Try to resolve full path
+        if (GetFinalPathNameByHandleW(h, filename, _countof(filename), FILE_NAME_NORMALIZED) == 0) {
+            wcsncpy_s(filename, L"(unknown)", _TRUNCATE);
+        }
+    }
+    else if (ObjectAttributes && ObjectAttributes->ObjectName && ObjectAttributes->ObjectName->Buffer) {
+        // fallback to ObjectAttributes name if handle resolution fails
+        wcsncpy_s(filename, ObjectAttributes->ObjectName->Buffer, _TRUNCATE);
+    }
+
+    _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenFile (%ls) with 0x%X", filename, static_cast<unsigned int>(DesiredAccess));
+    emit_etw_msg(msg, pid);
+
+    return g_origNtOpenFile(FileHandle, DesiredAccess, ObjectAttributes, IoStatusBlock, ShareAccess, OpenOptions);
+}
+
+NTSTATUS NTAPI Hook_NtReadFile(
+    HANDLE FileHandle,
+    HANDLE Event,
+    PIO_APC_ROUTINE ApcRoutine,
+    PVOID ApcContext,
+    PIO_STATUS_BLOCK IoStatusBlock,
+    PVOID Buffer,
+    ULONG Length,
+    PLARGE_INTEGER ByteOffset,
+    PULONG Key
+) {
+
+    char msg[128];
+    wchar_t filename[512] = L"(unknown)";
+
+    if (FileHandle) {
+        if (GetFinalPathNameByHandleW(FileHandle, filename, _countof(filename), FILE_NAME_NORMALIZED) == 0) {
+            wcsncpy_s(filename, L"(unknown)", _TRUNCATE);
+        }
+    }
+
+    unsigned long long offsetVal = ByteOffset ? (unsigned long long)ByteOffset->QuadPart : 0;
+    _snprintf_s(msg, sizeof(msg), _TRUNCATE,
+        ByteOffset ? "NtReadFile (%ls) at 0x%llx" : "NtReadFile (%ls) at NULL",
+        filename, offsetVal);
+
+    emit_etw_msg(msg, pid);
+
+    return g_origNtReadFile(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, Buffer, Length, ByteOffset, Key);
+}
 
 NTSTATUS NTAPI Hook_NtOpenProcess(
     PHANDLE ProcessHandle,
@@ -500,13 +625,7 @@ NTSTATUS NTAPI Hook_NtOpenProcess(
 
         char msg[64];
         _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenProcess with 0x%X", static_cast<unsigned int>(DesiredAccess));
-        TraceLoggingWrite(
-            g_hProvider,
-            "EDRHookOpenProc",
-            TraceLoggingString(msg, "message"),
-            TraceLoggingUInt64(tpid, "targetpid"),
-            TraceLoggingULong(DesiredAccess, "d_acces") // is not parsed unless manifest is used
-        );
+        emit_etw_msg(msg, tpid);
     }
 
     // Call original
@@ -530,14 +649,7 @@ NTSTATUS NTAPI Hook_NtReadVirtualMemory(
         static_cast<int>(sizeof(uintptr_t) * 2),
         static_cast<unsigned long long>(addr));
 
-    TraceLoggingWrite(
-        g_hProvider,
-        "EDRHookReadVM",
-        TraceLoggingString(msg, "message"),
-        TraceLoggingUInt64(tpid, "targetpid"),
-        TraceLoggingPointer(BaseAddress, "base_address"), // is not parsed unless manifest is used
-        TraceLoggingUInt64(NumberOfBytesToRead, "write_size") // is not parsed unless manifest is used
-    );
+    emit_etw_msg(msg, tpid);
 
     // Call original
     return g_origNtReadVirtualMemory(ProcessHandle, BaseAddress, Buffer, NumberOfBytesToRead, NumberOfBytesRead);
@@ -560,14 +672,7 @@ NTSTATUS NTAPI Hook_NtWriteVirtualMemory(
         static_cast<int>(sizeof(uintptr_t) * 2),
         static_cast<unsigned long long>(addr));
 
-    TraceLoggingWrite(
-        g_hProvider,
-        "EDRHookWriteVM",
-        TraceLoggingString(msg, "message"),
-        TraceLoggingUInt64(tpid, "targetpid"),
-        TraceLoggingPointer(BaseAddress, "base_address"), // is not parsed unless manifest is used
-        TraceLoggingUInt64(NumberOfBytesToWrite, "write_size") // is not parsed unless manifest is used
-    );
+    emit_etw_msg(msg, tpid);
 
     // Call original
     return g_origNtWriteVirtualMemory(ProcessHandle, BaseAddress, Buffer, NumberOfBytesToWrite, NumberOfBytesWritten);
@@ -576,15 +681,23 @@ NTSTATUS NTAPI Hook_NtWriteVirtualMemory(
 NTSTATUS NTAPI Hook_NtClose(HANDLE Handle)
 {
     DWORD tpid = GetProcessId(Handle);
-    if (tpid != 0) { // ignore closing events of non proc handles 
-        TraceLoggingWrite(
-            g_hProvider,
-            "EDRHookCloseProc",
-            TraceLoggingString("NtCloseProcess", "message"),
-            TraceLoggingUInt64(tpid, "targetpid")
-        );
+    if (tpid != 0) { // ignore closing events of non proc handles
+        emit_etw_msg("NtClose process", tpid);
     }
     return g_origNtClose(Handle);
+}
+
+NTSTATUS NTAPI Hook_NtTerminateProcess(HANDLE Handle, NTSTATUS ExitStatus)
+{
+    DWORD tpid = GetProcessId(Handle);
+    if (tpid != 0) { // ignore closing events of non proc handles 
+        char msg[128];
+        _snprintf_s(msg, sizeof(msg), _TRUNCATE,
+            "NtTerminateProcess with status 0x%lx",
+            static_cast<LONG>(ExitStatus));
+        emit_etw_msg(msg, tpid);
+    }
+    return g_origNtTerminateProcess(Handle, ExitStatus);
 }
 
 
@@ -606,10 +719,13 @@ void InstallHooks()
 
     // all functions to hook
     std::map<std::string, std::pair<void*, void**>> funcs = {
+        {"NtOpenFile", {(void*)Hook_NtOpenFile, (void**)&g_origNtOpenFile}},
+        {"NtReadFile", {(void*)Hook_NtReadFile, (void**)&g_origNtReadFile}},
         {"NtOpenProcess", {(void*)Hook_NtOpenProcess, (void**)&g_origNtOpenProcess}},
         {"NtReadVirtualMemory", {(void*)Hook_NtReadVirtualMemory, (void**)&g_origNtReadVirtualMemory}},
         {"NtWriteVirtualMemory", {(void*)Hook_NtWriteVirtualMemory, (void**)&g_origNtWriteVirtualMemory}},
-        {"NtClose", {(void*)Hook_NtClose, (void**)&g_origNtClose}}
+        {"NtClose", {(void*)Hook_NtClose, (void**)&g_origNtClose}},
+        {"NtTerminateProcess", {(void*)Hook_NtTerminateProcess, (void**)&g_origNtTerminateProcess}}
     };
 
     for (auto& it : funcs) {
