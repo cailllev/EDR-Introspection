@@ -1,5 +1,6 @@
 #include <windows.h>
 #include <shellapi.h>
+#include <chrono>
 #include <fstream>
 #include <iostream>
 #include <iomanip>
@@ -401,6 +402,26 @@ std::string translate_if_path(const std::string& s) {
     }
 
     return s2;
+}
+
+std::string ns_to_iso8601(uint64_t ns_since_epoch)
+{
+    using namespace std::chrono;
+    system_clock::duration duration = duration_cast<system_clock::duration>(nanoseconds(ns_since_epoch));
+    system_clock::time_point time_point(duration);
+    auto in_time_t = system_clock::to_time_t(time_point);
+    auto fractional = duration_cast<nanoseconds>(time_point.time_since_epoch()) % 1'000'000'000;
+
+    // Convert to UTC
+    std::tm tm_buf;
+    gmtime_s(&tm_buf, &in_time_t);
+
+    std::ostringstream oss;
+    oss << std::put_time(&tm_buf, "%Y-%m-%d %H:%M:%S")
+        << "." << std::setw(9) << std::setfill('0') << fractional.count()
+        << "Z"; // UTC
+
+    return oss.str();
 }
 
 std::string normalized_value(json ev, std::string key) {
