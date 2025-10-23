@@ -1,7 +1,30 @@
-#include <krabs.hpp>
+#include <krabs.hpp> // must be before windows.h???
+
+#include <windows.h>
+#include <chrono>
 #include <iostream>
 #include <string>
-#include <windows.h>
+
+
+std::string ns_to_iso8601(uint64_t ns_since_epoch)
+{
+    using namespace std::chrono;
+    system_clock::duration duration = duration_cast<system_clock::duration>(nanoseconds(ns_since_epoch));
+    system_clock::time_point time_point(duration);
+    auto in_time_t = system_clock::to_time_t(time_point);
+    auto fractional = duration_cast<nanoseconds>(time_point.time_since_epoch()) % 1'000'000'000;
+
+    // Convert to UTC
+    std::tm tm_buf;
+    gmtime_s(&tm_buf, &in_time_t);
+
+    std::ostringstream oss;
+    oss << std::put_time(&tm_buf, "%Y-%m-%d %H:%M:%S")
+        << "." << std::setw(9) << std::setfill('0') << fractional.count()
+        << "Z"; // UTC
+
+    return oss.str();
+}
 
 int main(int argc, wchar_t* argv[]) {
     try {
@@ -18,19 +41,31 @@ int main(int argc, wchar_t* argv[]) {
             const BYTE* data = (const BYTE*)record.UserData;
             ULONG size = record.UserDataLength;
 
+            // PARSE MESSAGE
             const char* msg = reinterpret_cast<const char*>(data); // read until first null byte
             size_t msg_len = strnlen(msg, size);
 
-			const BYTE* pid_ptr = data + msg_len + 1; // get pointer to targetpid field
+			// PARSE TARGETPID
+            const BYTE* pid_ptr = data + msg_len + 1;
             uint64_t targetpid = 0;
-			if (pid_ptr + sizeof(uint64_t) <= data + size) { // parse pid if still inside user data
+            if (pid_ptr + sizeof(uint64_t) <= data + size) {
                 memcpy(&targetpid, pid_ptr, sizeof(uint64_t));
             }
+
+			// PARSE NS_SINCE_EPOCH
+            const BYTE* ns_ptr = pid_ptr + sizeof(uint64_t);
+            int64_t ns_since_epoch = 0;
+            if (ns_ptr + sizeof(int64_t) <= data + size) {
+                memcpy(&ns_since_epoch, ns_ptr, sizeof(int64_t));
+            }
+
+			std::string iso_time = ns_to_iso8601(ns_since_epoch);
 
             std::wcout << L"PID: " << record.EventHeader.ProcessId
                 << L" : " << std::wstring(schema.task_name()) << std::endl;
             std::cout << "  message: " << msg << std::endl;
             std::cout << "  targetpid: " << targetpid << std::endl;
+            std::cout << "  timestamp: " << iso_time << std::endl;
             std::cout << "--------------------------\n";
         });
 
