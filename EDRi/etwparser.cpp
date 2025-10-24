@@ -59,7 +59,7 @@ static const std::vector<std::string> fields_to_add_exe_name = { PID, PPID, TARG
 
 // define start of CSV header, all other keys are added in order later
 std::vector<std::string> csv_header_start = {
-    TIMESTAMP, TYPE, PROVIDER_NAME, EVENT_ID, TASK, PID, TID, PPID, ORIGINATING_PID, TARGET_PID, TARGET_TID, MESSAGE,
+    TIMESTAMP_SYS, TIMESTAMP_ETW, TYPE, PROVIDER_NAME, EVENT_ID, TASK, PID, TID, PPID, ORIGINATING_PID, TARGET_PID, TARGET_TID, MESSAGE,
     FILEPATH, "cachename", "result", "vname", "sigseq", "sigsha", "commandline", "firstparam", "secondparam",
 };
 
@@ -136,23 +136,28 @@ json parse_my_etw_event(Event e) {
     json j;
 
     try {
-        j[TYPE] = "myETW";
-        j[TIMESTAMP] = filetime_to_iso8601(
+        j[TIMESTAMP_ETW] = filetime_to_iso8601(
             static_cast<__int64>(e.record.EventHeader.TimeStamp.QuadPart)
         );
+        j[TYPE] = "myETW";
         j[PID] = e.record.EventHeader.ProcessId;
         j[PROVIDER_NAME] = wchar2string(e.schema.provider_name());
         if (j[PROVIDER_NAME] == EDRi_PROVIDER) {
             j[EVENT_ID] = EDRi_PROVIDER_EVENT_ID;
-        }
-        else if (j[PROVIDER_NAME] == HOOK_PROVIDER) {
-            j[EVENT_ID] = HOOK_PROVIDER_EVENT_ID;
         }
         else if (j[PROVIDER_NAME] == ATTACK_PROVIDER) {
             j[EVENT_ID] = ATTACK_PROVIDER_EVENT_ID;
         } else {
             j[EVENT_ID] = -1; // unknown
 		}
+
+        uint64_t timestamp_sys;
+        if (parser.try_parse(TIMESTAMP_SYS, timestamp_sys)) {
+            j[TIMESTAMP_SYS] = ns_to_iso8601(timestamp_sys);
+        } 
+        else {
+            j[TIMESTAMP_SYS] = j[TIMESTAMP_ETW];
+        }
 
         std::string msg;
         if (parser.try_parse(MY_MESSAGE_W, msg)) {
@@ -173,15 +178,62 @@ json parse_my_etw_event(Event e) {
     }
 }
 
-// parses all other ETW events
-json parse_etw_event(Event e) {
+// parses hook events, custom parsing when not using manifest based ETW --> cannot use property parsing
+json parse_hook_etw_event(Event e) {
     try {
         krabs::parser parser(e.schema);
         json j;
 
-        j[TIMESTAMP] = filetime_to_iso8601(
+        j[TASK] = wstring2string(e.schema.task_name());
+
+        // get payload size
+        const BYTE* data = (const BYTE*)e.record.UserData;
+        ULONG size = e.record.UserDataLength;
+
+        // PARSE MESSAGE
+        const char* msg = reinterpret_cast<const char*>(data); // read until first null byte
+        size_t msg_len = strnlen(msg, size);
+        j[MESSAGE] = msg;
+
+        // PARSE TARGETPID
+        const BYTE* pid_ptr = data + msg_len + 1;
+        uint64_t targetpid = 0;
+        if (pid_ptr + sizeof(uint64_t) <= data + size) {
+            memcpy(&targetpid, pid_ptr, sizeof(uint64_t));
+        }
+        j[TARGET_PID] = targetpid;
+
+        // PARSE NS_SINCE_EPOCH
+        const BYTE* ns_ptr = pid_ptr + sizeof(uint64_t);
+        int64_t ns_since_epoch = 0;
+        if (ns_ptr + sizeof(int64_t) <= data + size) {
+            memcpy(&ns_since_epoch, ns_ptr, sizeof(int64_t));
+        }
+        std::string iso_time = ns_to_iso8601(ns_since_epoch);
+        j[TIMESTAMP_SYS] = iso_time;
+
+        return j;
+    }
+    catch (const std::exception& ex) {
+        std::cerr << "[!] ETW: Hook Trace Exception: " << ex.what() << "\n";
+        return json();
+    }
+}
+
+// parses all other ETW events
+json parse_etw_event(Event e) {
+    try {
+        if (j[PROVIDER_NAME] == HOOK_PROVIDER) {
+            return parse_hook_etw_event(e); // needs custom parsing
+        }
+
+        krabs::parser parser(e.schema);
+        json j;
+
+        j[TIMESTAMP_ETW] = filetime_to_iso8601(
             static_cast<__int64>(e.record.EventHeader.TimeStamp.QuadPart)
         );
+        j[TIMESTAMP_SYS] = j[TIMESTAMP_ETW]; // normal ETW events only have their timestamp, not my "accurate" timestamp
         j[PID] = e.record.EventHeader.ProcessId;
         j[TID] = e.record.EventHeader.ThreadId;
         j[EVENT_ID] = e.schema.event_id(); // opcode is the same as event_id, sometimes just a different number
@@ -525,7 +577,7 @@ bool check_traces_started(json& j) {
 
 // check if the hooker emits ETW messages --> hookes installed
 bool check_hooker_started(json& j) {
-    if (j.contains(TASK)) {
+    if (j.contains(TASK)) { // TODO, not as task but message?
         return j[TASK] == NTDLL_HOOKER_TRACE_START_MARKER;
     }
     return false;
@@ -892,8 +944,8 @@ void write_events_to_file(const std::string& output) {
         try {
             // sort events by timestamp
             std::sort(events.begin(), events.end(), [](const json& a, const json& b) {
-                const std::string& ts1 = a[TIMESTAMP];
-                const std::string& ts2 = b[TIMESTAMP];
+                const std::string& ts1 = a[TIMESTAMP_SYS];
+                const std::string& ts2 = b[TIMESTAMP_SYS];
                 return ts1 < ts2; // lexicographical compare works for ISO-like timestamps
                 });
 

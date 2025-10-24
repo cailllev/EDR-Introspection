@@ -17,6 +17,10 @@ static const int ANTIMALWARE_PROC_START_STOP_EVENT_ID = 73;
 static const std::string ANTIMALWARE_PROC_START_MSG = "SyncStart";
 static const std::string ANTIMALWARE_PROC_STOP_MSG = "Termination";
 
+// my system timestamp
+static const std::string TIMESTAMP_SYS = "timestamp_sys";
+static const std::wstring TIMESTAMP_SYS_W = std::wstring(TIMESTAMP_SYS.begin(), TIMESTAMP_SYS.end());
+
 // my providers (from other projects)
 static const std::wstring ATTACK_GUID = L"{72248466-7166-4feb-a386-34d8f35bb637}";
 static const std::wstring HOOKS_GUID = L"{72248411-7166-4feb-a386-34d8f35bb637}";
@@ -47,7 +51,7 @@ struct Event {
 
 // fixed attributes inside the header and schema --> string can be chosen "freely", but must be unique over all properties!
 // most properties do not use _, it's safe to use _ for these fixed attributes here
-static const std::string TIMESTAMP = "timestamp";
+static const std::string TIMESTAMP_ETW = "timestamp_etw";
 static const std::string TYPE = "src_type";
 static const std::string PROVIDER_NAME = "provider_name";
 static const std::string EVENT_ID = "event_id";
