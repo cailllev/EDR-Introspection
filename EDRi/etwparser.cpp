@@ -119,6 +119,8 @@ json parse_custom_etw_event(Event e) {
         );
         j[TYPE] = "myETW";
         j[PID] = e.record.EventHeader.ProcessId;
+		std::string task = wchar2string(e.schema.task_name());
+        j[TASK] = task;
         j[PROVIDER_NAME] = wchar2string(e.schema.provider_name());
         if (j[PROVIDER_NAME] == EDRi_PROVIDER) {
             j[EVENT_ID] = EDRi_PROVIDER_EVENT_ID;
@@ -141,8 +143,8 @@ json parse_custom_etw_event(Event e) {
         const char* msg = reinterpret_cast<const char*>(data); // read until first null byte
         size_t msg_len = strnlen(msg, size);
         if (msg_len == 0) {
-            j[TASK] = "(no " + MY_MESSAGE + " field)";
-            std::cout << "[*] ETW: Warning: Custom event missing " << MY_MESSAGE << " field " << j.dump() << "\n";
+            msg = "(empty message)";
+            std::cout << "[*] ETW: Warning: Custom event with empty message " << j.dump() << "\n";
         }
         j[MESSAGE] = msg;
         const BYTE* ptr_field = data + msg_len + 1;
