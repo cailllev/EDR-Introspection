@@ -38,14 +38,14 @@ DWORD WINAPI t_start_default_traces(LPVOID param) {
         // my attack trace
         krabs::guid attack_guid(ATTACK_GUID);
         krabs::provider<> attack_provider(attack_guid);
-        attack_provider.add_on_event_callback(my_event_callback);
+        attack_provider.add_on_event_callback(event_callback);
         std::cout << "[+] ETW: Enabling Injector-Attack: (all)\n";
         trace_etw.enable(attack_provider);
 
         // my EDRi trace, start last (start marker is consumed in this trace)
         krabs::guid parser_guid(EDRi_PROVIDER_GUID_W);
         krabs::provider<> parser_provider(parser_guid);
-        parser_provider.add_on_event_callback(my_event_callback);
+        parser_provider.add_on_event_callback(event_callback);
         std::cout << "[+] ETW: Enabling EDRi: (all)\n";
         trace_etw.enable(parser_provider);
 

@@ -138,7 +138,7 @@ std::wstring get_base_path() {
 
 std::string get_hook_dll_path() {
     std::wstring base_path = get_base_path();
-    return wstring2string(base_path) + "EDRHooker.dll"; // TODO global
+    return wstring2string(base_path) + "EDRReflectiveHooker.dll";
 }
 
 // returns the files from /EDRi/attacks

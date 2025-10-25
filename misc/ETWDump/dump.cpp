@@ -29,7 +29,8 @@ std::string ns_to_iso8601(uint64_t ns_since_epoch)
 int main(int argc, wchar_t* argv[]) {
     try {
         // Create provider
-        static const std::wstring provider_guid_str = L"{72248411-7166-4feb-a386-34d8f35bb637}";
+        //static const std::wstring provider_guid_str = L"{72248477-7177-4feb-a386-34d8f35bb637}"; // EDRi
+        static const std::wstring provider_guid_str = L"{72248411-7166-4feb-a386-34d8f35bb637}"; // Hooks
         krabs::guid provider_guid(provider_guid_str);
         krabs::provider<> provider(provider_guid);
 
@@ -44,28 +45,28 @@ int main(int argc, wchar_t* argv[]) {
             // PARSE MESSAGE
             const char* msg = reinterpret_cast<const char*>(data); // read until first null byte
             size_t msg_len = strnlen(msg, size);
+            const BYTE* ptr_field = data + msg_len + 1;
 
-			// PARSE TARGETPID
-            const BYTE* pid_ptr = data + msg_len + 1;
-            uint64_t targetpid = 0;
-            if (pid_ptr + sizeof(uint64_t) <= data + size) {
-                memcpy(&targetpid, pid_ptr, sizeof(uint64_t));
-            }
-
-			// PARSE NS_SINCE_EPOCH
-            const BYTE* ns_ptr = pid_ptr + sizeof(uint64_t);
+            // PARSE NS_SINCE_EPOCH
             int64_t ns_since_epoch = 0;
-            if (ns_ptr + sizeof(int64_t) <= data + size) {
-                memcpy(&ns_since_epoch, ns_ptr, sizeof(int64_t));
+            if (ptr_field + sizeof(int64_t) <= data + size) {
+                memcpy(&ns_since_epoch, ptr_field, sizeof(int64_t));
+                ptr_field += sizeof(uint64_t);
             }
+            std::string iso_time = ns_to_iso8601(ns_since_epoch);
 
-			std::string iso_time = ns_to_iso8601(ns_since_epoch);
+            // PARSE TARGETPID
+            uint64_t targetpid = -1;
+            if (ptr_field + sizeof(uint64_t) <= data + size) {
+                memcpy(&targetpid, ptr_field, sizeof(uint64_t));
+                ptr_field += sizeof(uint64_t);
+            }
 
             std::wcout << L"PID: " << record.EventHeader.ProcessId
                 << L" : " << std::wstring(schema.task_name()) << std::endl;
             std::cout << "  message: " << msg << std::endl;
-            std::cout << "  targetpid: " << targetpid << std::endl;
             std::cout << "  timestamp: " << iso_time << std::endl;
+            std::cout << "  targetpid: " << targetpid << std::endl;
             std::cout << "--------------------------\n";
         });
 
@@ -74,7 +75,7 @@ int main(int argc, wchar_t* argv[]) {
         krabs::user_trace trace(L"SimpleKrabsTrace");
         trace.enable(provider);
 
-        std::cout << "[*] Listening... Press Ctrl+C to exit" << std::endl;
+        std::wcout << L"[*] Listening to " << provider_guid_str << L"... Press Ctrl+C to exit" << std::endl;
         trace.start(); // blocks
     }
     catch (const std::exception& e) {
