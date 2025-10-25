@@ -1,4 +1,5 @@
 #include <windows.h>
+#include <chrono>
 #include <iostream>
 #include <iomanip>
 #include <fstream>
@@ -19,12 +20,18 @@ TRACELOGGING_DEFINE_PROVIDER(
 
 int sleep_between_steps_ms = 970; // time to wait between attack steps
 
+uint64_t get_ns_time() {
+    auto now = std::chrono::system_clock::now();
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
+}
 
 void print_and_emit_event(std::string msg) {
+	uint64_t ns = get_ns_time();
     TraceLoggingWrite(
         g_hProvider,
         "Attack-Provider", // this is the event name
-		TraceLoggingValue(msg.c_str(), "message") // cannot be a variable
+		TraceLoggingValue(msg.c_str(), "message"), // cannot be a variable
+		TraceLoggingUInt64(ns, "ns_since_epoch")
     );
     std::cout << msg << "\n";
 }

@@ -34,9 +34,9 @@ std::string get_attack_enc_path(const std::string&);
 void build_device_map();
 std::string translate_if_path(const std::string&);
 
-std::string ns_to_iso8601(int64_t ns);
+std::string ns_to_iso8601(uint64_t);
 
-// custom key for technicolor in timeline explorer
+// custom key for color info
 static const std::string COLOR_HEADER = "Color";
 static const std::string COLOR_GREEN = "green";
 static const std::string COLOR_RED = "red";

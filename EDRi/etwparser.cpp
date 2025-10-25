@@ -63,30 +63,6 @@ std::vector<std::string> csv_header_start = {
     FILEPATH, "cachename", "result", "vname", "sigseq", "sigsha", "commandline", "firstparam", "secondparam",
 };
 
-
-// hand over schema for parsing
-void my_event_callback(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
-    try {
-        krabs::schema schema(record, trace_context.schema_locator);
-        json ev = parse_my_etw_event(Event{ record, schema });
-        if (ev.is_null()) {
-            return; // ignore empty events
-		}
-        post_my_parsing_checks(ev);
-        add_exe_information(ev); // must be after all parsing checks and filtering but before adding it to events
-
-        etw_events[All].push_back(ev);
-        etw_events[Relevant].push_back(ev);
-        etw_events[Minimal].push_back(ev);
-    }
-    catch (const std::exception& e) {
-        std::cerr << "[!] ETW: my_event_callback exception: " << e.what() << "\n";
-    }
-    catch (...) {
-        std::cerr << "[!] ETW: my_event_callback unknown exception\n";
-    }
-}
-
 // pre-filter EDR events and hand over schema for parsing
 void event_callback(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
     try {
@@ -131,11 +107,13 @@ void event_callback(const EVENT_RECORD& record, const krabs::trace_context& trac
 }
 
 // parses attack events
-json parse_my_etw_event(Event e) {
-    krabs::parser parser(e.schema);
-    json j;
-
+json parse_custom_etw_event(Event e) {
     try {
+        krabs::parser parser(e.schema);
+        json j;
+
+        std::string provider = wchar2string(e.schema.provider_name());
+
         j[TIMESTAMP_ETW] = filetime_to_iso8601(
             static_cast<__int64>(e.record.EventHeader.TimeStamp.QuadPart)
         );
@@ -147,44 +125,13 @@ json parse_my_etw_event(Event e) {
         }
         else if (j[PROVIDER_NAME] == ATTACK_PROVIDER) {
             j[EVENT_ID] = ATTACK_PROVIDER_EVENT_ID;
-        } else {
+        }
+        else if (j[PROVIDER_NAME] == HOOK_PROVIDER) {
+            j[EVENT_ID] = HOOK_PROVIDER_EVENT_ID;
+        }
+        else {
             j[EVENT_ID] = -1; // unknown
 		}
-
-        uint64_t timestamp_sys;
-        if (parser.try_parse(TIMESTAMP_SYS, timestamp_sys)) {
-            j[TIMESTAMP_SYS] = ns_to_iso8601(timestamp_sys);
-        } 
-        else {
-            j[TIMESTAMP_SYS] = j[TIMESTAMP_ETW];
-        }
-
-        std::string msg;
-        if (parser.try_parse(MY_MESSAGE_W, msg)) {
-            j[TASK] = std::string(msg.begin(), msg.end());
-        }
-        else {
-            j[TASK] = "(no " + MY_MESSAGE + " field)";
-            std::cout << "[*] ETW: Warning: Custom event missing " << MY_MESSAGE << " field " << j.dump() << "\n";
-        }
-
-		// if there are any other properties, parse them too
-        parse_all_properties(parser, j);
-        return j;
-    }
-    catch (const std::exception& ex) {
-        std::cerr << "[!] ETW: Custom Trace Exception: " << ex.what() << "\n";
-        return json();
-    }
-}
-
-// parses hook events, custom parsing when not using manifest based ETW --> cannot use property parsing
-json parse_hook_etw_event(Event e) {
-    try {
-        krabs::parser parser(e.schema);
-        json j;
-
-        j[TASK] = wstring2string(e.schema.task_name());
 
         // get payload size
         const BYTE* data = (const BYTE*)e.record.UserData;
@@ -193,29 +140,35 @@ json parse_hook_etw_event(Event e) {
         // PARSE MESSAGE
         const char* msg = reinterpret_cast<const char*>(data); // read until first null byte
         size_t msg_len = strnlen(msg, size);
-        j[MESSAGE] = msg;
-
-        // PARSE TARGETPID
-        const BYTE* pid_ptr = data + msg_len + 1;
-        uint64_t targetpid = 0;
-        if (pid_ptr + sizeof(uint64_t) <= data + size) {
-            memcpy(&targetpid, pid_ptr, sizeof(uint64_t));
+        if (msg_len == 0) {
+            j[TASK] = "(no " + MY_MESSAGE + " field)";
+            std::cout << "[*] ETW: Warning: Custom event missing " << MY_MESSAGE << " field " << j.dump() << "\n";
         }
-        j[TARGET_PID] = targetpid;
+        j[MESSAGE] = msg;
+        const BYTE* ptr_field = data + msg_len + 1;
 
         // PARSE NS_SINCE_EPOCH
-        const BYTE* ns_ptr = pid_ptr + sizeof(uint64_t);
         int64_t ns_since_epoch = 0;
-        if (ns_ptr + sizeof(int64_t) <= data + size) {
-            memcpy(&ns_since_epoch, ns_ptr, sizeof(int64_t));
+        if (ptr_field + sizeof(int64_t) <= data + size) {
+            memcpy(&ns_since_epoch, ptr_field, sizeof(int64_t));
+            ptr_field += sizeof(uint64_t);
         }
         std::string iso_time = ns_to_iso8601(ns_since_epoch);
         j[TIMESTAMP_SYS] = iso_time;
 
+        if (provider == HOOK_PROVIDER) {
+            // PARSE TARGETPID
+            uint64_t targetpid = -1;
+            if (ptr_field + sizeof(uint64_t) <= data + size) {
+                memcpy(&targetpid, ptr_field, sizeof(uint64_t));
+            }
+            j[TARGET_PID] = targetpid;
+        }
+
         return j;
     }
     catch (const std::exception& ex) {
-        std::cerr << "[!] ETW: Hook Trace Exception: " << ex.what() << "\n";
+        std::cerr << "[!] ETW: Custom Trace Exception: " << ex.what() << "\n";
         return json();
     }
 }
@@ -223,13 +176,12 @@ json parse_hook_etw_event(Event e) {
 // parses all other ETW events
 json parse_etw_event(Event e) {
     try {
-        if (j[PROVIDER_NAME] == HOOK_PROVIDER) {
-            return parse_hook_etw_event(e); // needs custom parsing
-        }
+		std::string provider_name = wchar2string(e.schema.provider_name());
+        if (provider_name == EDRi_PROVIDER || provider_name == ATTACK_PROVIDER || provider_name == HOOK_PROVIDER) {
+            return parse_custom_etw_event(e);
+		}
 
-        krabs::parser parser(e.schema);
         json j;
-
         j[TIMESTAMP_ETW] = filetime_to_iso8601(
             static_cast<__int64>(e.record.EventHeader.TimeStamp.QuadPart)
         );
@@ -237,7 +189,7 @@ json parse_etw_event(Event e) {
         j[PID] = e.record.EventHeader.ProcessId;
         j[TID] = e.record.EventHeader.ThreadId;
         j[EVENT_ID] = e.schema.event_id(); // opcode is the same as event_id, sometimes just a different number
-        j[PROVIDER_NAME] = wchar2string(e.schema.provider_name());
+        j[PROVIDER_NAME] = provider_name;
 
         if (j[PROVIDER_NAME] == THREAT_INTEL_PROVIDER) {
 			j[TYPE] = "ETW-TI";
@@ -246,12 +198,255 @@ json parse_etw_event(Event e) {
 			j[TYPE] = "ETW";
         }
 
-        // task = task_name + opcode_name
-        // TODO lookup missing info if either is null?
+        // task = task_name + opcode_name, TODO lookup missing info if either is null?
         std::wstring combined = std::wstring(e.schema.task_name()) + std::wstring(e.schema.opcode_name());
         j[TASK] = wstring2string(combined);
 
-		parse_all_properties(parser, j);
+        krabs::parser parser(e.schema);
+        // parse all properties defined in the schema
+        for (const auto& property : parser.properties()) {
+            std::string last_key;
+            std::string original_key = "";
+            int last_type;
+
+            try {
+                // get property name and type
+                const std::wstring& property_name = property.name();
+                const auto property_type = property.type();
+
+                // create key and convert it to lowercase
+                std::string key = wstring2string((std::wstring&)property_name);
+                std::transform(key.begin(), key.end(), key.begin(),
+                    [](unsigned char c) { return std::tolower(c); });
+
+                // for tracking potential overwrites & error messages
+                std::string overwritten_value = "";
+                last_key = key;
+                last_type = property_type;
+
+                // check if it's a merged key --> write value to merged_key
+                for (const auto& cat : key_categories_to_merge) {
+                    if (std::find(cat.keys_to_merge.begin(), cat.keys_to_merge.end(), key) != cat.keys_to_merge.end()) {
+                        original_key = key;
+                        key = cat.merged_key;
+                    }
+                }
+                if (j.contains(key)) {
+                    overwritten_value = get_val(j, key);
+                }
+
+                // Special cases
+                if (key == "protectionmask" || key == "lastprotectionmask") {
+                    uint32_t protection_mask = parser.parse<uint32_t>(property_name);
+                    j[key] = get_memory_region_protect(protection_mask);
+                    continue;
+                }
+
+                switch (property_type) {
+
+                case TDH_INTYPE_UNICODESTRING:
+                {
+                    std::wstringstream wss;
+                    wss << parser.parse<std::wstring>(property_name);
+                    std::string s = wstring2string((std::wstring&)wss.str());
+                    j[key] = s;
+                    break;
+                }
+
+                case TDH_INTYPE_ANSISTRING:
+                    j[key] = parser.parse<std::string>(property_name);
+                    break;
+                case TDH_INTYPE_INT8:
+                    j[key] = (int32_t)parser.parse<CHAR>(property_name);
+                    break;
+                case TDH_INTYPE_UINT8:
+                    j[key] = (uint32_t)parser.parse<UCHAR>(property_name);
+                    break;
+                case TDH_INTYPE_INT16:
+                    j[key] = (int32_t)parser.parse<SHORT>(property_name);
+                    break;
+                case TDH_INTYPE_UINT16:
+                    j[key] = (int32_t)parser.parse<USHORT>(property_name);
+                    break;
+                case TDH_INTYPE_INT32:
+                    j[key] = (int32_t)parser.parse<int32_t>(property_name);
+                    break;
+                case TDH_INTYPE_UINT32:
+                    j[key] = (uint32_t)parser.parse<uint32_t>(property_name);
+                    break;
+                case TDH_INTYPE_INT64:
+                    j[key] = (int64_t)parser.parse<int64_t>(property_name);
+                    break;
+                case TDH_INTYPE_UINT64:
+                    j[key] = (uint64_t)parser.parse<uint64_t>(property_name);
+                    break;
+                case TDH_INTYPE_BOOLEAN:
+                    j[key] = (bool)parser.parse<BOOL>(property_name);
+                    break;
+                case TDH_INTYPE_POINTER:
+                    j[key] = (uint64_t)parser.parse<PVOID>(property_name);
+                    break;
+
+                case TDH_INTYPE_BINARY:
+                {
+                    try {
+                        auto bin = parser.parse<krabs::binary>(property_name);
+                        const auto& bytes = bin.bytes();
+                        const auto size = bytes.size();
+                        const auto data = bytes.empty() ? nullptr : bytes.data();
+
+                        if (size == 4 && data) {
+                            char ipStr[INET_ADDRSTRLEN] = { 0 };
+                            if (inet_ntop(AF_INET, data, ipStr, sizeof(ipStr)))
+                                j[key] = std::string(ipStr);
+                            else
+                                j[key] = "<inet_ntop_AF_INET_failed>";
+                        }
+                        else if (size == 16 && data) {
+                            // detect IPv4-mapped IPv6 ::ffff:a.b.c.d (first 10 bytes 0, then 0xff,0xff)
+                            bool ipv4_mapped = (std::equal(bytes.begin(), bytes.begin() + 10, std::vector<BYTE>(10, 0).begin())
+                                && bytes[10] == 0xff && bytes[11] == 0xff);
+                            if (ipv4_mapped) {
+                                // convert last 4 bytes as IPv4
+                                char ipStr[INET_ADDRSTRLEN] = { 0 };
+                                if (inet_ntop(AF_INET, data + 12, ipStr, sizeof(ipStr)))
+                                    j[key] = std::string("::ffff:") + std::string(ipStr); // or ipStr alone if you prefer
+                                else
+                                    j[key] = "<inet_ntop_mapped_failed>";
+                            }
+                            else {
+                                char ipStr[INET6_ADDRSTRLEN] = { 0 };
+                                if (inet_ntop(AF_INET6, data, ipStr, sizeof(ipStr)))
+                                    j[key] = std::string(ipStr);
+                                else
+                                    j[key] = "<inet_ntop_AF_INET6_failed>";
+                            }
+                        }
+                        else {
+                            // fallback: hex dump
+                            std::ostringstream oss;
+                            oss << "0x" << std::hex << std::setfill('0');
+                            for (BYTE b : bytes) {
+                                oss << std::setw(2) << static_cast<int>(b);
+                            }
+                            j[key] = oss.str();
+                        }
+                    }
+                    catch (...) {
+                        // ignore conversion errors
+                        j[key] = "<parse error>";
+                    }
+                    break;
+                }
+
+                case TDH_INTYPE_GUID:
+                {
+                    GUID guid = parser.parse<GUID>(property_name);
+                    std::ostringstream oss;
+                    oss << std::hex << std::setfill('0')
+                        << std::setw(8) << guid.Data1 << "-"
+                        << std::setw(4) << guid.Data2 << "-"
+                        << std::setw(4) << guid.Data3 << "-";
+
+                    for (int i = 0; i < 2; i++)
+                        oss << std::setw(2) << static_cast<int>(guid.Data4[i]);
+                    oss << "-";
+                    for (int i = 2; i < 8; i++)
+                        oss << std::setw(2) << static_cast<int>(guid.Data4[i]);
+
+                    j[key] = oss.str();
+                    break;
+                }
+
+                case TDH_INTYPE_FILETIME:
+                {
+                    FILETIME fileTime = parser.parse<FILETIME>(property_name);
+                    ULARGE_INTEGER uli;
+                    uli.LowPart = fileTime.dwLowDateTime;
+                    uli.HighPart = fileTime.dwHighDateTime;
+                    j[key] = uli.QuadPart;
+                    break;
+                }
+
+                case TDH_INTYPE_SID:
+                {
+                    std::vector<uint8_t> raw;
+                    if (parser.try_parse(property_name, raw)) {
+                        // try to convert raw bytes to a SID string
+                        if (!raw.empty() && IsValidSid((PSID)raw.data())) {
+                            LPWSTR sidString = nullptr;
+                            if (ConvertSidToStringSidW((PSID)raw.data(), &sidString)) {
+                                std::wstring ws(sidString);
+                                j[key] = wstring2string(ws);
+                                LocalFree(sidString);
+                            }
+                            else {
+                                j[key] = "invalid_sid";
+                            }
+                        }
+                        else {
+                            // fallback: output raw data as hex
+                            std::ostringstream oss;
+                            oss << "0x";
+                            for (auto b : raw) {
+                                oss << std::hex << std::setw(2) << std::setfill('0') << (int)b;
+                            }
+                            j[key] = oss.str();
+                        }
+                    }
+                    else {
+                        // parsing failed, fallback: empty hex
+                        j[key] = "0x";
+                    }
+                    break;
+                }
+
+                case TDH_INTYPE_HEXINT32:
+                {
+                    std::ostringstream oss;
+                    oss << "0x" << std::hex << std::uppercase << parser.parse<uint32_t>(property_name);
+                    j[key] = oss.str();
+                    break;
+                }
+
+                case TDH_INTYPE_HEXINT64:
+                {
+                    std::ostringstream oss;
+                    oss << "0x" << std::hex << std::uppercase << parser.parse<uint64_t>(property_name);
+                    j[key] = oss.str();
+                    break;
+                }
+
+                default:
+                    std::cout << "[*] ETW: Warning: Unsupported property type " << property_type << " for " << j[TASK] << "'s " << key << "\n";
+                    j[key] = "unsupported";
+                    break;
+                }
+                /*
+                if (key == ORIGINATING_PID && j[ORIGINATING_PID] == 0) {
+                    j[ORIGINATING_PID] = -1; // orginating pid=0 does not make sense?
+                }
+                */
+                if (overwritten_value != "") {
+                    if (overwritten_value != j[key]) { // only warn if the values differ
+                        std::cerr << "[!] ETW: Warning, " << j[PROVIDER_NAME] << ":" << j[EVENT_ID] <<
+                            ", overwritten '" << key << ":" << overwritten_value <<
+                            "' with '" << key << ":" << j[key] << "'";
+                        if (original_key != "") { // include name of merged key (if overwrite was b.c. of a merge)
+                            std::cerr << " because of merged key '" << original_key << "'";
+                        }
+                        std::cerr << "\n";
+                    }
+                }
+            }
+            catch (const std::exception& ex) {
+                std::cerr <<
+                    "[!] ETW: parse_etw_event failed to parse " << j[TASK] <<
+                    ", key: " << last_key <<
+                    ", type: " << last_type <<
+                    ", error: " << ex.what() << "\n";
+            }
+        }
 
         // add a newly spawned procs to process map
         int pid = check_new_proc(j);
@@ -284,253 +479,6 @@ json parse_etw_event(Event e) {
     catch (const std::exception& ex) {
         std::cerr << "[!] ETW: parse_etw_event general exception: " << ex.what() << "\n";
         return json();
-    }
-}
-
-void parse_all_properties(krabs::parser& parser, json& j) {
-    // parse all properties defined in the schema
-    for (const auto& property : parser.properties()) {
-        std::string last_key;
-        std::string original_key = "";
-        int last_type;
-
-        try {
-            // get property name and type
-            const std::wstring& property_name = property.name();
-            const auto property_type = property.type();
-
-            // create key and convert it to lowercase
-            std::string key = wstring2string((std::wstring&)property_name);
-            std::transform(key.begin(), key.end(), key.begin(),
-                [](unsigned char c) { return std::tolower(c); });
-
-            // for tracking potential overwrites & error messages
-            std::string overwritten_value = "";
-            last_key = key;
-            last_type = property_type;
-
-            // check if it's a merged key --> write value to merged_key
-            for (const auto& cat : key_categories_to_merge) {
-                if (std::find(cat.keys_to_merge.begin(), cat.keys_to_merge.end(), key) != cat.keys_to_merge.end()) {
-                    original_key = key;
-                    key = cat.merged_key;
-                }
-            }
-            if (j.contains(key)) {
-                overwritten_value = get_val(j, key);
-            }
-
-            // Special cases
-            if (key == "protectionmask" || key == "lastprotectionmask") {
-                uint32_t protection_mask = parser.parse<uint32_t>(property_name);
-                j[key] = get_memory_region_protect(protection_mask);
-                continue;
-            }
-
-            switch (property_type) {
-
-            case TDH_INTYPE_UNICODESTRING:
-            {
-                std::wstringstream wss;
-                wss << parser.parse<std::wstring>(property_name);
-                std::string s = wstring2string((std::wstring&)wss.str());
-                j[key] = s;
-                break;
-            }
-
-            case TDH_INTYPE_ANSISTRING:
-                j[key] = parser.parse<std::string>(property_name);
-                break;
-            case TDH_INTYPE_INT8:
-                j[key] = (int32_t)parser.parse<CHAR>(property_name);
-                break;
-            case TDH_INTYPE_UINT8:
-                j[key] = (uint32_t)parser.parse<UCHAR>(property_name);
-                break;
-            case TDH_INTYPE_INT16:
-                j[key] = (int32_t)parser.parse<SHORT>(property_name);
-                break;
-            case TDH_INTYPE_UINT16:
-                j[key] = (int32_t)parser.parse<USHORT>(property_name);
-                break;
-            case TDH_INTYPE_INT32:
-                j[key] = (int32_t)parser.parse<int32_t>(property_name);
-                break;
-            case TDH_INTYPE_UINT32:
-                j[key] = (uint32_t)parser.parse<uint32_t>(property_name);
-                break;
-            case TDH_INTYPE_INT64:
-                j[key] = (int64_t)parser.parse<int64_t>(property_name);
-                break;
-            case TDH_INTYPE_UINT64:
-                j[key] = (uint64_t)parser.parse<uint64_t>(property_name);
-                break;
-            case TDH_INTYPE_BOOLEAN:
-                j[key] = (bool)parser.parse<BOOL>(property_name);
-                break;
-            case TDH_INTYPE_POINTER:
-                j[key] = (uint64_t)parser.parse<PVOID>(property_name);
-                break;
-
-            case TDH_INTYPE_BINARY:
-            {
-                try {
-                    auto bin = parser.parse<krabs::binary>(property_name);
-                    const auto& bytes = bin.bytes();
-                    const auto size = bytes.size();
-                    const auto data = bytes.empty() ? nullptr : bytes.data();
-
-                    if (size == 4 && data) {
-                        char ipStr[INET_ADDRSTRLEN] = { 0 };
-                        if (inet_ntop(AF_INET, data, ipStr, sizeof(ipStr)))
-                            j[key] = std::string(ipStr);
-                        else
-                            j[key] = "<inet_ntop_AF_INET_failed>";
-                    }
-                    else if (size == 16 && data) {
-                        // detect IPv4-mapped IPv6 ::ffff:a.b.c.d (first 10 bytes 0, then 0xff,0xff)
-                        bool ipv4_mapped = (std::equal(bytes.begin(), bytes.begin() + 10, std::vector<BYTE>(10, 0).begin())
-                            && bytes[10] == 0xff && bytes[11] == 0xff);
-                        if (ipv4_mapped) {
-                            // convert last 4 bytes as IPv4
-                            char ipStr[INET_ADDRSTRLEN] = { 0 };
-                            if (inet_ntop(AF_INET, data + 12, ipStr, sizeof(ipStr)))
-                                j[key] = std::string("::ffff:") + std::string(ipStr); // or ipStr alone if you prefer
-                            else
-                                j[key] = "<inet_ntop_mapped_failed>";
-                        }
-                        else {
-                            char ipStr[INET6_ADDRSTRLEN] = { 0 };
-                            if (inet_ntop(AF_INET6, data, ipStr, sizeof(ipStr)))
-                                j[key] = std::string(ipStr);
-                            else
-                                j[key] = "<inet_ntop_AF_INET6_failed>";
-                        }
-                    }
-                    else {
-                        // fallback: hex dump
-                        std::ostringstream oss;
-                        oss << "0x" << std::hex << std::setfill('0');
-                        for (BYTE b : bytes) {
-                            oss << std::setw(2) << static_cast<int>(b);
-                        }
-                        j[key] = oss.str();
-                    }
-                }
-                catch (...) {
-                    // ignore conversion errors
-					j[key] = "<parse error>";
-                }
-                break;
-            }
-
-            case TDH_INTYPE_GUID:
-            {
-                GUID guid = parser.parse<GUID>(property_name);
-                std::ostringstream oss;
-                oss << std::hex << std::setfill('0')
-                    << std::setw(8) << guid.Data1 << "-"
-                    << std::setw(4) << guid.Data2 << "-"
-                    << std::setw(4) << guid.Data3 << "-";
-
-                for (int i = 0; i < 2; i++)
-                    oss << std::setw(2) << static_cast<int>(guid.Data4[i]);
-                oss << "-";
-                for (int i = 2; i < 8; i++)
-                    oss << std::setw(2) << static_cast<int>(guid.Data4[i]);
-
-                j[key] = oss.str();
-                break;
-            }
-
-            case TDH_INTYPE_FILETIME:
-            {
-                FILETIME fileTime = parser.parse<FILETIME>(property_name);
-                ULARGE_INTEGER uli;
-                uli.LowPart = fileTime.dwLowDateTime;
-                uli.HighPart = fileTime.dwHighDateTime;
-                j[key] = uli.QuadPart;
-                break;
-            }
-
-            case TDH_INTYPE_SID:
-            {
-                std::vector<uint8_t> raw;
-                if (parser.try_parse(property_name, raw)) {
-                    // try to convert raw bytes to a SID string
-                    if (!raw.empty() && IsValidSid((PSID)raw.data())) {
-                        LPWSTR sidString = nullptr;
-                        if (ConvertSidToStringSidW((PSID)raw.data(), &sidString)) {
-                            std::wstring ws(sidString);
-                            j[key] = wstring2string(ws);
-                            LocalFree(sidString);
-                        }
-                        else {
-                            j[key] = "invalid_sid";
-                        }
-                    }
-                    else {
-                        // fallback: output raw data as hex
-                        std::ostringstream oss;
-                        oss << "0x";
-                        for (auto b : raw) {
-                            oss << std::hex << std::setw(2) << std::setfill('0') << (int)b;
-                        }
-                        j[key] = oss.str();
-                    }
-                }
-                else {
-                    // parsing failed, fallback: empty hex
-                    j[key] = "0x";
-                }
-                break;
-            }
-
-            case TDH_INTYPE_HEXINT32:
-            {
-                std::ostringstream oss;
-                oss << "0x" << std::hex << std::uppercase << parser.parse<uint32_t>(property_name);
-                j[key] = oss.str();
-                break;
-            }
-
-            case TDH_INTYPE_HEXINT64:
-            {
-                std::ostringstream oss;
-                oss << "0x" << std::hex << std::uppercase << parser.parse<uint64_t>(property_name);
-                j[key] = oss.str();
-                break;
-            }
-
-            default:
-                std::cout << "[*] ETW: Warning: Unsupported property type " << property_type << " for " << j[TASK] << "'s " << key << "\n";
-                j[key] = "unsupported";
-                break;
-            }
-            /*
-            if (key == ORIGINATING_PID && j[ORIGINATING_PID] == 0) {
-                j[ORIGINATING_PID] = -1; // orginating pid=0 does not make sense?
-            }
-            */
-            if (overwritten_value != "") {
-                if (overwritten_value != j[key]) { // only warn if the values differ
-                    std::cerr << "[!] ETW: Warning, " << j[PROVIDER_NAME] << ":" << j[EVENT_ID] <<
-                        ", overwritten '" << key << ":" << overwritten_value <<
-                        "' with '" << key << ":" << j[key] << "'";
-                    if (original_key != "") { // include name of merged key (if overwrite was b.c. of a merge)
-                        std::cerr << " because of merged key '" << original_key << "'";
-                    }
-                    std::cerr << "\n";
-                }
-            }
-        }
-        catch (const std::exception& ex) {
-            std::cerr <<
-                "[!] ETW: parse_all_properties failed to parse " << j[TASK] <<
-                ", key: " << last_key <<
-                ", type: " << last_type <<
-                ", error: " << ex.what() << "\n";
-        }
     }
 }
 
@@ -569,22 +517,22 @@ int check_new_proc(json& j) {
 
 // check when the first EDRi event is registered --> trace running
 bool check_traces_started(json& j) {
-    if (j.contains(TASK)) {
-        return j[TASK] == EDRi_TRACE_START_MARKER;
+    if (j.contains(MESSAGE)) {
+        return j[MESSAGE] == EDRi_TRACE_START_MARKER;
     }
     return false;
 }
 
-// check if the hooker emits ETW messages --> hookes installed
+// check if the hooker emits ETW messages --> hooks installed
 bool check_hooker_started(json& j) {
-    if (j.contains(TASK)) { // TODO, not as task but message?
-        return j[TASK] == NTDLL_HOOKER_TRACE_START_MARKER;
+    if (j.contains(MESSAGE)) {
+        return j[MESSAGE] == NTDLL_HOOKER_TRACE_START_MARKER;
     }
     return false;
 }
 
-// monitors my events, sets started flag
-void post_my_parsing_checks(json& j) {
+// monitors events, sets and ended flag, attack and injected PID
+void post_parsing_checks(json& j) {
     // checks if the trace started
     if (!g_traces_started && check_traces_started(j)) {
         if (g_debug) {
@@ -592,10 +540,7 @@ void post_my_parsing_checks(json& j) {
         }
         g_traces_started = true;
     }
-}
 
-// monitors events, sets and ended flag, attack and injected PID
-void post_parsing_checks(json& j) {
     // checks if the hooker is started
     if (g_with_hooks && !g_hooker_started && check_hooker_started(j)) {
         if (g_debug) {
@@ -690,8 +635,15 @@ Classifier filter(json& ev) {
         return filter_antimalware(ev);
     }
 
+    // MY PROVIDERS
     else if (ev[PROVIDER_NAME] == HOOK_PROVIDER) {
         return filter_hooks(ev);
+    }
+    else if (ev[PROVIDER_NAME] == EDRi_PROVIDER) {
+        return Minimal; // do not filter
+    }
+    else if (ev[PROVIDER_NAME] == ATTACK_PROVIDER) {
+        return Minimal; // do not filter
     }
 
     if (g_super_debug) {
@@ -840,9 +792,19 @@ Classifier filter_antimalware(json& ev) {
     return Relevant; // put event ids without a filter into relevant
 }
 
-// filter hook provider for relevant processes
+// filter hook provider for relevant processes, either attack or injected PID -> Minimal, else All
 Classifier filter_hooks(json& ev) {
-	return Relevant; // TODO filter for pid of attack/injected
+    const std::string& msg = ev[MESSAGE];
+    if (msg.rfind("NtOpenFile", 0) == 0 || msg.rfind("NtReadFile", 0) == 0) {
+        if (ev[MESSAGE] == g_attack_exe_name || ev[MESSAGE] == injected_name || ev[MESSAGE] == injected_exe) {
+            return Minimal;
+        }
+        else {
+            return All; // TODO correct?
+        }
+    }
+	// else event has a usable targetpid --> classify based on target pid
+    return classify_to(ev, TARGET_PID, { g_attack_PID, g_injected_PID }); // TODO filter for pid of attack/injected
 }
 
 std::map<Classifier, std::vector<json>> get_cleaned_events() {
@@ -855,17 +817,17 @@ std::map<Classifier, std::vector<json>> get_cleaned_events() {
 // remove empty events or events without timestamp
 void clean_events() {
     if (g_debug) {
-        std::cout << "[-] ETW: Cleaning events, removing empty events or events without " << TIMESTAMP << " field\n";
+        std::cout << "[-] ETW: Cleaning events, removing empty events or events without " << TIMESTAMP_SYS << " field\n";
 	}
     for (auto& c : etw_events) {
 		std::vector<json>& events = etw_events[c.first]; // this must be a reference to modify the events vectors
         size_t before = events.size();
         events.erase(std::remove_if(events.begin(), events.end(), [](const json& e) {
-            return e.is_null() || !e.contains(TIMESTAMP) || !e[TIMESTAMP].is_string();
+            return e.is_null() || !e.contains(TIMESTAMP_SYS) || !e[TIMESTAMP_SYS].is_string();
             }), events.end());
         size_t removed = before - events.size();
         if (removed > 0 && g_debug) {
-            std::cout << "[-] ETW: Removed " << removed << " empty events or events without " << TIMESTAMP << " in " << classifier_names[c.first] << "\n";
+            std::cout << "[-] ETW: Removed " << removed << " empty events or events without " << TIMESTAMP_SYS << " in " << classifier_names[c.first] << "\n";
         }
     }
 	cleaned_events = true;

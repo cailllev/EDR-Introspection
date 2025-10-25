@@ -512,43 +512,43 @@ static PFN_NtWriteVirtualMemory g_origNtWriteVirtualMemory = nullptr;
 static PFN_NtClose g_origNtClose = nullptr;
 static PFN_NtTerminateProcess g_origNtTerminateProcess = nullptr;
 
-int64_t get_ns_time() {
+uint64_t get_ns_time() {
     auto now = std::chrono::system_clock::now();
     return std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
 }
 
 void emit_etw_ok(std::string msg) {
-    int64_t ns = get_ns_time();
+    uint64_t ns = get_ns_time();
     TraceLoggingWrite(
         g_hProvider,
         "EDRHookTask", // the first definition will be the task of each emitted event (unless using a manifest file?)
         TraceLoggingString(msg.c_str(), "message"),
-        TraceLoggingUInt64(pid, "targetpid"),
-        TraceLoggingInt64(ns, "ns_since_epoch")
+        TraceLoggingUInt64(ns, "ns_since_epoch"),
+        TraceLoggingUInt64(pid, "targetpid")
     );
     std::cout << "[+] Hook-DLL: " << msg << "\n";
 };
 
 void emit_etw_error(std::string error) {
-    int64_t ns = get_ns_time();
+    uint64_t ns = get_ns_time();
     TraceLoggingWrite(
         g_hProvider,
         "EDRHookError",
         TraceLoggingString(error.c_str(), "message"),
-        TraceLoggingUInt64(pid, "targetpid"),
-        TraceLoggingInt64(ns, "ns_since_epoch")
+        TraceLoggingUInt64(ns, "ns_since_epoch"),
+        TraceLoggingUInt64(pid, "targetpid")
     );
     std::cerr << "[!] Hook-DLL: " << error << "\n";
 };
 
 void emit_etw_msg(const char msg[], UINT64 tpid) {
-    int64_t ns = get_ns_time();
+    uint64_t ns = get_ns_time();
     TraceLoggingWrite(
         g_hProvider,
         "EDRHookTask", // the first definition will be the task of each emitted event (unless using a manifest file?)
         TraceLoggingString(msg, "message"),
-        TraceLoggingUInt64(tpid, "targetpid"),
-		TraceLoggingInt64(ns, "ns_since_epoch")
+        TraceLoggingUInt64(ns, "ns_since_epoch"),
+        TraceLoggingUInt64(tpid, "targetpid")
     );
 };
 

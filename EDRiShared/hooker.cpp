@@ -185,65 +185,90 @@ DWORD64 get_reflective_loader_offset(DWORD64 base_address, LPCSTR ReflectiveLoad
 
 // TODO unload again, or check if already loaded
 // Inject DLL into target process via Reflective DLL Injection
-bool reflective_inject(HANDLE hProcess, const std::string& dllPath, bool debug)
+bool reflective_inject(int pid, HANDLE hProcess, const std::string& dllPath, bool debug)
 {
     // open dll file
     HANDLE file_handle = CreateFileA(dllPath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (file_handle == INVALID_HANDLE_VALUE) { printf("CreateFile failed: %lu\n", GetLastError()); return false; }
+    if (file_handle == INVALID_HANDLE_VALUE) { printf("[!] Hooker: CreateFile failed: %lu\n", GetLastError()); return false; }
+    if (debug)
+        printf("[+] Hooker: Injecting DLL '%s' into remote process %lu\n", dllPath.c_str(), pid);
 
     // get file size
     LARGE_INTEGER fileSize = { 0 };
-    if (!GetFileSizeEx(file_handle, &fileSize)) { printf("GetFileSizeEx failed: %lu\n", GetLastError()); CloseHandle(file_handle); return false; }
+    if (!GetFileSizeEx(file_handle, &fileSize)) { printf("[!] Hooker: GetFileSizeEx failed: %lu\n", GetLastError()); CloseHandle(file_handle); return false; }
     SIZE_T sz = (SIZE_T)fileSize.QuadPart;
-    if (sz == 0) { printf("Empty file\n"); CloseHandle(file_handle); return false; }
+    if (sz == 0) { printf("[!] Hooker: Empty file\n"); CloseHandle(file_handle); return false; }
+    if (debug)
+        printf("[+] Hooker: DLL size: %llu bytes\n", (unsigned long long)sz);
 
     // allocate buffer and read
     LPBYTE file_buf = (LPBYTE)HeapAlloc(GetProcessHeap(), 0, sz);
-    if (!file_buf) { printf("HeapAlloc failed\n"); CloseHandle(file_handle); return false; }
+    if (!file_buf) { printf("[!] Hooker: HeapAlloc failed\n"); CloseHandle(file_handle); return false; }
     DWORD bytesRead = 0;
     if (!ReadFile(file_handle, file_buf, (DWORD)sz, &bytesRead, NULL) || bytesRead != (DWORD)sz) {
-        printf("ReadFile failed or incomplete: %lu bytesRead=%lu\n", GetLastError(), bytesRead);
+        printf("[!] Hooker: ReadFile failed or incomplete: %lu bytesRead=%lu\n", GetLastError(), bytesRead);
         HeapFree(GetProcessHeap(), 0, file_buf); CloseHandle(file_handle); return false;
     }
     CloseHandle(file_handle);
+    if (debug)
+        printf("[+] Hooker: DLL read into memory.\n");
 
     // find reflective loader offset in raw file
     DWORD64 reflective_loader_offset = get_reflective_loader_offset((DWORD64)file_buf, "ReflectiveLoader");
-    if (!reflective_loader_offset) { printf("ReflectiveLoader export not found\n"); HeapFree(GetProcessHeap(), 0, file_buf); return false; }
+    if (!reflective_loader_offset) { printf("[!] Hooker: ReflectiveLoader export not found in %s\n", dllPath.c_str()); HeapFree(GetProcessHeap(), 0, file_buf); return false; }
+    if (debug)
+        printf("[+] Hooker: ReflectiveLoader offset: 0x%llx\n", (unsigned long long)reflective_loader_offset);
 
     // allocate remote memory (use the file size)
     LPVOID remote_file_buf_address = VirtualAllocEx(hProcess, NULL, sz, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-    if (!remote_file_buf_address) { printf("VirtualAllocEx failed: %lu\n", GetLastError()); CloseHandle(hProcess); HeapFree(GetProcessHeap(), 0, file_buf); return false; }
+    if (!remote_file_buf_address) { printf("[!] Hooker: VirtualAllocEx failed in remote proc %lu: %lu\n", pid, GetLastError()); CloseHandle(hProcess); HeapFree(GetProcessHeap(), 0, file_buf); return false; }
+    if (debug)
+        printf("[+] Hooker: Remote memory allocated at %p\n", remote_file_buf_address);
 
     // write file into remote process
     SIZE_T written = 0;
     if (!WriteProcessMemory(hProcess, remote_file_buf_address, file_buf, sz, (SIZE_T*)&written) || written != sz) {
-        printf("WriteProcessMemory failed: %lu written=%llu\n", GetLastError(), (unsigned long long)written);
+        printf("[!] Hooker: WriteProcessMemory failed: %lu written=%llu\n", GetLastError(), (unsigned long long)written);
         VirtualFreeEx(hProcess, remote_file_buf_address, 0, MEM_RELEASE);
         CloseHandle(hProcess);
         HeapFree(GetProcessHeap(), 0, file_buf);
         return false;
     }
+    if (debug)
+        printf("[+] Hooker: DLL written into remote process memory.\n");
 
-    // 8) make memory executable
+    // make memory executable
     DWORD oldProt = 0;
     if (!VirtualProtectEx(hProcess, remote_file_buf_address, sz, PAGE_EXECUTE_READ, &oldProt)) {
         // If this fails, try PAGE_EXECUTE_READWRITE (some targets)
-        VirtualProtectEx(hProcess, remote_file_buf_address, sz, PAGE_EXECUTE_READWRITE, &oldProt);
+        if (!VirtualProtectEx(hProcess, remote_file_buf_address, sz, PAGE_EXECUTE_READWRITE, &oldProt)) {
+            printf("[!] Hooker: VirtualProtectEx to RWX failed: %lu\n", GetLastError());
+            VirtualFreeEx(hProcess, remote_file_buf_address, 0, MEM_RELEASE);
+            CloseHandle(hProcess);
+            HeapFree(GetProcessHeap(), 0, file_buf);
+			return false;
+        }
+        if (debug)
+            printf("[+] Hooker: Remote memory protection changed to RWX.\n");
     }
+    if (debug)
+        printf("[+] Hooker: Remote memory protection changed to RX.\n");
 
-    // 9) compute remote address of reflective loader and create remote thread
+    // compute remote address of reflective loader and create remote thread
     LPTHREAD_START_ROUTINE remote_start = (LPTHREAD_START_ROUTINE)((ULONG_PTR)remote_file_buf_address + (ULONG_PTR)reflective_loader_offset);
 
     HANDLE thread_handle = CreateRemoteThread(hProcess, NULL, 0, remote_start, NULL, 0, NULL);
-    if (!thread_handle) { printf("CreateRemoteThread failed: %lu\n", GetLastError()); VirtualFreeEx(hProcess, remote_file_buf_address, 0, MEM_RELEASE); CloseHandle(hProcess); HeapFree(GetProcessHeap(), 0, file_buf); return false; }
+    if (!thread_handle) { printf("[!] Hooker: CreateRemoteThread failed: %lu\n", GetLastError()); VirtualFreeEx(hProcess, remote_file_buf_address, 0, MEM_RELEASE); CloseHandle(hProcess); HeapFree(GetProcessHeap(), 0, file_buf); return false; }
+    if (debug)
+        printf("[+] Hooker: Remote thread created.\n");
 
     WaitForSingleObject(thread_handle, INFINITE);
     CloseHandle(thread_handle);
     CloseHandle(hProcess);
     HeapFree(GetProcessHeap(), 0, file_buf);
 
-    //printf("done.\n");
+    if (debug)
+        printf("[+] Hooker: done.\n");
     return true;
 }
 
@@ -272,7 +297,7 @@ bool inject_dll(int pid, const std::string& dllPath, bool debug, bool reflective
     }
     print_granted_access(hProcess, pid);
     if (reflective) {
-		return reflective_inject(hProcess, dllPath, debug);
+		return reflective_inject(pid, hProcess, dllPath, debug);
     }
     else {
 		return normal_inject(hProcess, dllPath, debug);

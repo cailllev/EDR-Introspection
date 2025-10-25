@@ -1,5 +1,6 @@
 #define WIN32_LEAN_AND_MEAN // wtf c++
 #include <windows.h>
+#include <chrono>
 #include <iostream>
 #include <map>
 #include <regex>
@@ -61,11 +62,18 @@ static const int wait_time_between_start_markers_ms = 250;
 static const int wait_callbacks_reenable_ms = 10000;
 static const int timeout_for_hooker_init = 30;
 
+uint64_t get_ns_time() {
+    auto now = std::chrono::system_clock::now();
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
+}
+
 void emit_etw_event(std::string msg, bool print_when_debug) {
+    uint64_t ns = get_ns_time();
     TraceLoggingWrite(
         g_hProvider,
         "EDRi-Event", // this is the event name, not further used
-        TraceLoggingValue(msg.c_str(), "message") // cannot be a variable
+        TraceLoggingValue(msg.c_str(), "message"), // cannot be a variable
+        TraceLoggingUInt64(ns, "ns_since_epoch")
     );
     if (g_debug && print_when_debug) {
         std::cout << msg << "\n";
@@ -101,7 +109,7 @@ int main(int argc, char* argv[]) {
         ("t,track-all", "Trace misc ETW, ETW-TI and hooks ntdll.dll")
         ("d,debug", "Print debug info")
         ("v,verbose-debug", "Print very verbose debug info");
-        ("c,technicolor", "Store CSV with Timeline-Explorer technicolor markup");
+        ("c,color", "Add color formatting information");
 
     cxxopts::ParseResult result;
     try {
@@ -116,7 +124,7 @@ int main(int argc, char* argv[]) {
 
     // PARSING
     // encrypt an exe
-    if (result.count("c") > 0) {
+    if (result.count("e") > 0) {
         std::string in_path = result["encrypt"].as<std::string>();
         std::string out_path = in_path + ".enc";
         xor_file(in_path, out_path);
@@ -275,7 +283,6 @@ int main(int argc, char* argv[]) {
 
 		// get main edr processes and inject the hooker
         std::vector<std::string> main_edr_exes = edr_profile.main_exes;
-        //std::vector<std::string> main_edr_exes = { "cmd.exe" } ; // TODO debug
         bool found_none = true;
         for (auto& exe : main_edr_exes) {
             std::vector<int> pids = get_PID_by_name(exe);
@@ -286,7 +293,7 @@ int main(int argc, char* argv[]) {
             found_none = false;
             for (auto& pid : pids) {
                 std::cout << "[*] EDRi: Found the EDR process " << exe << ":" << pid << ". Injecting...\n";
-                if (!inject_dll(pid, get_hook_dll_path(), g_debug, reflective_inject)) { // TODO per profile?
+                if (!inject_dll(pid, get_hook_dll_path(), g_debug, reflective_inject)) { // TODO reflective inject per profile?
                     std::cerr << "[!] EDRi: Failed to inject the hooker dll into " << exe << "\n";
                     stop_all_etw_traces();
                     exit(1);
