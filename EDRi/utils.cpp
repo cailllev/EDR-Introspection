@@ -160,6 +160,14 @@ bool xor_file(std::string in_path, std::string out_path) {
     return true;
 }
 
+bool remove_file(const std::string& path) {
+    if (DeleteFileA(path.c_str()) == 0) {
+        std::cerr << "[!] Utils: Failed to delete file: " << path << ", error: " << GetLastError() << "\n";
+        return false;
+    }
+    return true;
+}
+
 // get the EDRi.exe's path  
 std::wstring get_base_path() {
     wchar_t buffer[MAX_PATH];
@@ -477,7 +485,7 @@ std::string normalized_value(json ev, std::string key) {
 }
 
 // output all events as a sparse CSV timeline with merged PPID and FilePath
-std::string create_timeline_csv(const std::vector<json>& events, std::vector<std::string> header_start) {
+std::string create_timeline_csv(const std::vector<json>& events, std::vector<std::string> header_start, bool colored) {
     std::ostringstream csv_output;
 
     std::vector<std::string> all_keys;
@@ -518,7 +526,7 @@ std::string create_timeline_csv(const std::vector<json>& events, std::vector<std
     for (const auto& key : all_keys) {
         csv_output << key << ",";
     }
-    if (g_technicolor) {
+    if (colored) {
         csv_output << COLOR_HEADER; // add color info column
     }
 	// replace last comma with newline
@@ -542,7 +550,7 @@ std::string create_timeline_csv(const std::vector<json>& events, std::vector<std
             }
             csv_output << ",";
         }
-        if (g_technicolor) {
+        if (colored) {
             csv_output << add_color_info(ev);
         }
         // replace last comma with newline

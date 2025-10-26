@@ -908,7 +908,7 @@ std::string add_color_info(const json& ev) {
 	return ""; // event / provider not mapped
 }
 
-void write_events_to_file(const std::string& output) {
+void write_events_to_file(const std::string& output, bool colored) {
     if (!cleaned_events) {
         clean_events();
     }
@@ -923,7 +923,7 @@ void write_events_to_file(const std::string& output) {
                 });
 
             // write to csv
-            std::string csv_output = create_timeline_csv(events, csv_header_start);
+            std::string csv_output = create_timeline_csv(events, csv_header_start, colored);
             std::string output_base = output.substr(0, output.find_last_of('.')); // without .csv
             std::string output_final = output_base + "-" + get_classifier_name(c.first) + ".csv"; // add classifier to filename
             std::ofstream out(output_final);

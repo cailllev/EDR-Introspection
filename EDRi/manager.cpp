@@ -52,23 +52,22 @@ std::string g_attack_exe_path = "C:\\Users\\Public\\Downloads\\" + g_attack_exe_
 // more debug info
 bool g_debug = false;
 bool g_super_debug = false;
-bool g_technicolor = false;
 
 // wait times
 static const int wait_after_traces_started_ms = 15000;
 static const int wait_between_events_ms = 1000;
 static const int wait_after_termination_ms = 5000;
-static const int wait_time_between_start_markers_ms = 250;
+static const int wait_time_between_start_markers_ms = 1000;
 static const int wait_callbacks_reenable_ms = 10000;
 static const int timeout_for_hooker_init = 30;
 
-uint64_t get_ns_time() {
+UINT64 get_ns_time() {
     auto now = std::chrono::system_clock::now();
     return std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
 }
 
 void emit_etw_event(std::string msg, bool print_when_debug) {
-    uint64_t ns = get_ns_time();
+    UINT64 ns = get_ns_time();
     TraceLoggingWrite(
         g_hProvider,
         "EDRi-Event", // this is the event name, not further used
@@ -80,11 +79,11 @@ void emit_etw_event(std::string msg, bool print_when_debug) {
     }
 }
 
-void process_results(std::string output, bool dump_sig) {
+void process_results(std::string output, bool dump_sig, bool colored) {
     std::map<Classifier, std::vector<json>> cleaned_events = get_cleaned_events();
     print_etw_counts();
 
-    write_events_to_file(output);
+    write_events_to_file(output, colored);
 
     if (dump_sig) {
         dump_signatures(); // can only dump from antimalware provider
@@ -202,8 +201,9 @@ int main(int argc, char* argv[]) {
         g_debug = true;
         g_super_debug = true;
     }
-    if (result.count("technicolor") > 0) {
-        g_technicolor = true;
+    bool colored = false;
+    if (result.count("color") > 0) {
+        colored = true;
     }
 
     // TRACKING PREPARATION + INIT ETW TRACES
@@ -355,8 +355,9 @@ int main(int argc, char* argv[]) {
     if (run_as_child) {
         if (!launch_as_child(g_attack_exe_path)) {
             std::cerr << "[!] EDRi: Failed to launch the attack exe: " << g_attack_exe_path << ". Was it marked as a virus?\n";
+            remove_file(g_attack_exe_path); // remove again if it still exists
             stop_all_etw_traces();
-            process_results(output, dump_sig);
+            process_results(output, dump_sig, colored);
             return 0;
         }
     }
@@ -368,8 +369,9 @@ int main(int argc, char* argv[]) {
             cnt_waited += 100;
             if (cnt_waited > 20000) {
                 std::cerr << "[!] EDRi: Timeout waiting for attack PID, did you start " << g_attack_exe_path << ", or was it marked as a virus?\n";
+                remove_file(g_attack_exe_path); // remove again if it still exists
                 stop_all_etw_traces();
-				process_results(output, dump_sig);
+				process_results(output, dump_sig, colored);
                 return 0;
             }
         }
@@ -407,6 +409,8 @@ int main(int argc, char* argv[]) {
     }
     threads.clear();
 
-    process_results(output, dump_sig);
+    remove_file(g_attack_exe_path); // remove again
+
+    process_results(output, dump_sig, colored);
 	return 0;
 }

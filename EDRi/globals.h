@@ -35,7 +35,6 @@ extern bool g_attack_terminated;
 
 extern bool g_debug;
 extern bool g_super_debug;
-extern bool g_technicolor;
 
 extern std::string g_attack_exe_name;
 extern std::string g_attack_exe_path;
