@@ -141,6 +141,7 @@ bool normal_inject(HANDLE hProcess, const std::string& dllPath, bool debug)
     return true;
 }
 
+// reflective loader from https://github.com/Reijaff/offensive_c/blob/main/loadlibrary_reflective_dll.c
 // reflective loader helper
 DWORD64 rva_to_offset(DWORD64 rva, DWORD64 base_address)
 {
@@ -211,7 +212,7 @@ bool reflective_inject(int pid, HANDLE hProcess, const std::string& dllPath, boo
     }
     CloseHandle(file_handle);
     if (debug)
-        printf("[+] Hooker: DLL read into memory.\n");
+        printf("[+] Hooker: DLL read into memory\n");
 
     // find reflective loader offset in raw file
     DWORD64 reflective_loader_offset = get_reflective_loader_offset((DWORD64)file_buf, "ReflectiveLoader");
@@ -235,7 +236,7 @@ bool reflective_inject(int pid, HANDLE hProcess, const std::string& dllPath, boo
         return false;
     }
     if (debug)
-        printf("[+] Hooker: DLL written into remote process memory.\n");
+        printf("[+] Hooker: DLL written into remote process memory\n");
 
     // make memory executable
     DWORD oldProt = 0;
@@ -249,10 +250,10 @@ bool reflective_inject(int pid, HANDLE hProcess, const std::string& dllPath, boo
 			return false;
         }
         if (debug)
-            printf("[+] Hooker: Remote memory protection changed to RWX.\n");
+            printf("[+] Hooker: Remote memory protection changed to RWX\n");
     }
     if (debug)
-        printf("[+] Hooker: Remote memory protection changed to RX.\n");
+        printf("[+] Hooker: Remote memory protection changed to RX\n");
 
     // compute remote address of reflective loader and create remote thread
     LPTHREAD_START_ROUTINE remote_start = (LPTHREAD_START_ROUTINE)((ULONG_PTR)remote_file_buf_address + (ULONG_PTR)reflective_loader_offset);
@@ -260,7 +261,7 @@ bool reflective_inject(int pid, HANDLE hProcess, const std::string& dllPath, boo
     HANDLE thread_handle = CreateRemoteThread(hProcess, NULL, 0, remote_start, NULL, 0, NULL);
     if (!thread_handle) { printf("[!] Hooker: CreateRemoteThread failed: %lu\n", GetLastError()); VirtualFreeEx(hProcess, remote_file_buf_address, 0, MEM_RELEASE); CloseHandle(hProcess); HeapFree(GetProcessHeap(), 0, file_buf); return false; }
     if (debug)
-        printf("[+] Hooker: Remote thread created.\n");
+        printf("[+] Hooker: Remote thread created\n");
 
     WaitForSingleObject(thread_handle, INFINITE);
     CloseHandle(thread_handle);
@@ -268,7 +269,7 @@ bool reflective_inject(int pid, HANDLE hProcess, const std::string& dllPath, boo
     HeapFree(GetProcessHeap(), 0, file_buf);
 
     if (debug)
-        printf("[+] Hooker: done.\n");
+        printf("[+] Hooker: DLL successfully exited again\n");
     return true;
 }
 
