@@ -42,13 +42,13 @@ std::string ns_to_iso8601(uint64_t);
 
 
 // custom key for color info
-static const std::string COLOR_HEADER = "Color";
-static const std::string COLOR_GREEN = "green";
-static const std::string COLOR_RED = "red";
-static const std::string COLOR_BLUE = "blue";
-static const std::string COLOR_PURPLE = "purple";
-static const std::string COLOR_YELLOW = "yellow";
-static const std::string COLOR_GRAY = "gray";
+static const std::string COLOR_HEADER = "Color,";
+static const std::string COLOR_GREEN = "green,";
+static const std::string COLOR_RED = "red,";
+static const std::string COLOR_BLUE = "blue,";
+static const std::string COLOR_PURPLE = "purple,";
+static const std::string COLOR_YELLOW = "yellow,";
+static const std::string COLOR_GRAY = "gray,";
 std::string add_color_info(const json&);
 void write_events_to_file(const std::string&);
 std::string create_timeline_csv(const std::vector<json>&, std::vector<std::string>);

@@ -482,7 +482,7 @@ std::string create_timeline_csv(const std::vector<json>& events, std::vector<std
 
     std::vector<std::string> all_keys;
     if (g_super_debug) {
-        std::cout << "[+] Utils: Adding predefined key for CSV header: ";
+        std::cout << "[+] Utils: Adding predefined keys for CSV header: ";
     }
     for (const auto& k : header_start) {
         all_keys.push_back(k);
@@ -496,7 +496,7 @@ std::string create_timeline_csv(const std::vector<json>& events, std::vector<std
 
     // collect all property keys except merged ones
     if (g_super_debug) {
-        std::cout << "[+] Utils: Adding new key for CSV header: ";
+        std::cout << "[+] Utils: Adding new keys for CSV header: ";
     }
     for (const auto& ev : events) {
         for (auto it = ev.begin(); it != ev.end(); ++it) {
@@ -519,9 +519,11 @@ std::string create_timeline_csv(const std::vector<json>& events, std::vector<std
         csv_output << key << ",";
     }
     if (g_technicolor) {
-        csv_output << COLOR_HEADER; // add color info column,  TODO debug
+        csv_output << COLOR_HEADER; // add color info column
     }
-    csv_output << "\n";
+	// replace last comma with newline
+	csv_output.seekp(-1, std::ios_base::cur);
+	csv_output << "\n";
 
     // print each event as a row    
     for (const auto& ev : events) {
@@ -543,6 +545,8 @@ std::string create_timeline_csv(const std::vector<json>& events, std::vector<std
         if (g_technicolor) {
             csv_output << add_color_info(ev);
         }
+        // replace last comma with newline
+        csv_output.seekp(-1, std::ios_base::cur);
         csv_output << "\n";
     }
     return csv_output.str();
