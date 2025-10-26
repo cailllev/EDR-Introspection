@@ -4,10 +4,11 @@
 #include <fstream>
 #include <iostream>
 #include <iomanip>
+#include <random>
+#include <regex>
 #include <sstream>
 #include <string>
 #include <unordered_map>
-#include <regex>
 #include <vector>
 #include <shared_mutex>
 #include <tlhelp32.h> // import after windows.h, else all breaks, that's crazy, yo
@@ -19,7 +20,9 @@
 static const std::string encrypt_password = "much signature bypass, such wow";
 static std::unordered_map<std::string, std::string> g_deviceMap;
 static std::wstring attacks_subfolder = L"attacks\\";
-static std::string attack_suffix = ".exe.enc";
+static std::string enc_attack_suffix = ".exe.enc";
+
+static const std::string hooked_pids_file_path = "C:\\Users\\Public\\Downloads\\EDRi_hooked_pids.txt";
 
 static bool initialized = false;
 
@@ -88,6 +91,43 @@ std::string unnecessary_tools_running() {
         }
     }
     return r;
+}
+
+// get random number between 100...999
+std::string get_random_3digit_num() {
+    static std::mt19937 rng(std::random_device{}()); // initialize once
+    std::uniform_int_distribution<int> dist(100, 999);
+    return std::to_string(dist(rng));
+}
+
+// safe hooked pids to file (poor mans check for hooker being injected)
+bool write_pids_to_file(const std::vector<int>& data) {
+    std::ofstream out(hooked_pids_file_path);
+    if (!out.is_open())
+        return false;
+
+    for (int val : data)
+        out << val << '\n';
+
+    return true;
+}
+
+// read hooked pids from file
+std::vector<int> read_pids_from_file() {
+    std::vector<int> result;
+    std::ifstream in(hooked_pids_file_path);
+    if (!in.is_open())
+        return result;
+
+    std::string line;
+    while (std::getline(in, line)) {
+        std::istringstream iss(line);
+        int val;
+        if (iss >> val)
+            result.push_back(val);
+    }
+
+    return result;
 }
 
 // encrypt/decrypt a file with a static password
@@ -162,7 +202,7 @@ std::string get_available_attacks() {
                 oss << " ";
             }
 			std::string f = wchar2string(findData.cFileName);
-			f = f.substr(0, f.find(attack_suffix)); // remove .exe.enc
+			f = f.substr(0, f.find(enc_attack_suffix)); // remove .exe.enc
             oss << f;
             first = false;
         }
@@ -187,7 +227,7 @@ bool is_attack_available(const std::string& attack) {
 
 std::string get_attack_enc_path(const std::string& attack) {
 	std::wstring exe_path = get_base_path();
-    return wstring2string(exe_path) + wstring2string(attacks_subfolder) + attack + attack_suffix;
+    return wstring2string(exe_path) + wstring2string(attacks_subfolder) + attack + enc_attack_suffix;
 }
 
 
