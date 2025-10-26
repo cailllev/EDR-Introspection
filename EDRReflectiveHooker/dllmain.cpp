@@ -513,16 +513,16 @@ static PFN_NtWriteVirtualMemory g_origNtWriteVirtualMemory = nullptr;
 static PFN_NtClose g_origNtClose = nullptr;
 static PFN_NtTerminateProcess g_origNtTerminateProcess = nullptr;
 
-uint64_t get_ns_time() {
+UINT64 get_ns_time() {
     auto now = std::chrono::system_clock::now();
     return std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
 }
 
 void emit_etw_ok(std::string msg) {
-    uint64_t ns = get_ns_time();
+    UINT64 ns = get_ns_time();
     TraceLoggingWrite(
         g_hProvider,
-        "EDRHookTask", // the first definition will be the task of each emitted event (unless using a manifest file?)
+        "EDRHookTask", // the first event name is used for all events, unless using a manifest file
         TraceLoggingString(msg.c_str(), "message"),
         TraceLoggingUInt64(ns, "ns_since_epoch"),
         TraceLoggingUInt64(pid, "targetpid")
@@ -531,7 +531,7 @@ void emit_etw_ok(std::string msg) {
 };
 
 void emit_etw_error(std::string error) {
-    uint64_t ns = get_ns_time();
+    UINT64 ns = get_ns_time();
     TraceLoggingWrite(
         g_hProvider,
         "EDRHookError",
@@ -543,10 +543,10 @@ void emit_etw_error(std::string error) {
 };
 
 void emit_etw_msg(const char msg[], UINT64 tpid) {
-    uint64_t ns = get_ns_time();
+    UINT64 ns = get_ns_time();
     TraceLoggingWrite(
         g_hProvider,
-        "EDRHookTask", // the first definition will be the task of each emitted event (unless using a manifest file?)
+        "EDRHookTask", 
         TraceLoggingString(msg, "message"),
         TraceLoggingUInt64(ns, "ns_since_epoch"),
         TraceLoggingUInt64(tpid, "targetpid")
@@ -578,6 +578,8 @@ NTSTATUS NTAPI Hook_NtOpenFile(
 
     _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenFile (%ls) with 0x%X", filename, static_cast<unsigned int>(DesiredAccess));
     emit_etw_msg(msg, pid);
+
+	// TODO strip access when MsMpEng tries to open itself? Maybe tries to reload ntdll?
 
     return g_origNtOpenFile(FileHandle, DesiredAccess, ObjectAttributes, IoStatusBlock, ShareAccess, OpenOptions);
 }
