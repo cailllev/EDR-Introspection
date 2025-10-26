@@ -15,6 +15,7 @@
 #pragma intrinsic(_ReturnAddress)
 
 // ------------------ REFL INJ ------------------ //
+// from https://github.com/Reijaff/offensive_c/blob/main/dll_reflective_loader_64.c
 typedef struct _LSA_UNICODE_STRING
 {
     USHORT Length;

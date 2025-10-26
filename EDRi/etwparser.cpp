@@ -155,6 +155,9 @@ json parse_custom_etw_event(Event e) {
             memcpy(&ns_since_epoch, ptr_field, sizeof(int64_t));
             ptr_field += sizeof(uint64_t);
         }
+        else if (g_debug) {
+            std::cerr << "[!] ETW: Custom event with no " << TIMESTAMP_SYS << " field: " << j.dump() << "\n";
+		}
         std::string iso_time = ns_to_iso8601(ns_since_epoch);
         j[TIMESTAMP_SYS] = iso_time;
 
@@ -163,6 +166,9 @@ json parse_custom_etw_event(Event e) {
             uint64_t targetpid = -1;
             if (ptr_field + sizeof(uint64_t) <= data + size) {
                 memcpy(&targetpid, ptr_field, sizeof(uint64_t));
+            }
+            else if (g_debug) {
+                std::cerr << "[!] ETW: Hook event with no " << TARGET_PID << " field: " << j.dump() << "\n";
             }
             j[TARGET_PID] = targetpid;
         }
@@ -797,8 +803,11 @@ Classifier filter_antimalware(json& ev) {
 // filter hook provider for relevant processes, either attack or injected PID -> Minimal, else All
 Classifier filter_hooks(json& ev) {
     const std::string& msg = ev[MESSAGE];
+    // example: NtOpenFile (\??\C:\WINDOWS\SYSTEM32\apisethost.appexecutionalias.dll) with 0x100021
     if (msg.rfind("NtOpenFile", 0) == 0 || msg.rfind("NtReadFile", 0) == 0) {
-        if (ev[MESSAGE] == g_attack_exe_name || ev[MESSAGE] == injected_name || ev[MESSAGE] == injected_exe) {
+        if (msg.find(g_attack_exe_name) != std::string::npos
+            || msg.find(injected_name) != std::string::npos
+            || msg.find(injected_exe) != std::string::npos) {
             return Minimal;
         }
         else {

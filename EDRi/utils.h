@@ -20,6 +20,10 @@ std::vector<int> get_PID_by_name(const std::string& name);
 void add_proc(int, const std::string&);
 std::string get_proc_name(int);
 std::string unnecessary_tools_running();
+std::string get_random_3digit_num();
+
+bool write_pids_to_file(const std::vector<int>&);
+std::vector<int> read_pids_from_file();
 
 bool filepath_match(std::string, std::string);
 bool launch_as_child(const std::string& path);
@@ -35,6 +39,7 @@ void build_device_map();
 std::string translate_if_path(const std::string&);
 
 std::string ns_to_iso8601(uint64_t);
+
 
 // custom key for color info
 static const std::string COLOR_HEADER = "Color";
