@@ -697,8 +697,16 @@ Classifier classify_to(json& ev, std::string key, std::vector<int> list) {
 // filter kernel process events
 Classifier filter_kernel_process(json& ev) {
     // the interesting info is in target pid, process_id of msmpeng.exe/attack.exe/smartscreen.exe etc is not enough to filter
-    if (std::find(kproc_event_ids_with_tpid.begin(), kproc_event_ids_with_tpid.end(), ev[EVENT_ID]) != kproc_event_ids_with_tpid.end()) {
+    if (std::find(kproc_event_ids_with_tpid_minimal.begin(), kproc_event_ids_with_tpid_minimal.end(), ev[EVENT_ID]) != kproc_event_ids_with_tpid_minimal.end()) {
         return classify_to(ev, TARGET_PID, g_tracking_PIDs);
+    }
+    // image load and unload events are at most relevant, not minimal (very noisy)
+    if (std::find(kproc_event_ids_with_tpid_relevant.begin(), kproc_event_ids_with_tpid_relevant.end(), ev[EVENT_ID]) != kproc_event_ids_with_tpid_relevant.end()) {
+        Classifier c = classify_to(ev, TARGET_PID, g_tracking_PIDs);
+        if (c == Minimal) {
+            return Relevant; // put in relevant if matches
+        }
+        return c; // else put it in relevant or all accordingly
     }
     return Relevant; // put event ids without a filter into relevant
 }
