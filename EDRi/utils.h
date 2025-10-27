@@ -41,6 +41,8 @@ std::string translate_if_path(const std::string&);
 std::string filetime_to_iso8601(__int64 timestamp);
 std::string unix_epoch_ns_to_iso8601(uint64_t);
 
+std::string resolve_handle_in_msg(const std::string&);
+
 void write_events_to_file(const std::string&, bool);
 std::string create_timeline_csv(const std::vector<json>&, std::vector<std::string>, bool);
 
