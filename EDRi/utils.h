@@ -21,9 +21,6 @@ std::string get_proc_name(int);
 std::string unnecessary_tools_running();
 std::string get_random_3digit_num();
 
-bool write_pids_to_file(const std::vector<int>&);
-std::vector<int> read_pids_from_file();
-
 bool filepath_match(std::string, std::string);
 bool launch_as_child(const std::string& path);
 
