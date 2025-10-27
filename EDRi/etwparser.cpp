@@ -135,6 +135,7 @@ json parse_custom_etw_event(Event e) {
             j[EVENT_ID] = -1; // unknown
 		}
 
+        // custom parsing when not using manifest based ETW --> cannot use property parsing
         // get payload size
         const BYTE* data = (const BYTE*)e.record.UserData;
         ULONG size = e.record.UserDataLength;
@@ -150,10 +151,10 @@ json parse_custom_etw_event(Event e) {
         const BYTE* ptr_field = data + msg_len + 1;
 
         // PARSE NS_SINCE_EPOCH
-        int64_t ns_since_epoch = 0;
-        if (ptr_field + sizeof(int64_t) <= data + size) {
-            memcpy(&ns_since_epoch, ptr_field, sizeof(int64_t));
-            ptr_field += sizeof(uint64_t);
+        UINT64 ns_since_epoch = 0;
+        if (ptr_field + sizeof(UINT64) <= data + size) {
+            memcpy(&ns_since_epoch, ptr_field, sizeof(UINT64));
+            ptr_field += sizeof(UINT64);
         }
         else if (g_debug) {
             std::cerr << "[!] ETW: Custom event with no " << TIMESTAMP_SYS << " field: " << j.dump() << "\n";
@@ -163,9 +164,9 @@ json parse_custom_etw_event(Event e) {
 
         if (provider == HOOK_PROVIDER) {
             // PARSE TARGETPID
-            uint64_t targetpid = -1;
-            if (ptr_field + sizeof(uint64_t) <= data + size) {
-                memcpy(&targetpid, ptr_field, sizeof(uint64_t));
+            UINT64 targetpid = -1;
+            if (ptr_field + sizeof(UINT64) <= data + size) {
+                memcpy(&targetpid, ptr_field, sizeof(UINT64));
             }
             else if (g_debug) {
                 std::cerr << "[!] ETW: Hook event with no " << TARGET_PID << " field: " << j.dump() << "\n";
