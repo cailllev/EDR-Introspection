@@ -830,7 +830,7 @@ Classifier filter_antimalware(json& ev) {
 // filter hook provider for relevant processes, either attack or injected PID -> Minimal, else All
 Classifier filter_hooks(json& ev) {
     const std::string& msg = ev[MESSAGE];
-    // example: NtOpenFile (\??\C:\WINDOWS\SYSTEM32\apisethost.appexecutionalias.dll) with 0x100021
+    // example: NtOpenFile \??\C:\WINDOWS\SYSTEM32\apisethost.appexecutionalias.dll with 0x100021
     if (msg.rfind("NtOpenFile", 0) == 0 || msg.rfind("NtReadFile", 0) == 0) {
         if (msg.find(g_attack_exe_name) != std::string::npos
             || msg.find(injected_name) != std::string::npos
