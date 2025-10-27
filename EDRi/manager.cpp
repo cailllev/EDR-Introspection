@@ -287,9 +287,6 @@ int main(int argc, char* argv[]) {
 
     // hooking emits etw events, so hooking must be done after the traces are started
     if (hook_ntdll) {
-		std::vector<int> hooked_pids = read_pids_from_file();
-        std::vector<int> newly_hooked = {};
-
         if (!disable_kernel_callbacks_ok()) {
             std::cerr << "[!] EDRi: Failed to disable kernel callbacks, check manually if this is needed\n";
             stop_all_etw_traces();
@@ -299,7 +296,6 @@ int main(int argc, char* argv[]) {
 		// get main edr processes and inject the hooker
         std::vector<std::string> main_edr_exes = edr_profile.main_exes;
         bool found_none = true;
-        bool new_procs_hooked = false;
         for (auto& exe : main_edr_exes) {
             std::vector<int> pids = get_PID_by_name(exe);
             if (pids.empty()) {
@@ -308,27 +304,15 @@ int main(int argc, char* argv[]) {
             }
             found_none = false;
             for (auto& pid : pids) {
-
-				// check if already hooked the same PID earlier --> the hooker should persist
-                if (std::find(hooked_pids.begin(), hooked_pids.end(), pid) != hooked_pids.end()) {
-                    std::cout << "[*] EDRi: EDR process " << exe << " already hooked, skipping injection, but check results!!\n";
-                    newly_hooked.push_back(pid); // also add for the next run (the process should still be hooked then)
-                    continue;
-                }
-
                 std::cout << "[+] EDRi: Found the EDR process " << exe << ":" << pid << ". Injecting...\n";
                 if (!inject_dll(pid, get_hook_dll_path(), g_debug, reflective_inject)) { // TODO reflective inject per profile?
                     std::cerr << "[!] EDRi: Failed to inject the hooker dll into " << exe << "\n";
-					write_pids_to_file(newly_hooked); // save already hooked pids
                     stop_all_etw_traces();
                     exit(1);
                 }
-				newly_hooked.push_back(pid);
-                new_procs_hooked = true;
 				std::cout << "[+] EDRi: Successfully injected the hooker into " << exe << ":" << pid << "\n";
             }
         }
-		write_pids_to_file(newly_hooked); // save for next run
         if (found_none) {
 			std::cerr << "[!] EDRi: Could not find any of the main EDR processes";
             stop_all_etw_traces();
@@ -337,7 +321,7 @@ int main(int argc, char* argv[]) {
 
         // check if the hooker is successfully initialized // TODO check all procs not just one start marker
         int wait = 0;
-        while (new_procs_hooked && !g_hooker_started) {
+        while (!g_hooker_started) {
 			Sleep(1000);
             if (++wait > timeout_for_hooker_init) {
                 std::cerr << "[!] EDRi: Could not detect a successful initialization of the hooker!\n";

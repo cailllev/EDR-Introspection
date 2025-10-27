@@ -100,36 +100,6 @@ std::string get_random_3digit_num() {
     return std::to_string(dist(rng));
 }
 
-// safe hooked pids to file (poor mans check for hooker being injected)
-bool write_pids_to_file(const std::vector<int>& data) {
-    std::ofstream out(hooked_pids_file_path);
-    if (!out.is_open())
-        return false;
-
-    for (int val : data)
-        out << val << '\n';
-
-    return true;
-}
-
-// read hooked pids from file
-std::vector<int> read_pids_from_file() {
-    std::vector<int> result;
-    std::ifstream in(hooked_pids_file_path);
-    if (!in.is_open())
-        return result;
-
-    std::string line;
-    while (std::getline(in, line)) {
-        std::istringstream iss(line);
-        int val;
-        if (iss >> val)
-            result.push_back(val);
-    }
-
-    return result;
-}
-
 // encrypt/decrypt a file with a static password
 bool xor_file(std::string in_path, std::string out_path) {
     // open input file in binary mode
@@ -350,17 +320,16 @@ std::string resolve_handle_in_msg(const std::string& msg) {
 
     // Find where "handle=0x..." starts in the string
     size_t handle_pos = msg.find("handle=0x");
-    if (handle_pos != std::string::npos) {
-        // Find the space after the handle hex
-        size_t end = msg.find(' ', handle_pos);
-        if (end == std::string::npos)
-            end = msg.size();
 
-        // Replace "handle=0x...." with the resolved path
-        std::string result = msg;
-        result.replace(handle_pos, end - handle_pos, filename);
-        return result;
-    }
+    // Find the space after the handle hex
+    size_t end = msg.find(' ', handle_pos);
+    if (end == std::string::npos)
+        end = msg.size();
+
+    // Replace "handle=0x...." with the resolved path
+    std::string result = msg;
+    result.replace(handle_pos, end - handle_pos, filename);
+    return result;
 }
 
 char* get_memory_region_protect(DWORD protect) {
