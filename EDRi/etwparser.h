@@ -89,7 +89,6 @@ extern MergeCategory ppid_keys, tpid_keys, ttid_keys, filepath_keys;
 
 // processing the events
 enum Classifier;
-std::map<Classifier, std::vector<json>> get_cleaned_events();
 std::string get_classifier_name(Classifier);
 void print_etw_counts();
 void dump_signatures();
@@ -114,3 +113,4 @@ Classifier filter_kernel_network(json&);
 Classifier filter_antimalware(json&);
 Classifier filter_hooks(json&);
 void clean_events();
+void print_time_differences();
