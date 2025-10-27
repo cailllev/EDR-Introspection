@@ -164,6 +164,7 @@ json parse_custom_etw_event(Event e) {
             msg = "(empty message)";
             std::cout << "[*] ETW: Warning: Custom event with empty message " << j.dump() << "\n";
         }
+		resolve_handle_in_msg(msg); // resolve file handles (if any) in the message
         j[MESSAGE] = msg;
         const BYTE* ptr_field = data + msg_len + 1;
 

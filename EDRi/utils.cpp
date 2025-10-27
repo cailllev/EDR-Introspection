@@ -330,6 +330,39 @@ std::string unix_epoch_ns_to_iso8601(uint64_t ns_since_epoch)
     return oss.str();
 }
 
+std::string resolve_handle_in_msg(const std::string& msg) {
+    unsigned long long handle_val = 0;
+    if (sscanf_s(msg.c_str(), "NtOpenFile handle=0x%llx", &handle_val) == 0) {
+        return msg;
+    }
+
+    char filename[MAX_PATH] = "unresolved";
+    HANDLE hFile = reinterpret_cast<HANDLE>(handle_val);
+
+    if (!hFile || hFile == INVALID_HANDLE_VALUE) {
+        strcpy_s(filename, "invalid");
+	}
+
+    DWORD len = GetFinalPathNameByHandleA(hFile, filename, MAX_PATH, FILE_NAME_NORMALIZED);
+    if (len == 0 || len >= MAX_PATH) {
+        strcpy_s(filename, "invalid");
+    }
+
+    // Find where "handle=0x..." starts in the string
+    size_t handle_pos = msg.find("handle=0x");
+    if (handle_pos != std::string::npos) {
+        // Find the space after the handle hex
+        size_t end = msg.find(' ', handle_pos);
+        if (end == std::string::npos)
+            end = msg.size();
+
+        // Replace "handle=0x...." with the resolved path
+        std::string result = msg;
+        result.replace(handle_pos, end - handle_pos, filename);
+        return result;
+    }
+}
+
 char* get_memory_region_protect(DWORD protect) {
     const char* memoryProtect;
     switch (protect) {
