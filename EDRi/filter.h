@@ -20,10 +20,11 @@ static const std::vector<int> am_event_ids_with_signatures = { 59 }; // TODO fin
 
 // TODO all kernel events should be filtered, are event ids still needed?
 // Kernel Process Trace
-static const std::vector<int> kproc_event_ids_with_tpid = { 1, 2, 3, 4, 5, 6, 11 }; // todo thread start stop & image load unload (3456) also relevant for ALL security pids?
+static const std::vector<int> kproc_event_ids_with_tpid_minimal = { 1, 2, 3, 4, 11 };
+static const std::vector<int> kproc_event_ids_with_tpid_relevant = { 5, 6 };
 // Kernel API Calls Trace
-static const std::vector<int> kapi_event_ids_with_tpid = { 2, 5, 6 };
 static const std::vector<int> kapi_event_ids_with_pid = { 3 };
+static const std::vector<int> kapi_event_ids_with_tpid = { 2, 5, 6 };
 // Kernel File Trace
 static const std::vector<int> kfile_event_ids_with_pid = { 10, 30 };
 // Kernel Network Trace
