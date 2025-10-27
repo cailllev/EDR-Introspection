@@ -25,6 +25,20 @@ std::map<Classifier, std::string> classifier_names = {
     { Minimal, "Minimal" }
 };
 
+const UINT64 WINDOWS_TICK = 10'000'000ULL;        // 100ns intervals
+const UINT64 NS_PER_WINDOWS_TICK = 100ULL;        // 1 tick per 100ns
+const UINT64 SECS_TO_UNIX_EPOCH = 11644473600ULL; // seconds between 1601 and 1970, https://stackoverflow.com/questions/6161776/convert-windows-filetime-to-second-in-unix-linux#answer-6161842
+const UINT64 WINDOWS_TICKS_TO_UNIX_EPOCH = SECS_TO_UNIX_EPOCH * WINDOWS_TICK;
+
+std::vector<float> edri_diffs = {};
+std::vector<float> attack_diffs = {};
+std::vector<float> hooks_diffs = {};
+std::map<std::string, std::vector<float>> time_diffs_ns = { // differences in nanoseconds between ETW time and system time
+    { EDRi_PROVIDER, edri_diffs },
+    { ATTACK_PROVIDER, attack_diffs },
+    { HOOK_PROVIDER, hooks_diffs }
+};
+
 // globals
 int g_attack_PID = 0;
 int g_injected_PID = 0;
@@ -114,9 +128,8 @@ json parse_custom_etw_event(Event e) {
 
         std::string provider = wchar2string(e.schema.provider_name());
 
-        j[TIMESTAMP_ETW] = filetime_to_iso8601(
-            static_cast<__int64>(e.record.EventHeader.TimeStamp.QuadPart)
-        );
+		__int64 timestamp_filetime = static_cast<__int64>(e.record.EventHeader.TimeStamp.QuadPart);
+        j[TIMESTAMP_ETW] = filetime_to_iso8601(timestamp_filetime);
         j[TYPE] = "myETW";
         j[PID] = e.record.EventHeader.ProcessId;
 		std::string task = wchar2string(e.schema.task_name());
@@ -131,8 +144,12 @@ json parse_custom_etw_event(Event e) {
         else if (j[PROVIDER_NAME] == HOOK_PROVIDER) {
             j[EVENT_ID] = HOOK_PROVIDER_EVENT_ID;
         }
-        else {
-            j[EVENT_ID] = -1; // unknown
+		else { // unknown, return header info only
+            if (g_debug) {
+                std::cerr << "[!] ETW: Custom event with unknown provider: " << j.dump() << "\n";
+			}
+            j[EVENT_ID] = -1;
+            return j;
 		}
 
         // custom parsing when not using manifest based ETW --> cannot use property parsing
@@ -151,15 +168,17 @@ json parse_custom_etw_event(Event e) {
         const BYTE* ptr_field = data + msg_len + 1;
 
         // PARSE NS_SINCE_EPOCH
-        UINT64 ns_since_epoch = 0;
+        UINT64 system_ns_since_unix_epoch = 0;
         if (ptr_field + sizeof(UINT64) <= data + size) {
-            memcpy(&ns_since_epoch, ptr_field, sizeof(UINT64));
+            memcpy(&system_ns_since_unix_epoch, ptr_field, sizeof(UINT64));
+            UINT64 etw_ns_since_unix_epoch = (timestamp_filetime - WINDOWS_TICKS_TO_UNIX_EPOCH) * NS_PER_WINDOWS_TICK;
+            time_diffs_ns[j[PROVIDER_NAME]].push_back((float)(etw_ns_since_unix_epoch - system_ns_since_unix_epoch));
             ptr_field += sizeof(UINT64);
         }
         else if (g_debug) {
             std::cerr << "[!] ETW: Custom event with no " << TIMESTAMP_SYS << " field: " << j.dump() << "\n";
 		}
-        std::string iso_time = ns_to_iso8601(ns_since_epoch);
+        std::string iso_time = unix_epoch_ns_to_iso8601(system_ns_since_unix_epoch);
         j[TIMESTAMP_SYS] = iso_time;
 
         if (provider == HOOK_PROVIDER) {
@@ -191,9 +210,8 @@ json parse_etw_event(Event e) {
 		}
 
         json j;
-        j[TIMESTAMP_ETW] = filetime_to_iso8601(
-            static_cast<__int64>(e.record.EventHeader.TimeStamp.QuadPart)
-        );
+
+        j[TIMESTAMP_ETW] = filetime_to_iso8601(static_cast<__int64>(e.record.EventHeader.TimeStamp.QuadPart));
         j[TIMESTAMP_SYS] = j[TIMESTAMP_ETW]; // normal ETW events only have their timestamp, not my "accurate" timestamp
         j[PID] = e.record.EventHeader.ProcessId;
         j[TID] = e.record.EventHeader.ThreadId;
@@ -819,13 +837,6 @@ Classifier filter_hooks(json& ev) {
     return classify_to(ev, TARGET_PID, { g_attack_PID, g_injected_PID }); // TODO filter for pid of attack/injected
 }
 
-std::map<Classifier, std::vector<json>> get_cleaned_events() {
-    if (!cleaned_events) {
-        clean_events();
-    }
-	return etw_events;
-}
-
 // remove empty events or events without timestamp
 void clean_events() {
     if (g_debug) {
@@ -882,6 +893,20 @@ void print_etw_counts() {
         std::cout << "[*] ETW: Classification " << classifier_names[c.first] << ": " << events.size() << " events.";
         std::cout << " Filtered events per provider > " << oss.str() << "\n";
 	}
+}
+
+void print_time_differences() {
+	std::cout << std::fixed << std::setprecision(1); // one decimal place
+    for (auto& c : time_diffs_ns) {
+		std::vector<float>& diffs = c.second;
+        if (diffs.size() == 0) {
+            continue;
+        }
+		float avg = (std::accumulate(diffs.begin(), diffs.end(), 0.0f) / diffs.size()) / 1000.0f; // in microseconds
+		float max = *std::max_element(diffs.begin(), diffs.end()) / 1000.0f; // in microseconds
+        std::cout << "[+] ETW: Time differences in microseconds for " << c.first << ": avg=" << avg << ", max=" << max << "\n";
+	}
+    std::cout.unsetf(std::ios::fixed);
 }
 
 std::string add_color_info(const json& ev) {

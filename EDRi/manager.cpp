@@ -85,10 +85,12 @@ void emit_etw_event(std::string msg, std::string pre, bool print_when_debug) {
 }
 
 void process_results(std::string output, bool dump_sig, bool colored) {
-    std::map<Classifier, std::vector<json>> cleaned_events = get_cleaned_events();
-    print_etw_counts();
-
     write_events_to_file(output, colored);
+
+    print_etw_counts();
+    if (g_debug) {
+        print_time_differences();
+    }
 
     if (dump_sig) {
         dump_signatures(); // can only dump from antimalware provider

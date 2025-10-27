@@ -6,7 +6,7 @@
 #include <string>
 
 
-std::string ns_to_iso8601(uint64_t ns_since_epoch)
+std::string unix_epoch_ns_to_iso8601(uint64_t ns_since_epoch)
 {
     using namespace std::chrono;
     system_clock::duration duration = duration_cast<system_clock::duration>(nanoseconds(ns_since_epoch));
@@ -54,7 +54,7 @@ int main(int argc, wchar_t* argv[]) {
                 memcpy(&ns_since_epoch, ptr_field, sizeof(UINT64));
                 ptr_field += sizeof(UINT64);
             }
-            std::string iso_time = ns_to_iso8601(ns_since_epoch);
+            std::string iso_time = unix_epoch_ns_to_iso8601(ns_since_epoch);
 
             // PARSE TARGETPID
             UINT64 targetpid = -1;
