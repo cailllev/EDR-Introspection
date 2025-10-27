@@ -66,7 +66,12 @@ UINT64 get_ns_time() {
     return std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
 }
 
-void emit_etw_event(std::string msg, bool print_when_debug) {
+std::string ok = "[+] ";
+std::string fail = "[!] ";
+std::string bef = "[<]  ";
+std::string aft = "[>]  ";
+
+void emit_etw_event(std::string msg, std::string pre, bool print_when_debug) {
     UINT64 ns = get_ns_time();
     TraceLoggingWrite(
         g_hProvider,
@@ -75,7 +80,7 @@ void emit_etw_event(std::string msg, bool print_when_debug) {
         TraceLoggingUInt64(ns, "ns_since_epoch")
     );
     if (g_debug && print_when_debug) {
-        std::cout << msg << "\n";
+        std::cout << pre << msg << "\n";
     }
 }
 
@@ -126,9 +131,14 @@ int main(int argc, char* argv[]) {
     if (result.count("e") > 0) {
         std::string in_path = result["encrypt"].as<std::string>();
         std::string out_path = in_path + ".enc";
-        xor_file(in_path, out_path);
-        std::cout << "[*] EDRi: XOR encrypted " << in_path << " to " << out_path << "\n";
-        return 0;
+        if (xor_file(in_path, out_path)) {
+            std::cout << "[*] EDRi: XOR encrypted " << in_path << " to " << out_path << "\n";
+            return 0;
+        }
+        else {
+            std::cerr << "[!] EDRi: Failed to encrypt " << in_path << "\n";
+			return 1;
+        }
     }
     if (result.count("help")) {
         std::cout << options.help() << "\n";
@@ -268,7 +278,7 @@ int main(int argc, char* argv[]) {
     Sleep(wait_after_traces_started_ms);
     std::cout << "[*] EDRi: Waiting until start marker is registered\n";
 	while (!g_traces_started) {
-        emit_etw_event(EDRi_TRACE_START_MARKER, false);
+        emit_etw_event(EDRi_TRACE_START_MARKER, "", false);
 		Sleep(wait_time_between_start_markers_ms);
 	}
 	std::cout << "[*] EDRi: Traces started\n";
@@ -337,7 +347,7 @@ int main(int argc, char* argv[]) {
 
     // ATTACK
 	// decrypt the attack exe
-	emit_etw_event("[<] Before decrypting the attack exe", true);
+	emit_etw_event("Before decrypting the attack exe from " + attack_exe_enc_path, bef, true);
     if (xor_file(attack_exe_enc_path, g_attack_exe_path)) {
         std::cout << "[*] EDRi: Decrypted the attack exe: " << g_attack_exe_path << "\n";
     }
@@ -346,11 +356,11 @@ int main(int argc, char* argv[]) {
         stop_all_etw_traces();
         return 1;
     }
-    emit_etw_event("[>]  After decrypting the attack exe", true);
+    emit_etw_event("After decrypting the attack exe", aft, true);
     Sleep(wait_between_events_ms);
 
     // start the attack
-    emit_etw_event("[<] Before starting the attack exe", true);
+    emit_etw_event("Before starting the attack exe", bef, true);
     Sleep(wait_between_events_ms);
     if (run_as_child) {
         if (!launch_as_child(g_attack_exe_path)) {
@@ -376,7 +386,7 @@ int main(int argc, char* argv[]) {
             }
         }
     }
-	emit_etw_event("[>]  After starting the attack exe", true);
+	emit_etw_event("After starting the attack exe", aft, true);
 
 	// wait until the attack.exe terminates again
     std::cout << "[+] EDRi: Waiting for the attack exe to finish...\n";
