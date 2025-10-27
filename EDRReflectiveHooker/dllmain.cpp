@@ -561,26 +561,28 @@ NTSTATUS NTAPI Hook_NtOpenFile(
     ULONG              ShareAccess,
     ULONG              OpenOptions
 ) {
-    char msg[128];
-    wchar_t filename[512] = L"(unknown)";
+    try {
+        char msg[128];
+        wchar_t filename[512] = L"(unknown)";
 
-    if (FileHandle && *FileHandle) {
-        HANDLE h = *FileHandle;
-        // Try to resolve full path
-        if (GetFinalPathNameByHandleW(h, filename, _countof(filename), FILE_NAME_NORMALIZED) == 0) {
-            wcsncpy_s(filename, L"(unknown)", _TRUNCATE);
+        if (FileHandle && *FileHandle) {
+            HANDLE h = *FileHandle;
+            // Try to resolve full path
+            if (GetFinalPathNameByHandleW(h, filename, _countof(filename), FILE_NAME_NORMALIZED) == 0) {
+                wcsncpy_s(filename, L"'unknown'", _TRUNCATE);
+            }
         }
+        else if (ObjectAttributes && ObjectAttributes->ObjectName && ObjectAttributes->ObjectName->Buffer) {
+            // fallback to ObjectAttributes name if handle resolution fails
+            wcsncpy_s(filename, ObjectAttributes->ObjectName->Buffer, _TRUNCATE);
+        }
+
+        _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenFile %ls with 0x%X", filename, static_cast<unsigned int>(DesiredAccess));
+        emit_etw_msg(msg, pid);
     }
-    else if (ObjectAttributes && ObjectAttributes->ObjectName && ObjectAttributes->ObjectName->Buffer) {
-        // fallback to ObjectAttributes name if handle resolution fails
-        wcsncpy_s(filename, ObjectAttributes->ObjectName->Buffer, _TRUNCATE);
-    }
-
-    _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenFile (%ls) with 0x%X", filename, static_cast<unsigned int>(DesiredAccess));
-    emit_etw_msg(msg, pid);
-
-	// TODO strip access when MsMpEng tries to open itself? Maybe tries to reload ntdll?
-
+    catch (...) {
+        emit_etw_msg("Exception in NtOpenFile hook", pid);
+	}
     return g_origNtOpenFile(FileHandle, DesiredAccess, ObjectAttributes, IoStatusBlock, ShareAccess, OpenOptions);
 }
 
@@ -595,23 +597,24 @@ NTSTATUS NTAPI Hook_NtReadFile(
     PLARGE_INTEGER ByteOffset,
     PULONG Key
 ) {
+    try {
+        char msg[128];
+        wchar_t filename[512] = L"'unknown'";
 
-    char msg[128];
-    wchar_t filename[512] = L"(unknown)";
-
-    if (FileHandle) {
-        if (GetFinalPathNameByHandleW(FileHandle, filename, _countof(filename), FILE_NAME_NORMALIZED) == 0) {
-            wcsncpy_s(filename, L"(unknown)", _TRUNCATE);
+        if (FileHandle) {
+            if (GetFinalPathNameByHandleW(FileHandle, filename, _countof(filename), FILE_NAME_NORMALIZED) == 0) {
+                wcsncpy_s(filename, L"'unknown'", _TRUNCATE);
+            }
         }
+
+        unsigned long long offsetVal = ByteOffset ? (unsigned long long)ByteOffset->QuadPart : 0;
+        _snprintf_s(msg, sizeof(msg), _TRUNCATE, ByteOffset ? "NtReadFile %ls at 0x%llx" : "NtReadFile %ls at 0x0", filename, offsetVal);
+
+        emit_etw_msg(msg, pid);
     }
-
-    unsigned long long offsetVal = ByteOffset ? (unsigned long long)ByteOffset->QuadPart : 0;
-    _snprintf_s(msg, sizeof(msg), _TRUNCATE,
-        ByteOffset ? "NtReadFile (%ls) at 0x%llx" : "NtReadFile (%ls) at NULL",
-        filename, offsetVal);
-
-    emit_etw_msg(msg, pid);
-
+    catch (...) {
+        emit_etw_msg("Exception in NtReadFile hook", pid);
+    }
     return g_origNtReadFile(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, Buffer, Length, ByteOffset, Key);
 }
 
@@ -622,16 +625,20 @@ NTSTATUS NTAPI Hook_NtOpenProcess(
     PVOID ClientId
 )
 {
-    UINT64 tpid = 0;
-    if (ClientId) {
-        tpid = *(uintptr_t*)ClientId;
+    try {
+        UINT64 tpid = 0;
+        if (ClientId) {
+            tpid = *(uintptr_t*)ClientId;
+        }
 
         char msg[64];
         _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenProcess with 0x%X", static_cast<unsigned int>(DesiredAccess));
+
         emit_etw_msg(msg, tpid);
     }
-
-    // Call original
+    catch (...) {
+        emit_etw_msg("Exception in NtOpenProcess hook", pid);
+	}
     return g_origNtOpenProcess(ProcessHandle, DesiredAccess, ObjectAttributes, ClientId);
 }
 
@@ -643,18 +650,22 @@ NTSTATUS NTAPI Hook_NtReadVirtualMemory(
     PSIZE_T NumberOfBytesRead
 )
 {
-    DWORD tpid = GetProcessId(ProcessHandle);
-    uintptr_t addr = reinterpret_cast<uintptr_t>(BaseAddress);
-    char msg[128];
-    _snprintf_s(msg, sizeof(msg), _TRUNCATE,
-        "NtReadVirtualMemory %llu bytes at 0x%0*llx",
-        static_cast<unsigned long long>(NumberOfBytesToRead),
-        static_cast<int>(sizeof(uintptr_t) * 2),
-        static_cast<unsigned long long>(addr));
+    try {
+        DWORD tpid = GetProcessId(ProcessHandle);
+        uintptr_t addr = reinterpret_cast<uintptr_t>(BaseAddress);
 
-    emit_etw_msg(msg, tpid);
+        char msg[128];
+        _snprintf_s(msg, sizeof(msg), _TRUNCATE,
+            "NtReadVirtualMemory %llu bytes at 0x%0*llx",
+            static_cast<unsigned long long>(NumberOfBytesToRead),
+            static_cast<int>(sizeof(uintptr_t) * 2),
+            static_cast<unsigned long long>(addr));
 
-    // Call original
+        emit_etw_msg(msg, tpid);
+    }
+    catch (...) {
+        emit_etw_msg("Exception in NtReadVirtualMemory hook", pid);
+    }
     return g_origNtReadVirtualMemory(ProcessHandle, BaseAddress, Buffer, NumberOfBytesToRead, NumberOfBytesRead);
 }
 
@@ -666,39 +677,53 @@ NTSTATUS NTAPI Hook_NtWriteVirtualMemory(
     PSIZE_T NumberOfBytesWritten
 )
 {
-    DWORD tpid = GetProcessId(ProcessHandle);
-    uintptr_t addr = reinterpret_cast<uintptr_t>(BaseAddress);
-    char msg[128];
-    _snprintf_s(msg, sizeof(msg), _TRUNCATE,
-        "NtWriteVirtualMemory %llu bytes at 0x%0*llx",
-        static_cast<unsigned long long>(NumberOfBytesToWrite),
-        static_cast<int>(sizeof(uintptr_t) * 2),
-        static_cast<unsigned long long>(addr));
+    try {
+        DWORD tpid = GetProcessId(ProcessHandle);
+        uintptr_t addr = reinterpret_cast<uintptr_t>(BaseAddress);
 
-    emit_etw_msg(msg, tpid);
+        char msg[128];
+        _snprintf_s(msg, sizeof(msg), _TRUNCATE,
+            "NtWriteVirtualMemory %llu bytes at 0x%0*llx",
+            static_cast<unsigned long long>(NumberOfBytesToWrite),
+            static_cast<int>(sizeof(uintptr_t) * 2),
+            static_cast<unsigned long long>(addr));
 
-    // Call original
+        emit_etw_msg(msg, tpid);
+    }
+    catch (...) {
+        emit_etw_msg("Exception in NtWriteVirtualMemory hook", pid);
+	}
     return g_origNtWriteVirtualMemory(ProcessHandle, BaseAddress, Buffer, NumberOfBytesToWrite, NumberOfBytesWritten);
 }
 
 NTSTATUS NTAPI Hook_NtClose(HANDLE Handle)
 {
-    DWORD tpid = GetProcessId(Handle);
-    if (tpid != 0) { // ignore closing events of non proc handles
-        emit_etw_msg("NtClose process", tpid);
+    try {
+        DWORD tpid = GetProcessId(Handle);
+        if (tpid != 0) { // ignore closing events of non proc handles
+            emit_etw_msg("NtClose process", tpid);
+        }
     }
+    catch (...) {
+        emit_etw_msg("Exception in NtClose hook", pid);
+	}
     return g_origNtClose(Handle);
 }
 
 NTSTATUS NTAPI Hook_NtTerminateProcess(HANDLE Handle, NTSTATUS ExitStatus)
 {
-    DWORD tpid = GetProcessId(Handle);
-    if (tpid != 0) { // ignore closing events of non proc handles 
-        char msg[128];
-        _snprintf_s(msg, sizeof(msg), _TRUNCATE,
-            "NtTerminateProcess with status 0x%lx",
-            static_cast<LONG>(ExitStatus));
-        emit_etw_msg(msg, tpid);
+    try {
+        DWORD tpid = GetProcessId(Handle);
+        if (tpid != 0) { // ignore closing events of non proc handles 
+            char msg[128];
+            _snprintf_s(msg, sizeof(msg), _TRUNCATE,
+                "NtTerminateProcess with status 0x%lx",
+                static_cast<LONG>(ExitStatus));
+            emit_etw_msg(msg, tpid);
+        }
+    }
+    catch (...) {
+        emit_etw_msg("Exception in NtTerminateProcess hook", pid);
     }
     return g_origNtTerminateProcess(Handle, ExitStatus);
 }
