@@ -291,7 +291,7 @@ int main(int argc, char* argv[]) {
         std::vector<int> newly_hooked = {};
 
         if (!disable_kernel_callbacks_ok()) {
-            std::cerr << "[!] EDRi: Failed to disable kernel callbacks, check manually if needed\n";
+            std::cerr << "[!] EDRi: Failed to disable kernel callbacks, check manually if this is needed\n";
             stop_all_etw_traces();
             return 1;
         }
@@ -299,6 +299,7 @@ int main(int argc, char* argv[]) {
 		// get main edr processes and inject the hooker
         std::vector<std::string> main_edr_exes = edr_profile.main_exes;
         bool found_none = true;
+        bool new_procs_hooked = false;
         for (auto& exe : main_edr_exes) {
             std::vector<int> pids = get_PID_by_name(exe);
             if (pids.empty()) {
@@ -323,6 +324,7 @@ int main(int argc, char* argv[]) {
                     exit(1);
                 }
 				newly_hooked.push_back(pid);
+                new_procs_hooked = true;
 				std::cout << "[+] EDRi: Successfully injected the hooker into " << exe << ":" << pid << "\n";
             }
         }
@@ -335,7 +337,7 @@ int main(int argc, char* argv[]) {
 
         // check if the hooker is successfully initialized // TODO check all procs not just one start marker
         int wait = 0;
-        while (!g_hooker_started) {
+        while (new_procs_hooked && !g_hooker_started) {
 			Sleep(1000);
             if (++wait > timeout_for_hooker_init) {
                 std::cerr << "[!] EDRi: Could not detect a successful initialization of the hooker!\n";
