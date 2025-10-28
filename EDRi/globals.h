@@ -4,6 +4,7 @@
 #include <shared_mutex>
 
 #include "helpers/json.hpp"
+using json = nlohmann::json;
 
 static const std::string EDRi_PROVIDER = "EDRi-Provider";
 static const std::string HOOK_PROVIDER = "Hook-Provider"; // must the same in the other project
@@ -38,5 +39,3 @@ extern bool g_super_debug;
 
 extern std::string g_attack_exe_name;
 extern std::string g_attack_exe_path;
-
-using json = nlohmann::json;

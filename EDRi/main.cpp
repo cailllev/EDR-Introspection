@@ -17,12 +17,14 @@
 #include "helpers/json.hpp"
 
 #include "globals.h"
-#include "utils.h"
-#include "etwreader.h"
-#include "manager.h"
-#include "profile.h"
 #include "hooker.h"
 #include "sandblast.h"
+#include "utils.h"
+#include "filter.h"
+#include "profile.h"
+#include "etwreader.h"
+#include "output.h"
+#include "main.h"
 
 /*
 - creates krabs ETW traces for Antimalware, Kernel, etc. and the attack provider
@@ -85,15 +87,17 @@ void emit_etw_event(std::string msg, std::string pre, bool print_when_debug) {
 }
 
 void process_results(std::string output, bool dump_sig, bool colored) {
-    write_events_to_file(output, colored);
+	std::vector<json> all_etw_events = get_all_etw_events();
+    std::map<Classifier, std::vector<json>> etw_events = filter_all_events(all_etw_events);
+    write_events_to_file(etw_events, output, colored);
 
-    print_etw_counts();
+    print_etw_counts(etw_events);
     if (g_debug) {
         print_time_differences();
     }
 
     if (dump_sig) {
-        dump_signatures(); // can only dump from antimalware provider
+        dump_signatures(etw_events); // can only dump from antimalware provider
     }
     std::cout << "[*] EDRi: Done\n";
 }

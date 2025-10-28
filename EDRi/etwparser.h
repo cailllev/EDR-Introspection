@@ -88,29 +88,18 @@ struct MergeCategory {
 extern MergeCategory ppid_keys, tpid_keys, ttid_keys, filepath_keys;
 
 // processing the events
-enum Classifier;
-std::string get_classifier_name(Classifier);
-void print_etw_counts();
-void dump_signatures();
+void event_callback(const EVENT_RECORD&, const krabs::trace_context&);
+
+std::map<std::string, std::vector<float>> get_time_diffs();
+std::vector<json> get_all_etw_events();
 
 // internal functions
-void event_callback(const EVENT_RECORD&, const krabs::trace_context&);
+std::string get_kernel_api_task_name(int id);
 json parse_custom_etw_event(Event);
 json parse_etw_event(Event);
 std::string get_val(const json&, std::string);
 void post_parsing_checks(json&);
-void add_exe_information(json& j);
 int check_new_proc(json&);
 bool check_traces_started(json&);
 bool check_hooker_started(json&);
-Classifier filter(json&);
-Classifier classify_to(json&, std::string, std::vector<int>);
-Classifier filter_kernel_process(json&);
-Classifier filter_threat_intel(json&);
-Classifier filter_kernel_api_call(json&);
-Classifier filter_kernel_file(json&);
-Classifier filter_kernel_network(json&);
-Classifier filter_antimalware(json&);
-Classifier filter_hooks(json&);
-void clean_events();
 void print_time_differences();
