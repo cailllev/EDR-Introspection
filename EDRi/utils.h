@@ -32,23 +32,7 @@ std::string get_available_attacks();
 bool is_attack_available(const std::string&);
 std::string get_attack_enc_path(const std::string&);
 
-void build_device_map();
-std::string translate_if_path(const std::string&);
-
 std::string filetime_to_iso8601(__int64 timestamp);
 std::string unix_epoch_ns_to_iso8601(uint64_t);
 
-std::string resolve_handle_in_msg(const std::string&);
-
-void write_events_to_file(const std::string&, bool);
-std::string create_timeline_csv(const std::vector<json>&, std::vector<std::string>, bool);
-
-// custom key for color info
-static const std::string COLOR_HEADER = "Color,";
-static const std::string COLOR_GREEN = "green,";
-static const std::string COLOR_RED = "red,";
-static const std::string COLOR_BLUE = "blue,";
-static const std::string COLOR_PURPLE = "purple,";
-static const std::string COLOR_YELLOW = "yellow,";
-static const std::string COLOR_GRAY = "gray,";
-std::string add_color_info(const json&);
+std::string resolve_handle_in_msg(const std::string&); // TODO inside hook dll thread

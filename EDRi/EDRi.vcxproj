@@ -130,7 +130,9 @@
   <ItemGroup>
     <ClCompile Include="etwparser.cpp" />
     <ClCompile Include="etwreader.cpp" />
-    <ClCompile Include="manager.cpp" />
+    <ClCompile Include="filter.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="output.cpp" />
     <ClCompile Include="profile.cpp" />
     <ClCompile Include="sandblast.cpp" />
     <ClCompile Include="utils.cpp" />
@@ -142,7 +144,8 @@
     <ClInclude Include="globals.h" />
     <ClInclude Include="helpers\cxxopts.hpp" />
     <ClInclude Include="helpers\json.hpp" />
-    <ClInclude Include="manager.h" />
+    <ClInclude Include="main.h" />
+    <ClInclude Include="output.h" />
     <ClInclude Include="profile.h" />
     <ClInclude Include="sandblast.h" />
     <ClInclude Include="utils.h" />

@@ -1,42 +1,28 @@
 #include <krabs.hpp>
 #include "helpers/json.hpp"
 #include <iostream>
-#include <fstream>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #pragma comment(lib, "Ws2_32.lib")
 
 #include "globals.h"
-#include "utils.h"
-#include "filter.h"
 #include "profile.h"
+#include "utils.h"
 #include "etwparser.h"
 
 
-enum Classifier { All, Relevant, Minimal };
-std::map<Classifier, std::vector<json>> etw_events = {
-    { All, {} },
-    { Relevant, {} },
-    { Minimal, {} }
-};
-std::map<Classifier, std::string> classifier_names = {
-    { All, "All" },
-    { Relevant, "Relevant" },
-    { Minimal, "Minimal" }
-};
+// all events
+std::vector<json> all_etw_events = {};
 
 const UINT64 WINDOWS_TICK = 10'000'000ULL;        // 100ns intervals
 const UINT64 NS_PER_WINDOWS_TICK = 100ULL;        // 1 tick per 100ns
 const UINT64 SECS_TO_UNIX_EPOCH = 11644473600ULL; // seconds between 1601 and 1970, https://stackoverflow.com/questions/6161776/convert-windows-filetime-to-second-in-unix-linux#answer-6161842
 const UINT64 WINDOWS_TICKS_TO_UNIX_EPOCH = SECS_TO_UNIX_EPOCH * WINDOWS_TICK;
 
-std::vector<float> edri_diffs = {};
-std::vector<float> attack_diffs = {};
-std::vector<float> hooks_diffs = {};
 std::map<std::string, std::vector<float>> time_diffs_ns = { // differences in nanoseconds between ETW time and system time
-    { EDRi_PROVIDER, edri_diffs },
-    { ATTACK_PROVIDER, attack_diffs },
-    { HOOK_PROVIDER, hooks_diffs }
+    { EDRi_PROVIDER, {} },
+    { ATTACK_PROVIDER, {} },
+    { HOOK_PROVIDER, {} }
 };
 
 // globals
@@ -68,14 +54,15 @@ MergeCategory filepath_keys = {
 };
 std::vector<MergeCategory> key_categories_to_merge = { ppid_keys, tpid_keys, ttid_keys, filepath_keys };
 
-// pid fields that should have the exe name added at print time
-static const std::vector<std::string> fields_to_add_exe_name = { PID, PPID, TARGET_PID, ORIGINATING_PID };
+// get time difference statistics
+std::vector<json> get_all_etw_events() {
+    return all_etw_events;
+}
 
-// define start of CSV header, all other keys are added in order later
-std::vector<std::string> csv_header_start = {
-    TIMESTAMP_SYS, TIMESTAMP_ETW, TYPE, PROVIDER_NAME, EVENT_ID, TASK, PID, TID, PPID, ORIGINATING_PID, TARGET_PID, TARGET_TID, MESSAGE,
-    FILEPATH, "cachename", "result", "vname", "sigseq", "sigsha", "commandline", "firstparam", "secondparam",
-};
+// get time difference statistics
+std::map<std::string, std::vector<float>> get_time_diffs() {
+    return time_diffs_ns;
+}
 
 // pre-filter EDR events and hand over schema for parsing
 void event_callback(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
@@ -86,31 +73,7 @@ void event_callback(const EVENT_RECORD& record, const krabs::trace_context& trac
             return; // ignore empty events
         }
         post_parsing_checks(ev);
-
-        if (!g_traces_started) {
-            if (g_super_debug) {
-                std::cout << "[-] Waiting for EDRi start marker, ignoring early event: " << ev.dump() << "\n";
-            }
-        }
-
-        // check if event can be filtered out
-        Classifier c = filter(ev);
-        add_exe_information(ev); // must be after all parsing checks and filtering but before adding it to events
-
-        switch (c) {
-        case Minimal:
-            etw_events[Minimal].push_back(ev);
-            // do not break, also add to relevant and all
-        case Relevant:
-            etw_events[Relevant].push_back(ev);
-            // do not break, also add to all
-        case All:
-            etw_events[All].push_back(ev);
-            if (g_super_debug) {
-                std::cout << "[-] ETW: Filtered out event: " << ev.dump() << "\n";
-            }
-            break;
-        }
+		all_etw_events.push_back(ev);
     }
     catch (const std::exception& e) {
         std::cerr << "[!] ETW: event_callback exception: " << e.what() << "\n";
@@ -225,9 +188,15 @@ json parse_etw_event(Event e) {
 			j[TYPE] = "ETW";
         }
 
-        // task = task_name + opcode_name, TODO lookup missing info if either is null?
-        std::wstring combined = std::wstring(e.schema.task_name()) + std::wstring(e.schema.opcode_name());
-        j[TASK] = wstring2string(combined);
+        if (provider_name == KERNEL_API_PROVIDER) {
+            // special handling for kernel api provider to get better task names
+            std::string task_name = get_kernel_api_task_name(e.schema.event_id());
+            j[TASK] = task_name;
+        }
+        else {
+            std::wstring combined = std::wstring(e.schema.task_name()) + L" " + std::wstring(e.schema.opcode_name());
+            j[TASK] = wstring2string(combined);
+        }
 
         krabs::parser parser(e.schema);
         // parse all properties defined in the schema
@@ -509,6 +478,26 @@ json parse_etw_event(Event e) {
     }
 }
 
+std::string get_kernel_api_task_name(int event_id) {
+    if (event_id == 1)
+        return "PsSetLoadImageNotifyRoutineEx";
+    if (event_id == 2)
+        return "NtTerminateProcess";
+    if (event_id == 3)
+        return "ObCreateSymbolicLink";
+    if (event_id == 4)
+        return "NtSetContextThread";
+    if (event_id == 5)
+        return "PsOpenProcess";
+    if (event_id == 6)
+        return "PsOpenThread";
+    if (event_id == 7)
+        return "IoRegisterLastChanceShutdownNotification";
+    if (event_id == 8)
+        return "IoRegisterShutdownNotification";
+    return "unmapped kernel api event id";
+}
+
 std::string get_val(const json& j, std::string key) {
     if (!j.contains(key)) {
         return ""; // key not present
@@ -615,432 +604,5 @@ void post_parsing_checks(json& j) {
             }
             g_attack_terminated = true;
         }
-    }
-}
-
-// adds exe name to all pid fields, only use AFTER filtering!
-void add_exe_information(json& j) {
-    for (auto it = j.begin(); it != j.end(); ++it) {
-        const std::string& key = it.key();
-        json& value = it.value();
-
-        // add info for all pid fields
-        if (std::find(fields_to_add_exe_name.begin(), fields_to_add_exe_name.end(), key) != fields_to_add_exe_name.end()) {
-            std::string old_val = value.is_string() ? value.get<std::string>() : value.dump();
-            std::string exe_name = get_proc_name(value);
-
-            std::ostringstream oss;
-            oss << std::setw(5) << value.get<int>(); // pad up to 5 digits
-            value = oss.str() + " " + exe_name; // add exe name "in place" (reference)
-        }
-    }
-}
-
-// filter based on provider
-Classifier filter(json& ev) {
-    if (ev[PROVIDER_NAME] == KERNEL_PROCESS_PROVIDER) {
-        return filter_kernel_process(ev);
-    }
-
-    else if (ev[PROVIDER_NAME] == THREAT_INTEL_PROVIDER) {
-        return filter_threat_intel(ev);
-    }
-
-    else if (ev[PROVIDER_NAME] == KERNEL_API_PROVIDER) {
-        return filter_kernel_api_call(ev);
-    }
-
-    else if (ev[PROVIDER_NAME] == KERNEL_FILE_PROVIDER) {
-        return filter_kernel_file(ev);
-    }
-
-    else if (ev[PROVIDER_NAME] == KERNEL_NETWORK_PROVIDER) {
-        return filter_kernel_network(ev);
-    }
-
-    else if (ev[PROVIDER_NAME] == ANTIMALWARE_PROVIDER) {
-        return filter_antimalware(ev);
-    }
-
-    // MY PROVIDERS
-    else if (ev[PROVIDER_NAME] == HOOK_PROVIDER) {
-        return filter_hooks(ev);
-    }
-    else if (ev[PROVIDER_NAME] == EDRi_PROVIDER) {
-        return Minimal; // do not filter
-    }
-    else if (ev[PROVIDER_NAME] == ATTACK_PROVIDER) {
-        return Minimal; // do not filter
-    }
-
-    if (g_super_debug) {
-        std::cout << "[+] ETW: Unfiltered provider " << ev[PROVIDER_NAME] << ", not filtering its event ID " << ev[EVENT_ID] << "\n";
-    }
-
-    return Relevant; // do not filter unregistered providers
-}
-
-// returns a classifier based on if the value is in list
-Classifier classify_to(json& ev, std::string key, std::vector<int> list) {
-    if (ev.contains(key)) {
-        if (std::find(list.begin(), list.end(), ev[key]) == list.end()) {
-            return All; // when value not found --> put in all
-        }
-		return Minimal; // when value found --> do not filter
-    }
-    else if (g_debug) {
-        std::cout << "[-] ETW: Warning: Event with ID " << ev[EVENT_ID] << " missing " << key << " field to filter: " << ev.dump() << "\n";
-    }
-	return Relevant; // expected key does not exists, classify as relevant (for now)
-}
-
-// filter kernel process events
-Classifier filter_kernel_process(json& ev) {
-    // the interesting info is in target pid, process_id of msmpeng.exe/attack.exe/smartscreen.exe etc is not enough to filter
-    if (std::find(kproc_event_ids_with_tpid_minimal.begin(), kproc_event_ids_with_tpid_minimal.end(), ev[EVENT_ID]) != kproc_event_ids_with_tpid_minimal.end()) {
-        return classify_to(ev, TARGET_PID, g_tracking_PIDs);
-    }
-    // image load and unload events are at most relevant, not minimal (very noisy)
-    if (std::find(kproc_event_ids_with_tpid_relevant.begin(), kproc_event_ids_with_tpid_relevant.end(), ev[EVENT_ID]) != kproc_event_ids_with_tpid_relevant.end()) {
-        Classifier c = classify_to(ev, TARGET_PID, g_tracking_PIDs);
-        if (c == Minimal) {
-            return Relevant; // put in relevant if matches
-        }
-        return c; // else put it in relevant or all accordingly
-    }
-    return Relevant; // put event ids without a filter into relevant
-}
-
-// filter threat intel events
-Classifier filter_threat_intel(json& ev) {
-	// either pid or tpid must match a tracked pid
-    if (std::find(ti_events_with_pid_or_tpid.begin(), ti_events_with_pid_or_tpid.end(), ev[EVENT_ID]) != ti_events_with_pid_or_tpid.end()) {
-        Classifier c_pid = classify_to(ev, PID, g_tracking_PIDs);
-        Classifier c_orig = classify_to(ev, TARGET_PID, g_tracking_PIDs);
-        if (c_pid == Minimal || c_orig == Minimal) {
-            return Minimal; // put in minimal if either matches
-        } // else put it in relevant
-    }
-    return Relevant; // put event ids without a filter into relevant
-}
-
-// filter kernel api calls
-Classifier filter_kernel_api_call(json& ev) {
-    // the interesting info is in target pid, process_id of msmpeng.exe/attack.exe/smartscreen.exe etc is not enough to filter
-    if (std::find(kapi_event_ids_with_tpid.begin(), kapi_event_ids_with_tpid.end(), ev[EVENT_ID]) != kapi_event_ids_with_tpid.end()) {
-        return classify_to(ev, TARGET_PID, g_tracking_PIDs);
-    }
-    if (std::find(kapi_event_ids_with_pid.begin(), kapi_event_ids_with_pid.end(), ev[EVENT_ID]) != kapi_event_ids_with_pid.end()) {
-        return classify_to(ev, PID, g_tracking_PIDs);
-    }
-    return Relevant; // put event ids without a filter into relevant
-}
-
-// filter kernel file events
-Classifier filter_kernel_file(json& ev) {
-    // TODO also filters out Notepad.exe proc, why?
-    if (std::find(kfile_event_ids_with_pid.begin(), kfile_event_ids_with_pid.end(), ev[EVENT_ID]) != kfile_event_ids_with_pid.end()) {
-        return classify_to(ev, PID, g_tracking_PIDs);
-    }
-    return Relevant; // put event ids without a filter into relevant
-}
-
-// filter kernel network events
-Classifier filter_kernel_network(json& ev) {
-    // events to keep if PID or originating PID match
-    if (std::find(knetwork_event_ids_with_pid_or_opid.begin(), knetwork_event_ids_with_pid_or_opid.end(), ev[EVENT_ID]) != knetwork_event_ids_with_pid_or_opid.end()) {
-        Classifier c_pid = classify_to(ev, PID, g_tracking_PIDs);
-        Classifier c_orig = classify_to(ev, ORIGINATING_PID, g_tracking_PIDs); 
-        if (c_pid == Minimal || c_orig == Minimal) {
-            return Minimal; // put in minimal if either matches
-		} // else put it in relevant
-    }
-    return Relevant; // put event ids without a filter into relevant
-}
-
-// filter events based on known exclude values (e.g. wrong PID for given event id)
-Classifier filter_antimalware(json& ev) {
-    // events to remove
-    if (std::find(am_event_ids_to_remove.begin(), am_event_ids_to_remove.end(), ev[EVENT_ID]) != am_event_ids_to_remove.end()) {
-        return All;
-    }
-
-    // events to keep if originating PID matches attack or injected PID
-    if (std::find(am_event_ids_with_pid.begin(), am_event_ids_with_pid.end(), ev[EVENT_ID]) != am_event_ids_with_pid.end()) {
-        Classifier c = classify_to(ev, ORIGINATING_PID, { g_attack_PID, g_injected_PID });
-        if (c == All) {
-			return All; // put in all if it does not match
-        }
-        if (std::find(am_event_ids_with_pid_but_noisy.begin(), am_event_ids_with_pid_but_noisy.end(), ev[EVENT_ID]) != am_event_ids_with_pid_but_noisy.end()) {
-			return Relevant; // put noisy events into relevant (can overwrite minimal from above)
-        }
-		return c; // else return as classified originally
-    }
-
-    // events to keep if originating PID or TargetPID matches attack PID or injected PID
-    if (std::find(am_event_ids_with_pid_and_tpid.begin(), am_event_ids_with_pid_and_tpid.end(), ev[EVENT_ID]) != am_event_ids_with_pid_and_tpid.end()) {
-        Classifier c_orig = classify_to(ev, ORIGINATING_PID, { g_attack_PID, g_injected_PID });
-        Classifier c_target = classify_to(ev, TARGET_PID, { g_attack_PID, g_injected_PID });
-        if (c_orig == Minimal || c_target == Minimal) {
-            return Minimal; // put in minimal if either matches
-        } // else put it in relevant
-		return Relevant;
-    }
-
-    // events to keep if PID in Data matches
-    if (std::find(am_event_ids_with_pid_in_data.begin(), am_event_ids_with_pid_in_data.end(), ev[EVENT_ID]) != am_event_ids_with_pid_in_data.end()) {
-        return classify_to(ev, DATA, { g_attack_PID, g_injected_PID });
-    }
-
-    // events to keep if Message contains filter string (case insensitive)
-    if (std::find(am_event_ids_with_message.begin(), am_event_ids_with_message.end(), ev[EVENT_ID]) != am_event_ids_with_message.end()) {
-        if (ev.contains(MESSAGE)) {
-            std::string msg = ev[MESSAGE].get<std::string>();
-            std::transform(msg.begin(), msg.end(), msg.begin(), [](unsigned char c) { return std::tolower(c); });
-            if (msg.find(g_attack_exe_name) != std::string::npos ||
-                msg.find(injected_name) != std::string::npos ||
-                msg.find(invoked_name) != std::string::npos) {
-                return Minimal; // do not filter if any of the strings match
-            }
-            return All; // else filter out
-        }
-        else if (g_debug) {
-            std::cout << "[-] ETW: Warning: Event with ID " << ev[EVENT_ID] << " missing " << MESSAGE << " field: " << ev.dump() << "\n";
-        }
-        return Relevant; // unexpected event fields, do not filter
-    }
-
-    // events to keep if filepath matches (case insensitive)
-    if (std::find(am_event_ids_with_filepath.begin(), am_event_ids_with_filepath.end(), ev[EVENT_ID]) != am_event_ids_with_filepath.end()) {
-        if (ev.contains(FILEPATH)) {
-            if (_stricmp(ev[FILEPATH].get<std::string>().c_str(), g_attack_exe_path.c_str())) {
-				return Minimal; // do not filter if path matches
-            }
-			return All; // else filter out
-        }
-        else if (g_debug) {
-            std::cout << "[-] ETW: Warning: Event with ID " << ev[EVENT_ID] << " missing " << FILEPATH << " field: " << ev.dump() << "\n";
-        }
-        return Relevant; // unexpected event fields, do not filter
-    }
-
-    return Relevant; // put event ids without a filter into relevant
-}
-
-// filter hook provider for relevant processes, either attack or injected PID -> Minimal, else All
-Classifier filter_hooks(json& ev) {
-    const std::string& msg = ev[MESSAGE];
-    // example: NtOpenFile \??\C:\WINDOWS\SYSTEM32\apisethost.appexecutionalias.dll with 0x100021
-    if (msg.rfind("NtOpenFile", 0) == 0 || msg.rfind("NtReadFile", 0) == 0) {
-        if (msg.find(g_attack_exe_name) != std::string::npos
-            || msg.find(injected_name) != std::string::npos
-            || msg.find(injected_exe) != std::string::npos) {
-            return Minimal;
-        }
-        else {
-            return All; // TODO correct?
-        }
-    }
-	// else event has a usable targetpid --> classify based on target pid
-    return classify_to(ev, TARGET_PID, { g_attack_PID, g_injected_PID }); // TODO filter for pid of attack/injected
-}
-
-// remove empty events or events without timestamp
-void clean_events() {
-    if (g_debug) {
-        std::cout << "[-] ETW: Cleaning events, removing empty events or events without " << TIMESTAMP_SYS << " field\n";
-	}
-    for (auto& c : etw_events) {
-		std::vector<json>& events = etw_events[c.first]; // this must be a reference to modify the events vectors
-        size_t before = events.size();
-        events.erase(std::remove_if(events.begin(), events.end(), [](const json& e) {
-            return e.is_null() || !e.contains(TIMESTAMP_SYS) || !e[TIMESTAMP_SYS].is_string();
-            }), events.end());
-        size_t removed = before - events.size();
-        if (removed > 0 && g_debug) {
-            std::cout << "[-] ETW: Removed " << removed << " empty events or events without " << TIMESTAMP_SYS << " in " << classifier_names[c.first] << "\n";
-        }
-    }
-	cleaned_events = true;
-}
-
-std::string get_classifier_name(Classifier c) {
-    return classifier_names[c];
-}
-
-void print_etw_counts() {
-    if (!cleaned_events) {
-		clean_events();
-    }
-    for (auto& c : etw_events) {
-        std::ostringstream oss;
-		Classifier classifier = c.first;
-		std::vector<json>& events = c.second;
-
-        // count by provider
-		std::map<std::string, int> provider_counts;
-        for (auto& ev : events) {
-            std::string provider = "<empty provider>";
-            if (ev.contains(PROVIDER_NAME)) {
-                provider = ev[PROVIDER_NAME];
-            }
-            if (provider_counts.find(provider) == provider_counts.end()) {
-                provider_counts[provider] = 1;
-            }
-            else {
-                provider_counts[provider]++;
-			}
-        }
-
-        for (auto it = provider_counts.begin(); it != provider_counts.end(); ++it) {
-            if (it != provider_counts.begin()) {
-                oss << ", ";
-            }
-            oss << it->first << ": " << it->second;
-		}
-        std::cout << "[*] ETW: Classification " << classifier_names[c.first] << ": " << events.size() << " events.";
-        std::cout << " Filtered events per provider > " << oss.str() << "\n";
-	}
-}
-
-void print_time_differences() {
-	std::cout << std::fixed << std::setprecision(1); // one decimal place
-    for (auto& c : time_diffs_ns) {
-		std::vector<float>& diffs = c.second;
-        if (diffs.size() == 0) {
-            continue;
-        }
-		float avg = (std::accumulate(diffs.begin(), diffs.end(), 0.0f) / diffs.size()) / 1000.0f; // in microseconds
-		float max = *std::max_element(diffs.begin(), diffs.end()) / 1000.0f; // in microseconds
-        std::cout << "[+] ETW: Time differences in microseconds for " << c.first << ": avg=" << avg << ", max=" << max << "\n";
-	}
-    std::cout.unsetf(std::ios::fixed);
-}
-
-std::string add_color_info(const json& ev) {
-    if (!ev.contains(PROVIDER_NAME)) {
-        if (g_debug) {
-            std::cout << "[-] ETW: Warning: Event missing " << PROVIDER_NAME << " field: " << ev.dump() << "\n";
-        }
-        return COLOR_GRAY;
-    }
-    if (ev[PROVIDER_NAME] == EDRi_PROVIDER) {
-        return COLOR_GREEN;
-	}
-    if (ev[PROVIDER_NAME] == ANTIMALWARE_PROVIDER) {
-        return COLOR_BLUE;
-    }
-    if (ev[PROVIDER_NAME] == THREAT_INTEL_PROVIDER) {
-        return COLOR_PURPLE;
-	}
-    if (ev[PROVIDER_NAME] == ATTACK_PROVIDER) {
-        return COLOR_RED;
-	}
-    if (ev[PROVIDER_NAME] == HOOK_PROVIDER) {
-        return COLOR_YELLOW;
-	}
-	return ""; // event / provider not mapped
-}
-
-void write_events_to_file(const std::string& output, bool colored) {
-    if (!cleaned_events) {
-        clean_events();
-    }
-    for (auto& c : etw_events) {
-        std::vector<json>& events = etw_events[c.first];
-        try {
-            // sort events by timestamp
-            std::sort(events.begin(), events.end(), [](const json& a, const json& b) {
-                const std::string& ts1 = a[TIMESTAMP_SYS];
-                const std::string& ts2 = b[TIMESTAMP_SYS];
-                return ts1 < ts2; // lexicographical compare works for ISO-like timestamps
-                });
-
-            // write to csv
-            std::string csv_output = create_timeline_csv(events, csv_header_start, colored);
-            std::string output_base = output.substr(0, output.find_last_of('.')); // without .csv
-            std::string output_final = output_base + "-" + get_classifier_name(c.first) + ".csv"; // add classifier to filename
-            std::ofstream out(output_final);
-            if (!out.is_open()) {
-                std::cerr << "[!] ETW: Failed to open output file: " << output_final << "\n";
-            }
-            else {
-                out << csv_output;
-                out.close();
-            }
-        }
-        catch (const std::exception& ex) {
-            std::cerr << "[!] ETW: write_events_to_file exception: " << ex.what() << "\n";
-        }
-        catch (...) {
-            std::cerr << "[!] ETW: write_events_to_file unknown exception\n";
-        }
-    }
-}
-
-// dumps all relevant info from antimalware provider event id 3,8,74,104
-void dump_signatures() {
-    if (!cleaned_events) {
-        clean_events();
-    }
-    for (const auto& ev : etw_events[Relevant]) {
-        try {
-            if (ev[PROVIDER_NAME] != ANTIMALWARE_PROVIDER) {
-                continue; // only this provider contains the signatures
-            }
-            if (ev[EVENT_ID] == 3) {
-                if (!ev.contains(MESSAGE)) {
-                    if (g_debug) {
-                        std::cout << "[-] ETW: Warning: Event with ID 3 missing " << MESSAGE << " field: " << ev.dump() << "\n";
-                    }
-                    continue;
-                }
-                std::string m = get_val(ev, MESSAGE);
-                std::string s = "signame=";
-                std::string r = "resource=";
-                size_t ss = m.find(s);
-                size_t sr = m.find(r);
-                if (ss != std::string::npos && sr != std::string::npos) { // only some 3 events have signatures
-                    size_t es = m.find(", ", ss);
-                    size_t er = m.find(", ", sr);
-                    ss += s.length();
-                    sr += r.length();
-                    std::string sig = m.substr(ss, es - ss);
-                    std::string res = m.substr(sr, er - sr);
-                    std::cout << "[*] ETW: Found signature: " << sig << " in " << res << "\n";
-                }
-            }
-            if (ev[EVENT_ID] == 8) {
-                if (!ev.contains(PID)) {
-                    if (g_debug) {
-                        std::cout << "[-] ETW: Warning: Event with ID 8 missing " << PID << " field: " << ev.dump() << "\n";
-                    }
-                    continue;
-                }
-                std::cout << "[*] ETW: Behaviour Monitoring Detection: " <<
-                    "pid=" << get_val(ev, PID) << ", sig=" << get_val(ev, FILEPATH) << "\n"; // TODO debugging, correct field??
-            }
-            if (ev[EVENT_ID] == 74) {
-                std::cout << "[*] ETW: Sense Remidiation" <<
-                    ": threatname=" << get_val(ev, THREATNAME) <<
-                    ", signature=" << get_val(ev, SIGSEQ) <<
-                    ", sigsha=" << get_val(ev, SIGSHA) <<
-                    ", classification=" << get_val(ev, CLASSIFICATION) <<
-                    ", determination=" << get_val(ev, DETERMINATION) <<
-                    ", realpath=" << get_val(ev, REALPATH) <<
-                    ", resource=" << get_val(ev, RESOURCESCHEMA) <<
-                    "\n";
-            }
-            if (ev[EVENT_ID] == 104) {
-                if (!ev.contains(FIRST_PARAM) || !ev.contains(SECOND_PARAM)) {
-                    if (g_debug) {
-                        std::cout << "[-] ETW: Warning: Event with ID 104 missing " << FIRST_PARAM << " or " << SECOND_PARAM << " field: " << ev.dump() << "\n";
-                    }
-                }
-            }
-        }
-        catch (const std::exception& ex) {
-            std::cerr << "[!] ETW: dump_signatures exception: " << ex.what() << "\n";
-		}
     }
 }

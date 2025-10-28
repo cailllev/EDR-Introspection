@@ -18,7 +18,6 @@
 
 
 static const std::string encrypt_password = "much signature bypass, such wow";
-static std::unordered_map<std::string, std::string> g_deviceMap;
 static std::wstring attacks_subfolder = L"attacks\\";
 static std::string enc_attack_suffix = ".exe.enc";
 
@@ -37,7 +36,7 @@ void snapshot_procs() {
         do {
             std::string exe = wchar2string(pe.szExeFile);
             int pid = pe.th32ProcessID;
-            g_running_procs[pid] = exe;
+			g_running_procs[pid] = exe; // TODO enhance with timestamp, allow multiple entries per pid, unique by pid+timestamp
         } while (Process32Next(snapshot, &pe));
     }
 }
@@ -420,144 +419,4 @@ bool launch_as_child(const std::string& path) {
         return false;
     }
     return true;
-}
-
-void build_device_map() {
-    if (!g_deviceMap.empty()) return; // build only once
-
-    WCHAR drives[512];
-    DWORD len = GetLogicalDriveStringsW(512, drives);
-    if (!len) return;
-
-    for (WCHAR* d = drives; *d; d += wcslen(d) + 1) {
-        // drive like L"C:\\"
-        std::wstring driveW(d, 2); // just "C:"
-        WCHAR target[MAX_PATH];
-        if (QueryDosDeviceW(driveW.c_str(), target, MAX_PATH)) {
-            std::wstring targetW(target);
-            // store as UTF-8
-            std::string drive = wstring2string(driveW); // "C:"
-            std::string ntpath = wstring2string(targetW); // "\Device\HarddiskVolume3"
-            g_deviceMap[ntpath] = drive + "\\"; // "C:\"
-        }
-    }
-}
-
-std::string translate_if_path(const std::string& s) {
-    std::string s2 = s;
-
-    // replace any \Device\HarddiskVolumeX\ with its actual drive letter
-    for (const auto& m : g_deviceMap) {
-		const std::string& nt = m.first;
-		const std::string& drive = m.second;
-        // build escaped regex like "\Device\HarddiskVolume3\"
-        std::string pattern;
-        for (char c : nt) {
-            if (c == '\\') pattern += "\\\\";
-            else pattern += c;
-        }
-        pattern += "\\\\"; // must end with slash
-
-        std::regex r(pattern, std::regex_constants::icase);
-        s2 = std::regex_replace(s2, r, drive);
-    }
-
-    // replace "\\?\X:\"  (any drive letter) with "X:\"
-    static const std::regex extendedPrefix(R"(\\\\\?\\([A-Za-z]:)\\)",
-    std::regex_constants::icase);
-    s2 = std::regex_replace(s2, extendedPrefix, "$1\\\\");
-
-    if (g_super_debug && s2 != s) {
-        std::cout << "[~] Utils: Translated path " << s << " to " << s2 << "\n";
-    }
-
-    return s2;
-}
-
-std::string normalized_value(json ev, std::string key) {
-    if (ev[key].is_string()) {
-        std::string s = ev[key].get<std::string>();
-        std::string st = translate_if_path(s);
-        std::replace(st.begin(), st.end(), '"', '\'');
-        return "\"" + st + "\"";
-    }
-    else {
-        return ev[key].dump();
-    }
-}
-
-// output all events as a sparse CSV timeline with merged PPID and FilePath
-std::string create_timeline_csv(const std::vector<json>& events, std::vector<std::string> header_start, bool colored) {
-    std::ostringstream csv_output;
-
-    std::vector<std::string> all_keys;
-    if (g_super_debug) {
-        std::cout << "[+] Utils: Adding predefined keys for CSV header: ";
-    }
-    for (const auto& k : header_start) {
-        all_keys.push_back(k);
-        if (g_super_debug) {
-            std::cout << k << ", ";
-        }
-    }
-    if (g_super_debug) {
-        std::cout << "\n";
-    }
-
-    // collect all property keys except merged ones
-    if (g_super_debug) {
-        std::cout << "[+] Utils: Adding new keys for CSV header: ";
-    }
-    for (const auto& ev : events) {
-        for (auto it = ev.begin(); it != ev.end(); ++it) {
-            // skip already inserted keys
-            if (std::find(all_keys.begin(), all_keys.end(), it.key()) != all_keys.end()) continue;
-
-            // or insert new key
-            all_keys.push_back(it.key());
-            if (g_super_debug) {
-                std::cout << it.key() << ", ";
-            }
-        }
-    }
-    if (g_super_debug) {
-        std::cout << "\n";
-    }
-
-    // add header to csv_output
-    for (const auto& key : all_keys) {
-        csv_output << key << ",";
-    }
-    if (colored) {
-        csv_output << COLOR_HEADER; // add color info column
-    }
-	// replace last comma with newline
-	csv_output.seekp(-1, std::ios_base::cur);
-	csv_output << "\n";
-
-    // print each event as a row    
-    for (const auto& ev : events) {
-        if (ev.is_null()) continue; // skip null events
-
-        // traverse keys IN ORDER OF CSV HEADER
-        // i.e. given: key from csv, check: if event has it, add value, else skip (add "")
-        for (const auto& key : all_keys) {
-            // check if this event has a value for this key
-            if (ev.contains(key)) {
-                csv_output << normalized_value(ev, key);
-            }
-            // else print "" to skip it
-            else {
-                csv_output << "";
-            }
-            csv_output << ",";
-        }
-        if (colored) {
-            csv_output << add_color_info(ev);
-        }
-        // replace last comma with newline
-        csv_output.seekp(-1, std::ios_base::cur);
-        csv_output << "\n";
-    }
-    return csv_output.str();
 }

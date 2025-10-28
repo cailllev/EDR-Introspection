@@ -6,8 +6,6 @@
 #include "sandblast.h"
 #include "utils.h"
 
-
-// TODO check return of EDRSandblast, maybe with > out.txt or named pipes
 // disables kernel callbacks
 bool disable_kernel_callbacks_ok() {
     STARTUPINFO si{};

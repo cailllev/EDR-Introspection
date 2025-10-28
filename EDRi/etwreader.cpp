@@ -3,7 +3,6 @@
 
 #include "globals.h"
 #include "utils.h"
-#include "filter.h"
 #include "profile.h"
 #include "etwreader.h"
 #include "etwparser.h"
