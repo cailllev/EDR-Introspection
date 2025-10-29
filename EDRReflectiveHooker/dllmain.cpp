@@ -1,6 +1,5 @@
 #include <windows.h>
 #include <winternl.h>
-#include <excpt.h>
 #include <intrin.h>
 #include <psapi.h>
 #include <tchar.h>
@@ -406,7 +405,17 @@ void emit_etw_msg(const char msg[], UINT64 tpid) {
     UINT64 ns = get_ns_time();
     TraceLoggingWrite(
         g_hProvider,
-        "EDRHookTask", 
+        "EDRHookTask",
+        TraceLoggingString(msg, "message"),
+        TraceLoggingUInt64(ns, "ns_since_epoch"),
+        TraceLoggingUInt64(tpid, "targetpid")
+    );
+};
+
+void emit_etw_msg_ns(const char msg[], UINT64 tpid, UINT64 ns) {
+    TraceLoggingWrite(
+        g_hProvider,
+        "EDRHookTask",
         TraceLoggingString(msg, "message"),
         TraceLoggingUInt64(ns, "ns_since_epoch"),
         TraceLoggingUInt64(tpid, "targetpid")
@@ -414,6 +423,52 @@ void emit_etw_msg(const char msg[], UINT64 tpid) {
 };
 
 const size_t MSG_LEN = 128;
+const size_t BIG_MSG_LEN = 1024;
+
+// helper structure for ReadFile handle resolving
+typedef struct _FNR_ARGS {
+    HANDLE      FileHandle; // duplicated handle (or NULL on failure)
+    DWORD       Pid;
+    UINT64      Timestamp;
+} FNR_ARGS, * PFNR_ARGS;
+
+// worker thread: resolve filename and emit ETW
+DWORD WINAPI ReadFileResolverThread(LPVOID lpParam)
+{
+    FNR_ARGS* args = (FNR_ARGS*)lpParam;
+    if (!args) return 0;
+    HANDLE hFile = args->FileHandle;
+    DWORD pid = args->Pid;
+    UINT64 ns = args->Timestamp;
+
+    char msg[BIG_MSG_LEN];
+    // default message if invalid handle
+    if (!hFile || hFile == INVALID_HANDLE_VALUE) {
+        _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtReadFile handle=0x%p (invalid handle)", (void*)hFile);
+    }
+    else {
+        char* buf = (char*)malloc(BIG_MSG_LEN);
+        if (buf) {
+            if (GetFinalPathNameByHandleA(hFile, buf, BIG_MSG_LEN, FILE_NAME_NORMALIZED)) {
+                _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtReadFile %s", buf);
+            }
+            else {
+                _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtReadFile handle=0x%p (resolve failed)", (void*)hFile);
+            }
+            free(buf);
+        }
+        else {
+            _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtReadFile handle=0x%p (alloc failed)", (void*)hFile);
+        }
+    }
+
+    emit_etw_msg_ns(msg, pid, ns);
+
+    // close handle
+    if (hFile && hFile != INVALID_HANDLE_VALUE) CloseHandle(hFile);
+    free(args);
+    return 0;
+}
 
 NTSTATUS NTAPI Hook_NtOpenFile(
     PHANDLE            FileHandle,
@@ -423,14 +478,25 @@ NTSTATUS NTAPI Hook_NtOpenFile(
     ULONG              ShareAccess,
     ULONG              OpenOptions
 ) {
-    char msg[MSG_LEN];
-    if (FileHandle == nullptr) {
-        _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenFile with 0x%X", static_cast<unsigned int>(DesiredAccess));
+    char msg[BIG_MSG_LEN];
+    if (ObjectAttributes && ObjectAttributes->ObjectName) {
+        PUNICODE_STRING name = ObjectAttributes->ObjectName;
+        if (name->Buffer && name->Length > 0 && !IsBadReadPtr(name->Buffer, name->Length)) {
+            char nameBuf[MAX_PATH] = { 0 };
+            int wcharCount = name->Length / sizeof(WCHAR);
+            WideCharToMultiByte(CP_ACP, 0, name->Buffer, wcharCount, nameBuf, MAX_PATH - 1, NULL, NULL);
+            nameBuf[MAX_PATH - 1] = '\0'; // ensure termination
+            _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenFile %s with 0x%X", nameBuf, (unsigned)DesiredAccess);
+        }
+        else {
+            _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenFile (no or invalid name) with 0x%X", (unsigned)DesiredAccess);
+        }
     }
     else {
-        _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenFile handle=%p with 0x%X", (void*)(*FileHandle), static_cast<unsigned int>(DesiredAccess));
+        _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenFile (no objectattrs) with 0x%X", (unsigned)DesiredAccess);
     }
     emit_etw_msg(msg, pid);
+
     return g_origNtOpenFile(FileHandle, DesiredAccess, ObjectAttributes, IoStatusBlock, ShareAccess, OpenOptions);
 }
 
@@ -445,9 +511,36 @@ NTSTATUS NTAPI Hook_NtReadFile(
     PLARGE_INTEGER ByteOffset,
     PULONG Key
 ) {
-    char msg[MSG_LEN];
-    _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtReadFile handle=%p", (void*)(FileHandle));
-    emit_etw_msg(msg, pid);
+    UINT64 ns = get_ns_time();
+
+    // duplicate handle to ensure validity in worker thread
+    HANDLE dup = NULL;
+    if (FileHandle && FileHandle != INVALID_HANDLE_VALUE) {
+        BOOL ok = DuplicateHandle(
+            GetCurrentProcess(), FileHandle,
+            GetCurrentProcess(), &dup,
+            0, FALSE, DUPLICATE_SAME_ACCESS
+        );
+        if (!ok) dup = NULL;
+    }
+
+    // prepare args: dup may be NULL on failure; worker will handle it
+    FNR_ARGS* args = (FNR_ARGS*)malloc(sizeof(FNR_ARGS));
+    if (args) {
+        args->FileHandle = dup;
+        args->Pid = GetCurrentProcessId();
+        args->Timestamp = ns;
+        HANDLE th = CreateThread(NULL, 0, ReadFileResolverThread, args, 0, NULL);
+        if (th) CloseHandle(th);
+        else { // thread creation failed: cleanup duplicate and args
+            if (dup) CloseHandle(dup);
+            free(args);
+        }
+    }
+    else { // allocation failed: cleanup duplicate
+        if (dup) CloseHandle(dup);
+    }
+
     return g_origNtReadFile(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, Buffer, Length, ByteOffset, Key);
 }
 
