@@ -1,6 +1,7 @@
 #pragma once
 
-#include <map>
+#include <string>
+#include <vector>
 #include <shared_mutex>
 
 #include "helpers/json.hpp"
@@ -26,7 +27,13 @@ extern std::vector<int> g_tracking_PIDs;
 extern int g_attack_PID;
 extern int g_injected_PID;
 
-extern std::map<int, std::string> g_running_procs;
+struct ProcInfo {
+	int PID;
+	uint64_t start_time;
+	uint64_t end_time;
+	std::string name;
+};
+extern std::vector<ProcInfo> g_running_procs;
 extern std::shared_mutex g_procs_mutex;
 
 extern bool g_traces_started;

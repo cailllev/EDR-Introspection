@@ -42,7 +42,7 @@ TRACELOGGING_DEFINE_PROVIDER(
 
 // globals
 std::vector<int> g_tracking_PIDs = {};
-std::map<int, std::string> g_running_procs = {};
+std::vector<ProcInfo> g_running_procs = {};
 std::shared_mutex g_procs_mutex;
 bool g_with_hooks = false;
 bool reflective_inject = true;
@@ -62,11 +62,6 @@ static const int wait_after_termination_ms = 5000;
 static const int wait_time_between_start_markers_ms = 1000;
 static const int wait_callbacks_reenable_ms = 10000;
 static const int timeout_for_hooker_init = 30;
-
-UINT64 get_ns_time() {
-    auto now = std::chrono::system_clock::now();
-    return std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
-}
 
 std::string ok = "[+] ";
 std::string fail = "[!] ";
@@ -250,11 +245,24 @@ int main(int argc, char* argv[]) {
         return 1;
 	}
 
+    // WAIT UNTIL TRACES ARE READY
+    Sleep(wait_after_traces_started_ms);
+    std::cout << "[*] EDRi: Waiting until start marker is registered\n";
+    while (!g_traces_started) {
+        emit_etw_event(EDRi_TRACE_START_MARKER, "", false);
+        Sleep(wait_time_between_start_markers_ms);
+    }
+    std::cout << "[*] EDRi: Traces started\n";
+
     // GET PROCS TO TRACK
+    // etw traces also add procs over time
+    // -> taking a snapshot of procs first and then starting etw would omit procs started
+    //    between snapshot_procs() and "traces ready to track new proc creations"
     std::cout << "[*] EDRi: Get running procs\n";
     snapshot_procs();
+    UINT64 proc_snapshot_timestamp = get_ns_time();
     for (auto& e : exes_to_track) {
-        std::vector<int> pids = get_PID_by_name(e);
+        std::vector<int> pids = get_PID_by_name(e, proc_snapshot_timestamp);
         for (auto& p : pids) {
             std::cout << "[+] EDRi: Got pid for " << e << ":" << p << "\n";
             g_tracking_PIDs.push_back(p);
@@ -264,7 +272,7 @@ int main(int argc, char* argv[]) {
 		}
     }
     for (auto& e : get_all_edr_exes(edr_profile)) {
-        std::vector<int> pids = get_PID_by_name(e);
+        std::vector<int> pids = get_PID_by_name(e, proc_snapshot_timestamp);
         for (auto& p : pids) {
             std::cout << "[+] EDRi: Got pid for " << e << ":" << p << "\n";
             g_tracking_PIDs.push_back(p);
@@ -280,15 +288,7 @@ int main(int argc, char* argv[]) {
 		Sleep(3000);
 	}
 
-    // WAIT UNTIL TRACES ARE READY
-    Sleep(wait_after_traces_started_ms);
-    std::cout << "[*] EDRi: Waiting until start marker is registered\n";
-	while (!g_traces_started) {
-        emit_etw_event(EDRi_TRACE_START_MARKER, "", false);
-		Sleep(wait_time_between_start_markers_ms);
-	}
-	std::cout << "[*] EDRi: Traces started\n";
-
+    // HOOK NTDLL
     // hooking emits etw events, so hooking must be done after the traces are started
     if (hook_ntdll) {
         if (!disable_kernel_callbacks_ok()) {
@@ -301,7 +301,7 @@ int main(int argc, char* argv[]) {
         std::vector<std::string> main_edr_exes = edr_profile.main_exes;
         bool found_none = true;
         for (auto& exe : main_edr_exes) {
-            std::vector<int> pids = get_PID_by_name(exe);
+            std::vector<int> pids = get_PID_by_name(exe, proc_snapshot_timestamp);
             if (pids.empty()) {
                 std::cerr << "[!] EDRi: Could not find the EDR process " << exe << ", is it running?\n";
                 continue;
