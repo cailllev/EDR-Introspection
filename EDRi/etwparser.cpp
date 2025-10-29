@@ -484,7 +484,7 @@ std::string get_kernel_api_task_name(int event_id) {
     if (event_id == 2)
         return "NtTerminateProcess";
     if (event_id == 3)
-        return "ObCreateSymbolicLink";
+        return "NtCreateSymbolicLinkObject";
     if (event_id == 4)
         return "NtSetContextThread";
     if (event_id == 5)
