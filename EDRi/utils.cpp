@@ -25,59 +25,103 @@ static const std::string hooked_pids_file_path = "C:\\Users\\Public\\Downloads\\
 
 static bool initialized = false;
 
-// thread-safe storing PID:EXE to global variable
+
+// get unix epoch time in nanoseconds (100 ns resolution)
+UINT64 get_ns_time() {
+    auto now = std::chrono::system_clock::now();
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
+}
+
+// thread-safe storing ProcInfo to global variable, processes found here are assumed to be running since t=0
 void snapshot_procs() {
+    UINT64 ns = get_ns_time();
 	initialized = true;
     PROCESSENTRY32 pe;
     pe.dwSize = sizeof(PROCESSENTRY32);
     HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (Process32First(snapshot, &pe)) {
-        std::unique_lock<std::shared_mutex> lock(g_procs_mutex); // one lock for entire update
+        std::unique_lock<std::shared_mutex> lock(g_procs_mutex); // writer lock (one allowed, no readers)
         do {
             std::string exe = wchar2string(pe.szExeFile);
             int pid = pe.th32ProcessID;
-			g_running_procs[pid] = exe; // TODO enhance with timestamp, allow multiple entries per pid, unique by pid+timestamp
+            ProcInfo pi = { pid, MIN_PROC_START, MAX_PROC_END, exe };
+			g_running_procs.push_back(pi);
         } while (Process32Next(snapshot, &pe));
     }
 }
 
 // thread-safe retrieving the PID of the first case-insensitive match, ignores other same-named processes
-std::vector<int> get_PID_by_name(const std::string& name) {
+std::vector<int> get_PID_by_name(const std::string& name, UINT64 timestamp) {
     if (!initialized) {
 		std::cerr << "[!] Utils: Cannot use get_PID_by_name() before snapshot_procs()\n";
         return {};
     }
-    std::vector<int> p = {};
+    std::vector<int> procs = {};
     std::shared_lock<std::shared_mutex> lock(g_procs_mutex); // reader lock (multiple allowed when no writers)
     for (auto it = g_running_procs.begin(); it != g_running_procs.end(); ++it) {
-        if (_stricmp(it->second.c_str(), name.c_str()) == 0) {
-            p.push_back(it->first);
+        if (_stricmp(it->name.c_str(), name.c_str()) == 0) { // check if name matches
+            if (it->start_time < timestamp&& it->end_time > timestamp) { // check if timestamp is inside start and end
+                procs.push_back(it->PID);
+            }
         }
     }
-    return p;
+    return procs;
 }
 
-// thread-safe adding a proc (can overwrite old procs)
-void add_proc(int pid, const std::string& exe) {
-    std::unique_lock<std::shared_mutex> lock(g_procs_mutex); // writer lock (one allowed, no readers)
-    if (g_running_procs.find(pid) != g_running_procs.end()) {
+// thread-safe adding a proc
+void add_proc(int pid, const std::string& name) {
+    if (!initialized) {
+        if (g_debug) {
+            std::cout << "[~] Utils: New proc " << pid << ":" << name << " started before snapshot was taken";
+            std::cout << ", will be ignored here and just added in the snapshot_procs()\n";
+        }
         return;
     }
-    g_running_procs[pid] = exe;
+    UINT64 ns = get_ns_time() - RESERVE_NS; // set start a bit earlier
+    std::unique_lock<std::shared_mutex> lock(g_procs_mutex); // writer lock (one allowed, no readers)
+    ProcInfo pi = { pid, ns, MAX_PROC_END, name };
+    g_running_procs.push_back(pi);
     if (g_debug) {
-        std::cout << "[+] Utils: New proc started at runtime (" << g_running_procs.size() << " procs now): " << pid << ":" << exe << "\n";
+        std::cout << "[+] Utils: New proc started at runtime (" << g_running_procs.size() << " procs now): " << pid << ":" << name << "\n";
+    }
+}
+
+// thread-safe marking the proc termination
+void mark_termination(int pid) {
+    UINT64 ns = get_ns_time() + RESERVE_NS; // set termination a bit later
+    std::unique_lock<std::shared_mutex> lock(g_procs_mutex); // writer lock (one allowed, no readers)
+    ProcInfo* latest_proc = nullptr;
+    for (auto it = g_running_procs.begin(); it != g_running_procs.end(); ++it) {
+        if (it->PID == pid) {
+            if (latest_proc == nullptr || it->start_time > latest_proc->start_time) {
+                latest_proc = &(*it);
+            }
+        }
+    }
+    if (latest_proc != nullptr) {
+        latest_proc->end_time = ns;
+    }
+    else if (g_debug) {
+        std::cout << "[!] Utils: Cannot add termination for unregistered proc " << pid << " at " << unix_epoch_ns_to_iso8601(ns) << "\n";
     }
 }
 
 // thread-safe retrieving a proc
-std::string get_proc_name(int pid) {
+std::string get_proc_name(int pid, UINT64 timestamp) {
     std::shared_lock<std::shared_mutex> lock(g_procs_mutex); // reader lock (multiple allowed when no writers)
-    auto it = g_running_procs.find(pid);
-    return (it != g_running_procs.end()) ? it->second : PROC_NOT_FOUND;
+    for (auto it = g_running_procs.begin(); it != g_running_procs.end(); ++it) {
+        if (it->PID == pid) { // check if pid matches
+            if (it->start_time < timestamp && it->end_time > timestamp) { // check if timestamp is inside start and end
+                return it->name;
+            }
+        }
+    }
+    return PROC_NOT_FOUND;
 }
 
-// check if unnecessary tools are running --> these inflate the csv output
+// check if unnecessary tools are running --> these inflate the output
 std::string unnecessary_tools_running() {
+    UINT64 ns = get_ns_time();
     std::string r = "";
 	if (!initialized) {
         std::cerr << "[!] Utils: Cannot use unnecessary_tools_running() before snapshot_procs()\n";
@@ -85,7 +129,7 @@ std::string unnecessary_tools_running() {
 	}
     std::vector<std::string> procs = { "procexp64.exe" };
     for (auto& p : procs) {
-        if (!get_PID_by_name(p).empty()) {
+        if (!get_PID_by_name(p, ns).empty()) {
             r += p + " ";
         }
     }
@@ -137,7 +181,7 @@ bool remove_file(const std::string& path) {
     return true;
 }
 
-// get the EDRi.exe's path  
+// get the EDRi.exe's base path  
 std::wstring get_base_path() {
     wchar_t buffer[MAX_PATH];
     // Get the full path of the executable
@@ -297,38 +341,6 @@ std::string unix_epoch_ns_to_iso8601(uint64_t ns_since_epoch)
         << "Z"; // UTC
 
     return oss.str();
-}
-
-std::string resolve_handle_in_msg(const std::string& msg) {
-    unsigned long long handle_val = 0;
-    if (sscanf_s(msg.c_str(), "NtOpenFile handle=0x%llx", &handle_val) == 0) {
-        return msg;
-    }
-
-    char filename[MAX_PATH] = "unresolved";
-    HANDLE hFile = reinterpret_cast<HANDLE>(handle_val);
-
-    if (!hFile || hFile == INVALID_HANDLE_VALUE) {
-        strcpy_s(filename, "invalid");
-	}
-
-    DWORD len = GetFinalPathNameByHandleA(hFile, filename, MAX_PATH, FILE_NAME_NORMALIZED);
-    if (len == 0 || len >= MAX_PATH) {
-        strcpy_s(filename, "invalid");
-    }
-
-    // Find where "handle=0x..." starts in the string
-    size_t handle_pos = msg.find("handle=0x");
-
-    // Find the space after the handle hex
-    size_t end = msg.find(' ', handle_pos);
-    if (end == std::string::npos)
-        end = msg.size();
-
-    // Replace "handle=0x...." with the resolved path
-    std::string result = msg;
-    result.replace(handle_pos, end - handle_pos, filename);
-    return result;
 }
 
 char* get_memory_region_protect(DWORD protect) {

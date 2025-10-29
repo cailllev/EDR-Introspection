@@ -127,7 +127,7 @@ json parse_custom_etw_event(Event e) {
             msg = "(empty message)";
             std::cout << "[*] ETW: Warning: Custom event with empty message " << j.dump() << "\n";
         }
-        j[MESSAGE] = resolve_handle_in_msg(msg); // resolve file handles (if any) in the message
+        j[MESSAGE] = msg;
         const BYTE* ptr_field = data + msg_len + 1;
 
         // PARSE NS_SINCE_EPOCH
@@ -444,14 +444,6 @@ json parse_etw_event(Event e) {
             }
         }
 
-        // add a newly spawned procs to process map
-        int pid = check_new_proc(j);
-        if (pid != 0) {
-            std::string exe_path = j[FILEPATH].get<std::string>();
-            std::string exe_name = exe_path.substr(exe_path.find_last_of("\\") + 1);
-            add_proc(pid, exe_name);
-        }
-
         // callstack
         if (include_stacktrace) {
             try {
@@ -531,6 +523,18 @@ int check_new_proc(json& j) {
     return 0;
 }
 
+// check proc ended via kernel/antimalware etw
+int check_proc_termination(json& j) {
+    if (j[PROVIDER_NAME] == KERNEL_PROCESS_PROVIDER && j[EVENT_ID] == KERNEL_PROC_STOP_EVENT_ID && j.contains(TARGET_PID)) {
+        return j[TARGET_PID]; // kernel proc uses this key
+    }
+    if (j[PROVIDER_NAME] == ANTIMALWARE_PROVIDER && j[EVENT_ID] == ANTIMALWARE_PROC_START_STOP_EVENT_ID &&
+        j.contains(SOURCE) && j[SOURCE] == ANTIMALWARE_PROC_STOP_MSG && j.contains(ORIGINATING_PID)) {
+        return j[ORIGINATING_PID]; // antimalware uses this key
+    }
+    return 0;
+}
+
 // check when the first EDRi event is registered --> trace running
 bool check_traces_started(json& j) {
     if (j.contains(MESSAGE)) {
@@ -547,8 +551,51 @@ bool check_hooker_started(json& j) {
     return false;
 }
 
-// monitors events, sets and ended flag, attack and injected PID
+// monitors events: mark procs as started or terminated (also attack and injected on their own), and check traces startes
 void post_parsing_checks(json& j) {
+    // add a newly spawned procs to process map
+    int pid = check_new_proc(j);
+    if (pid != 0) {
+        std::string exe_path = j[FILEPATH].get<std::string>();
+        std::string exe_name = exe_path.substr(exe_path.find_last_of("\\") + 1);
+        add_proc(pid, exe_name);
+
+        // also check if the attack_PID and injected_PID can be set
+        if (g_attack_PID == 0) {
+            if (j.contains(FILEPATH) && filepath_match(j[FILEPATH], g_attack_exe_path)) { // depends on the attack path, but this is fixed
+                g_attack_PID = pid;
+                g_tracking_PIDs.push_back(g_attack_PID);
+                std::cout << "[+] ETW: Got attack PID: " << g_attack_PID << "\n";
+            }
+        }
+        if (g_injected_PID == 0) {
+            if (j.contains(FILEPATH)) {
+                std::string event_exe = j[FILEPATH].get<std::string>();
+                event_exe = event_exe.substr(event_exe.find_last_of("\\") + 1); // notepad is a windows app, only match via it's name, as path differs!
+                if (_stricmp(event_exe.c_str(), injected_exe.c_str()) == 0) {
+                    g_injected_PID = pid;
+                    g_tracking_PIDs.push_back(g_injected_PID);
+                    std::cout << "[+] ETW: Got injected PID: " << g_injected_PID << "\n";
+                }
+            }
+        }
+    }
+
+    // or mark termination of process
+    pid = check_proc_termination(j);
+    if (pid != 0) {
+        mark_termination(pid);
+        
+        // also check if the attack is done
+        if (!g_attack_terminated && pid == g_attack_PID) {
+            if (g_debug) {
+                std::cout << "[+] ETW: Attack termination detected\n";
+            }
+            g_attack_terminated = true;
+        }
+        // no need to check for injected termination, only g_attack_terminated is relevant
+    }
+
     // checks if the trace started
     if (!g_traces_started && check_traces_started(j)) {
         if (g_debug) {
@@ -563,46 +610,5 @@ void post_parsing_checks(json& j) {
             std::cout << "[+] ETW: Hooker initialization detected\n";
         }
         g_hooker_started = true;
-    }
-
-    int new_proc_id = check_new_proc(j);
-
-    // check if the attack_PID and injected_PID can be set
-    if (g_attack_PID == 0 && new_proc_id != 0) {
-        if (j.contains(FILEPATH) && filepath_match(j[FILEPATH], g_attack_exe_path)) { // depends on the attack path, but this is fixed
-            g_attack_PID = new_proc_id;
-            g_tracking_PIDs.push_back(g_attack_PID);
-            std::cout << "[+] ETW: Got attack PID: " << g_attack_PID << "\n";
-        }
-    }
-    if (g_injected_PID == 0 && new_proc_id != 0) {
-        if (j.contains(FILEPATH)) {
-			std::string event_exe = j[FILEPATH].get<std::string>();
-			event_exe = event_exe.substr(event_exe.find_last_of("\\") + 1); // only the exe name
-            if (_stricmp(event_exe.c_str(), injected_exe.c_str()) == 0) {
-                g_injected_PID = new_proc_id;
-                g_tracking_PIDs.push_back(g_injected_PID);
-                std::cout << "[+] ETW: Got injected PID: " << g_injected_PID << "\n";
-            }
-        }
-    }
-
-    // checks if the attack is done
-    if (!g_attack_terminated) {
-		// kernel event: check if the event contains the attack pid and is a terminate event
-        bool kernel_proc_stopped = j[PROVIDER_NAME] == KERNEL_PROCESS_PROVIDER && j[EVENT_ID] == KERNEL_PROC_STOP_EVENT_ID &&
-            j.contains(TARGET_PID) && j[TARGET_PID] == g_attack_PID;
-
-        // am event: check if the event contains the attack pid and is a terminate event
-        bool antimalware_proc_stopped = j[PROVIDER_NAME] == ANTIMALWARE_PROVIDER && j[EVENT_ID] == ANTIMALWARE_PROC_START_STOP_EVENT_ID &&
-            j.contains(SOURCE) && j[SOURCE] == ANTIMALWARE_PROC_STOP_MSG &&
-            j.contains(ORIGINATING_PID) && j[ORIGINATING_PID] == g_attack_PID;
-        
-        if (kernel_proc_stopped || antimalware_proc_stopped) {
-            if (g_debug) {
-                std::cout << "[+] ETW: Attack termination detected\n";
-            }
-            g_attack_terminated = true;
-        }
     }
 }
