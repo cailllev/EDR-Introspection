@@ -14,11 +14,6 @@
 // all events
 std::vector<json> all_etw_events = {};
 
-const UINT64 WINDOWS_TICK = 10'000'000ULL;        // 100ns intervals
-const UINT64 NS_PER_WINDOWS_TICK = 100ULL;        // 1 tick per 100ns
-const UINT64 SECS_TO_UNIX_EPOCH = 11644473600ULL; // seconds between 1601 and 1970, https://stackoverflow.com/questions/6161776/convert-windows-filetime-to-second-in-unix-linux#answer-6161842
-const UINT64 WINDOWS_TICKS_TO_UNIX_EPOCH = SECS_TO_UNIX_EPOCH * WINDOWS_TICK;
-
 std::map<std::string, std::vector<float>> time_diffs_ns = { // differences in nanoseconds between ETW time and system time
     { EDRi_PROVIDER, {} },
     { ATTACK_PROVIDER, {} },
@@ -92,6 +87,7 @@ json parse_custom_etw_event(Event e) {
         std::string provider = wchar2string(e.schema.provider_name());
 
 		__int64 timestamp_filetime = static_cast<__int64>(e.record.EventHeader.TimeStamp.QuadPart);
+        j[TIMESTAMP_NS] = filetime_to_unix_epoch_ns(timestamp_filetime);
         j[TIMESTAMP_ETW] = filetime_to_iso8601(timestamp_filetime);
         j[TYPE] = "myETW";
         j[PID] = e.record.EventHeader.ProcessId;
@@ -174,7 +170,9 @@ json parse_etw_event(Event e) {
 
         json j;
 
-        j[TIMESTAMP_ETW] = filetime_to_iso8601(static_cast<__int64>(e.record.EventHeader.TimeStamp.QuadPart));
+        __int64 timestamp_filetime = static_cast<__int64>(e.record.EventHeader.TimeStamp.QuadPart);
+        j[TIMESTAMP_NS] = filetime_to_unix_epoch_ns(timestamp_filetime);
+        j[TIMESTAMP_ETW] = filetime_to_iso8601(timestamp_filetime);
         j[TIMESTAMP_SYS] = j[TIMESTAMP_ETW]; // normal ETW events only have their timestamp, not my "accurate" timestamp
         j[PID] = e.record.EventHeader.ProcessId;
         j[TID] = e.record.EventHeader.ThreadId;
@@ -277,8 +275,22 @@ json parse_etw_event(Event e) {
                     j[key] = (uint64_t)parser.parse<uint64_t>(property_name);
                     break;
                 case TDH_INTYPE_BOOLEAN:
-                    j[key] = (bool)parser.parse<BOOL>(property_name);
+                {
+                    try {
+                        j[key] = (bool)parser.parse<bool>(property_name);
+                    }
+                    catch (...) {
+                        // fallback: dump raw bytes
+                        auto bin = parser.parse<krabs::binary>(property_name);
+                        const auto& bytes = bin.bytes();
+                        std::ostringstream oss;
+                        oss << "0x" << std::hex << std::setfill('0');
+                        for (auto b : bytes)
+                            oss << std::setw(2) << static_cast<int>(b);
+                        j[key] = oss.str();
+                    }
                     break;
+                }
                 case TDH_INTYPE_POINTER:
                     j[key] = (uint64_t)parser.parse<PVOID>(property_name);
                     break;
@@ -545,7 +557,7 @@ bool check_traces_started(json& j) {
 
 // check if the hooker emits ETW messages --> hooks installed
 bool check_hooker_started(json& j) {
-    if (j.contains(MESSAGE)) {
+    if (j[PROVIDER_NAME] == HOOK_PROVIDER && j.contains(MESSAGE)) {
         return j[MESSAGE] == NTDLL_HOOKER_TRACE_START_MARKER;
     }
     return false;

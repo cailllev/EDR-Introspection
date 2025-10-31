@@ -56,7 +56,7 @@ bool g_debug = false;
 bool g_super_debug = false;
 
 // wait times
-static const int wait_after_traces_started_ms = 15000;
+static const int add_wait_for_other_traces = 5000; // ensure all other traces are also started (additional wait)
 static const int wait_between_events_ms = 1000;
 static const int wait_after_termination_ms = 5000;
 static const int wait_time_between_start_markers_ms = 1000;
@@ -186,6 +186,7 @@ int main(int argc, char* argv[]) {
     bool trace_etw_misc = false, trace_etw_ti = false, hook_ntdll = false;
     if (result.count("track-all") > 0) {
         trace_etw_misc = true, trace_etw_ti = true, hook_ntdll = true;
+        g_with_hooks = true;
     }
     else {
         if (result.count("trace-etw-misc") > 0) {
@@ -240,17 +241,19 @@ int main(int argc, char* argv[]) {
             return 1;
         }
     }
-    if (!start_etw_default_traces(threads)) {
+    if (!start_etw_default_traces(threads)) { // start last
         std::cerr << "[!] EDRi: Failed to start default ETW traces(s)\n";
         return 1;
 	}
 
     // WAIT UNTIL TRACES ARE READY
-    Sleep(wait_after_traces_started_ms);
     std::cout << "[*] EDRi: Waiting until start marker is registered\n";
     while (!g_traces_started) {
         emit_etw_event(EDRi_TRACE_START_MARKER, "", false);
         Sleep(wait_time_between_start_markers_ms);
+    }
+    if (hook_ntdll || trace_etw_ti || trace_etw_misc) {
+        Sleep(add_wait_for_other_traces); // other traces may take longer to start, wait for them too
     }
     std::cout << "[*] EDRi: Traces started\n";
 
@@ -258,6 +261,7 @@ int main(int argc, char* argv[]) {
     // etw traces also add procs over time
     // -> taking a snapshot of procs first and then starting etw would omit procs started
     //    between snapshot_procs() and "traces ready to track new proc creations"
+    // --> therefore snapshot_procs() after traces started
     std::cout << "[*] EDRi: Get running procs\n";
     snapshot_procs();
     UINT64 proc_snapshot_timestamp = get_ns_time();
@@ -299,6 +303,9 @@ int main(int argc, char* argv[]) {
 
 		// get main edr processes and inject the hooker
         std::vector<std::string> main_edr_exes = edr_profile.main_exes;
+        std::vector<int> hooked_procs = get_hooked_procs();
+        std::vector<int> newly_hooked_procs = std::vector<int>{};
+        bool check_init_needed = false;
         bool found_none = true;
         for (auto& exe : main_edr_exes) {
             std::vector<int> pids = get_PID_by_name(exe, proc_snapshot_timestamp);
@@ -308,12 +315,19 @@ int main(int argc, char* argv[]) {
             }
             found_none = false;
             for (auto& pid : pids) {
+                if (std::find(hooked_procs.begin(), hooked_procs.end(), pid) != hooked_procs.end()) {
+                    std::cout << "[+] EDRi: Found the EDR process " << exe << ":" << pid << ", but already hooked, continuing...\n";
+                    newly_hooked_procs.push_back(pid); // add for next run, only when PID stayed the same
+                    continue; // already hooked
+                }
                 std::cout << "[+] EDRi: Found the EDR process " << exe << ":" << pid << ". Injecting...\n";
                 if (!inject_dll(pid, get_hook_dll_path(), g_debug, reflective_inject)) { // TODO reflective inject per profile?
                     std::cerr << "[!] EDRi: Failed to inject the hooker dll into " << exe << "\n";
                     stop_all_etw_traces();
                     exit(1);
                 }
+                newly_hooked_procs.push_back(pid); // add for next run
+                check_init_needed = true; // new proc hooked, must check if hooks started
 				std::cout << "[+] EDRi: Successfully injected the hooker into " << exe << ":" << pid << "\n";
             }
         }
@@ -322,10 +336,12 @@ int main(int argc, char* argv[]) {
             stop_all_etw_traces();
             return 1;
 		}
+        save_hooked_procs(newly_hooked_procs);
 
-        // check if the hooker is successfully initialized // TODO check all procs not just one start marker
+        // check if the hooker is successfully initialized 
+        // TODO check all procs not just one start marker
         int wait = 0;
-        while (!g_hooker_started) {
+        while (check_init_needed && !g_hooker_started) {
 			Sleep(1000);
             if (++wait > timeout_for_hooker_init) {
                 std::cerr << "[!] EDRi: Could not detect a successful initialization of the hooker!\n";
