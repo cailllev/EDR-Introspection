@@ -17,6 +17,9 @@ static const int ANTIMALWARE_PROC_START_STOP_EVENT_ID = 73;
 static const std::string ANTIMALWARE_PROC_START_MSG = "SyncStart";
 static const std::string ANTIMALWARE_PROC_STOP_MSG = "Termination";
 
+// nanoseconds since unix epoch
+static const std::string TIMESTAMP_NS = "timestamp_ns";
+
 // my system timestamp
 static const std::string TIMESTAMP_SYS = "timestamp_sys";
 static const std::wstring TIMESTAMP_SYS_W = std::wstring(TIMESTAMP_SYS.begin(), TIMESTAMP_SYS.end());

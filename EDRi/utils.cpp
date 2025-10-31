@@ -21,10 +21,9 @@ static const std::string encrypt_password = "much signature bypass, such wow";
 static std::wstring attacks_subfolder = L"attacks\\";
 static std::string enc_attack_suffix = ".exe.enc";
 
-static const std::string hooked_pids_file_path = "C:\\Users\\Public\\Downloads\\EDRi_hooked_pids.txt";
+const std::string hooked_procs_file = "C:\\Users\\Public\\Downloads\\hooked.txt";
 
-static bool initialized = false;
-
+static bool initialized_snapshot = false;
 
 // get unix epoch time in nanoseconds (100 ns resolution)
 UINT64 get_ns_time() {
@@ -35,7 +34,7 @@ UINT64 get_ns_time() {
 // thread-safe storing ProcInfo to global variable, processes found here are assumed to be running since t=0
 void snapshot_procs() {
     UINT64 ns = get_ns_time();
-	initialized = true;
+	initialized_snapshot = true;
     PROCESSENTRY32 pe;
     pe.dwSize = sizeof(PROCESSENTRY32);
     HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
@@ -52,7 +51,7 @@ void snapshot_procs() {
 
 // thread-safe retrieving the PID of the first case-insensitive match, ignores other same-named processes
 std::vector<int> get_PID_by_name(const std::string& name, UINT64 timestamp) {
-    if (!initialized) {
+    if (!initialized_snapshot) {
 		std::cerr << "[!] Utils: Cannot use get_PID_by_name() before snapshot_procs()\n";
         return {};
     }
@@ -60,7 +59,7 @@ std::vector<int> get_PID_by_name(const std::string& name, UINT64 timestamp) {
     std::shared_lock<std::shared_mutex> lock(g_procs_mutex); // reader lock (multiple allowed when no writers)
     for (auto it = g_running_procs.begin(); it != g_running_procs.end(); ++it) {
         if (_stricmp(it->name.c_str(), name.c_str()) == 0) { // check if name matches
-            if (it->start_time < timestamp&& it->end_time > timestamp) { // check if timestamp is inside start and end
+            if (it->start_time < timestamp && it->end_time > timestamp) { // check if timestamp is inside start and end
                 procs.push_back(it->PID);
             }
         }
@@ -70,7 +69,7 @@ std::vector<int> get_PID_by_name(const std::string& name, UINT64 timestamp) {
 
 // thread-safe adding a proc
 void add_proc(int pid, const std::string& name) {
-    if (!initialized) {
+    if (!initialized_snapshot) {
         if (g_debug) {
             std::cout << "[~] Utils: New proc " << pid << ":" << name << " started before snapshot was taken";
             std::cout << ", will be ignored here and just added in the snapshot_procs()\n";
@@ -123,7 +122,7 @@ std::string get_proc_name(int pid, UINT64 timestamp) {
 std::string unnecessary_tools_running() {
     UINT64 ns = get_ns_time();
     std::string r = "";
-	if (!initialized) {
+	if (!initialized_snapshot) {
         std::cerr << "[!] Utils: Cannot use unnecessary_tools_running() before snapshot_procs()\n";
         return r;
 	}
@@ -288,6 +287,21 @@ bool wstring_starts_with(const std::wstring& str, const std::wstring& prefix) {
 	return str.compare(0, prefix.size(), prefix) == 0;
 }
 
+UINT64 filetime_to_unix_epoch_ns(__int64 timestamp) {
+    // timestamp = FILETIME ticks since 1601 (100-ns intervals)
+    if (timestamp < WINDOWS_TICKS_TO_UNIX_EPOCH) {
+        // before Unix epoch
+        return 0;
+    }
+
+    uint64_t unix_ticks_100ns = static_cast<uint64_t>(timestamp) - WINDOWS_TICKS_TO_UNIX_EPOCH;
+    // 1 FILETIME tick = 100 ns -> multiply by 100
+    uint64_t unix_ns = unix_ticks_100ns * 100ULL;
+
+    return unix_ns;
+}
+
+
 std::string filetime_to_iso8601(__int64 timestamp) {
     // convert to FILETIME
     FILETIME ft;
@@ -431,4 +445,31 @@ bool launch_as_child(const std::string& path) {
         return false;
     }
     return true;
+}
+
+void save_hooked_procs(const std::vector<int> hooked_procs) {
+    std::ofstream ofs(hooked_procs_file, std::ios::trunc);
+    if (!ofs.is_open()) {
+        std::cerr << "[!] Utils: Failed to open file for writing: " << hooked_procs_file << "\n";
+        return;
+    }
+    for (int pid : hooked_procs) {
+        ofs << pid << "\n";
+    }
+    ofs.close();
+}
+
+std::vector<int> get_hooked_procs() {
+    std::vector<int> hooked_procs;
+    std::ifstream ifs(hooked_procs_file);
+    if (!ifs.is_open()) {
+        std::cerr << "[!] Utils: Failed to open file for reading: " << hooked_procs_file << "\n";
+        return hooked_procs;
+    }
+    int pid;
+    while (ifs >> pid) {
+        hooked_procs.push_back(pid);
+    }
+    ifs.close();
+    return hooked_procs;
 }
