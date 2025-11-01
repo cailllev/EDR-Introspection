@@ -453,6 +453,7 @@ json parse_etw_event(Event e) {
                     ", key: " << last_key <<
                     ", type: " << last_type <<
                     ", error: " << ex.what() << "\n";
+                j[last_key] = PARSE_ERROR; // write error and continue to next prop
             }
         }
 
