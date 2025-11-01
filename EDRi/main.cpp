@@ -338,7 +338,11 @@ int main(int argc, char* argv[]) {
 		}
         save_hooked_procs(newly_hooked_procs);
 
-        // check if the hooker is successfully initialized 
+        // check if the hooker is successfully initialized
+        if (!check_init_needed) {
+            std::cout << "[+] EDRi: No new process hooked, no need to check for initialization of the hooker\n";
+        }
+
         // TODO check all procs not just one start marker
         int wait = 0;
         while (check_init_needed && !g_hooker_started) {
