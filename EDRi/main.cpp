@@ -41,10 +41,10 @@ TRACELOGGING_DEFINE_PROVIDER(
 );
 
 // globals
-std::vector<int> g_tracking_PIDs = {};
-std::vector<ProcInfo> g_running_procs = {};
+std::vector<int> g_tracking_PIDs = std::vector<int>{};
+std::vector<int> g_newly_hooked_procs = std::vector<int>{};
+std::vector<ProcInfo> g_running_procs = std::vector<ProcInfo>{};
 std::shared_mutex g_procs_mutex;
-bool g_with_hooks = false;
 bool reflective_inject = true;
 
 // attack exe paths
@@ -193,7 +193,6 @@ int main(int argc, char* argv[]) {
     bool trace_etw_misc = false, trace_etw_ti = false, hook_ntdll = false;
     if (result.count("track-all") > 0) {
         trace_etw_misc = true, trace_etw_ti = true, hook_ntdll = true;
-        g_with_hooks = true;
     }
     else {
         if (result.count("trace-etw-misc") > 0) {
@@ -204,7 +203,6 @@ int main(int argc, char* argv[]) {
         }
         if (result.count("hook-ntdll") > 0) {
             hook_ntdll = true;
-			g_with_hooks = true;
         }
     }
 	std::cout << "[*] EDRi: Tracking options: ETW-Misc: " << (trace_etw_misc ? "Yes" : "No") 
@@ -311,7 +309,6 @@ int main(int argc, char* argv[]) {
 		// get main edr processes and inject the hooker
         std::vector<std::string> main_edr_exes = edr_profile.main_exes;
         std::vector<int> hooked_procs = get_hooked_procs();
-        std::vector<int> newly_hooked_procs = std::vector<int>{};
         bool check_init_needed = false;
         bool found_none = true;
         for (auto& exe : main_edr_exes) {
@@ -324,16 +321,16 @@ int main(int argc, char* argv[]) {
             for (auto& pid : pids) {
                 if (std::find(hooked_procs.begin(), hooked_procs.end(), pid) != hooked_procs.end()) {
                     std::cout << "[+] EDRi: Found the EDR process " << exe << ":" << pid << ", but already hooked, continuing...\n";
-                    newly_hooked_procs.push_back(pid); // add for next run, only when PID stayed the same
+                    g_newly_hooked_procs.push_back(pid); // add for next run, only when PID stayed the same
                     continue; // already hooked
                 }
                 std::cout << "[+] EDRi: Found the EDR process " << exe << ":" << pid << ". Injecting...\n";
-                if (!inject_dll(pid, get_hook_dll_path(), g_debug, reflective_inject)) { // TODO reflective inject per profile?
+                if (!inject_dll(pid, get_hook_dll_path(), g_debug, reflective_inject)) {
                     std::cerr << "[!] EDRi: Failed to inject the hooker dll into " << exe << "\n";
                     stop_all_etw_traces();
                     return 1;
                 }
-                newly_hooked_procs.push_back(pid); // add for next run
+                g_newly_hooked_procs.push_back(pid); // add for next run
                 check_init_needed = true; // new proc hooked, must check if hooks started
 				std::cout << "[+] EDRi: Successfully injected the hooker into " << exe << ":" << pid << "\n";
             }
@@ -343,14 +340,14 @@ int main(int argc, char* argv[]) {
             stop_all_etw_traces();
             return 1;
 		}
-        save_hooked_procs(newly_hooked_procs);
+        save_hooked_procs(g_newly_hooked_procs);
 
         // check if the hooker is successfully initialized
         if (!check_init_needed) {
             std::cout << "[+] EDRi: No new process hooked, no need to check for initialization of the hooker\n";
         }
 
-        // TODO check all procs not just one start marker
+        // check if ALL newly hooked procs emitted the hook start msg
         int wait = 0;
         while (check_init_needed && !g_hooker_started) {
 			Sleep(1000);
@@ -360,8 +357,8 @@ int main(int argc, char* argv[]) {
                 return 1;
 			}
         }
-		std::cout << "[*] EDRi: Wait for re-enabling of kernel callbacks by EDRSandblast...\n";
-		Sleep(wait_callbacks_reenable_ms); // wait a bit until callbacks are reenabled
+        std::cout << "[*] EDRi: Hooker initialization detected on all relevant processes, wait for re-enabling of kernel callbacks by EDRSandblast...\n";
+		Sleep(wait_callbacks_reenable_ms); // wait until callbacks are reenabled
     }
 
     // ATTACK

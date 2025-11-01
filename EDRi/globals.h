@@ -24,6 +24,7 @@ static const std::string injected_exe = "notepad.exe";
 static const std::string invoked_name = "microsoft.windowscalculator";
 
 extern std::vector<int> g_tracking_PIDs;
+extern std::vector<int> g_newly_hooked_procs;
 extern int g_attack_PID;
 extern int g_injected_PID;
 
@@ -38,7 +39,6 @@ extern std::shared_mutex g_procs_mutex;
 
 extern bool g_traces_started;
 extern bool g_hooker_started;
-extern bool g_with_hooks;
 extern bool g_attack_terminated;
 
 extern bool g_debug;
