@@ -167,6 +167,15 @@ Classifier filter_kernel_process(json& ev) {
     if (std::find(kproc_event_ids_with_tpid_minimal.begin(), kproc_event_ids_with_tpid_minimal.end(), ev[EVENT_ID]) != kproc_event_ids_with_tpid_minimal.end()) {
         return classify_to(ev, TARGET_PID, g_tracking_PIDs);
     }
+    // thread start and stop are only interesting with attack pid / tpid
+    if (std::find(kproc_event_ids_with_attack_pid_tpid.begin(), kproc_event_ids_with_attack_pid_tpid.end(), ev[EVENT_ID]) != kproc_event_ids_with_attack_pid_tpid.end()) {
+        Classifier c_pid = classify_to(ev, PID, { g_attack_PID });
+        Classifier c_tpid = classify_to(ev, TARGET_PID, { g_attack_PID });
+        if (c_pid == Minimal || c_tpid == Minimal) {
+            return Minimal; // put in minimal if either matches
+        } // else put it in relevant
+        return Relevant;
+    }
     // image load and unload events are at most relevant, not minimal (very noisy)
     if (std::find(kproc_event_ids_with_tpid_relevant.begin(), kproc_event_ids_with_tpid_relevant.end(), ev[EVENT_ID]) != kproc_event_ids_with_tpid_relevant.end()) {
         Classifier c = classify_to(ev, TARGET_PID, g_tracking_PIDs);
@@ -278,10 +287,13 @@ Classifier filter_antimalware(json& ev) {
         return Relevant; // unexpected event fields, do not filter
     }
 
-    // events to keep if filepath matches (case insensitive)
+    // events to keep if it's related to attack exe
+    // 30,31 = CreateNewFile,UfsScanFileTask
+    // 35-38 = Cache operations
     if (std::find(am_event_ids_with_filepath.begin(), am_event_ids_with_filepath.end(), ev[EVENT_ID]) != am_event_ids_with_filepath.end()) {
         if (ev.contains(FILEPATH)) {
-            if (_stricmp(ev[FILEPATH].get<std::string>().c_str(), g_attack_exe_path.c_str())) {
+            std::string path = ev[FILEPATH];
+            if (path.find(g_attack_exe_name) != std::string::npos) {
                 return Minimal; // do not filter if path matches
             }
             return All; // else filter out
