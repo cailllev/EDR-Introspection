@@ -37,7 +37,7 @@ MergeCategory ppid_keys = {
 };
 MergeCategory tpid_keys = { // all refer to yet another pid (event has an emitter (process_id), original proc (pid), and the target proc (tpid))
     TARGET_PID,
-    {KERNEL_PID, "tpid", "targetprocessid", "frozenprocessid"} // processid in kernel means tpid, processid in antimalware means pid (but only event 95 has this)
+    {"processid", "tpid", "targetprocessid", "frozenprocessid"} // processid in kernel means tpid, processid in antimalware means pid (but only event 95 has this)
 };
 MergeCategory ttid_keys = { // both refer to yet another pid (event has an emitter (process_id), original proc (pid), and the target proc (tpid))
     TARGET_TID,
@@ -173,10 +173,10 @@ json parse_etw_event(Event e) {
         __int64 timestamp_filetime = static_cast<__int64>(e.record.EventHeader.TimeStamp.QuadPart);
         j[TIMESTAMP_NS] = filetime_to_unix_epoch_ns(timestamp_filetime);
         j[TIMESTAMP_ETW] = filetime_to_iso8601(timestamp_filetime);
-        j[TIMESTAMP_SYS] = j[TIMESTAMP_ETW]; // normal ETW events only have their timestamp, not my "accurate" timestamp
+        j[TIMESTAMP_SYS] = j[TIMESTAMP_ETW]; // normal ETW events only have their timestamp, not the custom system timestamp
         j[PID] = e.record.EventHeader.ProcessId;
         j[TID] = e.record.EventHeader.ThreadId;
-        j[EVENT_ID] = e.schema.event_id(); // opcode is the same as event_id, sometimes just a different number
+        j[EVENT_ID] = e.schema.event_id(); // opcode is also an ID, but not documented?
         j[PROVIDER_NAME] = provider_name;
 
         if (j[PROVIDER_NAME] == THREAT_INTEL_PROVIDER) {
@@ -570,7 +570,8 @@ void post_parsing_checks(json& j) {
     if (pid != 0) {
         std::string exe_path = j[FILEPATH].get<std::string>();
         std::string exe_name = exe_path.substr(exe_path.find_last_of("\\") + 1);
-        add_proc(pid, exe_name);
+        UINT64 timestamp_ns = j[TIMESTAMP_NS];
+        add_proc(pid, exe_name, timestamp_ns);
 
         // also check if the attack_PID and injected_PID can be set
         if (g_attack_PID == 0) {
@@ -596,7 +597,8 @@ void post_parsing_checks(json& j) {
     // or mark termination of process
     pid = check_proc_termination(j);
     if (pid != 0) {
-        mark_termination(pid);
+        UINT64 timestamp_ns = j[TIMESTAMP_NS];
+        mark_termination(pid, timestamp_ns);
         
         // also check if the attack is done
         if (!g_attack_terminated && pid == g_attack_PID) {
