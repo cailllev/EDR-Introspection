@@ -16,6 +16,7 @@ static const int KERNEL_PROC_STOP_EVENT_ID = 2;
 static const int ANTIMALWARE_PROC_START_STOP_EVENT_ID = 73;
 static const std::string ANTIMALWARE_PROC_START_MSG = "SyncStart";
 static const std::string ANTIMALWARE_PROC_STOP_MSG = "Termination";
+static const std::string PARSE_ERROR = "<parse error>";
 
 // nanoseconds since unix epoch
 static const std::string TIMESTAMP_NS = "timestamp_ns";
