@@ -184,7 +184,6 @@ DWORD64 get_reflective_loader_offset(DWORD64 base_address, LPCSTR ReflectiveLoad
     return 0;
 }
 
-// TODO unload again, or check if already loaded
 // Inject DLL into target process via Reflective DLL Injection
 bool reflective_inject(int pid, HANDLE hProcess, const std::string& dllPath, bool debug)
 {

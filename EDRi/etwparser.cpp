@@ -27,6 +27,9 @@ bool g_traces_started = false;
 bool g_hooker_started = false;
 bool g_attack_terminated = false;
 
+// procs to check for hook init msg
+std::vector<int> procs_with_hooks_initialized = {};
+
 // static
 static bool cleaned_events = false;
 
@@ -559,9 +562,14 @@ bool check_traces_started(json& j) {
 // check if the hooker emits ETW messages --> hooks installed
 bool check_hooker_started(json& j) {
     if (j[PROVIDER_NAME] == HOOK_PROVIDER && j.contains(MESSAGE)) {
-        return j[MESSAGE] == NTDLL_HOOKER_TRACE_START_MARKER;
+        if (j[MESSAGE] == NTDLL_HOOKER_TRACE_START_MARKER) {
+            procs_with_hooks_initialized.push_back(j[PID]);
+            if (g_debug) {
+                std::cout << "[+] ETW: Detected hook initialization in " << j[PID] << "\n";
+            }
+        }
     }
-    return false;
+    return procs_with_hooks_initialized.size() == g_newly_hooked_procs.size();
 }
 
 // monitors events: mark procs as started or terminated (also attack and injected on their own), and check traces startes
@@ -619,11 +627,8 @@ void post_parsing_checks(json& j) {
         g_traces_started = true;
     }
 
-    // checks if the hooker is started
-    if (g_with_hooks && !g_hooker_started && check_hooker_started(j)) {
-        if (g_debug) {
-            std::cout << "[+] ETW: Hooker initialization detected\n";
-        }
+    // checks if the hooker is started (only if new procs were hooked, and the hooker is not started yet)
+    if (!g_hooker_started && g_newly_hooked_procs.size() > 0 && check_hooker_started(j)) {
         g_hooker_started = true;
     }
 }

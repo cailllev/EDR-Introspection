@@ -25,15 +25,18 @@ static const std::vector<int> am_event_ids_with_signatures = { 59 }; // TODO fin
 static const std::vector<int> kproc_event_ids_with_attack_pid_tpid = { 3, 4 };
 static const std::vector<int> kproc_event_ids_with_tpid_minimal = { 1, 2, 11 };
 static const std::vector<int> kproc_event_ids_with_tpid_relevant = { 5, 6 };
+
 // Kernel API Calls Trace
 static const std::vector<int> kapi_event_ids_with_pid = { 3 };
 static const std::vector<int> kapi_event_ids_with_tpid = { 5, 6 };
+
 // Kernel File Trace
 static const std::vector<int> kfile_event_ids_with_pid = { 10, 30 };
+
 // Kernel Network Trace
 static const std::vector<int> knet_event_ids_with_pid_or_opid = { 12, 15, 28, 31, 42, 43, 58, 59 };
 
-// TODO? ETW-TI trace
+// ETW-TI trace
 static const std::vector<int> ti_events_with_pid_or_tpid = { 2, 6, 12, 14, 16 };
 
 
