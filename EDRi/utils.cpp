@@ -33,7 +33,6 @@ UINT64 get_ns_time() {
 
 // thread-safe storing ProcInfo to global variable, processes found here are assumed to be running since t=0
 void snapshot_procs() {
-    UINT64 ns = get_ns_time();
 	initialized_snapshot = true;
     PROCESSENTRY32 pe;
     pe.dwSize = sizeof(PROCESSENTRY32);
@@ -68,7 +67,7 @@ std::vector<int> get_PID_by_name(const std::string& name, UINT64 timestamp) {
 }
 
 // thread-safe adding a proc
-void add_proc(int pid, const std::string& name) {
+void add_proc(int pid, const std::string& name, UINT64 timestamp_ns) {
     if (!initialized_snapshot) {
         if (g_debug) {
             std::cout << "[~] Utils: New proc " << pid << ":" << name << " started before snapshot was taken";
@@ -76,9 +75,9 @@ void add_proc(int pid, const std::string& name) {
         }
         return;
     }
-    UINT64 ns = get_ns_time() - RESERVE_NS; // set start a bit earlier
+    timestamp_ns -= RESERVE_NS; // set start a bit earlier
     std::unique_lock<std::shared_mutex> lock(g_procs_mutex); // writer lock (one allowed, no readers)
-    ProcInfo pi = { pid, ns, MAX_PROC_END, name };
+    ProcInfo pi = { pid, timestamp_ns, MAX_PROC_END, name };
     g_running_procs.push_back(pi);
     if (g_debug) {
         std::cout << "[+] Utils: New proc started at runtime (" << g_running_procs.size() << " procs now): " << pid << ":" << name << "\n";
@@ -86,8 +85,8 @@ void add_proc(int pid, const std::string& name) {
 }
 
 // thread-safe marking the proc termination
-void mark_termination(int pid) {
-    UINT64 ns = get_ns_time() + RESERVE_NS; // set termination a bit later
+void mark_termination(int pid, UINT64 timestamp_ns) {
+    timestamp_ns += RESERVE_NS; // set termination a bit later
     std::unique_lock<std::shared_mutex> lock(g_procs_mutex); // writer lock (one allowed, no readers)
     ProcInfo* latest_proc = nullptr;
     for (auto it = g_running_procs.begin(); it != g_running_procs.end(); ++it) {
@@ -98,10 +97,10 @@ void mark_termination(int pid) {
         }
     }
     if (latest_proc != nullptr) {
-        latest_proc->end_time = ns;
+        latest_proc->end_time = timestamp_ns;
     }
     else if (g_debug) {
-        std::cout << "[!] Utils: Cannot add termination for unregistered proc " << pid << " at " << unix_epoch_ns_to_iso8601(ns) << "\n";
+        std::cout << "[!] Utils: Cannot add termination for unregistered proc " << pid << " at " << unix_epoch_ns_to_iso8601(timestamp_ns) << "\n";
     }
 }
 
@@ -288,16 +287,11 @@ bool wstring_starts_with(const std::wstring& str, const std::wstring& prefix) {
 }
 
 UINT64 filetime_to_unix_epoch_ns(__int64 timestamp) {
-    // timestamp = FILETIME ticks since 1601 (100-ns intervals)
     if (timestamp < WINDOWS_TICKS_TO_UNIX_EPOCH) {
-        // before Unix epoch
-        return 0;
+        return 0; // before Unix epoch
     }
-
     uint64_t unix_ticks_100ns = static_cast<uint64_t>(timestamp) - WINDOWS_TICKS_TO_UNIX_EPOCH;
-    // 1 FILETIME tick = 100 ns -> multiply by 100
-    uint64_t unix_ns = unix_ticks_100ns * 100ULL;
-
+    uint64_t unix_ns = unix_ticks_100ns * NS_PER_WINDOWS_TICK;
     return unix_ns;
 }
 
