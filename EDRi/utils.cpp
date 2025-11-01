@@ -80,7 +80,7 @@ void add_proc(int pid, const std::string& name, UINT64 timestamp_ns) {
     ProcInfo pi = { pid, timestamp_ns, MAX_PROC_END, name };
     g_running_procs.push_back(pi);
     if (g_debug) {
-        std::cout << "[+] Utils: New proc started at runtime (" << g_running_procs.size() << " procs now): " << pid << ":" << name << "\n";
+        std::cout << "[+] Utils: New proc started at runtime: " << pid << ":" << name << "\n";
     }
 }
 
