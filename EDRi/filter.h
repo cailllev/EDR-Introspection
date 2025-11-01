@@ -22,7 +22,8 @@ static const std::vector<int> am_event_ids_with_pipe = { 32, 33 };
 static const std::vector<int> am_event_ids_with_signatures = { 59 }; // TODO find a way to filter event 59
 
 // Kernel Process Trace
-static const std::vector<int> kproc_event_ids_with_tpid_minimal = { 1, 2, 3, 4, 11 };
+static const std::vector<int> kproc_event_ids_with_attack_pid_tpid = { 3, 4 };
+static const std::vector<int> kproc_event_ids_with_tpid_minimal = { 1, 2, 11 };
 static const std::vector<int> kproc_event_ids_with_tpid_relevant = { 5, 6 };
 // Kernel API Calls Trace
 static const std::vector<int> kapi_event_ids_with_pid = { 3 };
