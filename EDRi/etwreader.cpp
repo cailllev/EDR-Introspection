@@ -77,12 +77,12 @@ DWORD WINAPI t_start_etw_misc_traces(LPVOID param) {
             8: IoRegisterShutdownNotification(kernel)
         */
         krabs::provider<> auditapi_provider(KERNEL_API_PROVIDER_W);
-        std::vector<unsigned short> auditapi_event_ids = { 1, 2, 3, 4, 5, 6, 7, 8 };
+        std::vector<unsigned short> auditapi_event_ids = { 3, 4, 5, 6 };
         krabs::event_filter auditapi_filter(auditapi_event_ids);
         auditapi_provider.trace_flags(auditapi_provider.trace_flags() | EVENT_ENABLE_PROPERTY_STACK_TRACE);
         auditapi_filter.add_on_event_callback(event_callback);
         auditapi_provider.add_filter(auditapi_filter);
-        std::cout << "[+] ETW: Enabling " << KERNEL_API_PROVIDER << ": 1, 2, 3, 4, 5, 6, 7, 8\n"; // TODO check
+        std::cout << "[+] ETW: Enabling " << KERNEL_API_PROVIDER << ": 3, 4, 5, 6\n";
         trace_etw_misc.enable(auditapi_provider);
 
         /*
