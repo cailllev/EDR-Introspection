@@ -51,29 +51,25 @@ std::map<Classifier, std::vector<json>> filter_all_events(std::vector<json> even
             skipped++;
 			continue;
         }
-        Classifier c = All;
         try {
             Classifier c = filter(ev);
+            add_exe_information(ev); // now add exe info to all pid fields
+            c = filter_post_exe(ev, c);
+
+            switch (c) {
+            case Minimal:
+                etw_events[Minimal].push_back(ev);
+                // do not break, also add to relevant and all
+            case Relevant:
+                etw_events[Relevant].push_back(ev);
+                // do not break, also add to all
+            case All:
+                etw_events[All].push_back(ev);
+                break;
+            }
         }
         catch (...) {
-            std::cout << "[!] Filter: filter(ev) exception on event: " << ev.dump() << "\n";
-        }
-        try {
-		    add_exe_information(ev); // now add exe info to all pid fields
-        }
-        catch (...) {
-            std::cout << "[!] Filter: add_exe_info(ev) exception on event: " << ev.dump() << "\n";
-        }
-        switch (c) {
-        case Minimal:
-            etw_events[Minimal].push_back(ev);
-            // do not break, also add to relevant and all
-        case Relevant:
-            etw_events[Relevant].push_back(ev);
-            // do not break, also add to all
-        case All:
-            etw_events[All].push_back(ev);
-            break;
+            std::cout << "[!] Filter: filter_all_events exception on event: " << ev.dump() << "\n";
         }
 	}
     if (g_debug) {
@@ -127,6 +123,30 @@ Classifier filter(json& ev) {
     return Relevant; // do not filter unregistered providers
 }
 
+bool is_exe_in_field(json& ev, std::string field, std::string exe_name) {
+    if (!ev.contains(field)) {
+        return false;
+    }
+    std::string val = ev[field];
+    return val.find(exe_name) != std::string::npos; // field may now have PID+EXE, must check if contains, not ==
+}
+
+
+// filter out known irrelevant exes
+Classifier filter_post_exe(json& ev, Classifier previous_c) {
+    if (ev[PROVIDER_NAME] == KERNEL_API_PROVIDER) {
+        for (auto& i : kapi_irrelevant_exe) {
+            std::string exe = i.first;
+            std::string field = i.second;
+            if (is_exe_in_field(ev, exe, field)) {
+                return All;
+            }
+
+        }
+    }
+    return previous_c; // for now only KERNEL_API is filtered post add_exe_information
+}
+
 // returns a classifier based on if the value is in list
 Classifier classify_to(json& ev, std::string key, std::vector<int> list) {
     if (ev.contains(key)) {
@@ -158,24 +178,13 @@ Classifier filter_kernel_process(json& ev) {
     return Relevant; // put event ids without a filter into relevant
 }
 
-// filter threat intel events
-Classifier filter_threat_intel(json& ev) {
-    // either pid or tpid must match a tracked pid
-    if (std::find(ti_events_with_pid_or_tpid.begin(), ti_events_with_pid_or_tpid.end(), ev[EVENT_ID]) != ti_events_with_pid_or_tpid.end()) {
-        Classifier c_pid = classify_to(ev, PID, g_tracking_PIDs);
-        Classifier c_orig = classify_to(ev, TARGET_PID, g_tracking_PIDs);
-        if (c_pid == Minimal || c_orig == Minimal) {
-            return Minimal; // put in minimal if either matches
-        } // else put it in relevant
-    }
-    return Relevant; // put event ids without a filter into relevant
-}
-
 // filter kernel api calls
 Classifier filter_kernel_api_call(json& ev) {
     // the interesting info is in target pid, process_id of msmpeng.exe/attack.exe/smartscreen.exe etc is not enough to filter
     if (std::find(kapi_event_ids_with_tpid.begin(), kapi_event_ids_with_tpid.end(), ev[EVENT_ID]) != kapi_event_ids_with_tpid.end()) {
-        return classify_to(ev, TARGET_PID, g_tracking_PIDs);
+        // only relevant if interacted with the attack / injected
+        // X syscall -> Defender/System/smartscreen => irrelevant
+        return classify_to(ev, TARGET_PID, { g_attack_PID, g_injected_PID });
     }
     if (std::find(kapi_event_ids_with_pid.begin(), kapi_event_ids_with_pid.end(), ev[EVENT_ID]) != kapi_event_ids_with_pid.end()) {
         return classify_to(ev, PID, g_tracking_PIDs);
@@ -185,7 +194,6 @@ Classifier filter_kernel_api_call(json& ev) {
 
 // filter kernel file events
 Classifier filter_kernel_file(json& ev) {
-    // TODO also filters out Notepad.exe proc, why?
     if (std::find(kfile_event_ids_with_pid.begin(), kfile_event_ids_with_pid.end(), ev[EVENT_ID]) != kfile_event_ids_with_pid.end()) {
         return classify_to(ev, PID, g_tracking_PIDs);
     }
@@ -195,9 +203,22 @@ Classifier filter_kernel_file(json& ev) {
 // filter kernel network events
 Classifier filter_kernel_network(json& ev) {
     // events to keep if PID or originating PID match
-    if (std::find(knetwork_event_ids_with_pid_or_opid.begin(), knetwork_event_ids_with_pid_or_opid.end(), ev[EVENT_ID]) != knetwork_event_ids_with_pid_or_opid.end()) {
+    if (std::find(knet_event_ids_with_pid_or_opid.begin(), knet_event_ids_with_pid_or_opid.end(), ev[EVENT_ID]) != knet_event_ids_with_pid_or_opid.end()) {
         Classifier c_pid = classify_to(ev, PID, g_tracking_PIDs);
         Classifier c_orig = classify_to(ev, ORIGINATING_PID, g_tracking_PIDs);
+        if (c_pid == Minimal || c_orig == Minimal) {
+            return Minimal; // put in minimal if either matches
+        } // else put it in relevant
+    }
+    return Relevant; // put event ids without a filter into relevant
+}
+
+// filter threat intel events
+Classifier filter_threat_intel(json& ev) {
+    // either pid or tpid must match a tracked pid
+    if (std::find(ti_events_with_pid_or_tpid.begin(), ti_events_with_pid_or_tpid.end(), ev[EVENT_ID]) != ti_events_with_pid_or_tpid.end()) {
+        Classifier c_pid = classify_to(ev, PID, g_tracking_PIDs);
+        Classifier c_orig = classify_to(ev, TARGET_PID, g_tracking_PIDs);
         if (c_pid == Minimal || c_orig == Minimal) {
             return Minimal; // put in minimal if either matches
         } // else put it in relevant
@@ -213,8 +234,8 @@ Classifier filter_antimalware(json& ev) {
     }
 
     // events to keep if originating PID matches attack or injected PID
-    if (std::find(am_event_ids_with_pid.begin(), am_event_ids_with_pid.end(), ev[EVENT_ID]) != am_event_ids_with_pid.end()) {
-        Classifier c = classify_to(ev, ORIGINATING_PID, g_tracking_PIDs);
+    if (std::find(am_event_ids_with_opid.begin(), am_event_ids_with_opid.end(), ev[EVENT_ID]) != am_event_ids_with_opid.end()) {
+        Classifier c = classify_to(ev, ORIGINATING_PID, { g_attack_PID, g_injected_PID });
         if (c == All) {
             return All; // put in all if it does not match
         }
@@ -225,9 +246,9 @@ Classifier filter_antimalware(json& ev) {
     }
 
     // events to keep if originating PID or TargetPID matches attack PID or injected PID
-    if (std::find(am_event_ids_with_pid_and_tpid.begin(), am_event_ids_with_pid_and_tpid.end(), ev[EVENT_ID]) != am_event_ids_with_pid_and_tpid.end()) {
-        Classifier c_orig = classify_to(ev, ORIGINATING_PID, g_tracking_PIDs);
-        Classifier c_target = classify_to(ev, TARGET_PID, g_tracking_PIDs);
+    if (std::find(am_event_ids_with_opid_and_tpid.begin(), am_event_ids_with_opid_and_tpid.end(), ev[EVENT_ID]) != am_event_ids_with_opid_and_tpid.end()) {
+        Classifier c_orig = classify_to(ev, ORIGINATING_PID, { g_attack_PID, g_injected_PID });
+        Classifier c_target = classify_to(ev, TARGET_PID, { g_attack_PID, g_injected_PID });
         if (c_orig == Minimal || c_target == Minimal) {
             return Minimal; // put in minimal if either matches
         } // else put it in relevant
@@ -236,13 +257,13 @@ Classifier filter_antimalware(json& ev) {
 
     // events to keep if PID in Data matches
     if (std::find(am_event_ids_with_pid_in_data.begin(), am_event_ids_with_pid_in_data.end(), ev[EVENT_ID]) != am_event_ids_with_pid_in_data.end()) {
-        return classify_to(ev, DATA, g_tracking_PIDs);
+        return classify_to(ev, DATA, { g_attack_PID, g_injected_PID });
     }
 
     // events to keep if Message contains filter string (case insensitive)
     if (std::find(am_event_ids_with_message.begin(), am_event_ids_with_message.end(), ev[EVENT_ID]) != am_event_ids_with_message.end()) {
         if (ev.contains(MESSAGE)) {
-            std::string msg = ev[MESSAGE].get<std::string>();
+            std::string msg = ev[MESSAGE];
             std::transform(msg.begin(), msg.end(), msg.begin(), [](unsigned char c) { return std::tolower(c); });
             if (msg.find(g_attack_exe_name) != std::string::npos ||
                 msg.find(injected_name) != std::string::npos ||
@@ -271,6 +292,21 @@ Classifier filter_antimalware(json& ev) {
         return Relevant; // unexpected event fields, do not filter
     }
 
+    // events to keep if pipe matches (via PID)
+    if (std::find(am_event_ids_with_pipe.begin(), am_event_ids_with_pipe.end(), ev[EVENT_ID]) != am_event_ids_with_pipe.end()) {
+        if (ev.contains(FILEPATH)) {
+            std::string pipe_info = ev[FILEPATH]; // \\.\proc\Process:12888,134064706853298289
+            if (pipe_info.find(std::to_string(g_attack_PID)) != std::string::npos || pipe_info.find(std::to_string(g_injected_PID)) != std::string::npos) {
+                return Minimal;
+            }
+            return All;
+        }
+        else if (g_debug) {
+            std::cout << "[-] Filter: Warning: Event with ID " << ev[EVENT_ID] << " missing " << FILEPATH << " field: " << ev.dump() << "\n";
+        }
+        return Relevant; // unexpected event fields, do not filter
+    }
+
     return Relevant; // put event ids without a filter into relevant
 }
 
@@ -285,9 +321,9 @@ Classifier filter_hooks(json& ev) {
             return Minimal;
         }
         else {
-            return All; // TODO correct?
+            return All; // openfile to other than attack / injected --> irrelevant
         }
     }
     // else event has a usable targetpid --> classify based on target pid
-    return classify_to(ev, TARGET_PID, g_tracking_PIDs);
+    return classify_to(ev, TARGET_PID, { g_attack_PID, g_injected_PID });
 }
