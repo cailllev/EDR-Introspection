@@ -56,9 +56,10 @@ bool g_debug = false;
 bool g_super_debug = false;
 
 // wait times
-static const int add_wait_for_other_traces = 5000; // ensure all other traces are also started (additional wait)
+static const int add_wait_for_other_traces = 10000; // ensure all other traces are also started (additional wait)
 static const int wait_between_events_ms = 1000;
 static const int wait_after_termination_ms = 5000;
+static const int wait_attack_not_found_threshold_ms = 20000;
 static const int wait_time_between_start_markers_ms = 1000;
 static const int wait_callbacks_reenable_ms = 10000;
 static const int timeout_for_hooker_init = 30;
@@ -95,6 +96,12 @@ void process_results(std::string output, bool dump_sig, bool colored) {
         dump_signatures(etw_events); // can only dump from antimalware provider
     }
     std::cout << "[*] EDRi: Done\n";
+}
+
+void cleanup(std::string output, bool dump_sig, bool colored) {
+    remove_file(g_attack_exe_path); // remove again if it still exists
+    stop_all_etw_traces();
+    process_results(output, dump_sig, colored);
 }
 
 int main(int argc, char* argv[]) {
@@ -324,7 +331,7 @@ int main(int argc, char* argv[]) {
                 if (!inject_dll(pid, get_hook_dll_path(), g_debug, reflective_inject)) { // TODO reflective inject per profile?
                     std::cerr << "[!] EDRi: Failed to inject the hooker dll into " << exe << "\n";
                     stop_all_etw_traces();
-                    exit(1);
+                    return 1;
                 }
                 newly_hooked_procs.push_back(pid); // add for next run
                 check_init_needed = true; // new proc hooked, must check if hooks started
@@ -373,29 +380,35 @@ int main(int argc, char* argv[]) {
 
     // start the attack
     emit_etw_event("Before starting the attack exe", bef, true);
+    if (g_debug) {
+        std::cout << "[~] EDRi: The EDR might block the attack and a pop up is displayed. In this case, just close it or click OK\n";
+    }
     Sleep(wait_between_events_ms);
     if (run_as_child) {
-        if (!launch_as_child(g_attack_exe_path)) {
-            std::cerr << "[!] EDRi: Failed to launch the attack exe: " << g_attack_exe_path << ". Was it marked as a virus?\n";
-            remove_file(g_attack_exe_path); // remove again if it still exists
-            stop_all_etw_traces();
-            process_results(output, dump_sig, colored);
-            return 0;
+        try {
+            if (!launch_as_child(g_attack_exe_path)) {
+                std::cerr << "[!] EDRi: Failed to launch the attack exe: " << g_attack_exe_path << ". Was it marked as a virus?\n";
+                cleanup(output, dump_sig, colored);
+                return 0;
+            }
+        }
+        catch (...) {
+            std::cerr << "[!] EDRi: Launching attack as child failed: " << GetLastError() << "\n";
+            Sleep(wait_after_termination_ms);
+            cleanup(output, dump_sig, colored);
         }
     }
     else {
         std::cout << "[*] EDRi: Execute " << g_attack_exe_path << " now manually\n";
-		int cnt_waited = 0;
-        while (g_attack_PID == 0) {
-            Sleep(100);
-            cnt_waited += 100;
-            if (cnt_waited > 20000) {
-                std::cerr << "[!] EDRi: Timeout waiting for attack PID, did you start " << g_attack_exe_path << ", or was it marked as a virus?\n";
-                remove_file(g_attack_exe_path); // remove again if it still exists
-                stop_all_etw_traces();
-				process_results(output, dump_sig, colored);
-                return 0;
-            }
+    }
+    int cnt_waited = 0;
+    while (g_attack_PID == 0) { // always wait for the attack_PID, lauch_as_child() might succeed even when attack is not started
+        Sleep(100);
+        cnt_waited += 100;
+        if (cnt_waited > wait_attack_not_found_threshold_ms) {
+            std::cerr << "[!] EDRi: Timeout waiting for attack PID, did you start " << g_attack_exe_path << ", or was it marked as a virus?\n";
+            cleanup(output, dump_sig, colored);
+            return 0;
         }
     }
 	emit_etw_event("After starting the attack exe", aft, true);
