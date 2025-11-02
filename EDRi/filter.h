@@ -19,7 +19,9 @@ static const std::vector<int> am_event_ids_with_pid_in_data = { 43, 67 };
 static const std::vector<int> am_event_ids_with_message = { 3 };
 static const std::vector<int> am_event_ids_with_filepath = { 30, 31, 35, 36, 37, 38 };
 static const std::vector<int> am_event_ids_with_pipe = { 32, 33 };
-static const std::vector<int> am_event_ids_with_signatures = { 59 }; // TODO find a way to filter event 59
+static const std::vector<int> am_event_ids_with_signatures = { 59 }; 
+// event 59 just logs all Behaviour tracking tasks, but has no identifier tied to actual files / events / procs, etc.
+// -> sigseq and sigsha only identify the tracking task, NOT the file / event / proc --> put event 59 in Relevant
 
 // Kernel Process Trace
 static const std::vector<int> kproc_event_ids_with_attack_pid_tpid = { 3, 4 };
