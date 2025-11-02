@@ -45,7 +45,9 @@ std::vector<int> g_tracking_PIDs = std::vector<int>{};
 std::vector<int> g_newly_hooked_procs = std::vector<int>{};
 std::vector<ProcInfo> g_running_procs = std::vector<ProcInfo>{};
 std::shared_mutex g_procs_mutex;
-bool reflective_inject = true;
+std::vector<std::string> g_exes_to_track = {
+    "smartscreen.exe", "System"
+};
 
 // attack exe paths
 std::string g_attack_exe_name = "attack-" + get_random_3digit_num() + ".exe"; // random every run
@@ -54,6 +56,9 @@ std::string g_attack_exe_path = "C:\\Users\\Public\\Downloads\\" + g_attack_exe_
 // more debug info
 bool g_debug = false;
 bool g_super_debug = false;
+
+// misc settings
+bool reflective_inject = true;
 
 // wait times
 static const int add_wait_for_other_traces = 10000; // ensure all other traces are also started (additional wait)
@@ -64,6 +69,7 @@ static const int wait_time_between_start_markers_ms = 1000;
 static const int wait_callbacks_reenable_ms = 10000;
 static const int timeout_for_hooker_init = 30;
 
+// etw print prefixes
 std::string ok = "[+] ";
 std::string fail = "[!] ";
 std::string bef = "[<]  ";
@@ -270,7 +276,7 @@ int main(int argc, char* argv[]) {
     std::cout << "[*] EDRi: Get running procs\n";
     snapshot_procs();
     UINT64 proc_snapshot_timestamp = get_ns_time();
-    for (auto& e : exes_to_track) {
+    for (auto& e : g_exes_to_track) {
         std::vector<int> pids = get_PID_by_name(e, proc_snapshot_timestamp);
         for (auto& p : pids) {
             std::cout << "[+] EDRi: Got pid for " << e << ":" << p << "\n";
@@ -401,7 +407,7 @@ int main(int argc, char* argv[]) {
         std::cout << "[*] EDRi: Execute " << g_attack_exe_path << " now manually\n";
     }
     int cnt_waited = 0;
-    while (g_attack_PID == 0) { // always wait for the attack_PID, lauch_as_child() might succeed even when attack is not started
+    while (g_attack_proc.PID == 0) { // always wait for the attack_PID, lauch_as_child() might succeed even when attack is not started
         Sleep(100);
         cnt_waited += 100;
         if (cnt_waited > wait_attack_not_found_threshold_ms) {

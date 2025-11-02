@@ -42,7 +42,13 @@ void snapshot_procs() {
         do {
             std::string exe = wchar2string(pe.szExeFile);
             int pid = pe.th32ProcessID;
-            ProcInfo pi = { pid, MIN_PROC_START, MAX_PROC_END, exe };
+            bool to_track = false; // check if this is a process to be tracked
+            for (auto& e : g_exes_to_track) {
+                if (_stricmp(exe.c_str(), e.c_str()) == 0) {
+                    to_track = true;
+                }
+            }
+            ProcInfo pi = { pid, MIN_PROC_START, MAX_PROC_END, exe, to_track };
 			g_running_procs.push_back(pi);
         } while (Process32Next(snapshot, &pe));
     }
@@ -67,7 +73,7 @@ std::vector<int> get_PID_by_name(const std::string& name, UINT64 timestamp) {
 }
 
 // thread-safe adding a proc
-void add_proc(int pid, const std::string& name, UINT64 timestamp_ns) {
+void add_proc(int pid, const std::string& name, UINT64 timestamp_ns, bool to_track) {
     if (!initialized_snapshot) {
         if (g_debug) {
             std::cout << "[~] Utils: New proc " << pid << ":" << name << " started before snapshot was taken";
@@ -77,7 +83,7 @@ void add_proc(int pid, const std::string& name, UINT64 timestamp_ns) {
     }
     timestamp_ns -= RESERVE_NS; // set start a bit earlier
     std::unique_lock<std::shared_mutex> lock(g_procs_mutex); // writer lock (one allowed, no readers)
-    ProcInfo pi = { pid, timestamp_ns, MAX_PROC_END, name };
+    ProcInfo pi = { pid, timestamp_ns, MAX_PROC_END, name, to_track };
     g_running_procs.push_back(pi);
     if (g_debug) {
         std::cout << "[+] Utils: New proc started at runtime: " << pid << ":" << name << "\n";
@@ -115,6 +121,18 @@ std::string get_proc_name(int pid, UINT64 timestamp) {
         }
     }
     return PROC_NOT_FOUND;
+}
+
+// thread-safe retrieving all processes that were tracked
+std::vector<ProcInfo> get_tracked_procs() {
+    std::shared_lock<std::shared_mutex> lock(g_procs_mutex); // reader lock (multiple allowed when no writers)
+    std::vector<ProcInfo> tracked = {};
+    for (auto it = g_running_procs.begin(); it != g_running_procs.end(); ++it) {
+        if (it->to_track) {
+            tracked.push_back(*it);
+        }
+    }
+    return tracked;
 }
 
 // check if unnecessary tools are running --> these inflate the output

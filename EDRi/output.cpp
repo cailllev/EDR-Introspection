@@ -11,132 +11,6 @@
 #include "output.h"
 
 
-void print_etw_counts(std::map<Classifier, std::vector<json>>& etw_events) {
-    for (auto& c : etw_events) {
-        std::ostringstream oss;
-        Classifier classifier = c.first;
-        std::vector<json>& events = c.second;
-
-        // count by provider
-        std::map<std::string, int> provider_counts;
-        for (auto& ev : events) {
-            try {
-                std::string provider = "<empty provider>";
-                if (ev.contains(PROVIDER_NAME)) {
-                    provider = ev[PROVIDER_NAME];
-                }
-                if (provider_counts.find(provider) == provider_counts.end()) {
-                    provider_counts[provider] = 1;
-                }
-                else {
-                    provider_counts[provider]++;
-                }
-            } 
-            catch (const std::exception& ex) {
-                std::cerr << "[!] Output: print_etw_counts exception: " << ex.what() << "\n";
-            }
-            catch (...) {
-                std::cerr << "[!] Output: print_etw_counts unknown exception\n";
-			}
-        }
-
-        for (auto it = provider_counts.begin(); it != provider_counts.end(); ++it) {
-            if (it != provider_counts.begin()) {
-                oss << ", ";
-            }
-            oss << it->first << ": " << it->second;
-        }
-        std::cout << "[*] Output: Classification " << classifier_names[c.first] << ": " << events.size() << " events.";
-        std::cout << " Filtered events per provider > " << oss.str() << "\n";
-    }
-}
-
-void print_time_differences() {
-    std::map<std::string, std::vector<float>> time_diffs_ns = get_time_diffs();
-    std::cout << std::fixed << std::setprecision(1); // set precision to one decimal place
-    for (auto& c : time_diffs_ns) {
-        std::vector<float>& diffs = c.second;
-        if (diffs.size() == 0) {
-            continue;
-        }
-        float avg = (std::accumulate(diffs.begin(), diffs.end(), 0.0f) / diffs.size()) / 1000.0f; // in microseconds
-        float max = *std::max_element(diffs.begin(), diffs.end()) / 1000.0f; // in microseconds
-        std::cout << "[+] Output: Time differences in microseconds for " << c.first << ": avg=" << avg << ", max=" << max << "\n";
-    }
-	std::cout.unsetf(std::ios::fixed); // revert precision
-}
-
-// dumps all relevant info from antimalware provider event id 3,8,74,104
-void dump_signatures(std::map<Classifier, std::vector<json>>& etw_events) {
-    for (const auto& ev : etw_events[Relevant]) {
-        try {
-            if (ev[PROVIDER_NAME] != ANTIMALWARE_PROVIDER) {
-                continue; // only this provider contains the signatures
-            }
-            if (ev[EVENT_ID] == 3) {
-                if (!ev.contains(MESSAGE)) {
-                    if (g_debug) {
-                        std::cout << "[-] Output: Warning: Event with ID 3 missing " << MESSAGE << " field: " << ev.dump() << "\n";
-                    }
-                    continue;
-                }
-                std::string m = get_val(ev, MESSAGE);
-                std::string s = "signame=";
-                std::string r = "resource=";
-                size_t ss = m.find(s);
-                size_t sr = m.find(r);
-                if (ss != std::string::npos && sr != std::string::npos) { // only some 3 events have signatures
-                    size_t es = m.find(", ", ss);
-                    size_t er = m.find(", ", sr);
-                    ss += s.length();
-                    sr += r.length();
-                    std::string sig = m.substr(ss, es - ss);
-                    std::string res = m.substr(sr, er - sr);
-                    std::cout << "[*] Output: Found signature: " << sig << " in " << res << "\n";
-                }
-            }
-            if (ev[EVENT_ID] == 8) {
-                if (!ev.contains(PID)) {
-                    if (g_debug) {
-                        std::cout << "[-] Output: Warning: Event with ID 8 missing " << PID << " field: " << ev.dump() << "\n";
-                    }
-                    continue;
-                }
-                if (!ev.contains(NAME)) {
-                    if (g_debug) {
-                        std::cout << "[-] Output: Warning: Event with ID 8 missing " << NAME << " field: " << ev.dump() << "\n";
-                    }
-                    continue;
-                }
-                std::string path_translated = translate_if_path(ev[NAME]);
-                std::cout << "[*] Output: Behaviour Monitoring Detection: " <<
-                    "pid=" << get_val(ev, PID) << ", sig=" << path_translated << "\n";
-            }
-            if (ev[EVENT_ID] == 74) {
-                std::cout << "[*] Output: Sense Remidiation" <<
-                    ": threatname=" << get_val(ev, THREATNAME) <<
-                    ", signature=" << get_val(ev, SIGSEQ) <<
-                    ", sigsha=" << get_val(ev, SIGSHA) <<
-                    ", classification=" << get_val(ev, CLASSIFICATION) <<
-                    ", determination=" << get_val(ev, DETERMINATION) <<
-                    ", realpath=" << get_val(ev, REALPATH) <<
-                    ", resource=" << get_val(ev, RESOURCESCHEMA) <<
-                    "\n";
-            }
-            if (ev[EVENT_ID] == 104) {
-                if (!ev.contains(FIRST_PARAM) || !ev.contains(SECOND_PARAM)) {
-                    if (g_debug) {
-                        std::cout << "[-] Output: Warning: Event with ID 104 missing " << FIRST_PARAM << " or " << SECOND_PARAM << " field: " << ev.dump() << "\n";
-                    }
-                }
-            }
-        }
-        catch (const std::exception& ex) {
-            std::cerr << "[!] Output: dump_signatures exception: " << ex.what() << "\n";
-        }
-    }
-}
-
 // ------------------- CSV IMPLEMENTATION ------------------- //
 static const std::string COLOR_HEADER = "Color,";
 static const std::string COLOR_GREEN = "green,";
@@ -349,6 +223,135 @@ void write_events_to_file(std::map<Classifier, std::vector<json>>& etw_events, c
         }
         catch (...) {
             std::cerr << "[!] Output: write_events_to_file unknown exception\n";
+        }
+    }
+}
+
+// ------------------- MISC stuff ------------------- //
+// print count by provider by classification
+void print_etw_counts(std::map<Classifier, std::vector<json>>& etw_events) {
+    for (auto& c : etw_events) {
+        std::ostringstream oss;
+        Classifier classifier = c.first;
+        std::vector<json>& events = c.second;
+
+        // count by provider
+        std::map<std::string, int> provider_counts;
+        for (auto& ev : events) {
+            try {
+                std::string provider = "<empty provider>";
+                if (ev.contains(PROVIDER_NAME)) {
+                    provider = ev[PROVIDER_NAME];
+                }
+                if (provider_counts.find(provider) == provider_counts.end()) {
+                    provider_counts[provider] = 1;
+                }
+                else {
+                    provider_counts[provider]++;
+                }
+            }
+            catch (const std::exception& ex) {
+                std::cerr << "[!] Output: print_etw_counts exception: " << ex.what() << "\n";
+            }
+            catch (...) {
+                std::cerr << "[!] Output: print_etw_counts unknown exception\n";
+            }
+        }
+
+        for (auto it = provider_counts.begin(); it != provider_counts.end(); ++it) {
+            if (it != provider_counts.begin()) {
+                oss << ", ";
+            }
+            oss << it->first << ": " << it->second;
+        }
+        std::cout << "[*] Output: Classification " << classifier_names[c.first] << ": " << events.size() << " events.";
+        std::cout << " Filtered events per provider > " << oss.str() << "\n";
+    }
+}
+
+// print diffs between timestamp_sys and timestamp_etw per provider
+void print_time_differences() {
+    std::map<std::string, std::vector<float>> time_diffs_ns = get_time_diffs();
+    std::cout << std::fixed << std::setprecision(1); // set precision to one decimal place
+    for (auto& c : time_diffs_ns) {
+        std::vector<float>& diffs = c.second;
+        if (diffs.size() == 0) {
+            continue;
+        }
+        float avg = (std::accumulate(diffs.begin(), diffs.end(), 0.0f) / diffs.size()) / 1000.0f; // in microseconds
+        float max = *std::max_element(diffs.begin(), diffs.end()) / 1000.0f; // in microseconds
+        std::cout << "[+] Output: Time differences in microseconds for " << c.first << ": avg=" << avg << ", max=" << max << "\n";
+    }
+    std::cout.unsetf(std::ios::fixed); // revert precision
+}
+
+// dumps all relevant info from antimalware provider event id 3,8,74,104
+void dump_signatures(std::map<Classifier, std::vector<json>>& etw_events) {
+    for (const auto& ev : etw_events[Relevant]) {
+        try {
+            if (ev[PROVIDER_NAME] != ANTIMALWARE_PROVIDER) {
+                continue; // only this provider contains the signatures
+            }
+            if (ev[EVENT_ID] == 3) {
+                if (!ev.contains(MESSAGE)) {
+                    if (g_debug) {
+                        std::cout << "[-] Output: Warning: Event with ID 3 missing " << MESSAGE << " field: " << ev.dump() << "\n";
+                    }
+                    continue;
+                }
+                std::string m = get_val(ev, MESSAGE);
+                std::string s = "signame=";
+                std::string r = "resource=";
+                size_t ss = m.find(s);
+                size_t sr = m.find(r);
+                if (ss != std::string::npos && sr != std::string::npos) { // only some 3 events have signatures
+                    size_t es = m.find(", ", ss);
+                    size_t er = m.find(", ", sr);
+                    ss += s.length();
+                    sr += r.length();
+                    std::string sig = m.substr(ss, es - ss);
+                    std::string res = m.substr(sr, er - sr);
+                    std::cout << "[*] Output: Found signature: " << sig << " in " << res << "\n";
+                }
+            }
+            if (ev[EVENT_ID] == 8) {
+                if (!ev.contains(PID)) {
+                    if (g_debug) {
+                        std::cout << "[-] Output: Warning: Event with ID 8 missing " << PID << " field: " << ev.dump() << "\n";
+                    }
+                    continue;
+                }
+                if (!ev.contains(NAME)) {
+                    if (g_debug) {
+                        std::cout << "[-] Output: Warning: Event with ID 8 missing " << NAME << " field: " << ev.dump() << "\n";
+                    }
+                    continue;
+                }
+                std::string path_translated = translate_if_path(ev[NAME]);
+                std::cout << "[*] Output: Behaviour Monitoring Detection: " <<
+                    "pid=" << get_val(ev, PID) << ", sig=" << path_translated << "\n";
+            }
+            if (ev[EVENT_ID] == 74) {
+                std::cout << "[*] Output: Sense Remidiation" <<
+                    ": threatname=" << get_val(ev, THREATNAME) <<
+                    ", signature=" << get_val(ev, SIGSEQ) <<
+                    ", sigsha=" << get_val(ev, SIGSHA) <<
+                    ", classification=" << get_val(ev, CLASSIFICATION) <<
+                    ", determination=" << get_val(ev, DETERMINATION) <<
+                    ", realpath=" << get_val(ev, REALPATH) <<
+                    ", resource=" << get_val(ev, RESOURCESCHEMA) <<
+                    "\n";
+            }
+            if (ev[EVENT_ID] == 104) {
+                if (!ev.contains(FIRST_PARAM) || !ev.contains(SECOND_PARAM)) {
+                    if (g_debug) {
+                        std::cout << "[-] Output: Warning: Event with ID 104 missing " << FIRST_PARAM << " or " << SECOND_PARAM << " field: " << ev.dump() << "\n";
+                    }
+                }
+            }
+        }
+        catch (const std::exception& ex) {
+            std::cerr << "[!] Output: dump_signatures exception: " << ex.what() << "\n";
         }
     }
 }
