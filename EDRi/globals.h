@@ -23,17 +23,20 @@ static const std::string injected_name = "microsoft.windowsnotepad";
 static const std::string injected_exe = "notepad.exe";
 static const std::string invoked_name = "microsoft.windowscalculator";
 
-extern std::vector<int> g_tracking_PIDs;
+// executables to track for kernel event filtering, i.e. their PIDs at runtime
+extern std::vector<std::string> g_exes_to_track;
 extern std::vector<int> g_newly_hooked_procs;
-extern int g_attack_PID;
-extern int g_injected_PID;
 
+// tracking data
 struct ProcInfo {
 	int PID;
 	uint64_t start_time;
 	uint64_t end_time;
 	std::string name;
+	bool to_track;
 };
+extern ProcInfo g_attack_proc;
+extern ProcInfo g_injected_proc;
 extern std::vector<ProcInfo> g_running_procs;
 extern std::shared_mutex g_procs_mutex;
 

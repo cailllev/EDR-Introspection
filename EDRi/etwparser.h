@@ -103,7 +103,3 @@ json parse_custom_etw_event(Event);
 json parse_etw_event(Event);
 std::string get_val(const json&, std::string);
 void post_parsing_checks(json&);
-int check_new_proc(json&);
-bool check_traces_started(json&);
-bool check_hooker_started(json&);
-void print_time_differences();

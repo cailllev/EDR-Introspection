@@ -26,9 +26,10 @@ static const UINT64 RESERVE_NS = 100'000; // 0,1 ms padding to minimize race con
 UINT64 get_ns_time();
 void snapshot_procs();
 std::vector<int> get_PID_by_name(const std::string& name, UINT64 timestamp);
-void add_proc(int, const std::string&, UINT64);
+void add_proc(int, const std::string&, UINT64, bool);
 void mark_termination(int, UINT64);
 std::string get_proc_name(int, UINT64);
+std::vector<ProcInfo> get_tracked_procs();
 std::string unnecessary_tools_running();
 std::string get_random_3digit_num();
 
