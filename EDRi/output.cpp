@@ -46,7 +46,7 @@ void print_etw_counts(std::map<Classifier, std::vector<json>>& etw_events) {
             }
             oss << it->first << ": " << it->second;
         }
-        std::cout << "[*] ETW: Classification " << classifier_names[c.first] << ": " << events.size() << " events.";
+        std::cout << "[*] Output: Classification " << classifier_names[c.first] << ": " << events.size() << " events.";
         std::cout << " Filtered events per provider > " << oss.str() << "\n";
     }
 }
@@ -61,7 +61,7 @@ void print_time_differences() {
         }
         float avg = (std::accumulate(diffs.begin(), diffs.end(), 0.0f) / diffs.size()) / 1000.0f; // in microseconds
         float max = *std::max_element(diffs.begin(), diffs.end()) / 1000.0f; // in microseconds
-        std::cout << "[+] ETW: Time differences in microseconds for " << c.first << ": avg=" << avg << ", max=" << max << "\n";
+        std::cout << "[+] Output: Time differences in microseconds for " << c.first << ": avg=" << avg << ", max=" << max << "\n";
     }
 	std::cout.unsetf(std::ios::fixed); // revert precision
 }
@@ -76,7 +76,7 @@ void dump_signatures(std::map<Classifier, std::vector<json>>& etw_events) {
             if (ev[EVENT_ID] == 3) {
                 if (!ev.contains(MESSAGE)) {
                     if (g_debug) {
-                        std::cout << "[-] ETW: Warning: Event with ID 3 missing " << MESSAGE << " field: " << ev.dump() << "\n";
+                        std::cout << "[-] Output: Warning: Event with ID 3 missing " << MESSAGE << " field: " << ev.dump() << "\n";
                     }
                     continue;
                 }
@@ -92,21 +92,28 @@ void dump_signatures(std::map<Classifier, std::vector<json>>& etw_events) {
                     sr += r.length();
                     std::string sig = m.substr(ss, es - ss);
                     std::string res = m.substr(sr, er - sr);
-                    std::cout << "[*] ETW: Found signature: " << sig << " in " << res << "\n";
+                    std::cout << "[*] Output: Found signature: " << sig << " in " << res << "\n";
                 }
             }
             if (ev[EVENT_ID] == 8) {
                 if (!ev.contains(PID)) {
                     if (g_debug) {
-                        std::cout << "[-] ETW: Warning: Event with ID 8 missing " << PID << " field: " << ev.dump() << "\n";
+                        std::cout << "[-] Output: Warning: Event with ID 8 missing " << PID << " field: " << ev.dump() << "\n";
                     }
                     continue;
                 }
-                std::cout << "[*] ETW: Behaviour Monitoring Detection: " <<
-                    "pid=" << get_val(ev, PID) << ", sig=" << get_val(ev, FILEPATH) << "\n"; // TODO debugging, correct field??
+                if (!ev.contains(NAME)) {
+                    if (g_debug) {
+                        std::cout << "[-] Output: Warning: Event with ID 8 missing " << NAME << " field: " << ev.dump() << "\n";
+                    }
+                    continue;
+                }
+                std::string path_translated = translate_if_path(ev[NAME]);
+                std::cout << "[*] Output: Behaviour Monitoring Detection: " <<
+                    "pid=" << get_val(ev, PID) << ", sig=" << path_translated << "\n";
             }
             if (ev[EVENT_ID] == 74) {
-                std::cout << "[*] ETW: Sense Remidiation" <<
+                std::cout << "[*] Output: Sense Remidiation" <<
                     ": threatname=" << get_val(ev, THREATNAME) <<
                     ", signature=" << get_val(ev, SIGSEQ) <<
                     ", sigsha=" << get_val(ev, SIGSHA) <<
@@ -119,13 +126,13 @@ void dump_signatures(std::map<Classifier, std::vector<json>>& etw_events) {
             if (ev[EVENT_ID] == 104) {
                 if (!ev.contains(FIRST_PARAM) || !ev.contains(SECOND_PARAM)) {
                     if (g_debug) {
-                        std::cout << "[-] ETW: Warning: Event with ID 104 missing " << FIRST_PARAM << " or " << SECOND_PARAM << " field: " << ev.dump() << "\n";
+                        std::cout << "[-] Output: Warning: Event with ID 104 missing " << FIRST_PARAM << " or " << SECOND_PARAM << " field: " << ev.dump() << "\n";
                     }
                 }
             }
         }
         catch (const std::exception& ex) {
-            std::cerr << "[!] ETW: dump_signatures exception: " << ex.what() << "\n";
+            std::cerr << "[!] Output: dump_signatures exception: " << ex.what() << "\n";
         }
     }
 }
@@ -144,7 +151,7 @@ static std::unordered_map<std::string, std::string> g_deviceMap;
 // define start of CSV header, all other keys are added in order of occurence later
 std::vector<std::string> csv_header_start = {
     TIMESTAMP_SYS, TIMESTAMP_ETW, TYPE, PROVIDER_NAME, EVENT_ID, TASK, PID, TID, PPID, ORIGINATING_PID, TARGET_PID, TARGET_TID, MESSAGE,
-    FILEPATH, "cachename", "result", "vname", "sigseq", "sigsha", "commandline", "firstparam", "secondparam",
+    FILEPATH, "cachename", "result", "vname", "name", "sigseq", "sigsha", "commandline", "firstparam", "secondparam",
 };
 
 void build_device_map() {
@@ -168,6 +175,7 @@ void build_device_map() {
     }
 }
 
+// translate any path in string
 std::string translate_if_path(const std::string& s) {
     std::string s2 = s;
 
@@ -193,7 +201,7 @@ std::string translate_if_path(const std::string& s) {
     s2 = std::regex_replace(s2, extendedPrefix, "$1\\\\");
 
     if (g_super_debug && s2 != s) {
-        std::cout << "[~] Utils: Translated path " << s << " to " << s2 << "\n";
+        std::cout << "[~] Output: Translated path " << s << " to " << s2 << "\n";
     }
 
     return s2;
@@ -214,7 +222,7 @@ std::string normalized_value(json ev, std::string key) {
 std::string add_color_info(const json& ev) {
     if (!ev.contains(PROVIDER_NAME)) {
         if (g_debug) {
-            std::cout << "[-] ETW: Warning: Event missing " << PROVIDER_NAME << " field: " << ev.dump() << "\n";
+            std::cout << "[-] Output: Warning: Event missing " << PROVIDER_NAME << " field: " << ev.dump() << "\n";
         }
         return COLOR_GRAY;
     }
@@ -242,7 +250,7 @@ std::string create_timeline_csv(const std::vector<json>& events, std::vector<std
 
     std::vector<std::string> all_keys;
     if (g_super_debug) {
-        std::cout << "[+] Utils: Adding predefined keys for CSV header: ";
+        std::cout << "[+] Output: Adding predefined keys for CSV header: ";
     }
     for (const auto& k : header_start) {
         all_keys.push_back(k);
@@ -256,7 +264,7 @@ std::string create_timeline_csv(const std::vector<json>& events, std::vector<std
 
     // collect all property keys except merged ones
     if (g_super_debug) {
-        std::cout << "[+] Utils: Adding new keys for CSV header: ";
+        std::cout << "[+] Output: Adding new keys for CSV header: ";
     }
     for (const auto& ev : events) {
         for (auto it = ev.begin(); it != ev.end(); ++it) {
@@ -329,7 +337,7 @@ void write_events_to_file(std::map<Classifier, std::vector<json>>& etw_events, c
             std::string output_final = output_base + "-" + classifier_names[c.first] + ".csv"; // add classifier to filename
             std::ofstream out(output_final);
             if (!out.is_open()) {
-                std::cerr << "[!] ETW: Failed to open output file: " << output_final << "\n";
+                std::cerr << "[!] Output: Failed to open output file: " << output_final << "\n";
             }
             else {
                 out << csv_output;
@@ -337,10 +345,10 @@ void write_events_to_file(std::map<Classifier, std::vector<json>>& etw_events, c
             }
         }
         catch (const std::exception& ex) {
-            std::cerr << "[!] ETW: write_events_to_file exception: " << ex.what() << "\n";
+            std::cerr << "[!] Output: write_events_to_file exception: " << ex.what() << "\n";
         }
         catch (...) {
-            std::cerr << "[!] ETW: write_events_to_file unknown exception\n";
+            std::cerr << "[!] Output: write_events_to_file unknown exception\n";
         }
     }
 }
