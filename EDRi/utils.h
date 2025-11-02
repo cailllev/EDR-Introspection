@@ -13,16 +13,16 @@ std::string wstring2string(std::wstring& wide_string);
 bool wstring_starts_with(const std::wstring& str, const std::wstring& prefix);
 char* get_memory_region_protect(DWORD protect);
 
-// TIME CONVERSION
+// TIME CONVERSION, https://stackoverflow.com/questions/6161776/convert-windows-filetime-to-second-in-unix-linux#answer-6161842
 const UINT64 WINDOWS_TICKS_PER_SECOND = 10'000'000ULL; // 100ns intervals
 const UINT64 NS_PER_WINDOWS_TICK = 100ULL;             // 1 tick per 100ns
-const UINT64 SECS_TO_UNIX_EPOCH = 11644473600ULL;      // seconds between 1601 and 1970, https://stackoverflow.com/questions/6161776/convert-windows-filetime-to-second-in-unix-linux#answer-6161842
+const UINT64 SECS_TO_UNIX_EPOCH = 11644473600ULL;      // seconds between 1601 and 1970
 const UINT64 WINDOWS_TICKS_TO_UNIX_EPOCH = SECS_TO_UNIX_EPOCH * WINDOWS_TICKS_PER_SECOND;
 
 // own cacophony
 static const UINT64 MIN_PROC_START = 0;
 static const UINT64 MAX_PROC_END = MAXUINT64;
-static const UINT64 RESERVE_NS = 100'000; // 0,1 ms padding to minimize race conditions between etw logs // TODO is this enough??
+static const UINT64 RESERVE_NS = 100'000; // 0,1 ms padding to minimize race conditions between etw logs // TODO: when event not between start-end, check if other start-end exists, and which of the ranges is closer
 UINT64 get_ns_time();
 void snapshot_procs();
 std::vector<int> get_PID_by_name(const std::string& name, UINT64 timestamp);
