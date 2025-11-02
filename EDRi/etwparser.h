@@ -72,6 +72,7 @@ static const std::string FILEPATH = "filepath";
 static const std::string MESSAGE = "message";
 static const std::string SIGSEQ = "sigseq";
 static const std::string SIGSHA = "sigsha";
+static const std::string NAME = "name";
 static const std::string FIRST_PARAM = "firstparam";
 static const std::string SECOND_PARAM = "secondparam";
 static const std::string CLASSIFICATION = "classification";

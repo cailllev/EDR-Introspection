@@ -48,7 +48,7 @@ MergeCategory ttid_keys = { // both refer to yet another pid (event has an emitt
 };
 MergeCategory filepath_keys = {
     FILEPATH,
-    {"basepath", "filename", "imagename", "path", "name", "reasonimagepath"}
+    {"basepath", "filename", "imagename", "path", "reasonimagepath"}
 };
 std::vector<MergeCategory> key_categories_to_merge = { ppid_keys, tpid_keys, ttid_keys, filepath_keys };
 
