@@ -311,7 +311,7 @@ int main(int argc, char* argv[]) {
             stop_all_etw_traces();
             return 1;
         }
-        std::cout << "// --------------------------- EDR Sandblast start marker ---------------------------\n"; // mark start in logs
+        std::cout << "// --------------------------- EDR Sandblast end marker ---------------------------\n"; // mark end in logs
 
 		// get main edr processes and inject the hooker
         std::vector<std::string> main_edr_exes = edr_profile.main_exes;
@@ -366,7 +366,6 @@ int main(int argc, char* argv[]) {
         }
         std::cout << "[*] EDRi: Hooker initialization detected on all relevant processes, wait for re-enabling of kernel callbacks by EDRSandblast...\n";
 		Sleep(wait_callbacks_reenable_ms); // wait until callbacks are reenabled
-        std::cout << "// --------------------------- EDR Sandblast end marker ---------------------------\n"; // mark end in logs
     }
 
     // ATTACK
