@@ -81,7 +81,6 @@ void add_proc(int pid, const std::string& name, UINT64 timestamp_ns, bool to_tra
         }
         return;
     }
-    timestamp_ns -= RESERVE_NS; // set start a bit earlier
     std::unique_lock<std::shared_mutex> lock(g_procs_mutex); // writer lock (one allowed, no readers)
     ProcInfo pi = { pid, timestamp_ns, MAX_PROC_END, name, to_track };
     g_running_procs.push_back(pi);
@@ -92,7 +91,6 @@ void add_proc(int pid, const std::string& name, UINT64 timestamp_ns, bool to_tra
 
 // thread-safe marking the proc termination
 void mark_termination(int pid, UINT64 timestamp_ns) {
-    timestamp_ns += RESERVE_NS; // set termination a bit later
     std::unique_lock<std::shared_mutex> lock(g_procs_mutex); // writer lock (one allowed, no readers)
     ProcInfo* latest_proc = nullptr;
     for (auto it = g_running_procs.begin(); it != g_running_procs.end(); ++it) {
@@ -111,16 +109,49 @@ void mark_termination(int pid, UINT64 timestamp_ns) {
 }
 
 // thread-safe retrieving a proc
-std::string get_proc_name(int pid, UINT64 timestamp) {
+std::string get_proc_name(int pid, UINT64 timestamp_ns, UINT64 buffer_ns) {
+    if (buffer_ns > MAX_BUFFER_NS) {
+        if (g_debug) {
+            std::cout << "[!] Utils: No process found with pid=" << pid << " at " << unix_epoch_ns_to_iso8601(timestamp_ns) << " with " << buffer_ns << "ns buffer\n";
+        }
+        return PROC_NOT_FOUND;
+    }
     std::shared_lock<std::shared_mutex> lock(g_procs_mutex); // reader lock (multiple allowed when no writers)
+    std::vector<ProcInfo> potential_matches = {};
     for (auto it = g_running_procs.begin(); it != g_running_procs.end(); ++it) {
         if (it->PID == pid) { // check if pid matches
-            if (it->start_time < timestamp && it->end_time > timestamp) { // check if timestamp is inside start and end
-                return it->name;
+            if ((it->start_time - buffer_ns) < timestamp_ns && (it->end_time + buffer_ns) > timestamp_ns) { // check if timestamp is inside start and end (with buffer)
+                potential_matches.push_back(*it);
             }
         }
     }
-    return PROC_NOT_FOUND;
+    std::shared_lock<std::shared_mutex> unlock(g_procs_mutex); // unlock mutex
+
+    // handle 0,1,>1 potential matches
+    if (potential_matches.size() == 0) { // no procs found --> search again with more buffer, 0.1ms, 1ms, ... MAX_BUFFER_NS, +1 --> not found
+        if (buffer_ns == 0) {
+            buffer_ns = RESERVE_NS; // ensure that the buffer grows
+        }
+        return get_proc_name(pid, timestamp_ns, buffer_ns*10);
+    }
+    if (potential_matches.size() == 1) { // one proc found --> return it
+        return potential_matches.at(0).name;
+    }
+    if (potential_matches.size() > 1) { // X procs found --> return the process with the closest start / end time to the given timestamp_ns // TODO does this work?
+        UINT64 smallest_diff = MAX_PROC_END;
+        ProcInfo closest_proc = {0, 0, 0, PROC_NOT_FOUND, false};
+        for (auto it = g_running_procs.begin(); it != g_running_procs.end(); ++it) {
+            UINT64 diff_s = (it->start_time > timestamp_ns) ? it->start_time - timestamp_ns : timestamp_ns - it->start_time;
+            UINT64 diff_e = (it->end_time > timestamp_ns) ? it->end_time - timestamp_ns : timestamp_ns - it->end_time;
+            UINT64 diff = (diff_s < diff_e) ? diff_s : diff_e;
+            if (diff < smallest_diff) {
+                smallest_diff = diff;
+                closest_proc = *it;
+            }
+        }
+        return closest_proc.name;
+    }
+    return PROC_NOT_FOUND; // comfort the compiler, "not all control paths return a value"
 }
 
 // thread-safe retrieving all processes that were tracked
@@ -218,6 +249,11 @@ std::string get_hook_dll_path() {
     return wstring2string(base_path) + "EDRReflectiveHooker.dll";
 }
 
+std::string get_output_path(std::string name) {
+    std::wstring base_path = get_base_path();
+    return wstring2string(base_path) + "..\\..\\EDRi\\dumps\\" + name;
+}
+
 // returns the files from /EDRi/attacks
 std::string get_available_attacks() {
     std::ostringstream oss;
@@ -231,17 +267,15 @@ std::string get_available_attacks() {
         return ""; // Directory not found or empty
     }
 
-    bool first = true;
     do {
         // Skip directories like "." and ".."
         if (!(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
-            if (!first) {
-                oss << " ";
-            }
 			std::string f = wchar2string(findData.cFileName);
-			f = f.substr(0, f.find(enc_attack_suffix)); // remove .exe.enc
-            oss << f;
-            first = false;
+            // check if file ends with correct suffix
+            if (f.size() > enc_attack_suffix.size() && std::equal(enc_attack_suffix.rbegin(), enc_attack_suffix.rend(), f.rbegin())) {
+                f = f.substr(0, f.find(enc_attack_suffix)); // remove .exe.enc
+                oss << "\n" << f;
+            }
         }
     } while (FindNextFile(hFind, &findData) != 0);
 

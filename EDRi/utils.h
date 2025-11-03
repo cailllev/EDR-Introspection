@@ -21,14 +21,15 @@ const UINT64 WINDOWS_TICKS_TO_UNIX_EPOCH = SECS_TO_UNIX_EPOCH * WINDOWS_TICKS_PE
 
 // own cacophony
 static const UINT64 MIN_PROC_START = 0;
-static const UINT64 MAX_PROC_END = MAXUINT64;
-static const UINT64 RESERVE_NS = 100'000; // 0,1 ms padding to minimize race conditions between etw logs // TODO: when event not between start-end, check if other start-end exists, and which of the ranges is closer
+static const UINT64 MAX_PROC_END = 0xFFFFFFFFFFFFFFFFULL; // MAXUINT64
+static const UINT64 RESERVE_NS = 10'000; // 0,01 ms buffer before start / after end, to find all relevant events for a given proc
+static const UINT64 MAX_BUFFER_NS = 100'000'000; // 100 ms max buffer before returning PROC_NOT_FOUND
 UINT64 get_ns_time();
 void snapshot_procs();
 std::vector<int> get_PID_by_name(const std::string& name, UINT64 timestamp);
 void add_proc(int, const std::string&, UINT64, bool);
 void mark_termination(int, UINT64);
-std::string get_proc_name(int, UINT64);
+std::string get_proc_name(int, UINT64, UINT64);
 std::vector<ProcInfo> get_tracked_procs();
 std::string unnecessary_tools_running();
 std::string get_random_3digit_num();
@@ -41,6 +42,7 @@ std::vector<int> get_hooked_procs();
 
 std::wstring get_base_path();
 std::string get_hook_dll_path();
+std::string get_output_path(std::string);
 bool xor_file(std::string, std::string);
 bool remove_file(const std::string&);
 std::string get_available_attacks();
