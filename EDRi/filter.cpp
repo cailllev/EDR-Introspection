@@ -26,7 +26,7 @@ void add_exe_information(json& j) {
 
             // add info for all pid fields
             if (std::find(fields_to_add_exe_name.begin(), fields_to_add_exe_name.end(), key) != fields_to_add_exe_name.end()) {
-                std::string exe_name = get_proc_name(value, timestamp_ns);
+                std::string exe_name = get_proc_name(value, timestamp_ns, RESERVE_NS);
                 std::ostringstream oss;
                 oss << std::setw(5) << value.get<int>(); // pad pid up to 5 digits, allows for "alphabetical sort" == "numerical sort"
                 value = oss.str() + " " + exe_name; // add exe name "in place" (reference)

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <basetsd.h>
 #include <string>
 #include <vector>
 #include <shared_mutex>
@@ -30,8 +31,8 @@ extern std::vector<int> g_newly_hooked_procs;
 // tracking data
 struct ProcInfo {
 	int PID;
-	uint64_t start_time;
-	uint64_t end_time;
+	UINT64 start_time;
+	UINT64 end_time;
 	std::string name;
 	bool to_track;
 };
