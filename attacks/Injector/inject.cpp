@@ -74,11 +74,23 @@ int main(int argc, char** argv) {
     print_and_emit_event(msg.str(), ok); msg.str("");
 	Sleep(sleep_between_steps_ms);
 
-#ifdef default
-    msg << "Running default config";
-    print_and_emit_event(msg.str(), ok); msg.str("");
-
-    // handle start params only in standard
+    // handle config selection
+    msg << "Running '";
+#if defined standard
+    msg << "standard";
+#elif defined obfuscation
+    msg << "obfuscation";
+#elif defined anti_emulation_sleep
+    msg << "anti_emulation_sleep";
+#elif defined anti_emulation_calc
+    msg << "anti_emulation_calc";
+#elif defined deconditioning_alloc
+    msg << "deconditioning_alloc";
+#elif defined deconditioning_calc
+    msg << "deconditioning_calc";
+# else
+    msg << "Release";
+    // handle start params only in 'Release' config
     switch (s) {
     case NoWait:
         break;
@@ -95,31 +107,8 @@ int main(int argc, char** argv) {
         break;
     }
 #endif
-
-#ifdef encryption
-    msg << "Running encryption config";
+    msg << "' config";
     print_and_emit_event(msg.str(), ok); msg.str("");
-#endif
-
-#ifdef anti_emulation_sleep
-    msg << "Running anti_emulation_sleep config";
-    print_and_emit_event(msg.str(), ok); msg.str("");
-#endif
-
-#ifdef anti_emulation_calc
-    msg << "Running anti_emulation_calc config";
-    print_and_emit_event(msg.str(), ok); msg.str("");
-#endif
-
-#ifdef deconditioning_alloc
-    msg << "Running deconditioning_alloc config";
-    print_and_emit_event(msg.str(), ok); msg.str("");
-#endif
-
-#ifdef deconditioning_calc
-    msg << "Running deconditioning_calc config";
-    print_and_emit_event(msg.str(), ok); msg.str("");
-#endif
 
 	msg << "Before starting subprocess to inject to";
     print_and_emit_event(msg.str(), bef); msg.str("");
