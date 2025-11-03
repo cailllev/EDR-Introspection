@@ -70,25 +70,56 @@ int main(int argc, char** argv) {
 	std::string ok = "[+] ";
 
     // print current 
-    msg << "Injector started with PID " << GetCurrentProcessId();;
+    msg << "Injector started with PID " << GetCurrentProcessId();
     print_and_emit_event(msg.str(), ok); msg.str("");
 	Sleep(sleep_between_steps_ms);
 
+#ifdef default
+    msg << "Running default config";
+    print_and_emit_event(msg.str(), ok); msg.str("");
+
+    // handle start params only in standard
     switch (s) {
-        case NoWait:
-            break;
-        case WaitTime:
-            for (int i = wait_time; i > 0; i--) {
-                std::cout << "[*] Starting injection in " << i << "\n";
-                Sleep(1000);
-            };
-            break;
-        case WaitForEnter:
-            std::cout << "[*] Press ENTER to start injection...\n";
-            std::cin.get();;
-        default:
-            break;
+    case NoWait:
+        break;
+    case WaitTime:
+        for (int i = wait_time; i > 0; i--) {
+            std::cout << "[*] Starting injection in " << i << "\n";
+            Sleep(1000);
+        };
+        break;
+    case WaitForEnter:
+        std::cout << "[*] Press ENTER to start injection...\n";
+        std::cin.get();
+    default:
+        break;
     }
+#endif
+
+#ifdef encryption
+    msg << "Running encryption config";
+    print_and_emit_event(msg.str(), ok); msg.str("");
+#endif
+
+#ifdef anti_emulation_sleep
+    msg << "Running anti_emulation_sleep config";
+    print_and_emit_event(msg.str(), ok); msg.str("");
+#endif
+
+#ifdef anti_emulation_calc
+    msg << "Running anti_emulation_calc config";
+    print_and_emit_event(msg.str(), ok); msg.str("");
+#endif
+
+#ifdef deconditioning_alloc
+    msg << "Running deconditioning_alloc config";
+    print_and_emit_event(msg.str(), ok); msg.str("");
+#endif
+
+#ifdef deconditioning_calc
+    msg << "Running deconditioning_calc config";
+    print_and_emit_event(msg.str(), ok); msg.str("");
+#endif
 
 	msg << "Before starting subprocess to inject to";
     print_and_emit_event(msg.str(), bef); msg.str("");
@@ -218,6 +249,9 @@ int main(int argc, char** argv) {
         print_and_emit_event(msg.str(), fail); msg.str("");
         return 1;
 	}
+
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
 
     msg << "Attack done";
     print_and_emit_event(msg.str(), ok); msg.str("");
