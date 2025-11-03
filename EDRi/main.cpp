@@ -120,7 +120,7 @@ int main(int argc, char* argv[]) {
         ("p,edr-profile", "The EDR to track, supporting: " + get_available_edrs(), cxxopts::value<std::string>())
         ("a,attack-exe", "The attack to execute, supporting: " + get_available_attacks(), cxxopts::value<std::string>())
         ("r,run-as-child", "If the attack should run (automatically) as a child of the EDRi.exe or if it should be executed manually")
-        ("o,output", "The Path of the all-events.csv, default " + all_events_output_default, cxxopts::value<std::string>())
+        ("o,output", "The output name of the csv results, base-dir: " + get_output_path(""), cxxopts::value<std::string>())
         ("m,trace-etw-misc", "Trace misc ETW")
         ("i,trace-etw-ti", "Trace ETW-TI (needs PPL)")
         ("n,hook-ntdll", "Hook ntdll.dll (needs PPL)")
@@ -181,13 +181,14 @@ int main(int argc, char* argv[]) {
         return 1;
 	}
 	std::string attack_exe_enc_path = get_attack_enc_path(attack_name);
-    std::string output;
+    std::string output_name;
     if (result.count("output") == 0) {
-        output = all_events_output_default;
+        output_name = "results.csv";
     }
     else {
-        output = result["output"].as<std::string>();
+        output_name = result["output"].as<std::string>();
     }
+    std::string output = get_output_path(output_name);
     std::cout << "[*] EDRi: Writing events to: " << output << "\n";
 
     bool run_as_child = false;
@@ -269,36 +270,19 @@ int main(int argc, char* argv[]) {
     std::cout << "[*] EDRi: Traces started\n";
 
     // GET PROCS TO TRACK
-    // etw traces also add procs over time
-    // -> taking a snapshot of procs first and then starting etw would omit procs started
-    //    between snapshot_procs() and "traces ready to track new proc creations"
-    // --> therefore snapshot_procs() after traces started
-    std::cout << "[*] EDRi: Get running procs\n";
-    snapshot_procs();
-    UINT64 proc_snapshot_timestamp = get_ns_time();
-    for (auto& e : g_exes_to_track) {
-        std::vector<int> pids = get_PID_by_name(e, proc_snapshot_timestamp);
-        for (auto& p : pids) {
-            std::cout << "[+] EDRi: Got pid for " << e << ":" << p << "\n";
-            g_tracking_PIDs.push_back(p);
-        }
-        if (pids.empty() && g_debug) {
-            std::cout << "[-] EDRi: Process tracking, could not find " << e << "\n";
-		}
-    }
+    // add all EDR specific procs
     for (auto& e : get_all_edr_exes(edr_profile)) {
-        std::vector<int> pids = get_PID_by_name(e, proc_snapshot_timestamp);
-        for (auto& p : pids) {
-            std::cout << "[+] EDRi: Got pid for " << e << ":" << p << "\n";
-            g_tracking_PIDs.push_back(p);
-        }
-        if (pids.empty() && g_debug) {
-            std::cout << "[-] EDRi: Process tracking, could not find EDR specific " << e << "\n";
-        }
+        g_exes_to_track.push_back(e); // must happen before snapshot!
     }
-	std::string up = unnecessary_tools_running();
-    if (!up.empty()) {
-        std::cout << "[!] EDRi: Unnecessary tools running: " << up << "\n";
+    // snapshot_procs must be after traces started!
+    // -> taking a snapshot of procs first and then starting etw would miss procs started in between
+    // -> therefore snapshot_procs() after traces started
+    snapshot_procs();
+    std::cout << "[*] EDRi: Get running procs\n";
+    UINT64 proc_snapshot_timestamp = get_ns_time();
+	std::string ut = unnecessary_tools_running();
+    if (!ut.empty()) {
+        std::cout << "[!] EDRi: Unnecessary tools running: " << ut << "\n";
         std::cout << "[!] EDRi: It is recommended to close them and start again, continuing in 3 sec...\n";
 		Sleep(3000);
 	}
@@ -311,7 +295,6 @@ int main(int argc, char* argv[]) {
             stop_all_etw_traces();
             return 1;
         }
-        std::cout << "// --------------------------- EDR Sandblast end marker ---------------------------\n"; // mark end in logs
 
 		// get main edr processes and inject the hooker
         std::vector<std::string> main_edr_exes = edr_profile.main_exes;
