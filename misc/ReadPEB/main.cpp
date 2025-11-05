@@ -16,13 +16,17 @@ PFN_NtQueryInformationProcess pNtQueryInfoProcess = nullptr;
 
 int main(int argc, char *argv[])
 {
+    int pid = 0;
     if (argc < 2) {
-        printf("[!] Usage %s <process ID to read PEB from>\n", argv[0]);
-        return 1;
+        printf("[*] Reading PEB from current process\n");
+        pid = GetCurrentProcessId();
     }
-    int pid = atoi(argv[1]);
-    if (pid == 0) {
-        printf("[!] Invalid PID: %i\n", pid);
+    else {
+        pid = atoi(argv[1]);
+        if (pid == 0) {
+            printf("[!] Invalid PID: %i\n", pid);
+        }
+        printf("[*] Reading PEB from process %i\n", pid);
     }
 
     HMODULE hNtdll = GetModuleHandleW(L"ntdll.dll");
@@ -52,6 +56,7 @@ int main(int argc, char *argv[])
         printf("Could not NtQueryInformationProcess for %lu, error: %lu\n", static_cast<unsigned long>(status), GetLastError());
         return 1;
     }
+    printf("[*] Got PBI.PebBaseAddress           = 0x%p\n", reinterpret_cast<void*>(pbi.PebBaseAddress));
 
     // PEB
     PEB peb = {};
@@ -60,19 +65,19 @@ int main(int argc, char *argv[])
         printf("[!] Could not ReadProcessMemory, error: %lu\n", GetLastError());
         return 1;
     }
-
     if (!peb.Ldr) {
         printf("[!] PEB.Ldr is NULL");
         return 1;
     }
+    printf("[*] Got PEB.Ldr                      = 0x%p\n", reinterpret_cast<void*>(peb.Ldr));
 
     // PEB_LDR_DATA
     PEB_LDR_DATA ldr = {};
-    // needs to call original ReadVirtualMemory, else recursion!
     if (!ReadProcessMemory(hProcess, peb.Ldr, &ldr, (ULONG)sizeof(PEB_LDR_DATA), 0)) {
         printf("[!] ReadProcessMemory failed for PEB_LDR_DATA, error: %lu\n", GetLastError());
         return 1;
     }
+    printf("[*] Got InMemoryOrderModuleList.head = 0x%p\n", reinterpret_cast<void*>(&ldr.InMemoryOrderModuleList));
     
     // InMemoryOrderModuleList
     LIST_ENTRY* head = &ldr.InMemoryOrderModuleList;
