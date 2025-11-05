@@ -5,9 +5,10 @@
 
 # TO INCLUDE
 !x64/Release/EDRi.exe
-!x64/Release/Hooks.dll
-!x64/Release/HookTester.exe
-!x64/Release/attacks/*
+!x64/Release/SelfReflectiveInjectLoader.exe
+!x64/Release/EDRReflectiveHooker.dll
+!x64/Release/ETWDump.exe
+!x64/Release/attacks/*.exe.enc
 !x64/Release/tools/*
 
 # KDU drivers
