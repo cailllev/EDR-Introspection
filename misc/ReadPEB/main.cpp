@@ -60,8 +60,8 @@ int main(int argc, char *argv[])
 
     // PEB
     PEB peb = {};
-    // needs to call original ReadVirtualMemory, else recursion!
-    if (pbi.PebBaseAddress != 0 && !ReadProcessMemory(hProcess, reinterpret_cast<void*>(pbi.PebBaseAddress), &peb, static_cast<ULONG>(sizeof(peb)), 0)) {
+    SIZE_T* read = nullptr;
+    if (pbi.PebBaseAddress != 0 && !ReadProcessMemory(hProcess, pbi.PebBaseAddress, &peb, sizeof(peb), read)) {
         printf("[!] Could not ReadProcessMemory, error: %lu\n", GetLastError());
         return 1;
     }
@@ -69,14 +69,16 @@ int main(int argc, char *argv[])
         printf("[!] PEB.Ldr is NULL");
         return 1;
     }
+    printf("[+] Read %i bytes\n", read);
     printf("[*] Got PEB.Ldr                      = 0x%p\n", reinterpret_cast<void*>(peb.Ldr));
 
     // PEB_LDR_DATA
     PEB_LDR_DATA ldr = {};
-    if (!ReadProcessMemory(hProcess, peb.Ldr, &ldr, (ULONG)sizeof(PEB_LDR_DATA), 0)) {
+    if (!ReadProcessMemory(hProcess, peb.Ldr, &ldr, (ULONG)sizeof(PEB_LDR_DATA), read)) {
         printf("[!] ReadProcessMemory failed for PEB_LDR_DATA, error: %lu\n", GetLastError());
         return 1;
     }
+    printf("[+] Read %i bytes\n", read);
     printf("[*] Got InMemoryOrderModuleList.head = 0x%p\n", reinterpret_cast<void*>(&ldr.InMemoryOrderModuleList));
     
     // InMemoryOrderModuleList
@@ -88,10 +90,11 @@ int main(int argc, char *argv[])
 
     while (current != head && iteration < maxIterations) {
         _LDR_DATA_TABLE_ENTRY entry = {};
-        if (!ReadProcessMemory(hProcess, CONTAINING_RECORD(current, _LDR_DATA_TABLE_ENTRY, InMemoryOrderLinks), &entry, sizeof(_LDR_DATA_TABLE_ENTRY), NULL)) {
+        if (!ReadProcessMemory(hProcess, CONTAINING_RECORD(current, _LDR_DATA_TABLE_ENTRY, InMemoryOrderLinks), &entry, sizeof(_LDR_DATA_TABLE_ENTRY), read)) {
             printf("[!] ReadProcessMemory failed for LDR_DATA_TABLE_ENTRY. Error: %lu\n", GetLastError());
             break;
         }
+        printf("[+] Read %i bytes\n", read);
 
         if (entry.DllBase == 0) { // all zero is last one for some reason
             break;
