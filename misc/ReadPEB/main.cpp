@@ -13,6 +13,16 @@ typedef NTSTATUS(NTAPI* PFN_NtQueryInformationProcess)(
     PULONG           ReturnLength);
 PFN_NtQueryInformationProcess pNtQueryInfoProcess = nullptr;
 
+// NtReadVirtualMemory definition (only in ntdll.dll defined)
+typedef NTSTATUS(NTAPI* PFN_NtReadVirtualMemory)(
+    HANDLE  ProcessHandle,
+    PVOID   BaseAddress,
+    PVOID   Buffer,
+    SIZE_T  NumberOfBytesToRead,
+    PSIZE_T NumberOfBytesRead
+    );
+PFN_NtReadVirtualMemory pNtReadVirtualMemory = nullptr;
+
 
 int main(int argc, char *argv[])
 {
@@ -45,6 +55,11 @@ int main(int argc, char *argv[])
         printf("[!] NtQueryInformationProcess not found in ntdll\n");
         return 1;
     }
+    pNtReadVirtualMemory = (PFN_NtReadVirtualMemory)GetProcAddress(hNtdll, "NtReadVirtualMemory");
+    if (pNtReadVirtualMemory == nullptr) {
+        printf("[!] NtQueryInformationProcess not found in ntdll\n");
+        return 1;
+    }
 
     PROCESS_BASIC_INFORMATION pbi = {};
     ULONG returnLength;
@@ -54,9 +69,10 @@ int main(int argc, char *argv[])
         printf("[!] Failed to open proc %i\n", pid);
         return 1;
     }
+    NTSTATUS status;
 
     // PBI
-    NTSTATUS status = pNtQueryInfoProcess(hProcess, ProcessBasicInformation, &pbi, sizeof(pbi), &returnLength);
+    status = pNtQueryInfoProcess(hProcess, ProcessBasicInformation, &pbi, sizeof(pbi), &returnLength);
     if (status != 0) {
         printf("Could not NtQueryInformationProcess for %i, status=%lu error: %lu\n", pid, static_cast<unsigned long>(status), GetLastError());
         return 1;
@@ -70,8 +86,9 @@ int main(int argc, char *argv[])
     // PEB, read into local PEB
     SIZE_T bytesRead = 0;
     PEB peb = { 0 };
-    if (!ReadProcessMemory(hProcess, pbi.PebBaseAddress, &peb, sizeof(peb), &bytesRead)) {
-        printf("[!] Could not ReadProcessMemory(PEB), error: %lu\n", GetLastError());
+    status = pNtReadVirtualMemory(hProcess, pbi.PebBaseAddress, &peb, sizeof(peb), &bytesRead);
+    if (status != 0) {
+        printf("[!] Could not ReadProcessMemory(PEB), status=%lu error: %lu\n", status, GetLastError());
         return 1;
     }
     if (debug) {
@@ -87,8 +104,9 @@ int main(int argc, char *argv[])
 
     // read remote PEB_LDR_DATA into local ldr
     PEB_LDR_DATA ldr = { 0 };
-    if (!ReadProcessMemory(hProcess, remoteLdrAddr, &ldr, sizeof(ldr), &bytesRead)) {
-        printf("[!] ReadProcessMemory failed for PEB_LDR_DATA, error: %lu\n", GetLastError());
+    status = pNtReadVirtualMemory(hProcess, remoteLdrAddr, &ldr, sizeof(ldr), &bytesRead);
+    if (status != 0) {
+        printf("[!] ReadProcessMemory failed for PEB_LDR_DATA, status=%lu error: %lu\n", status, GetLastError());
         return 1;
     }
     if (debug) {
@@ -103,6 +121,13 @@ int main(int argc, char *argv[])
     LIST_ENTRY remoteList = ldr.InMemoryOrderModuleList;
     PVOID current = remoteList.Flink; // remote address
 
+    // alloc memory locally for name
+    WCHAR* localNameW = (WCHAR*)malloc((MAX_PATH + 1) * sizeof(WCHAR));
+    if (!localNameW) {
+        printf("[!] Unable to alloc memory for local name\n");
+        return 1;
+    }
+
     int maxIterations = 1000;
     int iter = 0;
 
@@ -112,7 +137,8 @@ int main(int argc, char *argv[])
 
         _LDR_DATA_TABLE_ENTRY entry;
         ZeroMemory(&entry, sizeof(entry));
-        if (!ReadProcessMemory(hProcess, remoteEntryAddr, &entry, sizeof(entry), &bytesRead)) {
+        status = pNtReadVirtualMemory(hProcess, remoteEntryAddr, &entry, sizeof(entry), &bytesRead);
+        if (status != 0) {
             printf("[!] RPM failed for LDR entry at %p. Error: %lu\n", remoteEntryAddr, GetLastError());
             break;
         }
@@ -125,32 +151,38 @@ int main(int argc, char *argv[])
             break;
         }
 
-        // Read the remote FullDllName.Buffer into a local wchar buffer
+        // check FullDllName fields
+        if (!entry.FullDllName.Buffer) {
+            printf("[!] Empty buffer\n");
+            current = entry.InMemoryOrderLinks.Flink;
+            iter++; continue;
+        }
         USHORT nameLen = entry.FullDllName.Length;
-        if (nameLen > 0 && nameLen < 0x2000) { // sanity cap
-            size_t wcharCount = (nameLen / sizeof(WCHAR));
-            WCHAR* localNameW = (WCHAR*)malloc((wcharCount + 1) * sizeof(WCHAR));
-            if (localNameW) {
-                ZeroMemory(localNameW, (wcharCount + 1)*sizeof(WCHAR));
-                if (entry.FullDllName.Buffer && 
-                    ReadProcessMemory(hProcess, entry.FullDllName.Buffer, localNameW, nameLen, &bytesRead)) {
-                    localNameW[wcharCount] = L'\0';
-                    char nameBuf[MAX_PATH];
-                    WideCharToMultiByte(CP_ACP, 0, localNameW, -1, nameBuf, sizeof(nameBuf), NULL, NULL);
-                    printf("[+] Found entry: base=0x%p, size=0x%p, name=%s\n", entry.DllBase, (PVOID)entry.Reserved3[1], nameBuf);
-                } else {
-                    printf("[!] Could not read remote name buffer at %p (len=%u). Error: %lu\n", entry.FullDllName.Buffer, nameLen, GetLastError());
-                }
-                free(localNameW);
-            }
-        } else {
-            printf("[!] Invalid name length: %u\n", nameLen);
+        if (!nameLen || nameLen < 0 || nameLen > 0x2000) {
+            printf("[!] Invalid name lenght: %u\n", nameLen);
+            current = entry.InMemoryOrderLinks.Flink;
+            iter++; continue;
+        }
+
+        // Read the remote FullDllName.Buffer into a local wchar buffer
+        size_t wcharCount = (nameLen / sizeof(WCHAR));
+        ZeroMemory(localNameW, (wcharCount + 1)*sizeof(WCHAR));
+        status = pNtReadVirtualMemory(hProcess, entry.FullDllName.Buffer, localNameW, nameLen, &bytesRead);
+        if (status != 0) {
+            printf("[!] Could not read remote name buffer at %p (len=%u). Error: %lu\n", entry.FullDllName.Buffer, nameLen, GetLastError());
+        }
+        else {
+            localNameW[wcharCount] = L'\0';
+            char nameBuf[MAX_PATH];
+            WideCharToMultiByte(CP_ACP, 0, localNameW, -1, nameBuf, sizeof(nameBuf), NULL, NULL);
+            printf("[+] Found entry: base=0x%p, size=0x%p, name=%s\n", entry.DllBase, (PVOID)entry.Reserved3[1], nameBuf);
         }
 
         // advance to next remote entry
-        current = entry.InMemoryOrderLinks.Flink; // this is a remote pointer read from the entry we just copied locally
+        current = entry.InMemoryOrderLinks.Flink;
         iter++;
     }
+    free(localNameW);
 
     if (iter >= maxIterations) {
         printf("[!] Hit maximum iteration limit\n");
