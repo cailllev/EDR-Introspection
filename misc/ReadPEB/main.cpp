@@ -16,17 +16,21 @@ PFN_NtQueryInformationProcess pNtQueryInfoProcess = nullptr;
 
 int main(int argc, char *argv[])
 {
+    bool debug = false;
     int pid = 0;
     if (argc < 2) {
-        printf("[*] Reading PEB from current process\n");
         pid = GetCurrentProcessId();
+        printf("[*] Reading PEB from current process, pid=%i\n", pid);
     }
     else {
         pid = atoi(argv[1]);
         if (pid == 0) {
             printf("[!] Invalid PID: %i\n", pid);
         }
-        printf("[*] Reading PEB from process %i\n", pid);
+        printf("[*] Reading PEB from process pid=%i\n", pid);
+        if (argc == 3) {
+            debug = true;
+        }
     }
 
     HMODULE hNtdll = GetModuleHandleW(L"ntdll.dll");
@@ -48,80 +52,107 @@ int main(int argc, char *argv[])
     HANDLE hProcess = OpenProcess(PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE, FALSE, pid);
     if (!hProcess) {
         printf("[!] Failed to open proc %i\n", pid);
+        return 1;
     }
 
     // PBI
     NTSTATUS status = pNtQueryInfoProcess(hProcess, ProcessBasicInformation, &pbi, sizeof(pbi), &returnLength);
     if (status != 0) {
-        printf("Could not NtQueryInformationProcess for %lu, error: %lu\n", static_cast<unsigned long>(status), GetLastError());
+        printf("Could not NtQueryInformationProcess for %i, status=%lu error: %lu\n", pid, static_cast<unsigned long>(status), GetLastError());
         return 1;
     }
-    printf("[*] Got PBI.PebBaseAddress           = 0x%p\n", reinterpret_cast<void*>(pbi.PebBaseAddress));
-
-    // PEB
-    PEB peb = {};
-    SIZE_T* read = nullptr;
-    if (pbi.PebBaseAddress != 0 && !ReadProcessMemory(hProcess, pbi.PebBaseAddress, &peb, sizeof(peb), read)) {
-        printf("[!] Could not ReadProcessMemory, error: %lu\n", GetLastError());
+    if (pbi.PebBaseAddress == 0) {
+        printf("[!] pbi.PebBaseAddress is NULL\n");
         return 1;
+    }
+    printf("[*] Got PBI.PebBaseAddress = 0x%p\n", reinterpret_cast<void*>(pbi.PebBaseAddress));
+
+    // PEB, read into local PEB
+    SIZE_T bytesRead = 0;
+    PEB peb = { 0 };
+    if (!ReadProcessMemory(hProcess, pbi.PebBaseAddress, &peb, sizeof(peb), &bytesRead)) {
+        printf("[!] Could not ReadProcessMemory(PEB), error: %lu\n", GetLastError());
+        return 1;
+    }
+    if (debug) {
+        printf("[+] Read %llu bytes for PEB\n", (unsigned long long)bytesRead);
     }
     if (!peb.Ldr) {
-        printf("[!] PEB.Ldr is NULL");
-        return 1;
+        printf("[!] PEB.Ldr is NULL\n"); 
+        return 1; 
     }
-    printf("[+] Read %i bytes\n", read);
-    printf("[*] Got PEB.Ldr                      = 0x%p\n", reinterpret_cast<void*>(peb.Ldr));
+    // remote pointer to PEB_LDR_DATA
+    PBYTE remoteLdrAddr = (PBYTE)peb.Ldr;
+    printf("[*] Got remote PEB.LDR     = 0x%p\n", remoteLdrAddr);
 
-    // PEB_LDR_DATA
-    PEB_LDR_DATA ldr = {};
-    if (!ReadProcessMemory(hProcess, peb.Ldr, &ldr, (ULONG)sizeof(PEB_LDR_DATA), read)) {
+    // read remote PEB_LDR_DATA into local ldr
+    PEB_LDR_DATA ldr = { 0 };
+    if (!ReadProcessMemory(hProcess, remoteLdrAddr, &ldr, sizeof(ldr), &bytesRead)) {
         printf("[!] ReadProcessMemory failed for PEB_LDR_DATA, error: %lu\n", GetLastError());
         return 1;
     }
-    printf("[+] Read %i bytes\n", read);
-    printf("[*] Got InMemoryOrderModuleList.head = 0x%p\n", reinterpret_cast<void*>(&ldr.InMemoryOrderModuleList));
-    
-    // InMemoryOrderModuleList
-    LIST_ENTRY* head = &ldr.InMemoryOrderModuleList;
-    LIST_ENTRY* current = ldr.InMemoryOrderModuleList.Flink;
-
-    int maxIterations = 1000;
-    int iteration = 0;
-
-    while (current != head && iteration < maxIterations) {
-        _LDR_DATA_TABLE_ENTRY entry = {};
-        if (!ReadProcessMemory(hProcess, CONTAINING_RECORD(current, _LDR_DATA_TABLE_ENTRY, InMemoryOrderLinks), &entry, sizeof(_LDR_DATA_TABLE_ENTRY), read)) {
-            printf("[!] ReadProcessMemory failed for LDR_DATA_TABLE_ENTRY. Error: %lu\n", GetLastError());
-            break;
-        }
-        printf("[+] Read %i bytes\n", read);
-
-        if (entry.DllBase == 0) { // all zero is last one for some reason
-            break;
-        }
-
-        // Validate pointers before using them
-        UNICODE_STRING name = entry.FullDllName;
-        if (!name.Buffer || name.Length == 0 || name.Length > 2048 || IsBadReadPtr(name.Buffer, name.Length)) {
-            printf("[!] Invalid FullDllName in LDR_DATA_TABLE_ENTRY, length=%i\n", name.Length);
-            current = entry.InMemoryOrderLinks.Flink;
-            iteration++;
-            continue;
-        }
-
-        char nameBuf[MAX_PATH] = { 0 };
-        int wcharCount = name.Length / sizeof(WCHAR);
-        WideCharToMultiByte(CP_ACP, 0, name.Buffer, wcharCount, nameBuf, MAX_PATH - 1, NULL, NULL);
-        nameBuf[MAX_PATH - 1] = '\0'; // ensure termination
-
-        printf("[+] Found entry: name=%s, base=%p, size=%p", nameBuf, entry.DllBase, entry.Reserved3[1]);
-
-        // Move to the next module in the list
-        current = entry.InMemoryOrderLinks.Flink;
-        iteration++;
+    if (debug) {
+        printf("[+] Read %llu bytes for PEB_LDR_DATA\n", (unsigned long long)bytesRead);
     }
 
-    if (iteration >= maxIterations) {
+    // compute remote head address (remote address of the LIST_ENTRY inside the remote PEB_LDR_DATA)
+    PBYTE remoteHead = remoteLdrAddr + offsetof(PEB_LDR_DATA, InMemoryOrderModuleList);
+    printf("[*] Got remote remoteHead  = 0x%p\n", remoteHead);
+
+    // start with the remote Flink (this is a remote pointer)
+    LIST_ENTRY remoteList = ldr.InMemoryOrderModuleList;
+    PVOID current = remoteList.Flink; // remote address
+
+    int maxIterations = 1000;
+    int iter = 0;
+
+    while (current && (PBYTE)current != remoteHead && iter < maxIterations) {
+        // remote address of the containing LDR_DATA_TABLE_ENTRY
+        PBYTE remoteEntryAddr = (PBYTE)current - offsetof(_LDR_DATA_TABLE_ENTRY, InMemoryOrderLinks);
+
+        _LDR_DATA_TABLE_ENTRY entry;
+        ZeroMemory(&entry, sizeof(entry));
+        if (!ReadProcessMemory(hProcess, remoteEntryAddr, &entry, sizeof(entry), &bytesRead)) {
+            printf("[!] RPM failed for LDR entry at %p. Error: %lu\n", remoteEntryAddr, GetLastError());
+            break;
+        }
+        if (debug) {
+            printf("[+] Read %llu bytes for LDR entry\n", (unsigned long long)bytesRead);
+        }
+
+        if (entry.DllBase == NULL) {
+            // end marker (or corrupted)
+            break;
+        }
+
+        // Read the remote FullDllName.Buffer into a local wchar buffer
+        USHORT nameLen = entry.FullDllName.Length;
+        if (nameLen > 0 && nameLen < 0x2000) { // sanity cap
+            size_t wcharCount = (nameLen / sizeof(WCHAR));
+            WCHAR* localNameW = (WCHAR*)malloc((wcharCount + 1) * sizeof(WCHAR));
+            if (localNameW) {
+                ZeroMemory(localNameW, (wcharCount + 1)*sizeof(WCHAR));
+                if (entry.FullDllName.Buffer && 
+                    ReadProcessMemory(hProcess, entry.FullDllName.Buffer, localNameW, nameLen, &bytesRead)) {
+                    localNameW[wcharCount] = L'\0';
+                    char nameBuf[MAX_PATH];
+                    WideCharToMultiByte(CP_ACP, 0, localNameW, -1, nameBuf, sizeof(nameBuf), NULL, NULL);
+                    printf("[+] Found entry: base=0x%p, size=0x%p, name=%s\n", entry.DllBase, (PVOID)entry.Reserved3[1], nameBuf);
+                } else {
+                    printf("[!] Could not read remote name buffer at %p (len=%u). Error: %lu\n", entry.FullDllName.Buffer, nameLen, GetLastError());
+                }
+                free(localNameW);
+            }
+        } else {
+            printf("[!] Invalid name length: %u\n", nameLen);
+        }
+
+        // advance to next remote entry
+        current = entry.InMemoryOrderLinks.Flink; // this is a remote pointer read from the entry we just copied locally
+        iter++;
+    }
+
+    if (iter >= maxIterations) {
         printf("[!] Hit maximum iteration limit\n");
     }
 
