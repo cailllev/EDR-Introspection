@@ -3,14 +3,6 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
-# TO INCLUDE
-!x64/Release/EDRi.exe
-!x64/Release/SelfReflectiveInjectLoader.exe
-!x64/Release/EDRReflectiveHooker.dll
-!x64/Release/ETWDump.exe
-!x64/Release/attacks/*.exe.enc
-!x64/Release/tools/*
-
 # KDU drivers
 *NeacSafe64.inf
 *NeacSafe64.sys
@@ -373,3 +365,19 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# my super gitignore rules, F gitignore
+!/x64/
+
+!/x64/Release/
+/x64/Release/*
+
+!/x64/Release/attacks/
+/x64/Release/attacks/*
+!/x64/Release/attacks/*.exe.enc
+
+!/x64/Release/EDRi.exe
+!/x64/Release/SelfReflectiveInjectLoader.exe
+!/x64/Release/EDRReflectiveHooker.dll
+!/x64/Release/ETWDump.exe
+!/x64/Release/ReadPEB.exe
