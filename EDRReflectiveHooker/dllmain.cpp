@@ -494,7 +494,7 @@ DWORD WINAPI ReadFileResolverThread(LPVOID lpParam)
     emit_etw_msg_ns(msg, PID, ns);
 
     // close handle
-    if (hFile && hFile != INVALID_HANDLE_VALUE) CloseHandle(hFile);
+    if (hFile && hFile != INVALID_HANDLE_VALUE) g_origNtClose(hFile);
     free(args);
     return 0;
 }
@@ -518,211 +518,188 @@ DWORD WINAPI ReadMemoryResolverThread(LPVOID lpParam) {
     char msg[BIG_MSG_LEN];
     char error[MSG_LEN];
     bool err = false;
-
-    //std::unique_lock<std::shared_mutex> unique_lock(g_checkDlls); // writer lock (one allowed, no readers)
-
-    if (hProcess == 0 || hProcess == INVALID_HANDLE_VALUE) {
-        //_snprintf_s(error, sizeof(error), _TRUNCATE, "Invalid process handle");
-        err = true;
-    }
-
-    // ------------- RESOLVE IMAGE SECTIONS (EXE + DLL) ------------- //
-
-    PROCESS_BASIC_INFORMATION pbi = {};
-    ULONG returnLength;
-
-    // PBI
-    if (!err && pNtQueryInfoProcess(hProcess, ProcessBasicInformation, &pbi, sizeof(pbi), &returnLength) != 0) {
-        //_snprintf_s(error, sizeof(error), _TRUNCATE, "Could not NtQueryInformationProcess for %p, error: %lu", hProcess, GetLastError());
-        err = true;
-    }
-    if (!err && pbi.PebBaseAddress == 0) {
-        //_snprintf_s(error, sizeof(error), _TRUNCATE, "pbi.PebBaseAddress is NULL");
-        err = true;
-    }
-    //printf("[*] Got PBI.PebBaseAddress = 0x%p\n", reinterpret_cast<void*>(pbi.PebBaseAddress));
-
-    // PEB, read into local PEB
-    SIZE_T bytesRead = 0;
-    PEB peb = { 0 };
-    if (!err && g_origNtReadVirtualMemory(hProcess, pbi.PebBaseAddress, &peb, sizeof(peb), &bytesRead) != 0) {
-        //_snprintf_s(error, sizeof(error), _TRUNCATE, "Could not ReadProcessMemory(PEB), error: %lu", GetLastError());
-        err = true;
-    }
-    if (!err && !peb.Ldr) {
-        //_snprintf_s(error, sizeof(error), _TRUNCATE, "PEB.Ldr is NULL\n");
-        err = true;
-    }
-    // remote pointer to PEB_LDR_DATA
-    PBYTE remoteLdrAddr = (PBYTE)peb.Ldr;
-    //printf("[*] Got remote PEB.LDR     = 0x%p\n", remoteLdrAddr);
-
-    // read remote PEB_LDR_DATA into local ldr
-    PEB_LDR_DATA ldr = { 0 };
-    if (!err && g_origNtReadVirtualMemory(hProcess, remoteLdrAddr, &ldr, sizeof(ldr), &bytesRead) != 0) {
-        //_snprintf_s(error, sizeof(error), _TRUNCATE, "ReadProcessMemory failed for PEB_LDR_DATA, error: %lu", GetLastError());
-        err = true;
-    }
-
-    // compute remote head address (remote address of the LIST_ENTRY inside the remote PEB_LDR_DATA)
-    PBYTE remoteHead = remoteLdrAddr + offsetof(PEB_LDR_DATA, InMemoryOrderModuleList);
-    //printf("[*] Got remote remoteHead  = 0x%p\n", remoteHead);
-
-    // start with the remote Flink (this is a remote pointer)
-    LIST_ENTRY remoteList = ldr.InMemoryOrderModuleList;
-    PVOID current = remoteList.Flink; // remote address
-
-    // alloc memory locally for name
-    int maxLen = (MAX_PATH + 1) * sizeof(WCHAR);
-    WCHAR* localNameW = (WCHAR*)malloc(maxLen);
-    if (!localNameW) {
-        //_snprintf_s(error, sizeof(error), _TRUNCATE, "Unable to alloc memory for local name");
-        err = true;
-    }
-
-    int maxIterations = 1000;
-    int iter = 0;
-
-    // enumerate all remote memory regions (silently ignore errors here)
-    while (current && (PBYTE)current != remoteHead && iter < maxIterations) {
-        // remote address of the containing LDR_DATA_TABLE_ENTRY
-        PBYTE remoteEntryAddr = (PBYTE)current - offsetof(_LDR_DATA_TABLE_ENTRY, InMemoryOrderLinks);
-
-        _LDR_DATA_TABLE_ENTRY entry;
-        ZeroMemory(&entry, sizeof(entry));
-        if (g_origNtReadVirtualMemory(hProcess, remoteEntryAddr, &entry, sizeof(entry), &bytesRead) != 0) {
-            //_snprintf_s(error, sizeof(error), _TRUNCATE, "RPM failed for LDR entry at 0x%p. Error: %lu\n", remoteEntryAddr, GetLastError());
-            //emit_etw_msg_ns(error, tpid, ns);
-            //ZeroMemory(error, sizeof(error));
-            current = entry.InMemoryOrderLinks.Flink;
-            iter++; continue;
-        }
-
-        if (entry.DllBase == NULL) {
-            // end marker (or corrupted block) --> exit
-            break;
-        }
-
-        // check FullDllName fields
-        if (!entry.FullDllName.Buffer) {
-            //_snprintf_s(error, sizeof(error), _TRUNCATE, "Empty buffer at 0x%p", remoteEntryAddr);
-            //emit_etw_msg_ns(error, tpid, ns);
-            //ZeroMemory(error, sizeof(error));
-            current = entry.InMemoryOrderLinks.Flink;
-            iter++; continue;
-        }
-        USHORT nameLen = entry.FullDllName.Length;
-        if (!nameLen || nameLen < 0 || nameLen > 0x2000) {
-            //_snprintf_s(error, sizeof(error), _TRUNCATE, "Invalid name length at 0x%p, length=%u", remoteEntryAddr, nameLen);
-            //emit_etw_msg_ns(error, tpid, ns);
-            //ZeroMemory(error, sizeof(error));
-            current = entry.InMemoryOrderLinks.Flink;
-            iter++; continue;
-        }
-
-        // Read the remote FullDllName.Buffer into a local wchar buffer
-        ZeroMemory(localNameW, maxLen);
-        if (g_origNtReadVirtualMemory(hProcess, entry.FullDllName.Buffer, localNameW, nameLen, &bytesRead) != 0) {
-            //_snprintf_s(error, sizeof(error), _TRUNCATE, "Could not read remote name buffer at 0x%p (len=%u). Error: %lu", entry.FullDllName.Buffer, nameLen, GetLastError());
-            //emit_etw_msg_ns(error, tpid, ns);
-            //ZeroMemory(error, sizeof(error));
-        }
-        else {
-            size_t wcharCount = (nameLen / sizeof(WCHAR));
-            localNameW[wcharCount] = L'\0';
-            char nameBuf[MAX_PATH];
-            WideCharToMultiByte(CP_ACP, 0, localNameW, -1, nameBuf, sizeof(nameBuf), NULL, NULL);
-            ProcessSection image = {};
-            image.pid = tpid;
-            image.allocBase = reinterpret_cast<uint64_t>(entry.DllBase); // TODO, same?
-            //image.sectionBase = reinterpret_cast<uint64_t>(entry.DllBase); // TODO
-            image.sectionSize = static_cast<ULONG>(reinterpret_cast<ULONG_PTR>(entry.Reserved3[1]));
-            _snprintf_s(image.sectionName, sizeof(image.sectionName), _TRUNCATE, nameBuf);
-            g_loadedSections.push_back(image);
-
-            //_snprintf_s(msg, sizeof(error), _TRUNCATE, "Found image entry : base=0x%llx, size=0x%llx, name=%s", image.allocBase, image.sectionSize, image.sectionName);
-            //emit_etw_msg_ns(msg, tpid, ns);
-            //ZeroMemory(msg, sizeof(msg));
-        }
-
-        // advance to next remote entry
-        current = entry.InMemoryOrderLinks.Flink;
-        iter++;
-    }
-    free(localNameW);
+    ProcessSection actualSection = ProcessSection{ 0, 0, 0, "" };
 
     // find Section
-    ProcessSection actualSection = ProcessSection{ 0, 0, 0, "" };
     for (auto& s : g_loadedSections) {
         if (s.pid != tpid) continue; // skip sections from other procs
         if (offset >= s.allocBase && offset < s.allocBase + s.sectionSize) {
             actualSection = s;
-            //_snprintf_s(msg, sizeof(error), _TRUNCATE, "Found searched offset: base=0x%llx, size=0x%llx, name=%s", s.allocBase, s.sectionSize, s.sectionName);
-            //emit_etw_msg_ns(msg, tpid, ns);
-            //ZeroMemory(msg, sizeof(msg));
         }
     }
 
-    // ------------- RESOLVE PROC MEMORY SECTIONS ------------- //
-    // there are very many sections, do individual lookups when needed
+    // DO NOT use INVALID_PROCESS_HANDLE here, -1 can be used for same process reads
+    if (hProcess == NULL) {
+        _snprintf_s(error, sizeof(error), _TRUNCATE, "Invalid process handle (null)");
+        err = true;  goto emit;
+    }
 
-    if (actualSection.pid == 0 && !err) {
+    if (actualSection.pid == 0) { // offset currently unknown
+
+        // ------------- RESOLVE IMAGE SECTIONS (EXE + DLL) ------------- //
+
+        PROCESS_BASIC_INFORMATION pbi = {};
+        ULONG returnLength;
+
+        // PBI
+        if (pNtQueryInfoProcess(hProcess, ProcessBasicInformation, &pbi, sizeof(pbi), &returnLength) != 0) {
+            _snprintf_s(error, sizeof(error), _TRUNCATE, "Could not NtQueryInformationProcess for %p, error: %lu", hProcess, GetLastError());
+            err = true;  goto emit;
+        }
+        if (pbi.PebBaseAddress == 0) {
+            _snprintf_s(error, sizeof(error), _TRUNCATE, "pbi.PebBaseAddress is NULL");
+            err = true;  goto emit;
+        }
+
+        // PEB, read into local PEB
+        SIZE_T bytesRead = 0;
+        PEB peb = { 0 };
+        if (g_origNtReadVirtualMemory(hProcess, pbi.PebBaseAddress, &peb, sizeof(peb), &bytesRead) != 0) {
+            _snprintf_s(error, sizeof(error), _TRUNCATE, "Could not ReadProcessMemory(PEB), error: %lu", GetLastError());
+            err = true;  goto emit;
+        }
+        if (!peb.Ldr) {
+            _snprintf_s(error, sizeof(error), _TRUNCATE, "PEB.Ldr is NULL\n");
+            err = true;  goto emit;
+        }
+        // remote pointer to PEB_LDR_DATA
+        PBYTE remoteLdrAddr = (PBYTE)peb.Ldr;
+
+        // read remote PEB_LDR_DATA into local ldr
+        PEB_LDR_DATA ldr = { 0 };
+        if (g_origNtReadVirtualMemory(hProcess, remoteLdrAddr, &ldr, sizeof(ldr), &bytesRead) != 0) {
+            _snprintf_s(error, sizeof(error), _TRUNCATE, "ReadProcessMemory failed for PEB_LDR_DATA, error: %lu", GetLastError());
+            err = true;  goto emit;
+        }
+
+        // compute remote head address (remote address of the LIST_ENTRY inside the remote PEB_LDR_DATA)
+        PBYTE remoteHead = remoteLdrAddr + offsetof(PEB_LDR_DATA, InMemoryOrderModuleList);
+
+        // start with the remote Flink (this is a remote pointer)
+        LIST_ENTRY remoteList = ldr.InMemoryOrderModuleList;
+        PVOID current = remoteList.Flink; // remote address
+
+        // alloc memory locally for name
+        int maxLen = (MAX_PATH + 1) * sizeof(WCHAR);
+        WCHAR* localNameW = (WCHAR*)malloc(maxLen);
+        if (!localNameW) {
+            _snprintf_s(error, sizeof(error), _TRUNCATE, "Unable to alloc memory for local name");
+            err = true;  goto emit;
+        }
+
+        int maxIterations = 1000;
+        int iter = 0;
+
+        // enumerate all remote memory regions (silently ignore errors here)
+        while (current && (PBYTE)current != remoteHead && iter < maxIterations) {
+            // remote address of the containing LDR_DATA_TABLE_ENTRY
+            PBYTE remoteEntryAddr = (PBYTE)current - offsetof(_LDR_DATA_TABLE_ENTRY, InMemoryOrderLinks);
+
+            _LDR_DATA_TABLE_ENTRY entry;
+            ZeroMemory(&entry, sizeof(entry));
+            if (g_origNtReadVirtualMemory(hProcess, remoteEntryAddr, &entry, sizeof(entry), &bytesRead) != 0) {
+                //_snprintf_s(error, sizeof(error), _TRUNCATE, "RPM failed for LDR entry at 0x%p. Error: %lu\n", remoteEntryAddr, GetLastError());
+                //emit_etw_msg_ns(error, tpid, ns);
+                //ZeroMemory(error, sizeof(error));
+                current = entry.InMemoryOrderLinks.Flink;
+                iter++; continue;
+            }
+
+            if (entry.DllBase == NULL) {
+                // end marker (or corrupted block) --> exit
+                break;
+            }
+
+            // check FullDllName fields
+            USHORT nameLen = entry.FullDllName.Length;
+            if (!entry.FullDllName.Buffer || !nameLen || nameLen < 0 || nameLen > 0x2000) {
+                current = entry.InMemoryOrderLinks.Flink;
+                iter++; continue;
+            }
+
+            // Read the remote FullDllName.Buffer into a local wchar buffer
+            ZeroMemory(localNameW, maxLen);
+            if (g_origNtReadVirtualMemory(hProcess, entry.FullDllName.Buffer, localNameW, nameLen, &bytesRead) == 0) {
+                size_t wcharCount = (nameLen / sizeof(WCHAR));
+                localNameW[wcharCount] = L'\0';
+                char nameBuf[MAX_PATH];
+                WideCharToMultiByte(CP_ACP, 0, localNameW, -1, nameBuf, sizeof(nameBuf), NULL, NULL);
+
+                ProcessSection image = { 0, 0, 0, "" };
+                image.pid = tpid;
+                image.allocBase = reinterpret_cast<uint64_t>(entry.DllBase); // TODO, same?
+                //image.sectionBase = reinterpret_cast<uint64_t>(entry.DllBase); // TODO
+                image.sectionSize = static_cast<ULONG>(reinterpret_cast<ULONG_PTR>(entry.Reserved3[1]));
+
+                _snprintf_s(image.sectionName, sizeof(image.sectionName), _TRUNCATE, nameBuf);
+                g_loadedSections.push_back(image);
+
+                // check if offset from loaded image is in this section
+                if (offset >= image.allocBase && offset < image.allocBase + image.sectionSize) {
+                    actualSection = image;
+                }
+            }
+
+            // advance to next remote entry
+            current = entry.InMemoryOrderLinks.Flink;
+            iter++;
+        }
+        free(localNameW);
+    }
+
+    if (actualSection.pid == 0) { // offset still unknown
+
+        // ------------- RESOLVE PROC MEMORY SECTIONS ------------- //
+        // there are many sections, do individual lookups when needed
+        // open own handle with sufficient rights to VirtualQueryEx
+        HANDLE queryHandle;
+        CLIENT_ID cid = { (PVOID) tpid, 0};
+        g_origNtOpenProcess(&queryHandle, PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, &cid);
 
         MEMORY_BASIC_INFORMATION mbi = { 0 };
         if (VirtualQueryEx(hProcess, (LPCVOID)offset, &mbi, sizeof(mbi)) == sizeof(mbi)) {
 
-            if (mbi.State == MEM_COMMIT) {
-                actualSection.pid = tpid;
-                actualSection.allocBase = (UINT64)mbi.AllocationBase; // this is a per process base
-                actualSection.sectionSize = (UINT64)mbi.RegionSize;
+            ProcessSection s = { 0, 0, 0, "" };
+            s.pid = tpid;
+            s.allocBase = (UINT64)mbi.AllocationBase; // this is a per process base
+            s.sectionSize = (UINT64)mbi.RegionSize;
 
-                // get the mapped file name if it's a MEM_IMAGE or MEM_MAPPED
-                if (mbi.Type == MEM_IMAGE || mbi.Type == MEM_MAPPED) {
-                    WCHAR wName[MAX_PATH];
-                    if (GetMappedFileNameW(hProcess, mbi.BaseAddress, wName, MAX_PATH)) {
-                        WideCharToMultiByte(CP_ACP, 0, wName, -1, actualSection.sectionName, MAX_PATH, NULL, NULL);
-                    }
-                    else {
-                        strncpy_s(actualSection.sectionName, "ImageOrMappedNoName", _TRUNCATE);
-                    }
+            // get the mapped file name if it's a MEM_IMAGE or MEM_MAPPED
+            if (mbi.Type == MEM_IMAGE || mbi.Type == MEM_MAPPED) {
+                WCHAR wName[MAX_PATH];
+                if (GetMappedFileNameW(hProcess, mbi.BaseAddress, wName, MAX_PATH)) {
+                    WideCharToMultiByte(CP_ACP, 0, wName, -1, s.sectionName, MAX_PATH, NULL, NULL);
                 }
-                else { // else store the memory type
-                    switch (mbi.Type) {
-                    case MEM_PRIVATE: strncpy_s(actualSection.sectionName, "Private", _TRUNCATE); break;
-                    case MEM_IMAGE:   strncpy_s(actualSection.sectionName, "Image", _TRUNCATE); break;
-                    case MEM_MAPPED:  strncpy_s(actualSection.sectionName, "Mapped", _TRUNCATE); break;
-                    default:          
-                        char buf[32];
-                        sprintf_s(buf, "UnknownType_0x%lx", mbi.Type);
-                        strncpy_s(actualSection.sectionName, buf, _TRUNCATE);
-                        break;
-                    }
+                else {
+                    strncpy_s(s.sectionName, "ImageOrMappedNoName", _TRUNCATE);
                 }
-
-
-                //_snprintf_s(msg, sizeof(msg), _TRUNCATE, "Found mbi entry: base=0x%llx, size=0x%llx, name=%s", actualSection.allocBase, actualSection.sectionSize, actualSection.sectionName);
-                //emit_etw_msg_ns(msg, tpid, ns);
-                //ZeroMemory(msg, sizeof(msg));
             }
+            else { // else store the memory type
+                switch (mbi.Type) {
+                case MEM_PRIVATE: strncpy_s(s.sectionName, "Private", _TRUNCATE); break;
+                case MEM_IMAGE:   strncpy_s(s.sectionName, "Image", _TRUNCATE); break;
+                case MEM_MAPPED:  strncpy_s(s.sectionName, "Mapped", _TRUNCATE); break;
+                default:          
+                    char buf[32];
+                    sprintf_s(buf, "UnknownMemType_0x%lx", mbi.Type);
+                    strncpy_s(s.sectionName, buf, _TRUNCATE);
+                    break;
+                }
+            }
+
+            g_loadedSections.push_back(s);
+            actualSection = s;
+        } 
+        else {
+            _snprintf_s(error, sizeof(error), _TRUNCATE, "Unable to VirtualQueryEx");
+            err = true;  goto emit;
         }
+
+        if (queryHandle) g_origNtClose(queryHandle);
     }
 
-    if (actualSection.pid == 0) { // not found
-        _snprintf_s(msg, sizeof(msg), _TRUNCATE,
-            "NtReadVirtualMemory 0x%llx bytes at Unknown!0x%0*llx",
-            static_cast<unsigned long long>(bytesToRead),
-            static_cast<int>(sizeof(uintptr_t) * 2),
-            static_cast<unsigned long long>(offset));
-    }
-    else if (!err) {
-        _snprintf_s(msg, sizeof(msg), _TRUNCATE,
-            "NtReadVirtualMemory 0x%llx bytes from %s!0x%0*llx",
-            static_cast<unsigned long long>(bytesToRead),
-            actualSection.sectionName,
-            static_cast<int>(sizeof(uintptr_t) * 2),
-            static_cast<unsigned long long>(offset));
-    }
-    else {
+emit:
+    if (err) {
         _snprintf_s(msg, sizeof(msg), _TRUNCATE,
             "NtReadVirtualMemory 0x%llx bytes at 0x%0*llx, resolving error: %s",
             static_cast<unsigned long long>(bytesToRead),
@@ -730,10 +707,24 @@ DWORD WINAPI ReadMemoryResolverThread(LPVOID lpParam) {
             static_cast<unsigned long long>(offset),
             error);
     }
+    else if (actualSection.pid == 0) { // no error, but also not found
+        _snprintf_s(msg, sizeof(msg), _TRUNCATE,
+            "NtReadVirtualMemory 0x%llx bytes at Unknown!0x%0*llx",
+            static_cast<unsigned long long>(bytesToRead),
+            static_cast<int>(sizeof(uintptr_t) * 2),
+            static_cast<unsigned long long>(offset));
+    }
+    else {
+        _snprintf_s(msg, sizeof(msg), _TRUNCATE,
+            "NtReadVirtualMemory 0x%llx bytes from %s!0x%0*llx",
+            static_cast<unsigned long long>(bytesToRead),
+            actualSection.sectionName,
+            static_cast<int>(sizeof(uintptr_t) * 2),
+            static_cast<unsigned long long>(offset));
+    }
     emit_etw_msg_ns(msg, tpid, ns);
 
-    // close handle
-    if (hProcess && hProcess != INVALID_HANDLE_VALUE) CloseHandle(hProcess);
+    if (hProcess) g_origNtClose(hProcess);
     free(args);
     return 0;
 }
@@ -798,14 +789,14 @@ NTSTATUS NTAPI Hook_NtReadFile(
         args->FileHandle = dup;
         args->Timestamp = ns;
         HANDLE th = CreateThread(NULL, 0, ReadFileResolverThread, args, 0, NULL);
-        if (th) CloseHandle(th);
+        if (th) g_origNtClose(th);
         else { // thread creation failed: cleanup duplicate and args
-            if (dup) CloseHandle(dup);
+            if (dup) g_origNtClose(dup);
             free(args);
         }
     }
     else { // allocation failed: cleanup duplicate
-        if (dup) CloseHandle(dup);
+        if (dup) g_origNtClose(dup);
     }
 
     return g_origNtReadFile(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, Buffer, Length, ByteOffset, Key);
@@ -844,13 +835,22 @@ NTSTATUS NTAPI Hook_NtReadVirtualMemory(
 
     // duplicate handle to ensure validity in worker thread
     HANDLE dup = NULL;
-    if (ProcessHandle && ProcessHandle != INVALID_HANDLE_VALUE) {
+    if (ProcessHandle != NULL) { // do not check for INVALID_HANDLE_VALUE: https://devblogs.microsoft.com/oldnewthing/20230914-00/?p=108766
         BOOL ok = DuplicateHandle(
             GetCurrentProcess(), ProcessHandle,
             GetCurrentProcess(), &dup,
             0, FALSE, DUPLICATE_SAME_ACCESS
         );
-        if (!ok) dup = NULL;
+        if (!ok) { // this is the only check needed for valid handles
+            dup = NULL;
+            char msg[MSG_LEN];
+            _snprintf_s(msg, sizeof(msg), _TRUNCATE,
+                "NtReadVirtualMemory 0x%llx bytes at 0x%0*llx, resolve error: cannot duplicate handle",
+                static_cast<unsigned long long>(NumberOfBytesToRead),
+                static_cast<int>(sizeof(uintptr_t) * 2),
+                static_cast<unsigned long long>(addr));
+            emit_etw_msg_ns(msg, tpid, ns);
+        }
     }
 
     // prepare args: dup may be NULL on failure; worker will handle it
@@ -862,14 +862,14 @@ NTSTATUS NTAPI Hook_NtReadVirtualMemory(
         args->NumberOfBytesToRead = NumberOfBytesToRead;
         args->Timestamp = ns;
         HANDLE th = CreateThread(NULL, 0, ReadMemoryResolverThread, args, 0, NULL);
-        if (th) CloseHandle(th);
+        if (th) g_origNtClose(th);
         else { // thread creation failed: cleanup duplicate and args
-            if (dup) CloseHandle(dup);
+            if (dup) g_origNtClose(dup);
             free(args);
         }
     }
     else { // allocation failed: cleanup duplicate
-        if (dup) CloseHandle(dup);
+        if (dup) g_origNtClose(dup);
     }
 
     return g_origNtReadVirtualMemory(ProcessHandle, BaseAddress, Buffer, NumberOfBytesToRead, NumberOfBytesRead);
