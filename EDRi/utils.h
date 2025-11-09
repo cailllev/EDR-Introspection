@@ -21,7 +21,7 @@ const UINT64 WINDOWS_TICKS_TO_UNIX_EPOCH = SECS_TO_UNIX_EPOCH * WINDOWS_TICKS_PE
 
 // own cacophony
 static const UINT64 MIN_PROC_START = 0;
-static const UINT64 MAX_PROC_END = 0xFFFFFFFFFFFFFFFFULL; // MAXUINT64
+static const UINT64 MAX_PROC_END = 0x7FFFFFFFFFFFFFFFULL; // MAXUINT64 (safe for timestamp logic)
 static const UINT64 RESERVE_NS = 10'000; // 0,01 ms buffer before start / after end, to find all relevant events for a given proc
 static const UINT64 MAX_BUFFER_NS = 100'000'000; // 100 ms max buffer before returning PROC_NOT_FOUND
 UINT64 get_ns_time();
@@ -32,6 +32,8 @@ void mark_termination(int, UINT64);
 std::string get_proc_name(int, UINT64, UINT64);
 std::vector<ProcInfo> get_tracked_procs();
 std::string unnecessary_tools_running();
+void dump_proc_map();
+
 std::string get_random_3digit_num();
 
 bool filepath_match(std::string, std::string);

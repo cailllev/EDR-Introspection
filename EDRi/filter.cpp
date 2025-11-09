@@ -16,7 +16,7 @@ std::map<Classifier, std::string> classifier_names = {
 static std::vector<ProcInfo> tracked_procs = {};
 
 // adds exe name to all pid fields, only use AFTER filtering!
-void add_exe_information(json& j) {
+void add_exe_information(json& j, Classifier c) {
 	for (auto it = j.begin(); it != j.end(); ++it) { // iterate over all fields
         const std::string& key = it.key();
         json& value = it.value();
@@ -27,6 +27,15 @@ void add_exe_information(json& j) {
             // add info for all pid fields
             if (std::find(fields_to_add_exe_name.begin(), fields_to_add_exe_name.end(), key) != fields_to_add_exe_name.end()) {
                 std::string exe_name = get_proc_name(value, timestamp_ns, RESERVE_NS);
+
+                if (exe_name == PROC_NOT_FOUND && c == Minimal && g_debug) { // warn when important event cannot add it's PID name
+                    try {
+                        std::cout << "[!] Utils: No process found with " << key << "=" << value << " at " << unix_epoch_ns_to_iso8601(timestamp_ns) << " : ";
+                        std::cout << "provider=" << j[PROVIDER_NAME] << ",eventId=" << j[EVENT_ID] << ",task=" << j[TASK] << "\n";
+                    }
+                    catch (...) {}
+                }
+
                 std::ostringstream oss;
                 oss << std::setw(5) << value.get<int>(); // pad pid up to 5 digits, allows for "alphabetical sort" == "numerical sort"
                 value = oss.str() + " " + exe_name; // add exe name "in place" (reference)
@@ -57,7 +66,7 @@ std::map<Classifier, std::vector<json>> filter_all_events(std::vector<json> even
         }
         try {
             Classifier c = filter(ev);
-            add_exe_information(ev); // now add exe info to all pid fields
+            add_exe_information(ev, c); // now add exe info to all pid fields
             c = filter_post_exe(ev, c);
 
             switch (c) {
@@ -171,9 +180,14 @@ Classifier classify_to(json& ev, std::string key, std::vector<ProcInfo> procs) {
 
 // filter kernel process events
 Classifier filter_kernel_process(json& ev) {
-    // the interesting info is in target pid, process_id of msmpeng.exe/attack.exe/smartscreen.exe etc is not enough to filter
-    if (std::find(kproc_event_ids_with_tpid_minimal.begin(), kproc_event_ids_with_tpid_minimal.end(), ev[EVENT_ID]) != kproc_event_ids_with_tpid_minimal.end()) {
-        return classify_to(ev, TARGET_PID, tracked_procs);
+    if (std::find(kproc_event_ids_with_pid_minimal.begin(), kproc_event_ids_with_pid_minimal.end(), ev[EVENT_ID]) != kproc_event_ids_with_pid_minimal.end()) {
+        // only include events if pid is attack or injected OR a tracked_process is the target of a process operation
+        Classifier c_pid = classify_to(ev, PID, { g_attack_proc, g_injected_proc });
+        Classifier c_tpid = classify_to(ev, TARGET_PID, tracked_procs);
+        if (c_pid == Minimal || c_tpid == Minimal) {
+            return Minimal; // put in minimal if either matches
+        } // else put it in relevant
+        return Relevant;
     }
     // thread start and stop are only interesting with attack pid / tpid
     if (std::find(kproc_event_ids_with_attack_pid_tpid.begin(), kproc_event_ids_with_attack_pid_tpid.end(), ev[EVENT_ID]) != kproc_event_ids_with_attack_pid_tpid.end()) {

@@ -74,10 +74,6 @@ std::string translate_if_path(const std::string& s) {
         std::regex_constants::icase);
     s2 = std::regex_replace(s2, extendedPrefix, "$1\\\\");
 
-    if (g_super_debug && s2 != s) {
-        std::cout << "[~] Output: Translated path " << s << " to " << s2 << "\n";
-    }
-
     return s2;
 }
 

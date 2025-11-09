@@ -89,6 +89,9 @@ void emit_etw_event(std::string msg, std::string pre, bool print_when_debug) {
 }
 
 void process_results(std::string output, bool dump_sig, bool colored) {
+    if (g_super_debug) {
+        dump_proc_map();
+    }
 	std::vector<json> all_etw_events = get_all_etw_events();
     std::map<Classifier, std::vector<json>> etw_events = filter_all_events(all_etw_events);
     write_events_to_file(etw_events, output, colored);
