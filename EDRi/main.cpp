@@ -89,6 +89,7 @@ void emit_etw_event(std::string msg, std::string pre, bool print_when_debug) {
 }
 
 void process_results(std::string output, bool dump_sig, bool colored) {
+    std::cout << "[+] EDRi: Processing the results...\n";
     if (g_super_debug) {
         dump_proc_map();
     }
