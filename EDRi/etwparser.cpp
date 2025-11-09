@@ -529,25 +529,18 @@ std::string get_val(const json& j, std::string key) {
     }
 }
 
-// check proc started via kernel/antimalware etw
+// check proc started via kernel etw
 int check_new_proc(json& j) {
     if (j[PROVIDER_NAME] == KERNEL_PROCESS_PROVIDER && j[EVENT_ID] == KERNEL_PROC_START_EVENT_ID && j.contains(TARGET_PID)) {
         return j[TARGET_PID]; // kernel proc uses this key
     }
-    if (j[PROVIDER_NAME] == ANTIMALWARE_PROVIDER && j[EVENT_ID] == ANTIMALWARE_PROC_START_STOP_EVENT_ID && j[SOURCE] == ANTIMALWARE_PROC_START_MSG && j.contains(ORIGINATING_PID)) {
-        return j[ORIGINATING_PID]; // antimalware uses this key
-    }
     return 0;
 }
 
-// check proc ended via kernel/antimalware etw
+// check proc ended via kernel etw
 int check_proc_termination(json& j) {
     if (j[PROVIDER_NAME] == KERNEL_PROCESS_PROVIDER && j[EVENT_ID] == KERNEL_PROC_STOP_EVENT_ID && j.contains(TARGET_PID)) {
         return j[TARGET_PID]; // kernel proc uses this key
-    }
-    if (j[PROVIDER_NAME] == ANTIMALWARE_PROVIDER && j[EVENT_ID] == ANTIMALWARE_PROC_START_STOP_EVENT_ID &&
-        j.contains(SOURCE) && j[SOURCE] == ANTIMALWARE_PROC_STOP_MSG && j.contains(ORIGINATING_PID)) {
-        return j[ORIGINATING_PID]; // antimalware uses this key
     }
     return 0;
 }
@@ -589,13 +582,13 @@ void post_parsing_checks(json& j) {
                 to_track = true;
             }
         }
-        add_proc(pid, exe_name, timestamp_ns, to_track);
 
         // also check if the attack_PID and injected_PID can be set
         if (g_attack_proc.PID == 0) {
             if (j.contains(FILEPATH) && filepath_match(j[FILEPATH], g_attack_exe_path)) { // depends on the attack path, but this is fixed
                 g_attack_proc = ProcInfo{ pid, timestamp_ns, MAX_PROC_END, exe_name, true };
                 std::cout << "[+] ETW: Got attack PID: " << pid << "\n";
+                to_track = true;
             }
         }
         if (g_injected_proc.PID == 0) {
@@ -605,9 +598,12 @@ void post_parsing_checks(json& j) {
                 if (_stricmp(event_exe.c_str(), injected_exe.c_str()) == 0) {
                     g_injected_proc = ProcInfo{ pid, timestamp_ns, MAX_PROC_END, exe_name, true };
                     std::cout << "[+] ETW: Got injected PID: " << pid << "\n";
+                    to_track = true;
                 }
             }
         }
+
+        add_proc(pid, exe_name, timestamp_ns, to_track);
     }
 
     // or mark termination of process

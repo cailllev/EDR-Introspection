@@ -25,7 +25,7 @@ static const std::vector<int> am_event_ids_with_signatures = { 59 };
 
 // Kernel Process Trace
 static const std::vector<int> kproc_event_ids_with_attack_pid_tpid = { 3, 4 };
-static const std::vector<int> kproc_event_ids_with_tpid_minimal = { 1, 2, 11 };
+static const std::vector<int> kproc_event_ids_with_pid_minimal = { 1, 2, 11 };
 static const std::vector<int> kproc_event_ids_with_tpid_relevant = { 5, 6 };
 
 // Kernel API Calls Trace
@@ -48,7 +48,7 @@ static const std::vector<std::pair<std::string, std::string>> kapi_irrelevant_ex
 
 // -------------------- FILTERING FUNCTIONS -------------------- //
 std::map<Classifier, std::vector<json>> filter_all_events(std::vector<json>);
-void add_exe_information(json&);
+void add_exe_information(json&, Classifier c);
 
 // pid fields that should have the exe name added at print time
 static const std::vector<std::string> fields_to_add_exe_name = { PID, PPID, TARGET_PID, ORIGINATING_PID };

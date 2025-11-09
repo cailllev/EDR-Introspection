@@ -55,7 +55,7 @@ void snapshot_procs() {
 }
 
 // thread-safe retrieving the PID of the first case-insensitive match, ignores other same-named processes
-std::vector<int> get_PID_by_name(const std::string& name, UINT64 timestamp) {
+std::vector<int> get_PID_by_name(const std::string& name, UINT64 timestamp_ns) {
     if (!initialized_snapshot) {
 		std::cerr << "[!] Utils: Cannot use get_PID_by_name() before snapshot_procs()\n";
         return {};
@@ -64,7 +64,7 @@ std::vector<int> get_PID_by_name(const std::string& name, UINT64 timestamp) {
     std::shared_lock<std::shared_mutex> lock(g_procs_mutex); // reader lock (multiple allowed when no writers)
     for (auto it = g_running_procs.begin(); it != g_running_procs.end(); ++it) {
         if (_stricmp(it->name.c_str(), name.c_str()) == 0) { // check if name matches
-            if (it->start_time < timestamp && it->end_time > timestamp) { // check if timestamp is inside start and end
+            if (it->start_time < timestamp_ns && it->end_time > timestamp_ns) { // check if timestamp is inside start and end
                 procs.push_back(it->PID);
             }
         }
@@ -108,24 +108,20 @@ void mark_termination(int pid, UINT64 timestamp_ns) {
     }
 }
 
-// thread-safe retrieving a proc
+// retrieving a proc
 std::string get_proc_name(int pid, UINT64 timestamp_ns, UINT64 buffer_ns) {
     if (buffer_ns > MAX_BUFFER_NS) {
-        if (g_debug) {
-            std::cout << "[!] Utils: No process found with pid=" << pid << " at " << unix_epoch_ns_to_iso8601(timestamp_ns) << " with " << buffer_ns << "ns buffer\n";
-        }
         return PROC_NOT_FOUND;
     }
-    std::shared_lock<std::shared_mutex> lock(g_procs_mutex); // reader lock (multiple allowed when no writers)
+
     std::vector<ProcInfo> potential_matches = {};
     for (auto it = g_running_procs.begin(); it != g_running_procs.end(); ++it) {
         if (it->PID == pid) { // check if pid matches
-            if ((it->start_time - buffer_ns) < timestamp_ns && (it->end_time + buffer_ns) > timestamp_ns) { // check if timestamp is inside start and end (with buffer)
+            if (it->start_time <= timestamp_ns + buffer_ns && it->end_time >= timestamp_ns - buffer_ns) { // check if timestamp is inside start and end (with buffer)
                 potential_matches.push_back(*it);
             }
         }
     }
-    std::shared_lock<std::shared_mutex> unlock(g_procs_mutex); // unlock mutex
 
     // handle 0,1,>1 potential matches
     if (potential_matches.size() == 0) { // no procs found --> search again with more buffer, 0.1ms, 1ms, ... MAX_BUFFER_NS, +1 --> not found
@@ -137,10 +133,10 @@ std::string get_proc_name(int pid, UINT64 timestamp_ns, UINT64 buffer_ns) {
     if (potential_matches.size() == 1) { // one proc found --> return it
         return potential_matches.at(0).name;
     }
-    if (potential_matches.size() > 1) { // X procs found --> return the process with the closest start / end time to the given timestamp_ns // TODO does this work?
+    if (potential_matches.size() > 1) { // X procs found --> return the process with the closest start / end time to the given timestamp_ns
         UINT64 smallest_diff = MAX_PROC_END;
         ProcInfo closest_proc = {0, 0, 0, PROC_NOT_FOUND, false};
-        for (auto it = g_running_procs.begin(); it != g_running_procs.end(); ++it) {
+        for (auto it = potential_matches.begin(); it != potential_matches.end(); ++it) {
             UINT64 diff_s = (it->start_time > timestamp_ns) ? it->start_time - timestamp_ns : timestamp_ns - it->start_time;
             UINT64 diff_e = (it->end_time > timestamp_ns) ? it->end_time - timestamp_ns : timestamp_ns - it->end_time;
             UINT64 diff = (diff_s < diff_e) ? diff_s : diff_e;
@@ -151,7 +147,7 @@ std::string get_proc_name(int pid, UINT64 timestamp_ns, UINT64 buffer_ns) {
         }
         return closest_proc.name;
     }
-    return PROC_NOT_FOUND; // comfort the compiler, "not all control paths return a value"
+    return PROC_NOT_FOUND; // comfort the compiler: "not all control paths return a value"
 }
 
 // thread-safe retrieving all processes that were tracked
@@ -181,6 +177,21 @@ std::string unnecessary_tools_running() {
         }
     }
     return r;
+}
+
+// dump all recorded procs
+void dump_proc_map() {
+    std::cout << "[+] ------------------------ Running procs during the tests ------------------------\n";
+    // sort procs by PID
+    std::sort(g_running_procs.begin(), g_running_procs.end(), [](const ProcInfo& a, const ProcInfo& b) {
+        return a.PID < b.PID;
+        });
+    for (auto& p : g_running_procs) {
+        std::cout << std::setfill(' ') << std::setw(5) << p.PID << " : ";
+        std::cout << unix_epoch_ns_to_iso8601(p.start_time) << " - " << unix_epoch_ns_to_iso8601(p.end_time);
+        std::cout << " : " << p.to_track << "," << p.name << "\n";
+    }
+    std::cout << "[+] ------------------------ ------------------------------ ------------------------\n";
 }
 
 // get random number between 100...999
