@@ -257,13 +257,13 @@ int main(int argc, char* argv[]) {
             return 1;
         }
     }
-    if (!start_etw_default_traces(threads)) { // start last
+    if (!start_etw_default_traces(threads)) { // start last (start marker is detected here)
         std::cerr << "[!] EDRi: Failed to start default ETW traces(s)\n";
         return 1;
 	}
 
     // WAIT UNTIL TRACES ARE READY
-    std::cout << "[*] EDRi: Waiting until start marker is registered\n";
+    std::cout << "[*] EDRi: Waiting until start marker is detected...\n";
     while (!g_traces_started) {
         emit_etw_event(EDRi_TRACE_START_MARKER, "", false);
         Sleep(wait_time_between_start_markers_ms);
