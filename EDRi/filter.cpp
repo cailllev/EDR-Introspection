@@ -180,7 +180,7 @@ Classifier classify_to(json& ev, std::string key, std::vector<ProcInfo> procs) {
 
 // filter kernel process events
 Classifier filter_kernel_process(json& ev) {
-    if (std::find(kproc_event_ids_with_pid_minimal.begin(), kproc_event_ids_with_pid_minimal.end(), ev[EVENT_ID]) != kproc_event_ids_with_pid_minimal.end()) {
+    if (std::find(kproc_event_ids_with_pid_or_tpid_minimal.begin(), kproc_event_ids_with_pid_or_tpid_minimal.end(), ev[EVENT_ID]) != kproc_event_ids_with_pid_or_tpid_minimal.end()) {
         // only include events if pid is attack or injected OR a tracked_process is the target of a process operation
         Classifier c_pid = classify_to(ev, PID, { g_attack_proc, g_injected_proc });
         Classifier c_tpid = classify_to(ev, TARGET_PID, tracked_procs);

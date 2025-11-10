@@ -571,35 +571,42 @@ void post_parsing_checks(json& j) {
     // add a newly spawned procs to process map
     int pid = check_new_proc(j);
     if (pid != 0) {
-        std::string exe_path = j[FILEPATH].get<std::string>();
-        std::string exe_name = exe_path.substr(exe_path.find_last_of("\\") + 1);
-        UINT64 timestamp_ns = j[TIMESTAMP_NS];
-
-        // check if this is a process to be tracked
-        bool to_track = false;
-        for (auto& e : g_exes_to_track) {
-            if (_stricmp(exe_name.c_str(), e.c_str()) == 0) {
-                to_track = true;
+        if (!j.contains(FILEPATH)) {
+            if (g_debug) {
+                std::cout << "[!] ETW: New proc without a " << FILEPATH << ", " << j.dump() << "\n";
             }
         }
+        else {
+            std::string exe_path = j[FILEPATH].get<std::string>();
+            std::string exe_name = exe_path.substr(exe_path.find_last_of("\\") + 1);
+            UINT64 timestamp_ns = j[TIMESTAMP_NS];
 
-        // also check if the attack_PID and injected_PID can be set
-        if (g_attack_proc.PID == 0) {
-            if (j.contains(FILEPATH) && filepath_match(j[FILEPATH], g_attack_exe_path)) { // depends on the attack path, but this is fixed
-                g_attack_proc = ProcInfo{ pid, timestamp_ns, MAX_PROC_END, exe_name, true };
-                std::cout << "[+] ETW: Got attack PID: " << pid << "\n";
-                to_track = true;
+            // check if this is a process to be tracked
+            bool to_track = false;
+            for (auto& e : g_exes_to_track) {
+                if (_stricmp(exe_name.c_str(), e.c_str()) == 0) {
+                    to_track = true;
+                }
             }
-        }
-        if (g_injected_proc.PID == 0) {
-            if (j.contains(FILEPATH) && filepath_match(j[FILEPATH], injected_path)) {
-                g_injected_proc = ProcInfo{ pid, timestamp_ns, MAX_PROC_END, exe_name, true };
-                std::cout << "[+] ETW: Got injected PID: " << pid << "\n";
-                to_track = true;
-            }
-        }
 
-        add_proc(pid, exe_name, timestamp_ns, to_track);
+            // also check if the attack_PID and injected_PID can be set
+            if (g_attack_proc.PID == 0) {
+                if (filepath_match(j[FILEPATH], g_attack_exe_path)) { // depends on the attack path, but this is fixed
+                    g_attack_proc = ProcInfo{ pid, timestamp_ns, MAX_PROC_END, exe_name, true };
+                    std::cout << "[+] ETW: Got attack PID: " << pid << "\n";
+                    to_track = true;
+                }
+            }
+            if (g_injected_proc.PID == 0) {
+                if (filepath_match(j[FILEPATH], injected_path)) {
+                    g_injected_proc = ProcInfo{ pid, timestamp_ns, MAX_PROC_END, exe_name, true };
+                    std::cout << "[+] ETW: Got injected PID: " << pid << "\n";
+                    to_track = true;
+                }
+            }
+
+            add_proc(pid, exe_name, timestamp_ns, to_track);
+        }
     }
 
     // or mark termination of process
