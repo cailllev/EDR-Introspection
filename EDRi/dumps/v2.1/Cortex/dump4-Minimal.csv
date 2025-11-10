@@ -1,0 +1,1 @@
+timestamp_sys,timestamp_etw,src_type,provider_name,event_id,task_info,process_id,thread_id,ppid,pid,targetpid,targettid,message,filepath,cachename,result,vname,name,sigseq,sigsha,commandline,firstparam,secondparam
