@@ -10,7 +10,7 @@
 
 // paths
 std::string outFile = "C:\\Users\\Public\\Downloads\\attack-output.csv";
-LPCWSTR procToInject = L"C:\\Windows\\System32\\notepad.exe";
+LPCWSTR procToInject = L"C:\\Windows\\System32\\whoami.exe";
 
 // my attack provider
 TRACELOGGING_DEFINE_PROVIDER(
@@ -279,6 +279,10 @@ int main(int argc, char** argv) {
     constexpr int rounds = 100;
     int repetitions = 10;
     for (int n = 0; n < repetitions; n++) {
+
+        msg << "Starting deconditioning round " << n;
+        print_and_emit_event(msg.str(), ok); msg.str("");
+
         void* allocs[rounds] = { 0 };
         for (int i = 0; i < sizeof(allocs) / sizeof(allocs[0]); i++) {
             LPVOID alloc_addr = VirtualAllocEx(hProcess, nullptr, sizeof(nonsense), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
@@ -302,15 +306,17 @@ int main(int argc, char** argv) {
             }
         }
         // TODO create remote thread?
+
         for (int i = 0; i < sizeof(allocs) / sizeof(allocs[0]); i++) {
             if (allocs[i] != 0 && !VirtualFreeEx(hProcess, allocs[i], 0, MEM_RELEASE)) {
                 msg << "Failed to free mem in round " << n << "-" << i << " , error=" << GetLastError();
                 print_and_emit_event(msg.str(), fail); msg.str("");
             }
         }
+
         msg << "Finished deconditioning round " << n;
         print_and_emit_event(msg.str(), ok); msg.str("");
-        Sleep(sleep_between_steps_ms);
+        Sleep(sleep_between_steps_ms*3); // poor Defender is too slow to keep up
     }
 #endif
 
