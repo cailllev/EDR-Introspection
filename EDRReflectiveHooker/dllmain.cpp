@@ -9,8 +9,6 @@
 #include <stdint.h>
 #include <string>
 #include <chrono>
-#include <vector>
-#include <shared_mutex>
 
 #include <MinHook.h>
 #include <TraceLoggingProvider.h>
@@ -18,6 +16,7 @@
 #pragma intrinsic(_ReturnAddress)
 
 // ------------------ REFL INJ ------------------ //
+// do not use global std::vectors, seems to crash the DLL when reflectively loading
 // from https://github.com/Reijaff/offensive_c/blob/main/dll_reflective_loader_64.c
 typedef struct _LDR_MODULE
 {
@@ -458,9 +457,8 @@ struct ProcessSection {
     UINT64 allocBase;
     UINT64 sectionSize;
     char sectionName[MAX_PATH];
+    char source[MAX_PATH];
 };
-std::vector<ProcessSection> g_loadedSections = {};
-std::shared_mutex g_checkDlls;
 
 // worker thread: resolve filename and emit ETW
 DWORD WINAPI ReadFileResolverThread(LPVOID lpParam)
@@ -499,7 +497,7 @@ DWORD WINAPI ReadFileResolverThread(LPVOID lpParam)
     return 0;
 }
 
-// Enumerate all modules loaded in the process (DLL's), and their sections, from https://github.com/dobin/RedEdr/blob/master/RedEdrShared/process_query.cpp
+// Resolve a given memory offset in a process to an image / region (private, ...) 
 DWORD WINAPI ReadMemoryResolverThread(LPVOID lpParam) {
     FNM_ARGS* args = (FNM_ARGS*)lpParam;
     if (!args) return 0;
@@ -515,23 +513,16 @@ DWORD WINAPI ReadMemoryResolverThread(LPVOID lpParam) {
     SIZE_T bytesToRead = args->NumberOfBytesToRead;
     UINT64 ns = args->Timestamp;
 
-    char msg[BIG_MSG_LEN];
-    char error[MSG_LEN];
+    char msg[BIG_MSG_LEN] = { 0 };
+    char error[MSG_LEN] = { 0 };
+    char vqeError[MSG_LEN] = { 0 };
+    char combinedError[MSG_LEN] = { 0 };
     bool err = false;
     bool found = false;
 
-    ProcessSection actualSection = ProcessSection{ 0, 0, 0, "" };
-    
-    // find Section
-    for (auto& s : g_loadedSections) {
-        if (s.pid != tpid) continue; // skip sections from other procs
-        if (offset >= s.allocBase && offset < s.allocBase + s.sectionSize) {
-            actualSection = s;
-            found = true;
-        }
-    }
+    ProcessSection section = ProcessSection{ 0, 0, 0, "Unknown", "" };
 
-    // DO NOT use INVALID_PROCESS_HANDLE here, -1 can be used for same process reads
+    // DO NOT use INVALID_PROCESS_HANDLE here, INVALID_PROCESS_HANDLE (-1) is ACTUALLY USED for same process reads
     if (hProcess == NULL) {
         _snprintf_s(error, sizeof(error), _TRUNCATE, "Invalid process handle (null)");
         err = true;
@@ -541,6 +532,7 @@ DWORD WINAPI ReadMemoryResolverThread(LPVOID lpParam) {
         if (!found) { // offset currently unknown
 
             // ------------- RESOLVE IMAGE SECTIONS (EXE + DLL) ------------- //
+            // from https://github.com/dobin/RedEdr/blob/master/RedEdrShared/process_query.cpp
 
             PROCESS_BASIC_INFORMATION pbi = {};
             ULONG returnLength;
@@ -563,7 +555,7 @@ DWORD WINAPI ReadMemoryResolverThread(LPVOID lpParam) {
                 err = true;
             }
             if (!err && !peb.Ldr) {
-                _snprintf_s(error, sizeof(error), _TRUNCATE, "PEB.Ldr is NULL\n");
+                _snprintf_s(error, sizeof(error), _TRUNCATE, "PEB.Ldr is NULL");
                 err = true;
             }
 
@@ -605,14 +597,11 @@ DWORD WINAPI ReadMemoryResolverThread(LPVOID lpParam) {
                     ZeroMemory(&entry, sizeof(entry));
                     if (g_origNtReadVirtualMemory(hProcess, remoteEntryAddr, &entry, sizeof(entry), &bytesRead) != 0) {
                         //_snprintf_s(error, sizeof(error), _TRUNCATE, "RPM failed for LDR entry at 0x%p. Error: %lu\n", remoteEntryAddr, GetLastError());
-                        //emit_etw_msg_ns(error, tpid, ns);
-                        //ZeroMemory(error, sizeof(error));
                         current = entry.InMemoryOrderLinks.Flink;
                         iter++; continue;
                     }
 
-                    if (entry.DllBase == NULL) {
-                        // end marker (or corrupted block) --> exit
+                    if (entry.DllBase == NULL) { // end marker (or corrupted block)
                         break;
                     }
 
@@ -626,24 +615,25 @@ DWORD WINAPI ReadMemoryResolverThread(LPVOID lpParam) {
                     // Read the remote FullDllName.Buffer into a local wchar buffer
                     ZeroMemory(localNameW, maxLen);
                     if (g_origNtReadVirtualMemory(hProcess, entry.FullDllName.Buffer, localNameW, nameLen, &bytesRead) == 0) {
-                        size_t wcharCount = (nameLen / sizeof(WCHAR));
-                        localNameW[wcharCount] = L'\0';
-                        char nameBuf[MAX_PATH];
-                        WideCharToMultiByte(CP_ACP, 0, localNameW, -1, nameBuf, sizeof(nameBuf), NULL, NULL);
-
-                        ProcessSection image = { 0, 0, 0, "" };
-                        image.pid = tpid;
-                        image.allocBase = reinterpret_cast<uint64_t>(entry.DllBase); // TODO, same?
-                        //image.sectionBase = reinterpret_cast<uint64_t>(entry.DllBase); // TODO
-                        image.sectionSize = static_cast<ULONG>(reinterpret_cast<ULONG_PTR>(entry.Reserved3[1]));
-
-                        _snprintf_s(image.sectionName, sizeof(image.sectionName), _TRUNCATE, nameBuf);
-                        g_loadedSections.push_back(image);
+                        uint64_t base = reinterpret_cast<uint64_t>(entry.DllBase);
+                        uint64_t size = static_cast<ULONG>(reinterpret_cast<ULONG_PTR>(entry.Reserved3[1]));
 
                         // check if offset from loaded image is in this section
-                        if (offset >= image.allocBase && offset < image.allocBase + image.sectionSize) {
-                            actualSection = image;
+                        if (offset >= base && offset < base + size) {
+                            section.pid = tpid;
+                            section.allocBase = base;
+                            section.sectionSize = size;
+
+                            // read dll name
+                            size_t wcharCount = (nameLen / sizeof(WCHAR));
+                            localNameW[wcharCount] = L'\0';
+                            char nameBuf[MAX_PATH];
+                            WideCharToMultiByte(CP_ACP, 0, localNameW, -1, nameBuf, sizeof(nameBuf), NULL, NULL);
+                            _snprintf_s(section.sectionName, sizeof(section.sectionName), _TRUNCATE, nameBuf);
+                            _snprintf_s(section.source, sizeof(section.source), _TRUNCATE, "(PEB) ");
+
                             found = true;
+                            break;
                         }
                     }
 
@@ -658,76 +648,62 @@ DWORD WINAPI ReadMemoryResolverThread(LPVOID lpParam) {
         if (!found) { // offset still unknown
 
             // ------------- RESOLVE PROC MEMORY SECTIONS ------------- //
-            // there are many sections, do individual lookups when needed
-            // open own handle with sufficient rights to VirtualQueryEx
 
             MEMORY_BASIC_INFORMATION mbi = { 0 };
             if (VirtualQueryEx(hProcess, (LPCVOID)offset, &mbi, sizeof(mbi)) == sizeof(mbi)) {
 
-                ProcessSection s = { 0, 0, 0, "" };
-                s.pid = tpid;
-                s.allocBase = (UINT64)mbi.AllocationBase; // this is a per process base
-                s.sectionSize = (UINT64)mbi.RegionSize;
-
+                section.pid = tpid;
+                section.allocBase = (UINT64)mbi.AllocationBase; // this is a per process base
+                section.sectionSize = (UINT64)mbi.RegionSize;
+                
                 // get the mapped file name if it's a MEM_IMAGE or MEM_MAPPED
                 if (mbi.Type == MEM_IMAGE || mbi.Type == MEM_MAPPED) {
+                    _snprintf_s(section.source, sizeof(section.source), _TRUNCATE, "(ManualMap) "); // normal mapping of images would be detected by PEB walk
                     WCHAR wName[MAX_PATH];
                     if (GetMappedFileNameW(hProcess, mbi.BaseAddress, wName, MAX_PATH)) {
-                        WideCharToMultiByte(CP_ACP, 0, wName, -1, s.sectionName, MAX_PATH, NULL, NULL);
+                        WideCharToMultiByte(CP_ACP, 0, wName, -1, section.sectionName, MAX_PATH, NULL, NULL);
                     }
                     else {
-                        strncpy_s(s.sectionName, "ImageOrMappedNoName", _TRUNCATE);
+                        strncpy_s(section.sectionName, "ImageOrMappedNoName", _TRUNCATE);
                     }
                 }
                 else { // else store the memory type
-                    switch (mbi.Type) {
-                    case MEM_PRIVATE: strncpy_s(s.sectionName, "Private", _TRUNCATE); break;
-                    case MEM_IMAGE:   strncpy_s(s.sectionName, "Image", _TRUNCATE); break;
-                    case MEM_MAPPED:  strncpy_s(s.sectionName, "Mapped", _TRUNCATE); break;
-                    default:
-                        char buf[32];
-                        sprintf_s(buf, "UnknownMemType_0x%lx", mbi.Type);
-                        strncpy_s(s.sectionName, buf, _TRUNCATE);
-                        break;
+                    _snprintf_s(section.source, sizeof(section.source), _TRUNCATE, "(NoImage) ");
+                    if (mbi.Type == MEM_PRIVATE) {
+                        _snprintf_s(section.sectionName, sizeof(section.sectionName), _TRUNCATE, "Private");
+                    }
+                    else {
+                        _snprintf_s(section.sectionName, sizeof(section.sectionName), _TRUNCATE, "UnknownMemType_0x%lx", mbi.Type);
                     }
                 }
-
-                g_loadedSections.push_back(s);
-                actualSection = s;
-                found = true;
+                found = true; // irrelevant after here
             }
             else {
-                _snprintf_s(error, sizeof(error), _TRUNCATE, "Unable to VirtualQueryEx");
-                err = true;
+                _snprintf_s(vqeError, sizeof(vqeError), _TRUNCATE, "mbi is NULL");
             }
         }
     }
 
-    if (err) {
-        _snprintf_s(msg, sizeof(msg), _TRUNCATE,
-            "NtReadVirtualMemory 0x%llx bytes at 0x%0*llx, resolving error: %s",
-            static_cast<unsigned long long>(bytesToRead),
-            static_cast<int>(sizeof(uintptr_t) * 2),
-            static_cast<unsigned long long>(offset),
-            error);
+
+    // Combine errors for logging
+    if (strlen(error) > 0) {
+        _snprintf_s(combinedError, sizeof(combinedError), _TRUNCATE, ", QueryInfoProc error: %s", error);
     }
-    else if (!found) { // no error, but also not found
-        _snprintf_s(msg, sizeof(msg), _TRUNCATE,
-            "NtReadVirtualMemory 0x%llx bytes at Unknown!0x%0*llx",
-            static_cast<unsigned long long>(bytesToRead),
-            static_cast<int>(sizeof(uintptr_t) * 2),
-            static_cast<unsigned long long>(offset));
+    if (strlen(vqeError) > 0) {
+        size_t len = strlen(combinedError);
+        _snprintf_s(combinedError + len, sizeof(combinedError) - len, _TRUNCATE, ", VirtualQuery error: %s", vqeError);
     }
-    else {
-        _snprintf_s(msg, sizeof(msg), _TRUNCATE,
-            "NtReadVirtualMemory 0x%llx bytes from %s!0x%0*llx",
-            static_cast<unsigned long long>(bytesToRead),
-            actualSection.sectionName,
-            static_cast<int>(sizeof(uintptr_t) * 2),
-            static_cast<unsigned long long>(offset));
-    }
+
+    _snprintf_s(msg, sizeof(msg), _TRUNCATE,
+        "NtReadVirtualMemory 0x%llx bytes from %s%s!0x%0*llx%s",
+        static_cast<unsigned long long>(bytesToRead),
+        section.source,
+        section.sectionName,
+        static_cast<int>(sizeof(uintptr_t) * 2),
+        static_cast<unsigned long long>(offset),
+        combinedError);
     emit_etw_msg_ns(msg, tpid, ns);
-    
+
     if (hProcess) g_origNtClose(hProcess);
     free(args);
     return 0;
