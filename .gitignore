@@ -374,7 +374,7 @@ FodyWeavers.xsd
 
 !/x64/Release/attacks/
 /x64/Release/attacks/*
-!/x64/Release/attacks/*.exe.enc
+!/x64/Release/attacks/*-*.exe.enc
 
 !/x64/Release/EDRi.exe
 !/x64/Release/SelfReflectiveInjectLoader.exe
