@@ -19,10 +19,10 @@ static const std::wstring EDRi_PROVIDER_GUID_W = L"{72248477-7177-4feb-a386-34d8
 static const std::string EDRi_TRACE_START_MARKER = "++ EDRi START MARKER ++";
 static const std::string NTDLL_HOOKER_TRACE_START_MARKER = "++ NTDLL-HOOKER STARTED ++";
 
-// executables used for the attack (must be Windows independent (is ...\WindowsApps\Microsoft.WindowsNotepad_8wekyb3d8bbwe\...) in the logs)
-static const std::string injected_name = "microsoft.windowsnotepad";
-static const std::string injected_exe = "notepad.exe";
-static const std::string invoked_name = "microsoft.windowscalculator";
+// executables used for the attack
+static const std::string injected_exe = "whoami.exe";
+static const std::string injected_path = "C:\\Windows\\System32\\" + injected_exe;
+static const std::string invoked_name = "microsoft.windowscalculator"; // windows apps are like ...\WindowsApps\Microsoft.WindowsCalculator_.... in the logs
 
 // executables to track for kernel event filtering, i.e. their PIDs at runtime
 extern std::vector<std::string> g_exes_to_track;

@@ -297,7 +297,7 @@ Classifier filter_antimalware(json& ev) {
             std::string msg = ev[MESSAGE];
             std::transform(msg.begin(), msg.end(), msg.begin(), [](unsigned char c) { return std::tolower(c); });
             if (msg.find(g_attack_exe_name) != std::string::npos ||
-                msg.find(injected_name) != std::string::npos ||
+                msg.find(injected_exe) != std::string::npos ||
                 msg.find(invoked_name) != std::string::npos) {
                 return Minimal; // do not filter if any of the strings match
             }
@@ -350,7 +350,6 @@ Classifier filter_hooks(json& ev) {
     // example: NtOpenFile \??\C:\WINDOWS\SYSTEM32\apisethost.appexecutionalias.dll with 0x100021
     if (msg.rfind("NtOpenFile", 0) == 0 || msg.rfind("NtReadFile", 0) == 0) {
         if (msg.find(g_attack_exe_name) != std::string::npos
-            || msg.find(injected_name) != std::string::npos
             || msg.find(injected_exe) != std::string::npos) {
             return Minimal;
         }
