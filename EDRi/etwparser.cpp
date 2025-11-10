@@ -592,14 +592,10 @@ void post_parsing_checks(json& j) {
             }
         }
         if (g_injected_proc.PID == 0) {
-            if (j.contains(FILEPATH)) {
-                std::string event_exe = j[FILEPATH].get<std::string>();
-                event_exe = event_exe.substr(event_exe.find_last_of("\\") + 1); // notepad is a windows app, only match via it's name, as path differs!
-                if (_stricmp(event_exe.c_str(), injected_exe.c_str()) == 0) {
-                    g_injected_proc = ProcInfo{ pid, timestamp_ns, MAX_PROC_END, exe_name, true };
-                    std::cout << "[+] ETW: Got injected PID: " << pid << "\n";
-                    to_track = true;
-                }
+            if (j.contains(FILEPATH) && filepath_match(j[FILEPATH], injected_path)) {
+                g_injected_proc = ProcInfo{ pid, timestamp_ns, MAX_PROC_END, exe_name, true };
+                std::cout << "[+] ETW: Got injected PID: " << pid << "\n";
+                to_track = true;
             }
         }
 
