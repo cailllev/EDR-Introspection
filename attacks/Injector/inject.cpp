@@ -316,7 +316,7 @@ int main(int argc, char** argv) {
 
         msg << "Finished deconditioning round " << n;
         print_and_emit_event(msg.str(), ok); msg.str("");
-        Sleep(sleep_between_steps_ms*3); // poor Defender is too slow to keep up
+        Sleep(sleep_between_steps_ms * 3); // poor Defender is too slow to keep up
     }
 #endif
 
@@ -325,11 +325,12 @@ int main(int argc, char** argv) {
     print_and_emit_event(msg.str(), ok); msg.str("");
     auto start = std::chrono::high_resolution_clock::now();
     volatile bool dummy; // do no optimze "calc prime" loop away
-    for (UINT64 n = 2; n <= 100'000'000; ++n) { bool pr = true; for (UINT64 i = 2; i * i <= n; ++i) { if (n % i == 0) { pr = false; break; } } dummy = pr; }
+    for (UINT64 n = 2; n <= 90'000'000; ++n) { bool pr = true; for (UINT64 i = 2; i * i <= n; ++i) { if (n % i == 0) { pr = false; break; } } dummy = pr; }
     auto end = std::chrono::high_resolution_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     msg << "Calculated for approximately " << elapsed << " ms";
     print_and_emit_event(msg.str(), ok); msg.str("");
+    Sleep(sleep_between_steps_ms);
 #endif
 
     msg << "Before creating remote thread";
