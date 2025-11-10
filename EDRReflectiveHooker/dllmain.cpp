@@ -10,6 +10,12 @@
 #include <string>
 #include <chrono>
 
+#include <queue>
+#include <mutex>
+#include <condition_variable>
+#include <thread>
+#include <atomic>
+
 #include <MinHook.h>
 #include <TraceLoggingProvider.h>
 
@@ -446,7 +452,7 @@ typedef struct _FNF_ARGS {
 // helper structure for ReadMemory offset resolving
 typedef struct _FNM_ARGS {
     DWORD     tpid; // the process where the memory is read
-    HANDLE    hProcess; // the handle to the process
+    HANDLE    hProcess; // duplicated handle to the process (INVALID_HANDLE_VALUE is valid!)
     uintptr_t Offset; // the absolute memory offset
     SIZE_T    NumberOfBytesToRead;
     UINT64    Timestamp;
@@ -459,6 +465,55 @@ struct ProcessSection {
     char sectionName[MAX_PATH];
     char source[MAX_PATH];
 };
+
+struct ResolverTask {
+    LPTHREAD_START_ROUTINE func; // ReadMemoryResolverThread or ReadFileResolverThread
+    LPVOID arg;                  // argument struct pointer (FNM_ARGS* or FNF_ARGS*)
+};
+
+// resolver pool
+std::queue<ResolverTask> g_taskQueue;
+std::mutex g_queueMutex;
+std::condition_variable g_cv;
+std::vector<std::thread> g_workers;
+int MAX_QUEUE_SIZE = 16384;
+
+void ResolverWorker() {
+    while (true) {
+        ResolverTask task = {};
+        {
+            std::unique_lock<std::mutex> lock(g_queueMutex);
+            g_cv.wait(lock, [] { return !g_taskQueue.empty(); });
+
+            if (g_taskQueue.empty())
+                return;
+
+            task = g_taskQueue.front();
+            g_taskQueue.pop();
+        }
+        if (task.func && task.arg) { // invoke actual resolver
+            task.func(task.arg);
+        }
+    }
+}
+
+void InitResolverPool(int numThreads = 32) {
+    for (int i = 0; i < numThreads; i++) {
+        g_workers.emplace_back(ResolverWorker);
+    }
+}
+
+bool EnqueueResolverTask(LPTHREAD_START_ROUTINE func, LPVOID arg) {
+    std::unique_lock<std::mutex> lock(g_queueMutex);
+    if (g_taskQueue.size() >= MAX_QUEUE_SIZE) {
+        lock.unlock();
+        return false;
+    }
+    g_taskQueue.push(ResolverTask{ func, arg });
+    lock.unlock();
+    g_cv.notify_one();
+    return true;
+}
 
 // worker thread: resolve filename and emit ETW
 DWORD WINAPI ReadFileResolverThread(LPVOID lpParam)
@@ -524,8 +579,7 @@ DWORD WINAPI ReadMemoryResolverThread(LPVOID lpParam) {
 
     // DO NOT use INVALID_PROCESS_HANDLE here, INVALID_PROCESS_HANDLE (-1) is ACTUALLY USED for same process reads
     if (hProcess == NULL) {
-        _snprintf_s(error, sizeof(error), _TRUNCATE, "Invalid process handle (null)");
-        err = true;
+        _snprintf_s(combinedError, sizeof(combinedError), _TRUNCATE, ", Handle error: hProcess is NULL");
     }
 
     else {
@@ -539,7 +593,7 @@ DWORD WINAPI ReadMemoryResolverThread(LPVOID lpParam) {
 
             // PBI
             if (!err && pNtQueryInfoProcess(hProcess, ProcessBasicInformation, &pbi, sizeof(pbi), &returnLength) != 0) {
-                _snprintf_s(error, sizeof(error), _TRUNCATE, "Could not NtQueryInformationProcess for %p, error: %lu", hProcess, GetLastError());
+                _snprintf_s(error, sizeof(error), _TRUNCATE, "Could not NtQueryInformationProcess for %p error=%lu", hProcess, GetLastError());
                 err = true;
             }
             if (!err && pbi.PebBaseAddress == 0) {
@@ -551,7 +605,7 @@ DWORD WINAPI ReadMemoryResolverThread(LPVOID lpParam) {
             SIZE_T bytesRead = 0;
             PEB peb = { 0 };
             if (!err && g_origNtReadVirtualMemory(hProcess, pbi.PebBaseAddress, &peb, sizeof(peb), &bytesRead) != 0) {
-                _snprintf_s(error, sizeof(error), _TRUNCATE, "Could not ReadProcessMemory(PEB), error: %lu", GetLastError());
+                _snprintf_s(error, sizeof(error), _TRUNCATE, "Could not read PEB error=%lu", GetLastError());
                 err = true;
             }
             if (!err && !peb.Ldr) {
@@ -566,7 +620,7 @@ DWORD WINAPI ReadMemoryResolverThread(LPVOID lpParam) {
                 // read remote PEB_LDR_DATA into local ldr
                 PEB_LDR_DATA ldr = { 0 };
                 if (g_origNtReadVirtualMemory(hProcess, remoteLdrAddr, &ldr, sizeof(ldr), &bytesRead) != 0) {
-                    _snprintf_s(error, sizeof(error), _TRUNCATE, "ReadProcessMemory failed for PEB_LDR_DATA, error: %lu", GetLastError());
+                    _snprintf_s(error, sizeof(error), _TRUNCATE, "ReadProcessMemory failed for PEB_LDR_DATA error=%lu", GetLastError());
                     err = true;
                 }
 
@@ -754,13 +808,20 @@ NTSTATUS NTAPI Hook_NtReadFile(
 
     // duplicate handle to ensure validity in worker thread
     HANDLE dup = NULL;
+    BOOL ok = false;
     if (FileHandle && FileHandle != INVALID_HANDLE_VALUE) {
         BOOL ok = DuplicateHandle(
             GetCurrentProcess(), FileHandle,
             GetCurrentProcess(), &dup,
             0, FALSE, DUPLICATE_SAME_ACCESS
         );
-        if (!ok) dup = NULL;
+    }
+    if (!ok) {
+        if (dup) g_origNtClose(dup);
+        char msg[MSG_LEN];
+        _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtReadFile handle=0x%p (error %lu duplicating handle)", (void*)dup, GetLastError());
+        emit_etw_msg_ns(msg, PID, ns);
+        return g_origNtReadFile(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, Buffer, Length, ByteOffset, Key);
     }
 
     // prepare args: dup may be NULL on failure; worker will handle it
@@ -768,17 +829,16 @@ NTSTATUS NTAPI Hook_NtReadFile(
     if (args) {
         args->FileHandle = dup;
         args->Timestamp = ns;
-        HANDLE th = CreateThread(NULL, 0, ReadFileResolverThread, args, 0, NULL);
-        if (th) g_origNtClose(th);
-        else { // thread creation failed: cleanup duplicate and args
-            if (dup) g_origNtClose(dup);
+        if (!EnqueueResolverTask(ReadFileResolverThread, args)) {
+            char msg[MSG_LEN];
+            _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtReadFile handle=0x%p (resolver queue limit reached)", (void*)dup);
+            emit_etw_msg_ns(msg, PID, ns);
             free(args);
         }
     }
     else { // allocation failed: cleanup duplicate
         if (dup) g_origNtClose(dup);
     }
-
     return g_origNtReadFile(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, Buffer, Length, ByteOffset, Key);
 }
 
@@ -815,25 +875,28 @@ NTSTATUS NTAPI Hook_NtReadVirtualMemory(
 
     // duplicate handle to ensure validity in worker thread
     HANDLE dup = NULL;
+    BOOL ok = false;
     if (ProcessHandle != NULL) { // do not check for INVALID_HANDLE_VALUE: https://devblogs.microsoft.com/oldnewthing/20230914-00/?p=108766
-        BOOL ok = DuplicateHandle(
+        ok = DuplicateHandle(
             GetCurrentProcess(), ProcessHandle,
             GetCurrentProcess(), &dup,
             0, FALSE, DUPLICATE_SAME_ACCESS
         );
-        if (!ok) { // this is the only check needed for valid handles
-            dup = NULL;
-            char msg[MSG_LEN];
-            _snprintf_s(msg, sizeof(msg), _TRUNCATE,
-                "NtReadVirtualMemory 0x%llx bytes at 0x%0*llx, resolve error: cannot duplicate handle",
-                static_cast<unsigned long long>(NumberOfBytesToRead),
-                static_cast<int>(sizeof(uintptr_t) * 2),
-                static_cast<unsigned long long>(addr));
-            emit_etw_msg_ns(msg, tpid, ns);
-        }
+    }
+    if (!ok) { // this is the only check needed if a handle is valid to use later
+        if (dup) g_origNtClose(dup);
+        char msg[BIG_MSG_LEN];
+        _snprintf_s(msg, sizeof(msg), _TRUNCATE,
+            "NtReadVirtualMemory 0x%llx bytes from Unknown!0x%0*llx, DuplicateHandle: error %lu duplicating handle",
+            static_cast<unsigned long long>(NumberOfBytesToRead),
+            static_cast<int>(sizeof(uintptr_t) * 2),
+            static_cast<unsigned long long>(addr),
+            GetLastError());
+        emit_etw_msg_ns(msg, tpid, ns);
+        return g_origNtReadVirtualMemory(ProcessHandle, BaseAddress, Buffer, NumberOfBytesToRead, NumberOfBytesRead);
     }
 
-    // prepare args: dup may be NULL on failure; worker will handle it
+    // prepare args and enqueue (args are freed in worker function normally)
     FNM_ARGS* args = (FNM_ARGS*)malloc(sizeof(FNM_ARGS));
     if (args) {
         args->tpid = tpid;
@@ -841,17 +904,20 @@ NTSTATUS NTAPI Hook_NtReadVirtualMemory(
         args->Offset = addr;
         args->NumberOfBytesToRead = NumberOfBytesToRead;
         args->Timestamp = ns;
-        HANDLE th = CreateThread(NULL, 0, ReadMemoryResolverThread, args, 0, NULL);
-        if (th) g_origNtClose(th);
-        else { // thread creation failed: cleanup duplicate and args
-            if (dup) g_origNtClose(dup);
+        if (!EnqueueResolverTask(ReadMemoryResolverThread, args)) {
+            char msg[BIG_MSG_LEN];
+            _snprintf_s(msg, sizeof(msg), _TRUNCATE,
+                "NtReadVirtualMemory 0x%llx bytes from Unknown!0x%0*llx, Resolver: queue limit reached",
+                static_cast<unsigned long long>(NumberOfBytesToRead),
+                static_cast<int>(sizeof(uintptr_t) * 2),
+                static_cast<unsigned long long>(addr));
+            emit_etw_msg_ns(msg, PID, ns);
             free(args);
         }
     }
     else { // allocation failed: cleanup duplicate
         if (dup) g_origNtClose(dup);
     }
-
     return g_origNtReadVirtualMemory(ProcessHandle, BaseAddress, Buffer, NumberOfBytesToRead, NumberOfBytesRead);
 }
 
@@ -960,7 +1026,8 @@ DWORD WINAPI t_InitHooks(LPVOID param)
 {
     std::cout << "[+] Hook-DLL: Executing init thread...\n";
     TraceLoggingRegister(g_hProvider);
-    PID = GetCurrentProcessId();
+    PID = GetCurrentProcessId(); 
+    InitResolverPool(32);
     InstallHooks();
     return 0;
 }
