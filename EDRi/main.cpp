@@ -129,6 +129,7 @@ int main(int argc, char* argv[]) {
         ("i,trace-etw-ti", "Trace ETW-TI (needs PPL)")
         ("n,hook-ntdll", "Hook ntdll.dll (needs PPL)")
         ("t,track-all", "Trace misc ETW, ETW-TI and hooks ntdll.dll")
+        ("k,no-disable-kernel-callbacks", "Do not disable kernel callbacks (only applicable if hook-ntdll)")
         ("d,debug", "Print debug info")
         ("v,verbose-debug", "Print very verbose debug info");
         ("c,color", "Add color formatting information");
@@ -221,6 +222,11 @@ int main(int argc, char* argv[]) {
 		<< ", Hook-ntdll: " << (hook_ntdll ? "Yes" : "No") << "\n";
 	bool dump_sig = trace_etw_misc; // can only dump signatures if antimalware provider is traced
 
+	bool disable_kernel_callbacks_needed = hook_ntdll && edr_profile.needs_kernel_callbacks_disabling; // normally needed when hooking ntdll
+    if (result.count("no-disable-kernel-callbacks") > 0) {
+        disable_kernel_callbacks_needed = false; // may be not needed when manually disabled / EDR not protecting
+	}
+
     // debug
     if (result.count("debug") > 0) {
         g_debug = true;
@@ -294,7 +300,7 @@ int main(int argc, char* argv[]) {
     // HOOK NTDLL
     // hooking emits etw events, so hooking must be done after the traces are started
     if (hook_ntdll) {
-        if (!disable_kernel_callbacks_ok()) {
+        if (disable_kernel_callbacks_needed && !disable_kernel_callbacks_ok()) {
             std::cerr << "[!] EDRi: Failed to disable kernel callbacks, check manually if this is needed\n";
             stop_all_etw_traces();
             return 1;

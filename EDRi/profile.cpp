@@ -3,9 +3,10 @@
 
 #include "profile.h"
 
-EDR_Profile defender = { { "MsMpEng.exe" }, { "MpDefenderCoreService.exe" } };
-EDR_Profile mde = { { "MsMpEng.exe" }, { "MpDefenderCoreService.exe", "MsSense.exe", "SenseCnCProxy.exe", "SenseIR.exe", "SenseCE.exe", "SenseSampleUploader.exe", "SenseNdr.exe", "SenseSC.exe", "SenseCM.exe", "SenseTVM.exe" } };
-EDR_Profile cortex = { { "cyserver.exe", "cysandbox.exe" } , { "cywscsvc.exe", "tlaworker.exe", "cortex-xdr-payload.exe", "cyuserserver.exe", "cyrprtui.exe", "cydump.exe", "CyveraConsole.exe" } };
+bool needs_kernel_callbacks_disabling = true;
+EDR_Profile defender = { needs_kernel_callbacks_disabling, { "MsMpEng.exe" }, { "MpDefenderCoreService.exe" } };
+EDR_Profile mde = { needs_kernel_callbacks_disabling, { "MsMpEng.exe" }, { "MpDefenderCoreService.exe", "MsSense.exe", "SenseCnCProxy.exe", "SenseIR.exe", "SenseCE.exe", "SenseSampleUploader.exe", "SenseNdr.exe", "SenseSC.exe", "SenseCM.exe", "SenseTVM.exe" } };
+EDR_Profile cortex = { needs_kernel_callbacks_disabling, { "cyserver.exe", "cysandbox.exe" } , { "cywscsvc.exe", "tlaworker.exe", "cortex-xdr-payload.exe", "cyuserserver.exe", "cyrprtui.exe", "cydump.exe", "CyveraConsole.exe" } };
 
 static const std::map<std::string, EDR_Profile> edr_profiles = {
     { "Defender", defender },
