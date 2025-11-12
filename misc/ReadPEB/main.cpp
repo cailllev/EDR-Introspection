@@ -2,6 +2,7 @@
 #include <winternl.h>
 #include <cstdlib>
 #include <iostream>
+#include <string>
 
 
 // NtQueryInformationProcess definition (only in ntdll.dll defined)
@@ -24,28 +25,38 @@ typedef NTSTATUS(NTAPI* PFN_NtReadVirtualMemory)(
 PFN_NtReadVirtualMemory pNtReadVirtualMemory = nullptr;
 
 
+int print_usage(std::string path, int ret)
+{
+    size_t pos = path.find_last_of("\\");
+    std::string exe = (pos == std::string::npos) ? path : path.substr(pos + 1);
+    printf("Usage:\n    %s       : read current proc PEB\n    %s <pid> : read remote proc PEB", exe.c_str(), exe.c_str());
+    return ret;
+}
+
+
 int main(int argc, char *argv[])
 {
-    bool debug = false;
     int pid = 0;
     if (argc < 2) {
         pid = GetCurrentProcessId();
         printf("[*] Reading PEB from current process, pid=%i\n", pid);
     }
     else {
+        if (strcmp(argv[1], "-h") == 0) {
+			return print_usage(argv[0], 0);
+        }
+
         pid = atoi(argv[1]);
         if (pid == 0) {
             printf("[!] Invalid PID: %i\n", pid);
+            return print_usage(argv[0], 1);
         }
         printf("[*] Reading PEB from process pid=%i\n", pid);
-        if (argc == 3) {
-            debug = true;
-        }
     }
 
     HMODULE hNtdll = GetModuleHandleW(L"ntdll.dll");
     if (!hNtdll) {
-        printf("[!] ntdll not loaded\n");
+        printf("[!] ntdll not loaded in current process\n");
         return 1;
     }
 
@@ -91,9 +102,7 @@ int main(int argc, char *argv[])
         printf("[!] Could not ReadProcessMemory(PEB), status=%lu error: %lu\n", status, GetLastError());
         return 1;
     }
-    if (debug) {
-        printf("[+] Read %llu bytes for PEB\n", (unsigned long long)bytesRead);
-    }
+
     if (!peb.Ldr) {
         printf("[!] PEB.Ldr is NULL\n"); 
         return 1; 
@@ -108,9 +117,6 @@ int main(int argc, char *argv[])
     if (status != 0) {
         printf("[!] ReadProcessMemory failed for PEB_LDR_DATA, status=%lu error: %lu\n", status, GetLastError());
         return 1;
-    }
-    if (debug) {
-        printf("[+] Read %llu bytes for PEB_LDR_DATA\n", (unsigned long long)bytesRead);
     }
 
     // compute remote head address (remote address of the LIST_ENTRY inside the remote PEB_LDR_DATA)
@@ -139,11 +145,8 @@ int main(int argc, char *argv[])
         ZeroMemory(&entry, sizeof(entry));
         status = pNtReadVirtualMemory(hProcess, remoteEntryAddr, &entry, sizeof(entry), &bytesRead);
         if (status != 0) {
-            printf("[!] RPM failed for LDR entry at %p. Error: %lu\n", remoteEntryAddr, GetLastError());
+            printf("[!] ReadVirtualMemory failed for LDR entry at 0x%p. Error: %lu\n", remoteEntryAddr, GetLastError());
             break;
-        }
-        if (debug) {
-            printf("[+] Read %llu bytes for LDR entry\n", (unsigned long long)bytesRead);
         }
 
         if (entry.DllBase == NULL) {
@@ -153,13 +156,13 @@ int main(int argc, char *argv[])
 
         // check FullDllName fields
         if (!entry.FullDllName.Buffer) {
-            printf("[!] Empty buffer\n");
+            printf("[!] Empty buffer from entry 0x%p\n", current);
             current = entry.InMemoryOrderLinks.Flink;
             iter++; continue;
         }
         USHORT nameLen = entry.FullDllName.Length;
         if (!nameLen || nameLen < 0 || nameLen > 0x2000) {
-            printf("[!] Invalid name lenght: %u\n", nameLen);
+            printf("[!] Invalid name lenght %u from entry 0x%p\n", nameLen, current);
             current = entry.InMemoryOrderLinks.Flink;
             iter++; continue;
         }
@@ -169,13 +172,13 @@ int main(int argc, char *argv[])
         ZeroMemory(localNameW, (wcharCount + 1)*sizeof(WCHAR));
         status = pNtReadVirtualMemory(hProcess, entry.FullDllName.Buffer, localNameW, nameLen, &bytesRead);
         if (status != 0) {
-            printf("[!] Could not read remote name buffer at %p (len=%u). Error: %lu\n", entry.FullDllName.Buffer, nameLen, GetLastError());
+            printf("[!] Could not read remote name buffer at %p (len=%u) from entry 0x%p. Error: %lu\n", entry.FullDllName.Buffer, nameLen, current, GetLastError());
         }
         else {
             localNameW[wcharCount] = L'\0';
             char nameBuf[MAX_PATH];
             WideCharToMultiByte(CP_ACP, 0, localNameW, -1, nameBuf, sizeof(nameBuf), NULL, NULL);
-            printf("[+] Found entry: base=0x%p, size=0x%p, name=%s\n", entry.DllBase, (PVOID)entry.Reserved3[1], nameBuf);
+            printf("[+] Found entry: base=0x%p, size=0x%p, ldr=0x%p, name=%s\n", entry.DllBase, (PVOID)entry.Reserved3[1], current, nameBuf);
         }
 
         // advance to next remote entry
@@ -185,7 +188,7 @@ int main(int argc, char *argv[])
     free(localNameW);
 
     if (iter >= maxIterations) {
-        printf("[!] Hit maximum iteration limit\n");
+        printf("[!] Hit maximum iteration limit, exiting...\n");
     }
 
     return 0;
