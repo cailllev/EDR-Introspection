@@ -27,7 +27,7 @@
 * - global std::vectors modified in hooked functions
 * - large __try __except blocks (code inside these blocks can easily crash the loader)
 * - convoluted code flow (i.e. many declarations, if statements, ...)
-* - removing the REFL INJ code below
+* - max 31 strings, like "abcd" in strcat(out, sizeof(out), "abcd") in one function
 * - too many strings in A SINGLE SWITCH STATEMENT ??
 * - char[size_to_big] can break loading sometimes ??
 * - not using an allocated char[small_size] ??
@@ -334,14 +334,6 @@ TRACELOGGING_DEFINE_PROVIDER(
     (0x72248411, 0x7166, 0x4feb, 0xa3, 0x86, 0x34, 0xd8, 0xf3, 0x5b, 0xb6, 0x37)  // this cannot be a variable
 );
 
-// NtQueryInformationProcess definition (only in ntdll.dll defined)
-typedef NTSTATUS(NTAPI* PFN_NtQueryInformationProcess)(
-    HANDLE           ProcessHandle,
-    PROCESSINFOCLASS ProcessInformationClass,
-    PVOID            ProcessInformation,
-    ULONG            ProcessInformationLength,
-    PULONG           ReturnLength);
-
 // hooked function definitions
 typedef NTSTATUS (NTAPI* PFN_NtCreateFile)(
     PHANDLE            FileHandle,
@@ -385,6 +377,14 @@ typedef NTSTATUS(NTAPI* PFN_NtOpenProcess)(
     PVOID       ClientId
     );
 
+typedef NTSTATUS(NTAPI* PFN_NtQueryInformationProcess)(
+    HANDLE           ProcessHandle,
+    PROCESSINFOCLASS ProcessInformationClass,
+    PVOID            ProcessInformation,
+    ULONG            ProcessInformationLength,
+    PULONG           ReturnLength
+    );
+
 typedef NTSTATUS(NTAPI* PFN_NtReadVirtualMemory)(
     HANDLE  ProcessHandle,
     PVOID   BaseAddress,
@@ -410,14 +410,12 @@ typedef NTSTATUS(NTAPI* PFN_NtTerminateProcess)(
     NTSTATUS ExitStatus
     );
 
-// own resolved ntdll funcs
-static PFN_NtQueryInformationProcess pNtQueryInfoProcess = nullptr;
-
 // trampolines created by MinHook
 static PFN_NtCreateFile g_origNtCreateFile = nullptr;
 static PFN_NtOpenFile g_origNtOpenFile = nullptr;
 static PFN_NtReadFile g_origNtReadFile = nullptr;
 static PFN_NtOpenProcess g_origNtOpenProcess = nullptr;
+static PFN_NtQueryInformationProcess g_origNtQueryInformationProcess = nullptr;
 static PFN_NtReadVirtualMemory g_origNtReadVirtualMemory = nullptr;
 static PFN_NtWriteVirtualMemory g_origNtWriteVirtualMemory = nullptr;
 static PFN_NtClose g_origNtClose = nullptr;
@@ -470,7 +468,7 @@ void emit_etw_msg_ns(const char msg[], UINT64 tpid, UINT64 ns) {
 };
 
 const size_t MISC_LEN = 128;
-const size_t MSG_LEN = 512;
+const size_t MSG_LEN = 1024;
 
 // helper structure for ReadFile handle resolving
 typedef struct _FNF_ARGS {
@@ -591,7 +589,7 @@ DWORD WINAPI ReadMemoryResolverThread(LPVOID lpParam) {
     FNM_ARGS* args = (FNM_ARGS*)lpParam;
     if (!args) return 0;
 
-    if (pNtQueryInfoProcess == nullptr || g_origNtReadVirtualMemory == nullptr) {
+    if (g_origNtQueryInformationProcess == nullptr || g_origNtReadVirtualMemory == nullptr) {
         free(args);
         return 0;
     }
@@ -626,7 +624,7 @@ DWORD WINAPI ReadMemoryResolverThread(LPVOID lpParam) {
             ULONG returnLength;
 
             // PBI
-            if (!err && pNtQueryInfoProcess(hProcess, ProcessBasicInformation, &pbi, sizeof(pbi), &returnLength) != 0) {
+            if (!err && g_origNtQueryInformationProcess(hProcess, ProcessBasicInformation, &pbi, sizeof(pbi), &returnLength) != 0) {
                 _snprintf_s(error, sizeof(error), _TRUNCATE, "Could not NtQueryInformationProcess for %p error=%lu", hProcess, GetLastError());
                 err = true;
             }
@@ -813,22 +811,73 @@ NTSTATUS NTAPI Hook_NtCreateFile(
     UINT64 ns = get_ns_time();
 
     char msg[MSG_LEN] = { 0 };
-    char acc[MISC_LEN] = { 0 };
+    char accFlags[MISC_LEN * 4] = { 0 }; // need space
+    char accDesc[MISC_LEN * 4] = { 0 }; // need space
     char dispo[MISC_LEN] = { 0 };
 
-    const ACCESS_MASK EDR_FILE_READ_DATA_SYNC = 0x100001;
-    const ACCESS_MASK EDR_FILE_READ_ATTR_SYNC = 0x100080;
-    const ACCESS_MASK EDR_FILE_READ_CONTROL = 0x20000;
-
-    switch (DesiredAccess) {
-    case FILE_GENERIC_READ: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "0x%X:file_generic_read", (unsigned)DesiredAccess); break;
-    case FILE_ALL_ACCESS: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "0x%X:file_all_access", (unsigned)DesiredAccess); break;
-    case FILE_READ_EA: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "0x%X:file_read_ea", (unsigned)DesiredAccess); break;
-    case EDR_FILE_READ_DATA_SYNC: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "0x%X:file_read_data+sync", (unsigned)DesiredAccess); break;
-    case EDR_FILE_READ_ATTR_SYNC: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "0x%X:file_read_attr+sync", (unsigned)DesiredAccess); break;
-    case EDR_FILE_READ_CONTROL: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "0x%X:file_read_control", (unsigned)DesiredAccess); break;
-    default: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "0x%X:non-standard", (unsigned)DesiredAccess); break;
+    // basic file access masks
+    if (DesiredAccess & FILE_READ_DATA) {
+        strcat_s(accFlags, sizeof(accFlags), "FILE_READ_DATA|");
     }
+    if (DesiredAccess & FILE_WRITE_DATA) {
+        strcat_s(accFlags, sizeof(accFlags), "FILE_WRITE_DATA|");
+    }
+    if (DesiredAccess & FILE_APPEND_DATA) {
+        strcat_s(accFlags, sizeof(accFlags), "FILE_APPEND_DATA|");
+    }
+    if (DesiredAccess & FILE_READ_EA) {
+        strcat_s(accFlags, sizeof(accFlags), "FILE_READ_EA|");
+    }
+    if (DesiredAccess & FILE_WRITE_EA) {
+        strcat_s(accFlags, sizeof(accFlags), "FILE_WRITE_EA|");
+    }
+    if (DesiredAccess & FILE_EXECUTE) {
+        strcat_s(accFlags, sizeof(accFlags), "FILE_EXECUTE|");
+    }
+    if (DesiredAccess & FILE_DELETE_CHILD) {
+        strcat_s(accFlags, sizeof(accFlags), "FILE_DELETE_CHILD|");
+    }
+    if (DesiredAccess & FILE_READ_ATTRIBUTES) {
+        strcat_s(accFlags, sizeof(accFlags), "FILE_READ_ATTRIBUTES|");
+    }
+    if (DesiredAccess & FILE_WRITE_ATTRIBUTES) {
+        strcat_s(accFlags, sizeof(accFlags), "FILE_WRITE_ATTRIBUTES|");
+    }
+    // access types
+    if (DesiredAccess & DELETE) {
+        strcat_s(accFlags, sizeof(accFlags), "DELETE|");
+    }
+    if (DesiredAccess & READ_CONTROL) {
+        strcat_s(accFlags, sizeof(accFlags), "READ_CONTROL|");
+    }
+    if (DesiredAccess & WRITE_DAC) {
+        strcat_s(accFlags, sizeof(accFlags), "WRITE_DAC|");
+    }
+    if (DesiredAccess & WRITE_OWNER) {
+        strcat_s(accFlags, sizeof(accFlags), "WRITE_OWNER|");
+    }
+    if (DesiredAccess & SYNCHRONIZE) {
+        strcat_s(accFlags, sizeof(accFlags), "SYNCHRONIZE|");
+    }
+    // generic access
+    if (DesiredAccess & GENERIC_EXECUTE) {
+        strcat_s(accFlags, sizeof(accFlags), "GENERIC_EXECUTE|");
+    }
+    if (DesiredAccess & GENERIC_WRITE) {
+        strcat_s(accFlags, sizeof(accFlags), "GENERIC_WRITE|");
+    }
+    if (DesiredAccess & GENERIC_READ) {
+        strcat_s(accFlags, sizeof(accFlags), "GENERIC_READ|");
+    }
+    if (DesiredAccess & GENERIC_ALL) {
+        strcat_s(accFlags, sizeof(accFlags), "GENERIC_ALL|");
+    }
+    // remove trailing |
+    size_t len = strlen(accFlags);
+    if (len > 0 && accFlags[len - 1] == '|') {
+        accFlags[len - 1] = '\0';
+    }
+    _snprintf_s(accDesc, sizeof(accDesc), _TRUNCATE, "0x%X:%s", (unsigned)DesiredAccess, accFlags);
 
     switch (CreateDisposition) {
     case FILE_SUPERSEDE: _snprintf_s(dispo, sizeof(dispo), _TRUNCATE, "replace or create if not exists"); break;
@@ -853,7 +902,7 @@ NTSTATUS NTAPI Hook_NtCreateFile(
 
             WideCharToMultiByte(CP_ACP, 0, name->Buffer, wcharCount, nameBuf, MAX_PATH - 1, NULL, NULL);
             nameBuf[MAX_PATH - 1] = '\0'; // ensure termination
-            _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtCreateFile %s with DesiredAccess=%s and Disposition='%s'", nameBuf, acc, dispo);
+            _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtCreateFile %s with DesiredAccess=%s and Disposition='%s'", nameBuf, accDesc, dispo);
 
             // this try / except breaks the reflective loading, YOLO
             /*
@@ -868,11 +917,11 @@ NTSTATUS NTAPI Hook_NtCreateFile(
             */
         }
         else {
-            _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtCreateFile (no or invalid name) with DesiredAccess=%s and Disposition='%s'", acc, dispo);
+            _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtCreateFile (no or invalid name) with DesiredAccess=%s and Disposition='%s'", accDesc, dispo);
         }
     }
     else {
-        _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtCreateFile (no objectattrs) with DesiredAccess=%s and Disposition='%s'", acc, dispo);
+        _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtCreateFile (no objectattrs) with DesiredAccess=%s and Disposition='%s'", accDesc, dispo);
     }
 
     emit_etw_msg_ns(msg, PID, ns);
@@ -891,21 +940,72 @@ NTSTATUS NTAPI Hook_NtOpenFile(
 	UINT64 ns = get_ns_time();
 
     char msg[MSG_LEN] = { 0 };
-    char acc[MISC_LEN] = { 0 };
+    char accFlags[MISC_LEN * 4] = { 0 }; // need space
+    char accDesc[MISC_LEN * 4] = { 0 }; // need space
 
-    const ACCESS_MASK EDR_FILE_READ_DATA_SYNC = 0x100001;
-    const ACCESS_MASK EDR_FILE_READ_ATTR_SYNC = 0x100080;
-    const ACCESS_MASK EDR_FILE_READ_CONTROL = 0x20000;
-
-    switch (DesiredAccess) {
-    case FILE_GENERIC_READ: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "0x%X:file_generic_read", (unsigned)DesiredAccess); break;
-    case FILE_ALL_ACCESS: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "0x%X:file_all_access", (unsigned)DesiredAccess); break;
-    case FILE_READ_EA: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "0x%X:file_read_ea", (unsigned)DesiredAccess); break;
-    case EDR_FILE_READ_DATA_SYNC: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "0x%X:file_read_data+sync", (unsigned)DesiredAccess); break;
-    case EDR_FILE_READ_ATTR_SYNC: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "0x%X:file_read_attr+sync", (unsigned)DesiredAccess); break;
-    case EDR_FILE_READ_CONTROL: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "0x%X:file_read_control", (unsigned)DesiredAccess); break;
-    default: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "0x%X:non-standard", (unsigned)DesiredAccess); break;
+    // basic file access masks
+    if (DesiredAccess & FILE_READ_DATA) {
+        strcat_s(accFlags, sizeof(accFlags), "FILE_READ_DATA|");
     }
+    if (DesiredAccess & FILE_WRITE_DATA) {
+        strcat_s(accFlags, sizeof(accFlags), "FILE_WRITE_DATA|");
+    }
+    if (DesiredAccess & FILE_APPEND_DATA) {
+        strcat_s(accFlags, sizeof(accFlags), "FILE_APPEND_DATA|");
+    }
+    if (DesiredAccess & FILE_READ_EA) {
+        strcat_s(accFlags, sizeof(accFlags), "FILE_READ_EA|");
+    }
+    if (DesiredAccess & FILE_WRITE_EA) {
+        strcat_s(accFlags, sizeof(accFlags), "FILE_WRITE_EA|");
+    }
+    if (DesiredAccess & FILE_EXECUTE) {
+        strcat_s(accFlags, sizeof(accFlags), "FILE_EXECUTE|");
+    }
+    if (DesiredAccess & FILE_DELETE_CHILD) {
+        strcat_s(accFlags, sizeof(accFlags), "FILE_DELETE_CHILD|");
+    }
+    if (DesiredAccess & FILE_READ_ATTRIBUTES) {
+        strcat_s(accFlags, sizeof(accFlags), "FILE_READ_ATTRIBUTES|");
+    }
+    if (DesiredAccess & FILE_WRITE_ATTRIBUTES) {
+        strcat_s(accFlags, sizeof(accFlags), "FILE_WRITE_ATTRIBUTES|");
+    }
+    // access types
+    if (DesiredAccess & DELETE) {
+        strcat_s(accFlags, sizeof(accFlags), "DELETE|");
+    }
+    if (DesiredAccess & READ_CONTROL) {
+        strcat_s(accFlags, sizeof(accFlags), "READ_CONTROL|");
+    }
+    if (DesiredAccess & WRITE_DAC) {
+        strcat_s(accFlags, sizeof(accFlags), "WRITE_DAC|");
+    }
+    if (DesiredAccess & WRITE_OWNER) {
+        strcat_s(accFlags, sizeof(accFlags), "WRITE_OWNER|");
+    }
+    if (DesiredAccess & SYNCHRONIZE) {
+        strcat_s(accFlags, sizeof(accFlags), "SYNCHRONIZE|");
+    }
+    // generic access
+    if (DesiredAccess & GENERIC_EXECUTE) {
+        strcat_s(accFlags, sizeof(accFlags), "GENERIC_EXECUTE|");
+    }
+    if (DesiredAccess & GENERIC_WRITE) {
+        strcat_s(accFlags, sizeof(accFlags), "GENERIC_WRITE|");
+    }
+    if (DesiredAccess & GENERIC_READ) {
+        strcat_s(accFlags, sizeof(accFlags), "GENERIC_READ|");
+    }
+    if (DesiredAccess & GENERIC_ALL) {
+        strcat_s(accFlags, sizeof(accFlags), "GENERIC_ALL|");
+    }
+    // remove trailing |
+    size_t len = strlen(accFlags);
+    if (len > 0 && accFlags[len - 1] == '|') {
+        accFlags[len - 1] = '\0';
+    }
+    _snprintf_s(accDesc, sizeof(accDesc), _TRUNCATE, "0x%X:%s", (unsigned)DesiredAccess, accFlags);
 
     if (ObjectAttributes && ObjectAttributes->ObjectName) {
 
@@ -921,18 +1021,18 @@ NTSTATUS NTAPI Hook_NtOpenFile(
             __try {
                 WideCharToMultiByte(CP_ACP, 0, name->Buffer, wcharCount, nameBuf, MAX_PATH - 1, NULL, NULL);
                 nameBuf[MAX_PATH - 1] = '\0'; // ensure termination
-                _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenFile %s with DesiredAccess=%s", nameBuf, acc);
+                _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenFile %s with DesiredAccess=%s", nameBuf, accDesc);
             }
             __except (EXCEPTION_EXECUTE_HANDLER) {
-                _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenFile (invalid ObjectName pointer) with DesiredAccess=%s", acc);
+                _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenFile (invalid ObjectName pointer) with DesiredAccess=%s", accDesc);
             }
         }
         else {
-            _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenFile (no or invalid name) with DesiredAccess=%s", acc);
+            _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenFile (no or invalid name) with DesiredAccess=%s", accDesc);
         }
     }
     else {
-        _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenFile (no objectattrs) with DesiredAccess=%s", acc);
+        _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenFile (no objectattrs) with DesiredAccess=%s", accDesc);
     }
     emit_etw_msg_ns(msg, PID, ns);
 
@@ -951,7 +1051,7 @@ NTSTATUS NTAPI Hook_NtReadFile(
     PULONG           Key
 ) {
     UINT64 ns = get_ns_time();
-    char msg[MISC_LEN] = { 0 }; // MSG_LEN breaks the loading here ??
+    char msg[MSG_LEN] = { 0 };
 
     // duplicate handle to ensure validity in worker thread
     HANDLE dup = NULL;
@@ -1055,6 +1155,34 @@ NTSTATUS NTAPI Hook_NtOpenProcess(
 
     emit_etw_msg_ns(msg, tpid, ns);
     return g_origNtOpenProcess(ProcessHandle, DesiredAccess, ObjectAttributes, ClientId);
+}
+
+NTSTATUS NTAPI Hook_NtQueryInformationProcess(
+    HANDLE           ProcessHandle,
+    PROCESSINFOCLASS ProcessInformationClass,
+    PVOID            ProcessInformation,
+    ULONG            ProcessInformationLength,
+    PULONG           ReturnLength
+) {
+    UINT64 ns = get_ns_time();
+    DWORD tpid = GetProcessId(ProcessHandle);
+
+    char msg[MSG_LEN] = { 0 };
+	char infoClass[MISC_LEN] = { 0 };
+
+    switch (ProcessInformationClass) {
+    case ProcessBasicInformation: _snprintf_s(infoClass, sizeof(infoClass), _TRUNCATE, "ProcessBasicInformation"); break;
+    case ProcessDebugPort: _snprintf_s(infoClass, sizeof(infoClass), _TRUNCATE, "ProcessDebugPort"); break;
+    case ProcessWow64Information: _snprintf_s(infoClass, sizeof(infoClass), _TRUNCATE, "ProcessWow64Information"); break;
+    case ProcessImageFileName: _snprintf_s(infoClass, sizeof(infoClass), _TRUNCATE, "ProcessImageFileName"); break;
+    case ProcessBreakOnTermination: _snprintf_s(infoClass, sizeof(infoClass), _TRUNCATE, "ProcessBreakOnTermination"); break;
+    default: _snprintf_s(infoClass, sizeof(infoClass), _TRUNCATE, "UnknownClass_0x%X", ProcessInformationClass); break;
+    }
+
+    _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtQueryInformationProcess with %s", infoClass);
+
+    emit_etw_msg_ns(msg, tpid, ns);
+    return g_origNtQueryInformationProcess(ProcessHandle, ProcessInformationClass, ProcessInformation, ProcessInformationLength, ReturnLength);
 }
 
 NTSTATUS NTAPI Hook_NtReadVirtualMemory(
@@ -1171,7 +1299,7 @@ NTSTATUS NTAPI Hook_NtTerminateProcess(
 
 void InstallHooks()
 {
-    std::cout << "[+] Hook-DLL: Installing hooks...\n";
+    //std::cout << "[+] Hook-DLL: Installing hooks...\n";
 
     // MinHook init
     if (MH_Initialize() != MH_OK) {
@@ -1185,9 +1313,7 @@ void InstallHooks()
         return;
     }
 
-    // helper functions to resolve in ntdll.dll
-    pNtQueryInfoProcess = (PFN_NtQueryInformationProcess)GetProcAddress(hNtdll, "NtQueryInformationProcess");
-    if (pNtQueryInfoProcess == nullptr) return;
+	g_origNtQueryInformationProcess = (PFN_NtQueryInformationProcess)GetProcAddress(hNtdll, "NtQueryInformationProcess");
 
     // all functions to hook
     std::map<std::string, std::pair<void*, void**>> funcs = {
@@ -1195,6 +1321,7 @@ void InstallHooks()
         {"NtOpenFile", {(void*)Hook_NtOpenFile, (void**)&g_origNtOpenFile}},
         {"NtReadFile", {(void*)Hook_NtReadFile, (void**)&g_origNtReadFile}},
         {"NtOpenProcess", {(void*)Hook_NtOpenProcess, (void**)&g_origNtOpenProcess}},
+        //{"NtQueryInformationProcess", {(void*)Hook_NtQueryInformationProcess, (void**)&g_origNtQueryInformationProcess}},
         {"NtReadVirtualMemory", {(void*)Hook_NtReadVirtualMemory, (void**)&g_origNtReadVirtualMemory}},
         {"NtWriteVirtualMemory", {(void*)Hook_NtWriteVirtualMemory, (void**)&g_origNtWriteVirtualMemory}},
         {"NtClose", {(void*)Hook_NtClose, (void**)&g_origNtClose}},
@@ -1207,16 +1334,23 @@ void InstallHooks()
         FARPROC target = GetProcAddress(hNtdll, name.c_str());
         if (!target) {
             emit_etw_error(name + " not found in ntdll");
-            continue;
+            return;
         }
 
         if (MH_CreateHook(target, fn.first, (LPVOID*)fn.second) != MH_OK || MH_EnableHook(target) != MH_OK) {
             emit_etw_error("Failed to hook " + name);
+            return;
         }
         else {
             emit_etw_ok("Hooked " + name);
         }
     }
+
+    if (g_origNtQueryInformationProcess == nullptr || g_origNtReadVirtualMemory == nullptr) {
+        emit_etw_error("g_origNtQueryInformationProcess || g_origNtReadVirtualMemory is not resolved, ReadMemoryResolverThread depends on those");
+        return;
+    }
+
     emit_etw_ok("++ NTDLL-HOOKER STARTED ++");
 }
 
