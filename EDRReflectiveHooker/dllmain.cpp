@@ -21,8 +21,23 @@
 
 #pragma intrinsic(_ReturnAddress)
 
+/*
+* Things NOT to do when injecting reflectively (can crash the loader in t_InitHooks):
+* 
+* - global std::vectors modified in hooked functions
+* - large __try __except blocks (code inside these blocks can easily crash the loader)
+* - convoluted code flow (i.e. many declarations, if statements, ...)
+* - removing the REFL INJ code below
+* - ? changing to much code at once ?
+* - ? breathing at the compiled DLL ?
+* 
+* Hints for debugging:
+* - change one thing at a time, test it
+* - if something breaks, comment out the things above until it works again
+* - it can be very unintuitive what breaks the loader, try to really uncomment everything even if it seems unrelated
+*/
+
 // ------------------ REFL INJ ------------------ //
-// do not use global std::vectors, seems to crash the DLL when reflectively loading
 // from https://github.com/Reijaff/offensive_c/blob/main/dll_reflective_loader_64.c
 typedef struct _LDR_MODULE
 {
@@ -406,6 +421,13 @@ static PFN_NtClose g_origNtClose = nullptr;
 static PFN_NtTerminateProcess g_origNtTerminateProcess = nullptr;
 
 UINT64 get_ns_time() {
+    /*
+    ChronoVsFiletime.exe:
+    [*] Timing 1000000000 calls each...
+    5.59516 ns per call - GetSystemTimeAsFileTime
+    26.9772 ns per call - GetSystemTimePreciseAsFileTime
+    23.9806 ns per call - chrono::system_clock::now()
+    */
     auto now = std::chrono::system_clock::now();
     return std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
 }
@@ -432,17 +454,6 @@ void emit_etw_error(std::string error) {
         TraceLoggingUInt64(PID, "targetpid")
     );
     std::cerr << "[!] Hook-DLL: " << error << "\n";
-};
-
-void emit_etw_msg(const char msg[], UINT64 tpid) {
-    UINT64 ns = get_ns_time();
-    TraceLoggingWrite(
-        g_hProvider,
-        "EDRHookTask",
-        TraceLoggingString(msg, "message"),
-        TraceLoggingUInt64(ns, "ns_since_epoch"),
-        TraceLoggingUInt64(tpid, "targetpid")
-    );
 };
 
 void emit_etw_msg_ns(const char msg[], UINT64 tpid, UINT64 ns) {
@@ -539,19 +550,25 @@ DWORD WINAPI ReadFileResolverThread(LPVOID lpParam)
     UINT64 ns = args->Timestamp;
 
     char msg[BIG_MSG_LEN];
-    // default message if invalid handle
-    if (!hFile || hFile == INVALID_HANDLE_VALUE) {
+    
+    if (!hFile || hFile == INVALID_HANDLE_VALUE) { // default message if invalid handle
         _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtReadFile handle=0x%p (invalid handle)", (void*)hFile);
     }
     else {
-        char* buf = (char*)malloc(BIG_MSG_LEN);
+        size_t maxLen = MAX_PATH + 1;
+        char* buf = (char*)malloc(maxLen);
         if (buf) {
-            if (GetFinalPathNameByHandleA(hFile, buf, BIG_MSG_LEN, FILE_NAME_NORMALIZED)) {
-                _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtReadFile %s", buf);
+            __try {
+                if (GetFinalPathNameByHandleA(hFile, buf, maxLen, FILE_NAME_NORMALIZED)) {
+                    _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtReadFile %s", buf);
+                }
+                else {
+                    _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtReadFile handle=0x%p (resolve failed)", (void*)hFile);
+                }
             }
-            else {
-                _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtReadFile handle=0x%p (resolve failed)", (void*)hFile);
-            }
+            __except (EXCEPTION_EXECUTE_HANDLER) {
+                _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtReadFile handle=0x%p (GetFinalPathNameByHandleA exception)", (void*)hFile);
+			}
             free(buf);
         }
         else {
@@ -561,7 +578,6 @@ DWORD WINAPI ReadFileResolverThread(LPVOID lpParam)
 
     emit_etw_msg_ns(msg, PID, ns);
 
-    // close handle
     if (hFile && hFile != INVALID_HANDLE_VALUE) g_origNtClose(hFile);
     free(args);
     return 0;
@@ -791,70 +807,67 @@ NTSTATUS NTAPI Hook_NtCreateFile(
     PVOID              EaBuffer,
     ULONG              EaLength
 ) {
-    char msg[BIG_MSG_LEN];
-    
-    /* TODO
-    DesiredAccess
-    
-FILE_GENERIC_READ
+    UINT64 ns = get_ns_time();
 
-	STANDARD_RIGHTS_READ | FILE_READ_DATA | FILE_READ_ATTRIBUTES | FILE_READ_EA | SYNCHRONIZE
-
-FILE_GENERIC_WRITE
-
-	STANDARD_RIGHTS_WRITE | FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES | FILE_WRITE_EA | FILE_APPEND_DATA | SYNCHRONIZE
-
-FILE_GENERIC_EXECUTE
-
-	STANDARD_RIGHTS_EXECUTE | FILE_READ_ATTRIBUTES | FILE_EXECUTE | SYNCHRONIZE
-    */
-
+    char msg[BIG_MSG_LEN] = { 0 };
+    char acc[MSG_LEN] = { 0 };
     char dispo[MSG_LEN] = { 0 };
+    
+    switch (DesiredAccess) {
+    case FILE_GENERIC_READ: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "file_generic_read"); break;
+    case FILE_GENERIC_WRITE: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "file_generic_write"); break;
+    case FILE_GENERIC_EXECUTE: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "file_generic_execute"); break;
+    case FILE_ALL_ACCESS: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "file_all_access"); break;
+    case FILE_READ_EA: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "file_read_ea"); break;
+    default: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "non-standard:0x%X", (unsigned)DesiredAccess); break;
+    }
+
     switch (CreateDisposition) {
-        case FILE_SUPERSEDE: _snprintf_s(dispo, sizeof(dispo), _TRUNCATE, "replace or create if not exists"); break;
-        case FILE_CREATE: _snprintf_s(dispo, sizeof(dispo), _TRUNCATE, "create or fail if exists"); break;
-        case FILE_OPEN: _snprintf_s(dispo, sizeof(dispo), _TRUNCATE, "open or fail if not exists"); break;
-        case FILE_OPEN_IF: _snprintf_s(dispo, sizeof(dispo), _TRUNCATE, "open or create if not exists"); break;
-        case FILE_OVERWRITE: _snprintf_s(dispo, sizeof(dispo), _TRUNCATE, "overwrite or fail if not exists"); break;
-        case FILE_OVERWRITE_IF: _snprintf_s(dispo, sizeof(dispo), _TRUNCATE, "overwrite or create if not exists"); break;
-        default: _snprintf_s(dispo, sizeof(dispo), _TRUNCATE, "unknown flag");
+    case FILE_SUPERSEDE: _snprintf_s(dispo, sizeof(dispo), _TRUNCATE, "replace or create if not exists"); break;
+    case FILE_CREATE: _snprintf_s(dispo, sizeof(dispo), _TRUNCATE, "create or fail if exists"); break;
+    case FILE_OPEN: _snprintf_s(dispo, sizeof(dispo), _TRUNCATE, "open or fail if not exists"); break;
+    case FILE_OPEN_IF: _snprintf_s(dispo, sizeof(dispo), _TRUNCATE, "open or create if not exists"); break;
+    case FILE_OVERWRITE: _snprintf_s(dispo, sizeof(dispo), _TRUNCATE, "overwrite or fail if not exists"); break;
+    case FILE_OVERWRITE_IF: _snprintf_s(dispo, sizeof(dispo), _TRUNCATE, "overwrite or create if not exists"); break;
+    default: _snprintf_s(dispo, sizeof(dispo), _TRUNCATE, "unknown-flag:0x%lX", CreateDisposition); break;
     }
 
     if (ObjectAttributes && ObjectAttributes->ObjectName) {
         
         PUNICODE_STRING name = ObjectAttributes->ObjectName;
-        __try {
-            if (name->Buffer && name->Length > 0) {
-                
-                char nameBuf[MAX_PATH] = { 0 };
+        if (name->Buffer && name->Length > 0) {
 
-                int wcharCount = (int)(name->Length / sizeof(WCHAR));
-                if (wcharCount > (MAX_PATH - 1))
-                    wcharCount = MAX_PATH - 1;
+            char nameBuf[MAX_PATH] = { 0 };
 
+            int wcharCount = (int)(name->Length / sizeof(WCHAR));
+            if (wcharCount > (MAX_PATH - 1))
+                wcharCount = MAX_PATH - 1;
+
+            WideCharToMultiByte(CP_ACP, 0, name->Buffer, wcharCount, nameBuf, MAX_PATH - 1, NULL, NULL);
+            nameBuf[MAX_PATH - 1] = '\0'; // ensure termination
+            _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtCreateFile %s with DesiredAccess=%s and Disposition='%s'", nameBuf, acc, dispo);
+
+            // this try / except breaks the reflective loading, YOLO
+            /*
+            __try {
                 WideCharToMultiByte(CP_ACP, 0, name->Buffer, wcharCount, nameBuf, MAX_PATH - 1, NULL, NULL);
                 nameBuf[MAX_PATH - 1] = '\0'; // ensure termination
-
-                _snprintf_s(
-                    msg, sizeof(msg), _TRUNCATE,
-                    "NtCreateFile %s with DesiredAccess=0x%X and Operation='%s'",
-                    nameBuf,
-                    (unsigned)DesiredAccess,
-                    dispo);
+                _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtCreateFile %s with DesiredAccess=%s and Disposition='%s'", nameBuf, acc, dispo);
             }
-            else {
-                _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtCreateFile (no or invalid name) with DesiredAccess=0x%X and Operation='%s'", (unsigned)DesiredAccess, dispo);
+            __except (EXCEPTION_EXECUTE_HANDLER) {
+                _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtCreateFile (invalid ObjectName pointer) with DesiredAccess=%s and Disposition='%s'", acc, dispo);
             }
+            */
         }
-        __except (EXCEPTION_CONTINUE_EXECUTION) {
-            _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtCreateFile (invalid ObjectName pointer) with DesiredAccess=0x%X and Operation='%s'", (unsigned)DesiredAccess, dispo);
+        else {
+            _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtCreateFile (no or invalid name) with DesiredAccess=%s and Disposition='%s'", acc, dispo);
         }
     }
     else {
-        _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtCreateFile (no objectattrs) with DesiredAccess=0x%X and Operation='%s'", (unsigned)DesiredAccess, dispo);
+        _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtCreateFile (no objectattrs) with DesiredAccess=%s and Disposition='%s'", acc, dispo);
     }
 
-    emit_etw_msg(msg, PID);
+    emit_etw_msg_ns(msg, PID, ns);
 
     return g_origNtCreateFile(FileHandle, DesiredAccess, ObjectAttributes, IoStatusBlock, AllocationSize, FileAttributes, ShareAccess, CreateDisposition, CreateOptions, EaBuffer, EaLength);
 }
@@ -867,67 +880,62 @@ NTSTATUS NTAPI Hook_NtOpenFile(
     ULONG              ShareAccess,
     ULONG              OpenOptions
 ) {
+	UINT64 ns = get_ns_time();
+
     char msg[BIG_MSG_LEN];
+    char acc[MSG_LEN];
 
-    /* TODO
-    DesiredAccess
-
-FILE_GENERIC_READ
-
-	STANDARD_RIGHTS_READ | FILE_READ_DATA | FILE_READ_ATTRIBUTES | FILE_READ_EA | SYNCHRONIZE
-
-FILE_GENERIC_WRITE
-
-	STANDARD_RIGHTS_WRITE | FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES | FILE_WRITE_EA | FILE_APPEND_DATA | SYNCHRONIZE
-
-FILE_GENERIC_EXECUTE
-
-	STANDARD_RIGHTS_EXECUTE | FILE_READ_ATTRIBUTES | FILE_EXECUTE | SYNCHRONIZE
-    */
+    switch (DesiredAccess) {
+    case FILE_GENERIC_READ: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "file_generic_read"); break;
+    case FILE_GENERIC_WRITE: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "file_generic_write"); break;
+    case FILE_GENERIC_EXECUTE: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "file_generic_execute"); break;
+	case FILE_ALL_ACCESS: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "file_all_access"); break;
+	case FILE_READ_EA: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "file_read_ea"); break;
+    default: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "non-standard:0x%X", (unsigned)DesiredAccess); break;
+	}
 
     if (ObjectAttributes && ObjectAttributes->ObjectName) {
 
         PUNICODE_STRING name = ObjectAttributes->ObjectName;
-        __try {
-            if (name->Buffer && name->Length > 0) {
+        if (name->Buffer && name->Length > 0) {
 
-                char nameBuf[MAX_PATH] = { 0 };
+            char nameBuf[MAX_PATH] = { 0 };
 
-                int wcharCount = name->Length / sizeof(WCHAR);
-                if (wcharCount > (MAX_PATH - 1))
-                    wcharCount = MAX_PATH - 1;
+            int wcharCount = (int)(name->Length / sizeof(WCHAR));
+            if (wcharCount > (MAX_PATH - 1))
+                wcharCount = MAX_PATH - 1;
 
+            __try {
                 WideCharToMultiByte(CP_ACP, 0, name->Buffer, wcharCount, nameBuf, MAX_PATH - 1, NULL, NULL);
                 nameBuf[MAX_PATH - 1] = '\0'; // ensure termination
-
-                _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenFile %s with DesiredAccess=0x%X", nameBuf, (unsigned)DesiredAccess);
+                _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenFile %s with DesiredAccess=%s", nameBuf, acc);
             }
-            else {
-                _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenFile (no or invalid name) with DesiredAccess=0x%X", (unsigned)DesiredAccess);
+            __except (EXCEPTION_EXECUTE_HANDLER) {
+                _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenFile (invalid ObjectName pointer) with DesiredAccess=%s", acc);
             }
         }
-        __except (EXCEPTION_CONTINUE_EXECUTION) {
-            _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenFile (invalid ObjectName pointer) with DesiredAccess=0x%X and Operation='%s'", (unsigned)DesiredAccess, dispo);
+        else {
+            _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenFile (no or invalid name) with DesiredAccess=%s", acc);
         }
     }
     else {
-        _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenFile (no objectattrs) with DesiredAccess=0x%X", (unsigned)DesiredAccess);
+        _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenFile (no objectattrs) with DesiredAccess=%s", acc);
     }
-    emit_etw_msg(msg, PID);
+    emit_etw_msg_ns(msg, PID, ns);
 
     return g_origNtOpenFile(FileHandle, DesiredAccess, ObjectAttributes, IoStatusBlock, ShareAccess, OpenOptions);
 }
 
 NTSTATUS NTAPI Hook_NtReadFile(
-    HANDLE FileHandle,
-    HANDLE Event,
-    PIO_APC_ROUTINE ApcRoutine,
-    PVOID ApcContext,
+    HANDLE           FileHandle,
+    HANDLE           Event,
+    PIO_APC_ROUTINE  ApcRoutine,
+    PVOID            ApcContext,
     PIO_STATUS_BLOCK IoStatusBlock,
-    PVOID Buffer,
-    ULONG Length,
-    PLARGE_INTEGER ByteOffset,
-    PULONG Key
+    PVOID            Buffer,
+    ULONG            Length,
+    PLARGE_INTEGER   ByteOffset,
+    PULONG           Key
 ) {
     UINT64 ns = get_ns_time();
 
@@ -968,12 +976,13 @@ NTSTATUS NTAPI Hook_NtReadFile(
 }
 
 NTSTATUS NTAPI Hook_NtOpenProcess(
-    PHANDLE ProcessHandle,
+    PHANDLE     ProcessHandle,
     ACCESS_MASK DesiredAccess,
-    PVOID ObjectAttributes,
-    PVOID ClientId
+    PVOID       ObjectAttributes,
+    PVOID       ClientId
 )
 {
+    UINT64 ns = get_ns_time();
     UINT64 tpid = 0;
     if (ClientId) {
         tpid = *(uintptr_t*)ClientId;
@@ -982,15 +991,15 @@ NTSTATUS NTAPI Hook_NtOpenProcess(
     char msg[MSG_LEN];
     _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenProcess with 0x%X", static_cast<unsigned int>(DesiredAccess));
 
-    emit_etw_msg(msg, tpid);
+    emit_etw_msg_ns(msg, tpid, ns);
     return g_origNtOpenProcess(ProcessHandle, DesiredAccess, ObjectAttributes, ClientId);
 }
 
 NTSTATUS NTAPI Hook_NtReadVirtualMemory(
-    HANDLE ProcessHandle,
-    PVOID BaseAddress,
-    PVOID Buffer,
-    SIZE_T NumberOfBytesToRead,
+    HANDLE  ProcessHandle,
+    PVOID   BaseAddress,
+    PVOID   Buffer,
+    SIZE_T  NumberOfBytesToRead,
     PSIZE_T NumberOfBytesRead
 )
 {
@@ -1047,13 +1056,14 @@ NTSTATUS NTAPI Hook_NtReadVirtualMemory(
 }
 
 NTSTATUS NTAPI Hook_NtWriteVirtualMemory(
-    HANDLE ProcessHandle,
-    PVOID BaseAddress,
-    PVOID Buffer,
-    SIZE_T NumberOfBytesToWrite,
+    HANDLE  ProcessHandle,
+    PVOID   BaseAddress,
+    PVOID   Buffer,
+    SIZE_T  NumberOfBytesToWrite,
     PSIZE_T NumberOfBytesWritten
 )
 {
+    UINT64 ns = get_ns_time();
     DWORD tpid = GetProcessId(ProcessHandle);
     uintptr_t addr = reinterpret_cast<uintptr_t>(BaseAddress);
 
@@ -1064,28 +1074,33 @@ NTSTATUS NTAPI Hook_NtWriteVirtualMemory(
         static_cast<int>(sizeof(uintptr_t) * 2),
         static_cast<unsigned long long>(addr));
 
-    emit_etw_msg(msg, tpid);
+    emit_etw_msg_ns(msg, tpid, ns);
     return g_origNtWriteVirtualMemory(ProcessHandle, BaseAddress, Buffer, NumberOfBytesToWrite, NumberOfBytesWritten);
 }
 
-NTSTATUS NTAPI Hook_NtClose(HANDLE Handle)
-{
+NTSTATUS NTAPI Hook_NtClose(
+    HANDLE Handle
+) {
+    UINT64 ns = get_ns_time();
     DWORD tpid = GetProcessId(Handle);
     if (tpid != 0) { // ignore closing events of non proc handles
-        emit_etw_msg("NtClose process", tpid);
+        emit_etw_msg_ns("NtClose process", tpid, ns);
     }
     return g_origNtClose(Handle);
 }
 
-NTSTATUS NTAPI Hook_NtTerminateProcess(HANDLE Handle, NTSTATUS ExitStatus)
-{
+NTSTATUS NTAPI Hook_NtTerminateProcess(
+    HANDLE   Handle, 
+    NTSTATUS ExitStatus
+) {
+    UINT64 ns = get_ns_time();
     DWORD tpid = GetProcessId(Handle);
     if (tpid != 0) { // ignore closing events of non proc handles 
         char msg[MSG_LEN];
         _snprintf_s(msg, sizeof(msg), _TRUNCATE,
             "NtTerminateProcess with status 0x%lx",
             static_cast<LONG>(ExitStatus));
-        emit_etw_msg(msg, tpid);
+        emit_etw_msg_ns(msg, tpid, ns);
     }
     return g_origNtTerminateProcess(Handle, ExitStatus);
 }
@@ -1168,7 +1183,7 @@ BOOL WINAPI DllMain(HINSTANCE hinst, DWORD reason, LPVOID reserved) {
     switch (reason) {
     case DLL_PROCESS_ATTACH:
     {
-        //DisableThreadLibraryCalls(hinst);
+        DisableThreadLibraryCalls(hinst); // dont notify for DLL_THREAD_ATTACH or DLL_THREAD_DETACH
         HANDLE hTread = CreateThread(nullptr, 0, t_InitHooks, nullptr, 0, nullptr);
         if (!hTread) {
             std::cerr << "[!] Hook-DLL: Failed to create init thread\n";
@@ -1177,9 +1192,9 @@ BOOL WINAPI DllMain(HINSTANCE hinst, DWORD reason, LPVOID reserved) {
         std::cout << "[+] Hook-DLL: Created init thread\n";
         break;
     }
-    case DLL_THREAD_ATTACH:
+	case DLL_THREAD_ATTACH: // disabled by DisableThreadLibraryCalls
         break;
-    case DLL_THREAD_DETACH:
+    case DLL_THREAD_DETACH: // disabled by DisableThreadLibraryCalls
         break;
     case DLL_PROCESS_DETACH:
         //RemoveHooks();
