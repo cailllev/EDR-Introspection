@@ -28,6 +28,7 @@
 * - large __try __except blocks (code inside these blocks can easily crash the loader)
 * - convoluted code flow (i.e. many declarations, if statements, ...)
 * - removing the REFL INJ code below
+* - too many strings in A SINGLE SWITCH STATEMENT ??
 * - ? changing to much code at once ?
 * - ? breathing at the compiled DLL ?
 * 
@@ -555,7 +556,7 @@ DWORD WINAPI ReadFileResolverThread(LPVOID lpParam)
         _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtReadFile handle=0x%p (invalid handle)", (void*)hFile);
     }
     else {
-        size_t maxLen = MAX_PATH + 1;
+        DWORD maxLen = MAX_PATH + 1;
         char* buf = (char*)malloc(maxLen);
         if (buf) {
             __try {
@@ -812,14 +813,19 @@ NTSTATUS NTAPI Hook_NtCreateFile(
     char msg[BIG_MSG_LEN] = { 0 };
     char acc[MSG_LEN] = { 0 };
     char dispo[MSG_LEN] = { 0 };
-    
+
+    const ACCESS_MASK EDR_FILE_READ_DATA_SYNC = 0x100001;
+    const ACCESS_MASK EDR_FILE_READ_ATTR_SYNC = 0x100080;
+    const ACCESS_MASK EDR_FILE_READ_CONTROL = 0x20000;
+
     switch (DesiredAccess) {
-    case FILE_GENERIC_READ: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "file_generic_read"); break;
-    case FILE_GENERIC_WRITE: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "file_generic_write"); break;
-    case FILE_GENERIC_EXECUTE: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "file_generic_execute"); break;
-    case FILE_ALL_ACCESS: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "file_all_access"); break;
-    case FILE_READ_EA: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "file_read_ea"); break;
-    default: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "non-standard:0x%X", (unsigned)DesiredAccess); break;
+    case FILE_GENERIC_READ: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "0x%X:file_generic_read", (unsigned)DesiredAccess); break;
+    case FILE_ALL_ACCESS: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "0x%X:file_all_access", (unsigned)DesiredAccess); break;
+    case FILE_READ_EA: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "0x%X:file_read_ea", (unsigned)DesiredAccess); break;
+    case EDR_FILE_READ_DATA_SYNC: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "0x%X:file_read_data+sync", (unsigned)DesiredAccess); break;
+    case EDR_FILE_READ_ATTR_SYNC: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "0x%X:file_read_attr+sync", (unsigned)DesiredAccess); break;
+    case EDR_FILE_READ_CONTROL: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "0x%X:file_read_control", (unsigned)DesiredAccess); break;
+    default: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "0x%X:non-standard", (unsigned)DesiredAccess); break;
     }
 
     switch (CreateDisposition) {
@@ -883,16 +889,21 @@ NTSTATUS NTAPI Hook_NtOpenFile(
 	UINT64 ns = get_ns_time();
 
     char msg[BIG_MSG_LEN];
-    char acc[MSG_LEN];
+    char acc[MSG_LEN] = { 0 };
+
+    const ACCESS_MASK EDR_FILE_READ_DATA_SYNC = 0x100001;
+    const ACCESS_MASK EDR_FILE_READ_ATTR_SYNC = 0x100080;
+    const ACCESS_MASK EDR_FILE_READ_CONTROL = 0x20000;
 
     switch (DesiredAccess) {
-    case FILE_GENERIC_READ: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "file_generic_read"); break;
-    case FILE_GENERIC_WRITE: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "file_generic_write"); break;
-    case FILE_GENERIC_EXECUTE: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "file_generic_execute"); break;
-	case FILE_ALL_ACCESS: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "file_all_access"); break;
-	case FILE_READ_EA: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "file_read_ea"); break;
-    default: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "non-standard:0x%X", (unsigned)DesiredAccess); break;
-	}
+    case FILE_GENERIC_READ: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "0x%X:file_generic_read", (unsigned)DesiredAccess); break;
+    case FILE_ALL_ACCESS: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "0x%X:file_all_access", (unsigned)DesiredAccess); break;
+    case FILE_READ_EA: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "0x%X:file_read_ea", (unsigned)DesiredAccess); break;
+    case EDR_FILE_READ_DATA_SYNC: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "0x%X:file_read_data+sync", (unsigned)DesiredAccess); break;
+    case EDR_FILE_READ_ATTR_SYNC: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "0x%X:file_read_attr+sync", (unsigned)DesiredAccess); break;
+    case EDR_FILE_READ_CONTROL: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "0x%X:file_read_control", (unsigned)DesiredAccess); break;
+    default: _snprintf_s(acc, sizeof(acc), _TRUNCATE, "0x%X:non-standard", (unsigned)DesiredAccess); break;
+    }
 
     if (ObjectAttributes && ObjectAttributes->ObjectName) {
 
@@ -943,7 +954,7 @@ NTSTATUS NTAPI Hook_NtReadFile(
     HANDLE dup = NULL;
     BOOL ok = false;
     if (FileHandle && FileHandle != INVALID_HANDLE_VALUE) {
-        BOOL ok = DuplicateHandle(
+        ok = DuplicateHandle(
             GetCurrentProcess(), FileHandle,
             GetCurrentProcess(), &dup,
             0, FALSE, DUPLICATE_SAME_ACCESS
