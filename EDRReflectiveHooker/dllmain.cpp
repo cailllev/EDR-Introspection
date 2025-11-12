@@ -29,6 +29,8 @@
 * - convoluted code flow (i.e. many declarations, if statements, ...)
 * - removing the REFL INJ code below
 * - too many strings in A SINGLE SWITCH STATEMENT ??
+* - char[size_to_big] can break loading sometimes ??
+* - not using an allocated char[small_size] ??
 * - ? changing to much code at once ?
 * - ? breathing at the compiled DLL ?
 * 
@@ -467,8 +469,8 @@ void emit_etw_msg_ns(const char msg[], UINT64 tpid, UINT64 ns) {
     );
 };
 
-const size_t MSG_LEN = 128;
-const size_t BIG_MSG_LEN = 1024;
+const size_t MISC_LEN = 128;
+const size_t MSG_LEN = 512;
 
 // helper structure for ReadFile handle resolving
 typedef struct _FNF_ARGS {
@@ -550,7 +552,7 @@ DWORD WINAPI ReadFileResolverThread(LPVOID lpParam)
     HANDLE hFile = args->FileHandle;
     UINT64 ns = args->Timestamp;
 
-    char msg[BIG_MSG_LEN];
+    char msg[MSG_LEN] = { 0 };
     
     if (!hFile || hFile == INVALID_HANDLE_VALUE) { // default message if invalid handle
         _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtReadFile handle=0x%p (invalid handle)", (void*)hFile);
@@ -600,10 +602,10 @@ DWORD WINAPI ReadMemoryResolverThread(LPVOID lpParam) {
     SIZE_T bytesToRead = args->NumberOfBytesToRead;
     UINT64 ns = args->Timestamp;
 
-    char msg[BIG_MSG_LEN] = { 0 };
-    char error[MSG_LEN] = { 0 };
-    char vqeError[MSG_LEN] = { 0 };
-    char combinedError[MSG_LEN] = { 0 };
+    char msg[MSG_LEN] = { 0 };
+    char error[MISC_LEN] = { 0 };
+    char vqeError[MISC_LEN] = { 0 };
+    char combinedError[MISC_LEN] = { 0 };
     bool err = false;
     bool found = false;
 
@@ -810,9 +812,9 @@ NTSTATUS NTAPI Hook_NtCreateFile(
 ) {
     UINT64 ns = get_ns_time();
 
-    char msg[BIG_MSG_LEN] = { 0 };
-    char acc[MSG_LEN] = { 0 };
-    char dispo[MSG_LEN] = { 0 };
+    char msg[MSG_LEN] = { 0 };
+    char acc[MISC_LEN] = { 0 };
+    char dispo[MISC_LEN] = { 0 };
 
     const ACCESS_MASK EDR_FILE_READ_DATA_SYNC = 0x100001;
     const ACCESS_MASK EDR_FILE_READ_ATTR_SYNC = 0x100080;
@@ -888,8 +890,8 @@ NTSTATUS NTAPI Hook_NtOpenFile(
 ) {
 	UINT64 ns = get_ns_time();
 
-    char msg[BIG_MSG_LEN];
-    char acc[MSG_LEN] = { 0 };
+    char msg[MSG_LEN] = { 0 };
+    char acc[MISC_LEN] = { 0 };
 
     const ACCESS_MASK EDR_FILE_READ_DATA_SYNC = 0x100001;
     const ACCESS_MASK EDR_FILE_READ_ATTR_SYNC = 0x100080;
@@ -949,6 +951,7 @@ NTSTATUS NTAPI Hook_NtReadFile(
     PULONG           Key
 ) {
     UINT64 ns = get_ns_time();
+    char msg[MISC_LEN] = { 0 }; // MSG_LEN breaks the loading here ??
 
     // duplicate handle to ensure validity in worker thread
     HANDLE dup = NULL;
@@ -962,7 +965,6 @@ NTSTATUS NTAPI Hook_NtReadFile(
     }
     if (!ok) {
         if (dup) g_origNtClose(dup);
-        char msg[MSG_LEN];
         _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtReadFile handle=0x%p (error %lu duplicating handle)", (void*)dup, GetLastError());
         emit_etw_msg_ns(msg, PID, ns);
         return g_origNtReadFile(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, Buffer, Length, ByteOffset, Key);
@@ -974,7 +976,6 @@ NTSTATUS NTAPI Hook_NtReadFile(
         args->FileHandle = dup;
         args->Timestamp = ns;
         if (!EnqueueResolverTask(ReadFileResolverThread, args)) {
-            char msg[MSG_LEN];
             _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtReadFile handle=0x%p (resolver queue limit reached)", (void*)dup);
             emit_etw_msg_ns(msg, PID, ns);
             free(args);
@@ -999,8 +1000,58 @@ NTSTATUS NTAPI Hook_NtOpenProcess(
         tpid = *(uintptr_t*)ClientId;
     }
 
-    char msg[MSG_LEN];
-    _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenProcess with 0x%X", static_cast<unsigned int>(DesiredAccess));
+	char acc[MISC_LEN] = { 0 };
+
+    if (DesiredAccess & PROCESS_TERMINATE) {
+        strcat_s(acc, sizeof(acc), "PROCESS_TERMINATE|");
+	}
+    if (DesiredAccess & PROCESS_CREATE_THREAD) {
+        strcat_s(acc, sizeof(acc), "PROCESS_CREATE_THREAD|");
+	}
+    if (DesiredAccess & PROCESS_VM_OPERATION) {
+        strcat_s(acc, sizeof(acc), "PROCESS_VM_OPERATION|");
+    }
+    if (DesiredAccess & PROCESS_VM_READ) {
+        strcat_s(acc, sizeof(acc), "PROCESS_VM_READ|");
+    }
+    if (DesiredAccess & PROCESS_VM_WRITE) {
+        strcat_s(acc, sizeof(acc), "PROCESS_VM_WRITE|");
+    }
+    if (DesiredAccess & PROCESS_DUP_HANDLE) {
+        strcat_s(acc, sizeof(acc), "PROCESS_DUP_HANDLE|");
+    }
+    if (DesiredAccess & PROCESS_CREATE_PROCESS) {
+        strcat_s(acc, sizeof(acc), "PROCESS_CREATE_PROCESS|");
+    }
+    if (DesiredAccess & PROCESS_SET_QUOTA) {
+        strcat_s(acc, sizeof(acc), "PROCESS_SET_QUOTA|");
+    }
+    if (DesiredAccess & PROCESS_SET_INFORMATION) {
+        strcat_s(acc, sizeof(acc), "PROCESS_SET_INFORMATION|");
+    }
+    if (DesiredAccess & PROCESS_QUERY_INFORMATION) {
+        strcat_s(acc, sizeof(acc), "PROCESS_QUERY_INFORMATION|");
+    }
+    if (DesiredAccess & PROCESS_SUSPEND_RESUME) {
+        strcat_s(acc, sizeof(acc), "PROCESS_SUSPEND_RESUME|");
+    }
+    if (DesiredAccess & PROCESS_QUERY_LIMITED_INFORMATION) {
+        strcat_s(acc, sizeof(acc), "PROCESS_QUERY_LIMITED_INFORMATION|");
+    }
+    if (DesiredAccess & PROCESS_SET_LIMITED_INFORMATION) {
+        strcat_s(acc, sizeof(acc), "PROCESS_SET_LIMITED_INFORMATION|");
+    }
+    if (DesiredAccess & SYNCHRONIZE) {
+        strcat_s(acc, sizeof(acc), "SYNCHRONIZE|");
+    }
+
+	size_t len = strlen(acc);
+    if (len > 0) {
+        acc[len - 1] = '\0'; // remove last '|'
+    }
+
+    char msg[MSG_LEN] = { 0 };
+    _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenProcess with 0x%X:%s", static_cast<unsigned int>(DesiredAccess), acc);
 
     emit_etw_msg_ns(msg, tpid, ns);
     return g_origNtOpenProcess(ProcessHandle, DesiredAccess, ObjectAttributes, ClientId);
@@ -1018,6 +1069,8 @@ NTSTATUS NTAPI Hook_NtReadVirtualMemory(
     DWORD tpid = GetProcessId(ProcessHandle);
     uintptr_t addr = reinterpret_cast<uintptr_t>(BaseAddress);
 
+    char msg[MSG_LEN] = { 0 };
+
     // duplicate handle to ensure validity in worker thread
     HANDLE dup = NULL;
     BOOL ok = false;
@@ -1030,7 +1083,6 @@ NTSTATUS NTAPI Hook_NtReadVirtualMemory(
     }
     if (!ok) { // this is the only check needed if a handle is valid to use later
         if (dup) g_origNtClose(dup);
-        char msg[BIG_MSG_LEN];
         _snprintf_s(msg, sizeof(msg), _TRUNCATE,
             "NtReadVirtualMemory 0x%llx bytes from Unknown!0x%0*llx, DuplicateHandle: error %lu duplicating handle",
             static_cast<unsigned long long>(NumberOfBytesToRead),
@@ -1050,7 +1102,6 @@ NTSTATUS NTAPI Hook_NtReadVirtualMemory(
         args->NumberOfBytesToRead = NumberOfBytesToRead;
         args->Timestamp = ns;
         if (!EnqueueResolverTask(ReadMemoryResolverThread, args)) {
-            char msg[BIG_MSG_LEN];
             _snprintf_s(msg, sizeof(msg), _TRUNCATE,
                 "NtReadVirtualMemory 0x%llx bytes from Unknown!0x%0*llx, Resolver: queue limit reached",
                 static_cast<unsigned long long>(NumberOfBytesToRead),
@@ -1078,7 +1129,7 @@ NTSTATUS NTAPI Hook_NtWriteVirtualMemory(
     DWORD tpid = GetProcessId(ProcessHandle);
     uintptr_t addr = reinterpret_cast<uintptr_t>(BaseAddress);
 
-    char msg[MSG_LEN];
+    char msg[MSG_LEN] = { 0 };
     _snprintf_s(msg, sizeof(msg), _TRUNCATE,
         "NtWriteVirtualMemory 0x%llx bytes at 0x%0*llx",
         static_cast<unsigned long long>(NumberOfBytesToWrite),
@@ -1105,9 +1156,10 @@ NTSTATUS NTAPI Hook_NtTerminateProcess(
     NTSTATUS ExitStatus
 ) {
     UINT64 ns = get_ns_time();
+    char msg[MSG_LEN] = { 0 };
+
     DWORD tpid = GetProcessId(Handle);
-    if (tpid != 0) { // ignore closing events of non proc handles 
-        char msg[MSG_LEN];
+    if (tpid != 0) { // ignore closing events of non proc handles
         _snprintf_s(msg, sizeof(msg), _TRUNCATE,
             "NtTerminateProcess with status 0x%lx",
             static_cast<LONG>(ExitStatus));
