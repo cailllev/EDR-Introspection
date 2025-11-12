@@ -325,6 +325,20 @@ typedef NTSTATUS(NTAPI* PFN_NtQueryInformationProcess)(
     PULONG           ReturnLength);
 
 // hooked function definitions
+typedef NTSTATUS (NTAPI* PFN_NtCreateFile)(
+    PHANDLE            FileHandle,
+    ACCESS_MASK        DesiredAccess,
+    POBJECT_ATTRIBUTES ObjectAttributes,
+    PIO_STATUS_BLOCK   IoStatusBlock,
+    PLARGE_INTEGER     AllocationSize,
+    ULONG              FileAttributes,
+    ULONG              ShareAccess,
+    ULONG              CreateDisposition,
+    ULONG              CreateOptions,
+    PVOID              EaBuffer,
+    ULONG              EaLength
+    );
+
 typedef NTSTATUS(NTAPI* PFN_NtOpenFile)(
     PHANDLE            FileHandle,
     ACCESS_MASK        DesiredAccess,
@@ -382,6 +396,7 @@ typedef NTSTATUS(NTAPI* PFN_NtTerminateProcess)(
 static PFN_NtQueryInformationProcess pNtQueryInfoProcess = nullptr;
 
 // trampolines created by MinHook
+static PFN_NtCreateFile g_origNtCreateFile = nullptr;
 static PFN_NtOpenFile g_origNtOpenFile = nullptr;
 static PFN_NtReadFile g_origNtReadFile = nullptr;
 static PFN_NtOpenProcess g_origNtOpenProcess = nullptr;
@@ -763,6 +778,87 @@ DWORD WINAPI ReadMemoryResolverThread(LPVOID lpParam) {
     return 0;
 }
 
+NTSTATUS NTAPI Hook_NtCreateFile(
+    PHANDLE            FileHandle,
+    ACCESS_MASK        DesiredAccess,
+    POBJECT_ATTRIBUTES ObjectAttributes,
+    PIO_STATUS_BLOCK   IoStatusBlock,
+    PLARGE_INTEGER     AllocationSize,
+    ULONG              FileAttributes,
+    ULONG              ShareAccess,
+    ULONG              CreateDisposition,
+    ULONG              CreateOptions,
+    PVOID              EaBuffer,
+    ULONG              EaLength
+) {
+    char msg[BIG_MSG_LEN];
+    
+    /* TODO
+    DesiredAccess
+    
+FILE_GENERIC_READ
+
+	STANDARD_RIGHTS_READ | FILE_READ_DATA | FILE_READ_ATTRIBUTES | FILE_READ_EA | SYNCHRONIZE
+
+FILE_GENERIC_WRITE
+
+	STANDARD_RIGHTS_WRITE | FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES | FILE_WRITE_EA | FILE_APPEND_DATA | SYNCHRONIZE
+
+FILE_GENERIC_EXECUTE
+
+	STANDARD_RIGHTS_EXECUTE | FILE_READ_ATTRIBUTES | FILE_EXECUTE | SYNCHRONIZE
+    */
+
+    char dispo[MSG_LEN] = { 0 };
+    switch (CreateDisposition) {
+        case FILE_SUPERSEDE: _snprintf_s(dispo, sizeof(dispo), _TRUNCATE, "replace or create if not exists"); break;
+        case FILE_CREATE: _snprintf_s(dispo, sizeof(dispo), _TRUNCATE, "create or fail if exists"); break;
+        case FILE_OPEN: _snprintf_s(dispo, sizeof(dispo), _TRUNCATE, "open or fail if not exists"); break;
+        case FILE_OPEN_IF: _snprintf_s(dispo, sizeof(dispo), _TRUNCATE, "open or create if not exists"); break;
+        case FILE_OVERWRITE: _snprintf_s(dispo, sizeof(dispo), _TRUNCATE, "overwrite or fail if not exists"); break;
+        case FILE_OVERWRITE_IF: _snprintf_s(dispo, sizeof(dispo), _TRUNCATE, "overwrite or create if not exists"); break;
+        default: _snprintf_s(dispo, sizeof(dispo), _TRUNCATE, "unknown flag");
+    }
+
+    if (ObjectAttributes && ObjectAttributes->ObjectName) {
+        
+        PUNICODE_STRING name = ObjectAttributes->ObjectName;
+        __try {
+            if (name->Buffer && name->Length > 0) {
+                
+                char nameBuf[MAX_PATH] = { 0 };
+
+                int wcharCount = (int)(name->Length / sizeof(WCHAR));
+                if (wcharCount > (MAX_PATH - 1))
+                    wcharCount = MAX_PATH - 1;
+
+                WideCharToMultiByte(CP_ACP, 0, name->Buffer, wcharCount, nameBuf, MAX_PATH - 1, NULL, NULL);
+                nameBuf[MAX_PATH - 1] = '\0'; // ensure termination
+
+                _snprintf_s(
+                    msg, sizeof(msg), _TRUNCATE,
+                    "NtCreateFile %s with DesiredAccess=0x%X and Operation='%s'",
+                    nameBuf,
+                    (unsigned)DesiredAccess,
+                    dispo);
+            }
+            else {
+                _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtCreateFile (no or invalid name) with DesiredAccess=0x%X and Operation='%s'", (unsigned)DesiredAccess, dispo);
+            }
+        }
+        __except (EXCEPTION_CONTINUE_EXECUTION) {
+            _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtCreateFile (invalid ObjectName pointer) with DesiredAccess=0x%X and Operation='%s'", (unsigned)DesiredAccess, dispo);
+        }
+    }
+    else {
+        _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtCreateFile (no objectattrs) with DesiredAccess=0x%X and Operation='%s'", (unsigned)DesiredAccess, dispo);
+    }
+
+    emit_etw_msg(msg, PID);
+
+    return g_origNtCreateFile(FileHandle, DesiredAccess, ObjectAttributes, IoStatusBlock, AllocationSize, FileAttributes, ShareAccess, CreateDisposition, CreateOptions, EaBuffer, EaLength);
+}
+
 NTSTATUS NTAPI Hook_NtOpenFile(
     PHANDLE            FileHandle,
     ACCESS_MASK        DesiredAccess,
@@ -772,21 +868,50 @@ NTSTATUS NTAPI Hook_NtOpenFile(
     ULONG              OpenOptions
 ) {
     char msg[BIG_MSG_LEN];
+
+    /* TODO
+    DesiredAccess
+
+FILE_GENERIC_READ
+
+	STANDARD_RIGHTS_READ | FILE_READ_DATA | FILE_READ_ATTRIBUTES | FILE_READ_EA | SYNCHRONIZE
+
+FILE_GENERIC_WRITE
+
+	STANDARD_RIGHTS_WRITE | FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES | FILE_WRITE_EA | FILE_APPEND_DATA | SYNCHRONIZE
+
+FILE_GENERIC_EXECUTE
+
+	STANDARD_RIGHTS_EXECUTE | FILE_READ_ATTRIBUTES | FILE_EXECUTE | SYNCHRONIZE
+    */
+
     if (ObjectAttributes && ObjectAttributes->ObjectName) {
+
         PUNICODE_STRING name = ObjectAttributes->ObjectName;
-        if (name->Buffer && name->Length > 0 && !IsBadReadPtr(name->Buffer, name->Length)) {
-            char nameBuf[MAX_PATH] = { 0 };
-            int wcharCount = name->Length / sizeof(WCHAR);
-            WideCharToMultiByte(CP_ACP, 0, name->Buffer, wcharCount, nameBuf, MAX_PATH - 1, NULL, NULL);
-            nameBuf[MAX_PATH - 1] = '\0'; // ensure termination
-            _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenFile %s with 0x%X", nameBuf, (unsigned)DesiredAccess);
+        __try {
+            if (name->Buffer && name->Length > 0) {
+
+                char nameBuf[MAX_PATH] = { 0 };
+
+                int wcharCount = name->Length / sizeof(WCHAR);
+                if (wcharCount > (MAX_PATH - 1))
+                    wcharCount = MAX_PATH - 1;
+
+                WideCharToMultiByte(CP_ACP, 0, name->Buffer, wcharCount, nameBuf, MAX_PATH - 1, NULL, NULL);
+                nameBuf[MAX_PATH - 1] = '\0'; // ensure termination
+
+                _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenFile %s with DesiredAccess=0x%X", nameBuf, (unsigned)DesiredAccess);
+            }
+            else {
+                _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenFile (no or invalid name) with DesiredAccess=0x%X", (unsigned)DesiredAccess);
+            }
         }
-        else {
-            _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenFile (no or invalid name) with 0x%X", (unsigned)DesiredAccess);
+        __except (EXCEPTION_CONTINUE_EXECUTION) {
+            _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenFile (invalid ObjectName pointer) with DesiredAccess=0x%X and Operation='%s'", (unsigned)DesiredAccess, dispo);
         }
     }
     else {
-        _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenFile (no objectattrs) with 0x%X", (unsigned)DesiredAccess);
+        _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtOpenFile (no objectattrs) with DesiredAccess=0x%X", (unsigned)DesiredAccess);
     }
     emit_etw_msg(msg, PID);
 
@@ -988,6 +1113,7 @@ void InstallHooks()
 
     // all functions to hook
     std::map<std::string, std::pair<void*, void**>> funcs = {
+        {"NtCreateFile", {(void*)Hook_NtCreateFile, (void**)&g_origNtCreateFile}},
         {"NtOpenFile", {(void*)Hook_NtOpenFile, (void**)&g_origNtOpenFile}},
         {"NtReadFile", {(void*)Hook_NtReadFile, (void**)&g_origNtReadFile}},
         {"NtOpenProcess", {(void*)Hook_NtOpenProcess, (void**)&g_origNtOpenProcess}},
