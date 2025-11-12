@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="HookTester.cpp">
+    <ClCompile Include="loader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
