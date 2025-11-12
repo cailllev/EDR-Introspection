@@ -22,6 +22,13 @@ TRACELOGGING_DEFINE_PROVIDER(
 int sleep_between_steps_ms = 970; // time to wait between attack steps
 
 UINT64 get_ns_time() {
+    /*
+    ChronoVsFiletime.exe:
+    [*] Timing 1000000000 calls each...
+    5.59516 ns per call - GetSystemTimeAsFileTime
+    26.9772 ns per call - GetSystemTimePreciseAsFileTime
+    23.9806 ns per call - chrono::system_clock::now()
+    */
     auto now = std::chrono::system_clock::now();
     return std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
 }
