@@ -476,7 +476,7 @@ std::queue<ResolverTask> g_taskQueue;
 std::mutex g_queueMutex;
 std::condition_variable g_cv;
 std::vector<std::thread> g_workers;
-int MAX_QUEUE_SIZE = 16384;
+int MAX_QUEUE_SIZE = 65536; // arbitrary
 
 void ResolverWorker() {
     while (true) {
@@ -497,7 +497,7 @@ void ResolverWorker() {
     }
 }
 
-void InitResolverPool(int numThreads = 32) {
+void InitResolverPool(int numThreads) {
     for (int i = 0; i < numThreads; i++) {
         g_workers.emplace_back(ResolverWorker);
     }
@@ -1027,7 +1027,7 @@ DWORD WINAPI t_InitHooks(LPVOID param)
     std::cout << "[+] Hook-DLL: Executing init thread...\n";
     TraceLoggingRegister(g_hProvider);
     PID = GetCurrentProcessId(); 
-    InitResolverPool(32);
+    InitResolverPool(8); // logical cpus * 2
     InstallHooks();
     return 0;
 }
