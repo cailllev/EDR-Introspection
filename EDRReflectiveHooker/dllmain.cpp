@@ -802,7 +802,6 @@ DWORD WINAPI ReadMemoryResolverThread(LPVOID lpParam) {
         }
     }
 
-
     // Combine errors for logging
     if (strlen(error) > 0) {
         _snprintf_s(combinedError, sizeof(combinedError), _TRUNCATE, ", QueryInfoProc error: %s", error);
@@ -825,6 +824,24 @@ DWORD WINAPI ReadMemoryResolverThread(LPVOID lpParam) {
     if (hProcess) g_origNtClose(hProcess);
     free(args);
     return 0;
+}
+
+// when hooking NtQueryInformationProcess, GetProcessId is also affected
+DWORD UnhookedGetProcessId(HANDLE hProcess) {
+	if (hProcess == NULL) return 0; // do NOT check for INVALID_HANDLE_VALUE, it's valid: https://devblogs.microsoft.com/oldnewthing/20230914-00/?p=108766
+
+    PROCESS_BASIC_INFORMATION pbi;
+    ULONG retLen;
+
+    NTSTATUS status = g_origNtQueryInformationProcess(hProcess,
+        ProcessBasicInformation,
+        &pbi,
+        sizeof(pbi),
+        &retLen);
+
+    if (status < 0) return 0; // handle not a process
+
+    return (DWORD)(ULONG_PTR)pbi.UniqueProcessId;
 }
 
 NTSTATUS NTAPI Hook_NtCreateFile(
@@ -1197,7 +1214,7 @@ NTSTATUS NTAPI Hook_NtQueryInformationProcess(
     PULONG           ReturnLength
 ) {
     UINT64 ns = get_ns_time();
-    DWORD tpid = GetProcessId(ProcessHandle);
+    DWORD tpid = UnhookedGetProcessId(ProcessHandle);
 
     char msg[MSG_LEN] = { 0 };
 	char infoClass[MISC_LEN] = { 0 };
@@ -1226,7 +1243,7 @@ NTSTATUS NTAPI Hook_NtReadVirtualMemory(
 )
 {
     UINT64 ns = get_ns_time();
-    DWORD tpid = GetProcessId(ProcessHandle);
+    DWORD tpid = UnhookedGetProcessId(ProcessHandle);
     uintptr_t addr = reinterpret_cast<uintptr_t>(BaseAddress);
 
     char msg[MSG_LEN] = { 0 };
@@ -1286,7 +1303,7 @@ NTSTATUS NTAPI Hook_NtWriteVirtualMemory(
 )
 {
     UINT64 ns = get_ns_time();
-    DWORD tpid = GetProcessId(ProcessHandle);
+    DWORD tpid = UnhookedGetProcessId(ProcessHandle);
     uintptr_t addr = reinterpret_cast<uintptr_t>(BaseAddress);
 
     char msg[MSG_LEN] = { 0 };
@@ -1304,7 +1321,7 @@ NTSTATUS NTAPI Hook_NtSuspendProcess(
     HANDLE Handle
 ) {
     UINT64 ns = get_ns_time();
-    DWORD tpid = GetProcessId(Handle);
+    DWORD tpid = UnhookedGetProcessId(Handle);
     emit_etw_msg_ns("NtSuspendProcess", tpid, ns);
     return g_origNtSuspendProcess(Handle);
 }
@@ -1313,7 +1330,7 @@ NTSTATUS NTAPI Hook_NtResumeProcess(
     HANDLE Handle
 ) {
     UINT64 ns = get_ns_time();
-    DWORD tpid = GetProcessId(Handle);
+    DWORD tpid = UnhookedGetProcessId(Handle);
     emit_etw_msg_ns("NtResumeProcess", tpid, ns);
     return g_origNtResumeProcess(Handle);
 }
@@ -1322,8 +1339,8 @@ NTSTATUS NTAPI Hook_NtClose(
     HANDLE Handle
 ) {
     UINT64 ns = get_ns_time();
-    DWORD tpid = GetProcessId(Handle);
-    if (tpid != 0) { // ignore closing events of non proc handles
+    int tpid = (int)UnhookedGetProcessId(Handle); // can return garbage for non-process handles
+    if (tpid >= 4 && tpid <= 0xFFFFFF) { // ignore closing events of non proc handles
         emit_etw_msg_ns("NtClose process", tpid, ns);
     }
     return g_origNtClose(Handle);
@@ -1336,8 +1353,8 @@ NTSTATUS NTAPI Hook_NtTerminateProcess(
     UINT64 ns = get_ns_time();
     char msg[MSG_LEN] = { 0 };
 
-    DWORD tpid = GetProcessId(Handle);
-    if (tpid != 0) { // ignore closing events of non proc handles
+	int tpid = (int)UnhookedGetProcessId(Handle); // can return garbage for non-process handles
+    if (tpid >= 4 && tpid <= 0xFFFFFF) { // ignore closing events of non proc handles
         _snprintf_s(msg, sizeof(msg), _TRUNCATE,
             "NtTerminateProcess with status 0x%lx",
             static_cast<LONG>(ExitStatus));
