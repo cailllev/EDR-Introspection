@@ -66,7 +66,7 @@ typedef ULONG(WINAPI* PFN_RtlNtStatusToDosError)(
 PFN_NtOpenEvent g_origNtOpenEvent = nullptr;
 PFN_RtlNtStatusToDosError g_origRtlNtStatusToDosError = nullptr;
 
-int unload(int pid, std::string dllName) {
+int unload(int pid, std::string dllName) { // or just use a stopRequest.txt
     HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
     if (!ntdll) return 1;
 
@@ -77,28 +77,31 @@ int unload(int pid, std::string dllName) {
         return 1;
 	}
 
-    wchar_t eventName[64];
-    swprintf_s(eventName, _countof(eventName), L"\\BaseNamedObjects\\DLL_Stop_%lu", pid);
+    // build NT name
+    wchar_t eventName[128];
+    swprintf_s(eventName, _countof(eventName), L"\\BaseNamedObjects\\Hooks_Stop_%lu", (unsigned long)pid);
+
+    // init UNICODE_STRING
+    UNICODE_STRING us;
+    RtlInitUnicodeString(&us, eventName);
+
+    OBJECT_ATTRIBUTES oa = { 0 };
+    InitializeObjectAttributes(&oa, &us, OBJ_CASE_INSENSITIVE, NULL, NULL);
 
     HANDLE hEvent = NULL;
+    NTSTATUS st = g_origNtOpenEvent(&hEvent, EVENT_MODIFY_STATE | SYNCHRONIZE, &oa);
 
-    UNICODE_STRING usName = { 0 };
-    usName.Buffer = (PWSTR)eventName;
-    usName.Length = (USHORT)(wcslen(eventName) * sizeof(wchar_t));
-    usName.MaximumLength = usName.Length + sizeof(wchar_t);
-
-    OBJECT_ATTRIBUTES oa;
-    InitializeObjectAttributes(&oa, &usName, OBJ_CASE_INSENSITIVE, NULL, NULL);
-
-    NTSTATUS status = g_origNtOpenEvent(&hEvent, EVENT_MODIFY_STATE | SYNCHRONIZE, &oa);
-    if (!NT_SUCCESS(status)) {
-       std::wcerr << L"[!] InjectLoader: Failed to open stop event " << eventName << L": " << g_origRtlNtStatusToDosError(status) << L"\n";
-        return 1;
+    if (!NT_SUCCESS(st)) {
+        DWORD winerr = g_origRtlNtStatusToDosError(st);
+        std::wcerr << "[!] InjectorLoader: Failt to NtOpenEvent " << eventName << ", WinErr = " << winerr << L"\n";
+    }
+    else {
+        std::wcout << "[-] InjectorLoader: NtOpenEvent " << eventName << " ok, sending stop signal\n";
+        SetEvent(hEvent);
+        CloseHandle(hEvent);
     }
 
-	SetEvent(hEvent); // send the stop signal
-	std::wcout << L"[*] InjectLoader: Signaled stop event " << eventName << L"\n";
-	Sleep(2000); // wait a bit for cleanup
+	Sleep(3000); // wait a bit for cleanup
 
 	HMODULE hMod = GetRemoteModuleHandle(pid, std::wstring(dllName.begin(), dllName.end()));
     if (hMod != NULL) {
