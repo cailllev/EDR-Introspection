@@ -327,6 +327,7 @@ void ReflectiveLoader()
 // ------------------ HOOKS ------------------ //
 static UINT64 PID;
 static const char* HOOKED_PROCS = "C:\\Users\\Public\\Downloads\\hooked.txt";
+static const char* TEMP_FILE = "C:\\Users\\Public\\Downloads\\temp.txt";
 
 TRACELOGGING_DEFINE_PROVIDER(
     g_hProvider,
@@ -1312,19 +1313,19 @@ NTSTATUS NTAPI Hook_NtTerminateProcess(
 }
 
 
-void InstallHooks() {
+bool InstallHooks() {
     std::cout << "[+] Hook-DLL: Installing hooks...\n";
 
     // MinHook init
     if (MH_Initialize() != MH_OK) {
         emit_etw_error("MinHook init failed");
-        return;
+        return false;
     }
 
     HMODULE hNtdll = GetModuleHandleW(L"ntdll.dll");
     if (!hNtdll) {
         emit_etw_error("ntdll not loaded");
-        return;
+        return false;
     }
 
 	g_origNtQueryInformationProcess = (PFN_NtQueryInformationProcess)GetProcAddress(hNtdll, "NtQueryInformationProcess");
@@ -1348,12 +1349,12 @@ void InstallHooks() {
         FARPROC target = GetProcAddress(hNtdll, name.c_str());
         if (!target) {
             emit_etw_error(name + " not found in ntdll");
-            return;
+            return false;
         }
 
-        if (MH_CreateHook(target, fn.first, (LPVOID*)fn.second) != MH_OK || MH_EnableHook(target) != MH_OK) {
+        if (MH_CreateHook(target, fn.first, (LPVOID*)fn.second) != MH_OK) {
             emit_etw_error("Failed to hook " + name);
-            return;
+            return false;
         }
         else {
             emit_etw_ok("Hooked " + name);
@@ -1362,10 +1363,16 @@ void InstallHooks() {
 
     if (g_origNtQueryInformationProcess == nullptr || g_origNtReadVirtualMemory == nullptr) {
         emit_etw_error("g_origNtQueryInformationProcess || g_origNtReadVirtualMemory is not resolved, ReadMemoryResolverThread depends on those");
-        return;
+        return false;
     }
 
+    if (MH_EnableHook(MH_ALL_HOOKS) != MH_OK) {
+        emit_etw_error("Failed to enable hooks");
+        return false;
+	}
+
     emit_etw_ok("++ NTDLL-HOOKER STARTED ++");
+    return true;
 }
 
 void RemoveHooks() {
@@ -1391,25 +1398,45 @@ bool is_already_hooked(DWORD pid) {
     return false;
 }
 
+void remove_pid_from_file(DWORD pid) {
+    std::ifstream ifs(HOOKED_PROCS);
+    std::ofstream ofs(TEMP_FILE);
+    DWORD val;
+    while (ifs >> val) {
+        if (val != pid) {
+            ofs << val << "\n";
+        }
+    }
+    ifs.close();
+    ofs.close();
+    // replace original file
+    std::remove(HOOKED_PROCS);
+    std::rename(TEMP_FILE, HOOKED_PROCS);
+}
+
 DWORD WINAPI cleanup() {
+    if (g_requestedStop) {
+        return 0; // already cleaning up, do not reenter
+	}
+
     std::cout << "[+] Hook-DLL: Cleaning up and unloading...\n";
 	emit_etw_ok("-- NTDLL-HOOKER STOPPED --");
     StopResolverPool();
     RemoveHooks();
     TraceLoggingUnregister(g_hProvider); // after hooks removed!
-    return 0;
+    remove_pid_from_file(PID);
+	return 0;
 }
 
 void watcher_thread() {
     char eventName[64];
     sprintf_s(eventName, "Global\\DLL_Stop_%llu", PID);
     HANDLE evt = CreateEventA(NULL, FALSE, FALSE, eventName);
-    //HANDLE evt = CreateEventA(NULL, FALSE, FALSE, "Global\\DLL_Stop");
     if (!evt) {
         std::cerr << "[!] Hook-DLL: Failed to create stop event watcher\n";
         return;
     }
-    std::cout << "[+] Hook-DLL: Created stop event watcher for event: " << eventName << "\n";
+    std::cout << "[+] Hook-DLL: Created stop event watcher for unloading: " << eventName << "\n";
     CreateThread(NULL, 0, [](LPVOID param) -> DWORD {
         HANDLE evt = (HANDLE)param;
         WaitForSingleObject(evt, INFINITE);
@@ -1422,13 +1449,15 @@ DWORD WINAPI t_InitHooks(LPVOID param) {
     std::cout << "[+] Hook-DLL: Executing init thread...\n";
     PID = GetCurrentProcessId();
     if (is_already_hooked((DWORD)PID)) {
-        std::cout << "[+] Hook-DLL: Process " << PID << "already hooked, ensure the allocated memory is freed again\n";
+        std::cout << "[+] Hook-DLL: Process " << PID << " already hooked, ensure the allocated memory is freed again\n";
         return 0;
     }
     TraceLoggingRegister(g_hProvider);
 	watcher_thread(); // start watcher thread to unload DLL again
     InitResolverPool(8); // logical cpus * 2
-    InstallHooks();
+    if (InstallHooks()) {
+        append_pid_to_file((DWORD)PID);
+    }
     return 0;
 }
 
@@ -1450,7 +1479,7 @@ BOOL WINAPI DllMain(HINSTANCE hinst, DWORD reason, LPVOID reserved) {
     case DLL_THREAD_DETACH: // disabled by DisableThreadLibraryCalls
         break;
     case DLL_PROCESS_DETACH:
-        //cleanup();
+        cleanup();
         break;
     }
     return TRUE;
