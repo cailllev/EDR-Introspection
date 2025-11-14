@@ -1497,21 +1497,94 @@ DWORD WINAPI cleanup(bool remove_pid) {
 	return 0;
 }
 
+typedef enum _EVENT_TYPE {
+    NotificationEvent = 0,
+    SynchronizationEvent = 1
+} EVENT_TYPE;
+
+typedef NTSTATUS(NTAPI* PFN_NtCreateEvent)(
+    PHANDLE            EventHandle,
+    ACCESS_MASK        DesiredAccess,
+    POBJECT_ATTRIBUTES ObjectAttributes,
+    EVENT_TYPE         EventType,
+    BOOLEAN            InitialState
+);
+typedef NTSTATUS(NTAPI* PFN_NtOpenEvent)(
+    PHANDLE            EventHandle,
+    ACCESS_MASK        DesiredAccess,
+    POBJECT_ATTRIBUTES ObjectAttributes
+    );
+typedef ULONG(WINAPI* PFN_RtlNtStatusToDosError)(
+    NTSTATUS Status
+    );
+
+PFN_NtCreateEvent g_origNtCreateEvent = nullptr;
+PFN_NtOpenEvent g_origNtOpenEvent = nullptr;
+PFN_RtlNtStatusToDosError g_origRtlNtStatusToDosError = nullptr; 
+
+#ifndef STATUS_OBJECT_NAME_EXISTS
+#define STATUS_OBJECT_NAME_EXISTS ((NTSTATUS)0xC0000035L)
+#endif
+
+
+// init a watcher thread to unload the DLL on event signal, ignore errors here
 void watcher_thread() {
-    char eventName[64];
-    sprintf_s(eventName, "Global\\DLL_Stop_%llu", PID);
-    HANDLE evt = CreateEventA(NULL, FALSE, FALSE, eventName);
-    if (!evt) {
-        std::cerr << "[!] Hook-DLL: Failed to create stop event watcher\n";
+    HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
+    if (!ntdll) {
+        std::wcerr << L"[!] Hook-DLL: Failed to get ntdll Handle\n";
         return;
     }
-    std::cout << "[+] Hook-DLL: Created stop event watcher for unloading: " << eventName << "\n";
+
+    g_origNtCreateEvent = (PFN_NtCreateEvent)GetProcAddress(ntdll, "NtCreateEvent");
+    g_origNtOpenEvent = (PFN_NtOpenEvent)GetProcAddress(ntdll, "NtOpenEvent");
+    g_origRtlNtStatusToDosError = (PFN_RtlNtStatusToDosError)GetProcAddress(ntdll, "RtlNtStatusToDosError");
+    if (g_origNtCreateEvent == nullptr || g_origRtlNtStatusToDosError == nullptr) {
+        std::wcerr << L"[!] Hook-DLL: Failed to get NtOpenEvent or RtlNtStatusToDosError address\n";
+        return;
+    }
+
+    wchar_t eventName[64];
+    swprintf_s(eventName, _countof(eventName), L"\\BaseNamedObjects\\DLL_Stop_%llu", PID);
+
+    UNICODE_STRING usName = { 0 };
+    usName.Buffer = (PWSTR)eventName;
+    usName.Length = (USHORT)(wcslen(eventName) * sizeof(wchar_t));
+    usName.MaximumLength = usName.Length + sizeof(wchar_t);
+
+    OBJECT_ATTRIBUTES oa = { 0 };
+    InitializeObjectAttributes(&oa, &usName, OBJ_CASE_INSENSITIVE, NULL, NULL);
+
+    HANDLE hEvent = NULL;
+    NTSTATUS status = g_origNtCreateEvent(&hEvent, EVENT_ALL_ACCESS, &oa, NotificationEvent, FALSE);
+
+	if (status == STATUS_OBJECT_NAME_EXISTS) { // Event already exists --> meaning already loaded, unloaded and loaded again here
+        if (g_origNtOpenEvent == nullptr) {
+            std::wcerr << L"[!] Hook-DLL: NtOpenEvent not resolved but needed to open existing event\n";
+            return;
+		}
+        NTSTATUS s2 = g_origNtOpenEvent(&hEvent, EVENT_ALL_ACCESS, &oa);
+        if (!NT_SUCCESS(s2)) {
+			std::wcerr << L"[!] Hook-DLL: Failed to open existing stop event watcher " << eventName << L": " << g_origRtlNtStatusToDosError(s2) << L"\n";
+            return;
+        }
+		ResetEvent(hEvent); // ensure non-signaled (imagine how long this took to debug...)
+        std::wcout << L"[+] Hook-DLL: Opened stop event watcher for unloading: " << eventName << L"\n";
+    }
+    else if (!NT_SUCCESS(status)) {
+        std::wcerr << L"[!] Hook-DLL: Failed to create stop event watcher " << eventName << L": " << g_origRtlNtStatusToDosError(status) << L"\n";
+        return;
+    }
+    else {
+        std::wcout << L"[+] Hook-DLL: Created stop event watcher for unloading: " << eventName << L"\n";
+    }
+
     CreateThread(NULL, 0, [](LPVOID param) -> DWORD {
         HANDLE evt = (HANDLE)param;
         WaitForSingleObject(evt, INFINITE);
+		std::cout << "[-] Hook-DLL: Stop event signaled, unloading...\n";
         cleanup(true);
         return 0;
-        }, evt, 0, NULL);
+        }, hEvent, 0, NULL);
 }
 
 DWORD WINAPI t_InitHooks(LPVOID param) {
@@ -1528,6 +1601,8 @@ DWORD WINAPI t_InitHooks(LPVOID param) {
         append_pid_to_file((DWORD)PID);
     }
     else {
+		Sleep(1000); // wait a bit to ensure any ETW messages are sent
+		std::cout << "[-] Hook-DLL: Hook installation failed, unloading...\n";
         cleanup(false); // no need to remove PID from file
     }
     return 0;
@@ -1551,6 +1626,7 @@ BOOL WINAPI DllMain(HINSTANCE hinst, DWORD reason, LPVOID reserved) {
     case DLL_THREAD_DETACH: // disabled by DisableThreadLibraryCalls
         break;
     case DLL_PROCESS_DETACH:
+        std::cout << "[-] Hook-DLL: Process detach, unloading...\n";
         cleanup(true);
         break;
     }
