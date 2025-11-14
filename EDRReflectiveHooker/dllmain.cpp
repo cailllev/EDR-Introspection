@@ -14,7 +14,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <thread>
-#include <atomic>
+#include <fstream>
 
 #include <MinHook.h>
 #include <TraceLoggingProvider.h>
@@ -214,7 +214,6 @@ extern "C" __declspec(dllexport)
 void ReflectiveLoader()
 {
     // 0. calculate image address
-
     DWORD64 dll_image_address;
     PIMAGE_NT_HEADERS nt_headers_address;
 
@@ -327,6 +326,7 @@ void ReflectiveLoader()
 
 // ------------------ HOOKS ------------------ //
 static UINT64 PID;
+static const char* HOOKED_PROCS = "C:\\Users\\Public\\Downloads\\hooked.txt";
 
 TRACELOGGING_DEFINE_PROVIDER(
     g_hProvider,
@@ -503,24 +503,28 @@ std::queue<ResolverTask> g_taskQueue;
 std::mutex g_queueMutex;
 std::condition_variable g_cv;
 std::vector<std::thread> g_workers;
+bool g_requestedStop = false;
 int MAX_QUEUE_SIZE = 65536; // arbitrary
 
 void ResolverWorker() {
     while (true) {
-        ResolverTask task = {};
+        ResolverTask task;
+
         {
             std::unique_lock<std::mutex> lock(g_queueMutex);
-            g_cv.wait(lock, [] { return !g_taskQueue.empty(); });
+            g_cv.wait(lock, [] { 
+                return g_requestedStop || !g_taskQueue.empty(); 
+            });
 
-            if (g_taskQueue.empty())
-                return;
+            if (g_requestedStop && g_taskQueue.empty())
+                return; // clean exit
 
             task = g_taskQueue.front();
             g_taskQueue.pop();
         }
-        if (task.func && task.arg) { // invoke actual resolver
+
+        if (task.func && task.arg)
             task.func(task.arg);
-        }
     }
 }
 
@@ -528,6 +532,17 @@ void InitResolverPool(int numThreads) {
     for (int i = 0; i < numThreads; i++) {
         g_workers.emplace_back(ResolverWorker);
     }
+}
+
+void StopResolverPool() {
+    {
+        std::lock_guard<std::mutex> lock(g_queueMutex);
+        g_requestedStop = true;
+    }
+    g_cv.notify_all();
+
+    for (auto& t : g_workers)
+        t.join();
 }
 
 bool EnqueueResolverTask(LPTHREAD_START_ROUTINE func, LPVOID arg) {
@@ -1297,9 +1312,8 @@ NTSTATUS NTAPI Hook_NtTerminateProcess(
 }
 
 
-void InstallHooks()
-{
-    //std::cout << "[+] Hook-DLL: Installing hooks...\n";
+void InstallHooks() {
+    std::cout << "[+] Hook-DLL: Installing hooks...\n";
 
     // MinHook init
     if (MH_Initialize() != MH_OK) {
@@ -1354,25 +1368,67 @@ void InstallHooks()
     emit_etw_ok("++ NTDLL-HOOKER STARTED ++");
 }
 
-void RemoveHooks()
-{
+void RemoveHooks() {
     MH_DisableHook(MH_ALL_HOOKS);
     MH_Uninitialize();
 }
 
-DWORD WINAPI t_InitHooks(LPVOID param)
-{
-    std::cout << "[+] Hook-DLL: Executing init thread...\n";
-    TraceLoggingRegister(g_hProvider);
-    PID = GetCurrentProcessId(); 
-    InitResolverPool(8); // logical cpus * 2
-    InstallHooks();
+// append PID to file
+void append_pid_to_file(DWORD pid) {
+    std::ofstream ofs(HOOKED_PROCS, std::ios::app);
+    ofs << pid << "\n";
+}
+
+// check if already hooked
+bool is_already_hooked(DWORD pid) {
+    std::ifstream ifs(HOOKED_PROCS);
+    DWORD val;
+    while (ifs >> val) {
+        if (val == pid) {
+            return true;
+        }
+    }
+    return false;
+}
+
+DWORD WINAPI cleanup() {
+    std::cout << "[+] Hook-DLL: Cleaning up and unloading...\n";
+	emit_etw_ok("-- NTDLL-HOOKER STOPPED --");
+    StopResolverPool();
+    RemoveHooks();
+    TraceLoggingUnregister(g_hProvider); // after hooks removed!
     return 0;
 }
 
-DWORD WINAPI t_selfUnloadThread(LPVOID hinst) {
-    Sleep(2000); // give the loader time to release the lock
-    FreeLibraryAndExitThread((HMODULE)hinst, 0);
+void watcher_thread() {
+    char eventName[64];
+    sprintf_s(eventName, "Global\\DLL_Stop_%llu", PID);
+    HANDLE evt = CreateEventA(NULL, FALSE, FALSE, eventName);
+    //HANDLE evt = CreateEventA(NULL, FALSE, FALSE, "Global\\DLL_Stop");
+    if (!evt) {
+        std::cerr << "[!] Hook-DLL: Failed to create stop event watcher\n";
+        return;
+    }
+    std::cout << "[+] Hook-DLL: Created stop event watcher for event: " << eventName << "\n";
+    CreateThread(NULL, 0, [](LPVOID param) -> DWORD {
+        HANDLE evt = (HANDLE)param;
+        WaitForSingleObject(evt, INFINITE);
+        cleanup();
+        return 0;
+        }, evt, 0, NULL);
+}
+
+DWORD WINAPI t_InitHooks(LPVOID param) {
+    std::cout << "[+] Hook-DLL: Executing init thread...\n";
+    PID = GetCurrentProcessId();
+    if (is_already_hooked((DWORD)PID)) {
+        std::cout << "[+] Hook-DLL: Process " << PID << "already hooked, ensure the allocated memory is freed again\n";
+        return 0;
+    }
+    TraceLoggingRegister(g_hProvider);
+	watcher_thread(); // start watcher thread to unload DLL again
+    InitResolverPool(8); // logical cpus * 2
+    InstallHooks();
     return 0;
 }
 
@@ -1394,8 +1450,7 @@ BOOL WINAPI DllMain(HINSTANCE hinst, DWORD reason, LPVOID reserved) {
     case DLL_THREAD_DETACH: // disabled by DisableThreadLibraryCalls
         break;
     case DLL_PROCESS_DETACH:
-        //RemoveHooks();
-        //TraceLoggingUnregister(g_hProvider);
+        //cleanup();
         break;
     }
     return TRUE;
