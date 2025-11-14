@@ -1488,8 +1488,6 @@ bool InstallHooks() {
         return false;
     }
 
-	//g_origNtQueryInformationProcess = (PFN_NtQueryInformationProcess)GetProcAddress(hNtdll, "NtQueryInformationProcess");
-
     // all functions to hook (order does matter sometimes)
     HookInfo funcs[] = {
         {"NtQueryInformationProcess", (void*)Hook_NtQueryInformationProcess, (void**)&g_origNtQueryInformationProcess},
@@ -1507,7 +1505,6 @@ bool InstallHooks() {
 
     /* more functions to hook:
     - NtCreateProcess(Ex)
-    - NtQueryInformationProcess (a working implementation)
     - NtSetInformationProcess
     - NtCreateThreadEx
     - NtQueryObject
