@@ -22,7 +22,7 @@ It is recomended to exclude EDR-Introspection folder from the EDR, and then clon
 Normally EDR processes run as PPL-AntiMalware. The kernel only allows opening of these processes via `OpenProcess("edr.exe")` from other PPL-AntiMalware procs (or higher).
 To run any process as PPL-AntiMalware:
 ```powershell
-\helpers\KDU\kdu.exe -pse "powershell.exe" -prv 54
+.\helpers\KDU\kdu.exe -pse "powershell.exe" -prv 54
 ```
 Hint: When running a subprocess from these powershell procs, the subprocesses have no PPL flag anymore. If needed, run these subprocesses directly with kdu.exe, not via powershell.exe.
 Example for opening an EDR proc and reading the loaded DLLs:
@@ -86,7 +86,7 @@ The EDRReflectiveHooker.dll emits basic ETW events to track the actions of the E
 `\attacks\` contains some (encrypted) attacks, which also emit basic ETW events to track the attacks actions.
 To decrypt and use the attacks: 
 ```powershell
-\x64\Release\EDRi.exe -c "$(pwd)\x64\Release\attacks\attackX.exe.enc"
+.\x64\Release\EDRi.exe -c "$(pwd)\x64\Release\attacks\attackX.exe.enc"
 ```
 This drops an `attackX.exe` into `\x64\Release\attacks\`.
 
