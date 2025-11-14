@@ -1400,6 +1400,17 @@ bool InstallHooks() {
         {"NtTerminateProcess", (void*)Hook_NtTerminateProcess, (void**)&g_origNtTerminateProcess}
     };
 
+    /* more functions to hook:
+    - NtCreateProcess(Ex)
+    - NtQueryInformationProcess (a working implementation)
+    - NtSetInformationProcess
+    - NtCreateThreadEx
+    - NtQueryObject
+    - NtQuerySecurityObject / NtSetSecurityObject
+    - NtDebugActiveProcess
+    - NtGetContextThread / NtSetContextThread
+    */
+
     for (auto& f : funcs) {
         std::string name = f.name;
         FARPROC target = GetProcAddress(hNtdll, name.c_str());
@@ -1470,7 +1481,7 @@ void remove_pid_from_file(DWORD pid) {
     std::rename(TEMP_FILE, HOOKED_PROCS);
 }
 
-DWORD WINAPI cleanup() {
+DWORD WINAPI cleanup(bool remove_pid) {
     if (g_requestedStop) {
         return 0; // already cleaning up, do not reenter
 	}
@@ -1480,7 +1491,9 @@ DWORD WINAPI cleanup() {
     StopResolverPool();
     RemoveHooks();
     TraceLoggingUnregister(g_hProvider); // after hooks removed!
-    remove_pid_from_file(PID);
+    if (remove_pid) {
+        remove_pid_from_file(PID);
+    }
 	return 0;
 }
 
@@ -1496,7 +1509,7 @@ void watcher_thread() {
     CreateThread(NULL, 0, [](LPVOID param) -> DWORD {
         HANDLE evt = (HANDLE)param;
         WaitForSingleObject(evt, INFINITE);
-        cleanup();
+        cleanup(true);
         return 0;
         }, evt, 0, NULL);
 }
@@ -1513,6 +1526,9 @@ DWORD WINAPI t_InitHooks(LPVOID param) {
     InitResolverPool(8); // logical cpus * 2
     if (InstallHooks()) {
         append_pid_to_file((DWORD)PID);
+    }
+    else {
+        cleanup(false); // no need to remove PID from file
     }
     return 0;
 }
@@ -1535,7 +1551,7 @@ BOOL WINAPI DllMain(HINSTANCE hinst, DWORD reason, LPVOID reserved) {
     case DLL_THREAD_DETACH: // disabled by DisableThreadLibraryCalls
         break;
     case DLL_PROCESS_DETACH:
-        cleanup();
+        cleanup(true);
         break;
     }
     return TRUE;
