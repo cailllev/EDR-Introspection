@@ -15,6 +15,7 @@
 #include <condition_variable>
 #include <thread>
 #include <fstream>
+#include <sddl.h>
 
 #include <MinHook.h>
 #include <TraceLoggingProvider.h>
@@ -1528,7 +1529,7 @@ PFN_RtlNtStatusToDosError g_origRtlNtStatusToDosError = nullptr;
 
 
 // init a watcher thread to unload the DLL on event signal, ignore errors here
-void watcher_thread() {
+void watcher_thread() { // or just use a stopRequest.txt
     HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
     if (!ntdll) {
         std::wcerr << L"[!] Hook-DLL: Failed to get ntdll Handle\n";
@@ -1543,8 +1544,13 @@ void watcher_thread() {
         return;
     }
 
-    wchar_t eventName[64];
-    swprintf_s(eventName, _countof(eventName), L"\\BaseNamedObjects\\DLL_Stop_%llu", PID);
+    PSECURITY_DESCRIPTOR pSD = NULL;
+    ConvertStringSecurityDescriptorToSecurityDescriptorW(
+        L"D:(A;;GA;;;WD)", SDDL_REVISION_1, &pSD, NULL); // World: GENERIC_ALL
+
+    // build NT name
+    wchar_t eventName[128];
+    swprintf_s(eventName, _countof(eventName), L"\\BaseNamedObjects\\Hooks_Stop_%lu", (unsigned long)PID);
 
     UNICODE_STRING usName = { 0 };
     usName.Buffer = (PWSTR)eventName;
@@ -1552,7 +1558,7 @@ void watcher_thread() {
     usName.MaximumLength = usName.Length + sizeof(wchar_t);
 
     OBJECT_ATTRIBUTES oa = { 0 };
-    InitializeObjectAttributes(&oa, &usName, OBJ_CASE_INSENSITIVE, NULL, NULL);
+    InitializeObjectAttributes(&oa, &usName, OBJ_CASE_INSENSITIVE, NULL, pSD);
 
     HANDLE hEvent = NULL;
     NTSTATUS status = g_origNtCreateEvent(&hEvent, EVENT_ALL_ACCESS, &oa, NotificationEvent, FALSE);
