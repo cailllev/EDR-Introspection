@@ -1213,10 +1213,11 @@ NTSTATUS NTAPI Hook_NtQueryInformationProcess(
     ULONG            ProcessInformationLength,
     PULONG           ReturnLength
 ) {
-    UINT64 ns = get_ns_time();
-    DWORD tpid = UnhookedGetProcessId(ProcessHandle);
+    //UINT64 ns = get_ns_time();
+    //DWORD tpid = UnhookedGetProcessId(ProcessHandle);
 
-    char msg[MSG_LEN] = { 0 };
+    //char msg[MSG_LEN] = { 0 };
+    /*
 	char infoClass[MISC_LEN] = { 0 };
 
     switch (ProcessInformationClass) {
@@ -1231,6 +1232,9 @@ NTSTATUS NTAPI Hook_NtQueryInformationProcess(
     _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtQueryInformationProcess with %s", infoClass);
 
     emit_etw_msg_ns(msg, tpid, ns);
+    */
+
+    //emit_etw_msg_ns("NtQueryInformationProcess", 0, 0);
     return g_origNtQueryInformationProcess(ProcessHandle, ProcessInformationClass, ProcessInformation, ProcessInformationLength, ReturnLength);
 }
 
@@ -1387,7 +1391,7 @@ bool InstallHooks() {
         {"NtOpenFile", (void*)Hook_NtOpenFile, (void**)&g_origNtOpenFile},
         {"NtReadFile", (void*)Hook_NtReadFile, (void**)&g_origNtReadFile},
         {"NtOpenProcess", (void*)Hook_NtOpenProcess, (void**)&g_origNtOpenProcess},
-        //{"NtQueryInformationProcess", (void*)Hook_NtQueryInformationProcess, (void**)&g_origNtQueryInformationProcess},
+        {"NtQueryInformationProcess", (void*)Hook_NtQueryInformationProcess, (void**)&g_origNtQueryInformationProcess},
         {"NtReadVirtualMemory", (void*)Hook_NtReadVirtualMemory, (void**)&g_origNtReadVirtualMemory},
         {"NtWriteVirtualMemory", (void*)Hook_NtWriteVirtualMemory, (void**)&g_origNtWriteVirtualMemory},
         {"NtSuspendProcess", (void*)Hook_NtSuspendProcess, (void**)&g_origNtSuspendProcess},
