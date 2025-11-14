@@ -327,8 +327,6 @@ void ReflectiveLoader()
 
 // ------------------ HOOKS ------------------ //
 static UINT64 PID;
-static const char* HOOKED_PROCS = "C:\\Users\\Public\\Downloads\\hooked.txt";
-static const char* TEMP_FILE = "C:\\Users\\Public\\Downloads\\temp.txt";
 
 TRACELOGGING_DEFINE_PROVIDER(
     g_hProvider,
@@ -489,6 +487,13 @@ const size_t MISC_LEN = 128;
 const size_t MSG_LEN = 1024;
 
 // helper structure for ReadFile handle resolving
+typedef struct _FNQ_ARGS {
+    HANDLE           hProcess; // duplicated handle (or NULL on failure)
+    PROCESSINFOCLASS pic;
+    UINT64           Timestamp;
+} FNQ_ARGS, * PFNQ_ARGS;
+
+// helper structure for ReadFile handle resolving
 typedef struct _FNF_ARGS {
     HANDLE FileHandle; // duplicated handle (or NULL on failure)
     UINT64 Timestamp;
@@ -516,7 +521,7 @@ struct ResolverTask {
     LPVOID arg;                  // argument struct pointer (FNM_ARGS* or FNF_ARGS*)
 };
 
-// resolver pool
+// ------- RESOLVER THREAD LOGIC ------- //
 std::queue<ResolverTask> g_taskQueue;
 std::mutex g_queueMutex;
 std::condition_variable g_cv;
@@ -573,6 +578,75 @@ bool EnqueueResolverTask(LPTHREAD_START_ROUTINE func, LPVOID arg) {
     lock.unlock();
     g_cv.notify_one();
     return true;
+}
+
+// when hooking NtQueryInformationProcess, GetProcessId is also affected
+DWORD UnhookedGetProcessId(HANDLE hProcess) {
+    if (hProcess == NULL) return 0; // do NOT check for INVALID_HANDLE_VALUE, it's valid: https://devblogs.microsoft.com/oldnewthing/20230914-00/?p=108766
+
+    PROCESS_BASIC_INFORMATION pbi;
+    ULONG retLen;
+
+    NTSTATUS status = g_origNtQueryInformationProcess(hProcess,
+        ProcessBasicInformation,
+        &pbi,
+        sizeof(pbi),
+        &retLen);
+
+    if (status < 0) return 0; // handle not a process
+
+    return (DWORD)(ULONG_PTR)pbi.UniqueProcessId;
+}
+
+// worker thread: resolve procinfo and emit ETW
+DWORD WINAPI ReadProcInfoResolverThread(LPVOID lpParam)
+{
+    FNQ_ARGS* args = (FNQ_ARGS*)lpParam;
+    if (!args) return 0;
+    HANDLE hProcess = args->hProcess;
+	PROCESSINFOCLASS pic = args->pic;
+    UINT64 ns = args->Timestamp;
+
+    char msg[MSG_LEN] = { 0 };
+    char infoClass[MISC_LEN] = { 0 };
+
+    DWORD tpid = UnhookedGetProcessId(hProcess);
+
+    if (pic == 0x0) {
+        _snprintf_s(infoClass, sizeof(infoClass), _TRUNCATE, "ProcessBasicInformation");
+    }
+    else if (pic == 0x4) {
+        _snprintf_s(infoClass, sizeof(infoClass), _TRUNCATE, "ProcessSessionInformation");
+    }
+    else if (pic == 0x17) {
+        _snprintf_s(infoClass, sizeof(infoClass), _TRUNCATE, "ProcessDeviceMap");
+    }
+    else if (pic == 0x18) {
+        _snprintf_s(infoClass, sizeof(infoClass), _TRUNCATE, "ThreadPagePriority");
+    }
+    else if (pic == 0x1A) {
+        _snprintf_s(infoClass, sizeof(infoClass), _TRUNCATE, "ProcessWow64Information");
+    }
+    else if (pic == 0x1B) {
+        _snprintf_s(infoClass, sizeof(infoClass), _TRUNCATE, "ProcessImageFileName");
+    }
+    else if (pic == 0x25) {
+        _snprintf_s(infoClass, sizeof(infoClass), _TRUNCATE, "ProcessImageInformation");
+    }
+    else if (pic == 0x3C) {
+        _snprintf_s(infoClass, sizeof(infoClass), _TRUNCATE, "ProcessCommandLineInformation");
+    }
+    else {
+        _snprintf_s(infoClass, sizeof(infoClass), _TRUNCATE, "0x%X", pic);
+    }
+
+    _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtQueryInformationProcess with InfoClass=%s", infoClass);
+
+    emit_etw_msg_ns(msg, tpid, ns);
+
+    if (hProcess && hProcess != INVALID_HANDLE_VALUE) g_origNtClose(hProcess);
+    free(args);
+    return 0;
 }
 
 // worker thread: resolve filename and emit ETW
@@ -827,22 +901,50 @@ DWORD WINAPI ReadMemoryResolverThread(LPVOID lpParam) {
     return 0;
 }
 
-// when hooking NtQueryInformationProcess, GetProcessId is also affected
-DWORD UnhookedGetProcessId(HANDLE hProcess) {
-	if (hProcess == NULL) return 0; // do NOT check for INVALID_HANDLE_VALUE, it's valid: https://devblogs.microsoft.com/oldnewthing/20230914-00/?p=108766
 
-    PROCESS_BASIC_INFORMATION pbi;
-    ULONG retLen;
+NTSTATUS NTAPI Hook_NtQueryInformationProcess(
+    HANDLE           ProcessHandle,
+    PROCESSINFOCLASS ProcessInformationClass,
+    PVOID            ProcessInformation,
+    ULONG            ProcessInformationLength,
+    PULONG           ReturnLength
+) {
+    UINT64 ns = get_ns_time();
+    NTSTATUS ret = g_origNtQueryInformationProcess(ProcessHandle, ProcessInformationClass, ProcessInformation, ProcessInformationLength, ReturnLength);
 
-    NTSTATUS status = g_origNtQueryInformationProcess(hProcess,
-        ProcessBasicInformation,
-        &pbi,
-        sizeof(pbi),
-        &retLen);
+    char msg[MSG_LEN] = { 0 };
 
-    if (status < 0) return 0; // handle not a process
+    // duplicate handle to ensure validity in worker thread
+    HANDLE dup = NULL;
+    BOOL ok = DuplicateHandle(
+        GetCurrentProcess(), ProcessHandle,
+        GetCurrentProcess(), &dup,
+        0, FALSE, DUPLICATE_SAME_ACCESS
+    );
+    if (!ok) {
+        if (dup) g_origNtClose(dup);
+        _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtQueryInformationProcess handle=0x%p (error %lu duplicating handle)", (void*)dup, GetLastError());
+        emit_etw_msg_ns(msg, PID, ns);
+        return ret;
+    }
 
-    return (DWORD)(ULONG_PTR)pbi.UniqueProcessId;
+    // prepare args: dup may be NULL on failure; worker will handle it
+    FNQ_ARGS* args = (FNQ_ARGS*)malloc(sizeof(FNQ_ARGS));
+    if (args) {
+        args->hProcess = dup;
+        args->pic = ProcessInformationClass;
+        args->Timestamp = ns;
+        if (!EnqueueResolverTask(ReadProcInfoResolverThread, args)) {
+            _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtQueryInformationProcess handle=0x%p (resolver queue limit reached)", (void*)dup);
+            emit_etw_msg_ns(msg, PID, ns);
+            free(args);
+        }
+    }
+    else { // allocation failed: cleanup duplicate
+        if (dup) g_origNtClose(dup);
+    }
+
+    return ret;
 }
 
 NTSTATUS NTAPI Hook_NtCreateFile(
@@ -1101,6 +1203,8 @@ NTSTATUS NTAPI Hook_NtReadFile(
     PULONG           Key
 ) {
     UINT64 ns = get_ns_time();
+    NTSTATUS ret = g_origNtReadFile(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, Buffer, Length, ByteOffset, Key);
+
     char msg[MSG_LEN] = { 0 };
 
     // duplicate handle to ensure validity in worker thread
@@ -1117,7 +1221,7 @@ NTSTATUS NTAPI Hook_NtReadFile(
         if (dup) g_origNtClose(dup);
         _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtReadFile handle=0x%p (error %lu duplicating handle)", (void*)dup, GetLastError());
         emit_etw_msg_ns(msg, PID, ns);
-        return g_origNtReadFile(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, Buffer, Length, ByteOffset, Key);
+        return ret;
     }
 
     // prepare args: dup may be NULL on failure; worker will handle it
@@ -1134,7 +1238,7 @@ NTSTATUS NTAPI Hook_NtReadFile(
     else { // allocation failed: cleanup duplicate
         if (dup) g_origNtClose(dup);
     }
-    return g_origNtReadFile(FileHandle, Event, ApcRoutine, ApcContext, IoStatusBlock, Buffer, Length, ByteOffset, Key);
+    return ret;
 }
 
 NTSTATUS NTAPI Hook_NtOpenProcess(
@@ -1207,38 +1311,6 @@ NTSTATUS NTAPI Hook_NtOpenProcess(
     return g_origNtOpenProcess(ProcessHandle, DesiredAccess, ObjectAttributes, ClientId);
 }
 
-NTSTATUS NTAPI Hook_NtQueryInformationProcess(
-    HANDLE           ProcessHandle,
-    PROCESSINFOCLASS ProcessInformationClass,
-    PVOID            ProcessInformation,
-    ULONG            ProcessInformationLength,
-    PULONG           ReturnLength
-) {
-    //UINT64 ns = get_ns_time();
-    //DWORD tpid = UnhookedGetProcessId(ProcessHandle);
-
-    //char msg[MSG_LEN] = { 0 };
-    /*
-	char infoClass[MISC_LEN] = { 0 };
-
-    switch (ProcessInformationClass) {
-    case ProcessBasicInformation: _snprintf_s(infoClass, sizeof(infoClass), _TRUNCATE, "ProcessBasicInformation"); break;
-    case ProcessDebugPort: _snprintf_s(infoClass, sizeof(infoClass), _TRUNCATE, "ProcessDebugPort"); break;
-    case ProcessWow64Information: _snprintf_s(infoClass, sizeof(infoClass), _TRUNCATE, "ProcessWow64Information"); break;
-    case ProcessImageFileName: _snprintf_s(infoClass, sizeof(infoClass), _TRUNCATE, "ProcessImageFileName"); break;
-    case ProcessBreakOnTermination: _snprintf_s(infoClass, sizeof(infoClass), _TRUNCATE, "ProcessBreakOnTermination"); break;
-    default: _snprintf_s(infoClass, sizeof(infoClass), _TRUNCATE, "UnknownClass_0x%X", ProcessInformationClass); break;
-    }
-
-    _snprintf_s(msg, sizeof(msg), _TRUNCATE, "NtQueryInformationProcess with %s", infoClass);
-
-    emit_etw_msg_ns(msg, tpid, ns);
-    */
-
-    //emit_etw_msg_ns("NtQueryInformationProcess", 0, 0);
-    return g_origNtQueryInformationProcess(ProcessHandle, ProcessInformationClass, ProcessInformation, ProcessInformationLength, ReturnLength);
-}
-
 NTSTATUS NTAPI Hook_NtReadVirtualMemory(
     HANDLE  ProcessHandle,
     PVOID   BaseAddress,
@@ -1248,6 +1320,8 @@ NTSTATUS NTAPI Hook_NtReadVirtualMemory(
 )
 {
     UINT64 ns = get_ns_time();
+    NTSTATUS ret = g_origNtReadVirtualMemory(ProcessHandle, BaseAddress, Buffer, NumberOfBytesToRead, NumberOfBytesRead);
+
     DWORD tpid = UnhookedGetProcessId(ProcessHandle);
     uintptr_t addr = reinterpret_cast<uintptr_t>(BaseAddress);
 
@@ -1272,7 +1346,7 @@ NTSTATUS NTAPI Hook_NtReadVirtualMemory(
             static_cast<unsigned long long>(addr),
             GetLastError());
         emit_etw_msg_ns(msg, tpid, ns);
-        return g_origNtReadVirtualMemory(ProcessHandle, BaseAddress, Buffer, NumberOfBytesToRead, NumberOfBytesRead);
+        return ret;
     }
 
     // prepare args and enqueue (args are freed in worker function normally)
@@ -1296,7 +1370,7 @@ NTSTATUS NTAPI Hook_NtReadVirtualMemory(
     else { // allocation failed: cleanup duplicate
         if (dup) g_origNtClose(dup);
     }
-    return g_origNtReadVirtualMemory(ProcessHandle, BaseAddress, Buffer, NumberOfBytesToRead, NumberOfBytesRead);
+    return ret;
 }
 
 NTSTATUS NTAPI Hook_NtWriteVirtualMemory(
@@ -1368,6 +1442,36 @@ NTSTATUS NTAPI Hook_NtTerminateProcess(
     return g_origNtTerminateProcess(Handle, ExitStatus);
 }
 
+// -------- HOOKING FRAMEWORK SETUP, STARTUP, TEARDOWN -------- //
+typedef enum _EVENT_TYPE {
+    NotificationEvent = 0,
+    SynchronizationEvent = 1
+} EVENT_TYPE;
+
+typedef NTSTATUS(NTAPI* PFN_NtCreateEvent)(
+    PHANDLE            EventHandle,
+    ACCESS_MASK        DesiredAccess,
+    POBJECT_ATTRIBUTES ObjectAttributes,
+    EVENT_TYPE         EventType,
+    BOOLEAN            InitialState
+    );
+typedef NTSTATUS(NTAPI* PFN_NtOpenEvent)(
+    PHANDLE            EventHandle,
+    ACCESS_MASK        DesiredAccess,
+    POBJECT_ATTRIBUTES ObjectAttributes
+    );
+typedef ULONG(WINAPI* PFN_RtlNtStatusToDosError)(
+    NTSTATUS Status
+    );
+
+PFN_NtCreateEvent g_origNtCreateEvent = nullptr;
+PFN_NtOpenEvent g_origNtOpenEvent = nullptr;
+PFN_RtlNtStatusToDosError g_origRtlNtStatusToDosError = nullptr;
+
+#ifndef STATUS_OBJECT_NAME_EXISTS
+#define STATUS_OBJECT_NAME_EXISTS ((NTSTATUS)0xC0000035L)
+#endif
+
 
 bool InstallHooks() {
     std::cout << "[+] Hook-DLL: Installing hooks...\n";
@@ -1384,15 +1488,15 @@ bool InstallHooks() {
         return false;
     }
 
-	g_origNtQueryInformationProcess = (PFN_NtQueryInformationProcess)GetProcAddress(hNtdll, "NtQueryInformationProcess");
+	//g_origNtQueryInformationProcess = (PFN_NtQueryInformationProcess)GetProcAddress(hNtdll, "NtQueryInformationProcess");
 
-    // all functions to hook
+    // all functions to hook (order does matter sometimes)
     HookInfo funcs[] = {
+        {"NtQueryInformationProcess", (void*)Hook_NtQueryInformationProcess, (void**)&g_origNtQueryInformationProcess},
         {"NtCreateFile", (void*)Hook_NtCreateFile, (void**)&g_origNtCreateFile},
         {"NtOpenFile", (void*)Hook_NtOpenFile, (void**)&g_origNtOpenFile},
         {"NtReadFile", (void*)Hook_NtReadFile, (void**)&g_origNtReadFile},
         {"NtOpenProcess", (void*)Hook_NtOpenProcess, (void**)&g_origNtOpenProcess},
-        {"NtQueryInformationProcess", (void*)Hook_NtQueryInformationProcess, (void**)&g_origNtQueryInformationProcess},
         {"NtReadVirtualMemory", (void*)Hook_NtReadVirtualMemory, (void**)&g_origNtReadVirtualMemory},
         {"NtWriteVirtualMemory", (void*)Hook_NtWriteVirtualMemory, (void**)&g_origNtWriteVirtualMemory},
         {"NtSuspendProcess", (void*)Hook_NtSuspendProcess, (void**)&g_origNtSuspendProcess},
@@ -1429,11 +1533,6 @@ bool InstallHooks() {
         }
     }
 
-    if (g_origNtQueryInformationProcess == nullptr || g_origNtReadVirtualMemory == nullptr) {
-        emit_etw_error("g_origNtQueryInformationProcess || g_origNtReadVirtualMemory is not resolved, ReadMemoryResolverThread depends on those");
-        return false;
-    }
-
     if (MH_EnableHook(MH_ALL_HOOKS) != MH_OK) {
         emit_etw_error("Failed to enable hooks");
         return false;
@@ -1448,38 +1547,46 @@ void RemoveHooks() {
     MH_Uninitialize();
 }
 
+static const char* HOOKED_PROCS = "C:\\Users\\Public\\Downloads\\hooked.txt";
+static const char* TEMP_FILE = "C:\\Users\\Public\\Downloads\\temp.txt";
+
 // append PID to file
-void append_pid_to_file(DWORD pid) {
+void append_pid_to_file() {
     std::ofstream ofs(HOOKED_PROCS, std::ios::app);
-    ofs << pid << "\n";
+    ofs << PID << "\n";
 }
 
 // check if already hooked
-bool is_already_hooked(DWORD pid) {
+bool is_already_hooked() {
     std::ifstream ifs(HOOKED_PROCS);
     DWORD val;
     while (ifs >> val) {
-        if (val == pid) {
+        if (val == PID) {
             return true;
         }
     }
     return false;
 }
 
-void remove_pid_from_file(DWORD pid) {
+void remove_pid_from_file() {
     std::ifstream ifs(HOOKED_PROCS);
     std::ofstream ofs(TEMP_FILE);
     DWORD val;
     while (ifs >> val) {
-        if (val != pid) {
+        if (val != PID) {
             ofs << val << "\n";
         }
     }
     ifs.close();
     ofs.close();
     // replace original file
-    std::remove(HOOKED_PROCS);
-    std::rename(TEMP_FILE, HOOKED_PROCS);
+    if (std::remove(HOOKED_PROCS) != 0) {
+        std::cerr << "[!] Hook-DLL: Failed update hooked procs file\n";
+        return;
+    }
+    if(std::rename(TEMP_FILE, HOOKED_PROCS) != 0) {
+        std::cerr << "[!] Hook-DLL: Failed to store hooked procs again\n";
+	}
 }
 
 DWORD WINAPI cleanup(bool remove_pid) {
@@ -1493,40 +1600,10 @@ DWORD WINAPI cleanup(bool remove_pid) {
     RemoveHooks();
     TraceLoggingUnregister(g_hProvider); // after hooks removed!
     if (remove_pid) {
-        remove_pid_from_file(PID);
+        remove_pid_from_file();
     }
 	return 0;
 }
-
-typedef enum _EVENT_TYPE {
-    NotificationEvent = 0,
-    SynchronizationEvent = 1
-} EVENT_TYPE;
-
-typedef NTSTATUS(NTAPI* PFN_NtCreateEvent)(
-    PHANDLE            EventHandle,
-    ACCESS_MASK        DesiredAccess,
-    POBJECT_ATTRIBUTES ObjectAttributes,
-    EVENT_TYPE         EventType,
-    BOOLEAN            InitialState
-);
-typedef NTSTATUS(NTAPI* PFN_NtOpenEvent)(
-    PHANDLE            EventHandle,
-    ACCESS_MASK        DesiredAccess,
-    POBJECT_ATTRIBUTES ObjectAttributes
-    );
-typedef ULONG(WINAPI* PFN_RtlNtStatusToDosError)(
-    NTSTATUS Status
-    );
-
-PFN_NtCreateEvent g_origNtCreateEvent = nullptr;
-PFN_NtOpenEvent g_origNtOpenEvent = nullptr;
-PFN_RtlNtStatusToDosError g_origRtlNtStatusToDosError = nullptr; 
-
-#ifndef STATUS_OBJECT_NAME_EXISTS
-#define STATUS_OBJECT_NAME_EXISTS ((NTSTATUS)0xC0000035L)
-#endif
-
 
 // init a watcher thread to unload the DLL on event signal, ignore errors here
 void watcher_thread() { // or just use a stopRequest.txt
@@ -1596,7 +1673,7 @@ void watcher_thread() { // or just use a stopRequest.txt
 DWORD WINAPI t_InitHooks(LPVOID param) {
     std::cout << "[+] Hook-DLL: Executing init thread...\n";
     PID = GetCurrentProcessId();
-    if (is_already_hooked((DWORD)PID)) {
+    if (is_already_hooked()) {
         std::cout << "[+] Hook-DLL: Process " << PID << " already hooked, ensure the allocated memory is freed again\n";
         return 0;
     }
@@ -1604,7 +1681,7 @@ DWORD WINAPI t_InitHooks(LPVOID param) {
 	watcher_thread(); // start watcher thread to unload DLL again
     InitResolverPool(8); // logical cpus * 2
     if (InstallHooks()) {
-        append_pid_to_file((DWORD)PID);
+        append_pid_to_file();
     }
     else {
 		Sleep(1000); // wait a bit to ensure any ETW messages are sent
