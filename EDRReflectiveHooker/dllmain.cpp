@@ -432,6 +432,12 @@ static PFN_NtResumeProcess g_origNtResumeProcess = nullptr;
 static PFN_NtClose g_origNtClose = nullptr;
 static PFN_NtTerminateProcess g_origNtTerminateProcess = nullptr;
 
+struct HookInfo {
+    const char* name;
+    void* hook;
+    void** original;
+};
+
 UINT64 get_ns_time() {
     /*
     ChronoVsFiletime.exe:
@@ -1359,30 +1365,29 @@ bool InstallHooks() {
 	g_origNtQueryInformationProcess = (PFN_NtQueryInformationProcess)GetProcAddress(hNtdll, "NtQueryInformationProcess");
 
     // all functions to hook
-    std::map<std::string, std::pair<void*, void**>> funcs = {
-        {"NtCreateFile", {(void*)Hook_NtCreateFile, (void**)&g_origNtCreateFile}},
-        {"NtOpenFile", {(void*)Hook_NtOpenFile, (void**)&g_origNtOpenFile}},
-        {"NtReadFile", {(void*)Hook_NtReadFile, (void**)&g_origNtReadFile}},
-        {"NtOpenProcess", {(void*)Hook_NtOpenProcess, (void**)&g_origNtOpenProcess}},
-        //{"NtQueryInformationProcess", {(void*)Hook_NtQueryInformationProcess, (void**)&g_origNtQueryInformationProcess}},
-        {"NtReadVirtualMemory", {(void*)Hook_NtReadVirtualMemory, (void**)&g_origNtReadVirtualMemory}},
-        {"NtWriteVirtualMemory", {(void*)Hook_NtWriteVirtualMemory, (void**)&g_origNtWriteVirtualMemory}},
-        //{"NtSuspendProcess", {(void*)Hook_NtSuspendProcess, (void**)&g_origNtSuspendProcess}},
-        //{"NtResumeProcess", {(void*)Hook_NtResumeProcess, (void**)&g_origNtResumeProcess}},
-        {"NtClose", {(void*)Hook_NtClose, (void**)&g_origNtClose}},
-        {"NtTerminateProcess", {(void*)Hook_NtTerminateProcess, (void**)&g_origNtTerminateProcess}}
+    HookInfo funcs[] = {
+        {"NtCreateFile", (void*)Hook_NtCreateFile, (void**)&g_origNtCreateFile},
+        {"NtOpenFile", (void*)Hook_NtOpenFile, (void**)&g_origNtOpenFile},
+        {"NtReadFile", (void*)Hook_NtReadFile, (void**)&g_origNtReadFile},
+        {"NtOpenProcess", (void*)Hook_NtOpenProcess, (void**)&g_origNtOpenProcess},
+        //{"NtQueryInformationProcess", (void*)Hook_NtQueryInformationProcess, (void**)&g_origNtQueryInformationProcess},
+        {"NtReadVirtualMemory", (void*)Hook_NtReadVirtualMemory, (void**)&g_origNtReadVirtualMemory},
+        {"NtWriteVirtualMemory", (void*)Hook_NtWriteVirtualMemory, (void**)&g_origNtWriteVirtualMemory},
+        {"NtSuspendProcess", (void*)Hook_NtSuspendProcess, (void**)&g_origNtSuspendProcess},
+        {"NtResumeProcess", (void*)Hook_NtResumeProcess, (void**)&g_origNtResumeProcess},
+        {"NtClose", (void*)Hook_NtClose, (void**)&g_origNtClose},
+        {"NtTerminateProcess", (void*)Hook_NtTerminateProcess, (void**)&g_origNtTerminateProcess}
     };
 
-    for (auto& it : funcs) {
-        std::string name = it.first;
-        std::pair<void*, void**> fn = it.second;
+    for (auto& f : funcs) {
+        std::string name = f.name;
         FARPROC target = GetProcAddress(hNtdll, name.c_str());
         if (!target) {
             emit_etw_error(name + " not found in ntdll");
             return false;
         }
 
-        if (MH_CreateHook(target, fn.first, (LPVOID*)fn.second) != MH_OK) {
+        if (MH_CreateHook(target, f.hook, (LPVOID*)f.original) != MH_OK) {
             emit_etw_error("Failed to hook " + name);
             return false;
         }
