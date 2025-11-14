@@ -402,6 +402,14 @@ typedef NTSTATUS(NTAPI* PFN_NtWriteVirtualMemory)(
     PSIZE_T NumberOfBytesWritten
     );
 
+typedef NTSTATUS(NTAPI* PFN_NtSuspendProcess)(
+    HANDLE Handle
+    );
+
+typedef NTSTATUS(NTAPI* PFN_NtResumeProcess)(
+    HANDLE Handle
+    );
+
 typedef NTSTATUS(NTAPI* PFN_NtClose)(
     HANDLE Handle
     );
@@ -419,6 +427,8 @@ static PFN_NtOpenProcess g_origNtOpenProcess = nullptr;
 static PFN_NtQueryInformationProcess g_origNtQueryInformationProcess = nullptr;
 static PFN_NtReadVirtualMemory g_origNtReadVirtualMemory = nullptr;
 static PFN_NtWriteVirtualMemory g_origNtWriteVirtualMemory = nullptr;
+static PFN_NtSuspendProcess g_origNtSuspendProcess = nullptr;
+static PFN_NtResumeProcess g_origNtResumeProcess = nullptr;
 static PFN_NtClose g_origNtClose = nullptr;
 static PFN_NtTerminateProcess g_origNtTerminateProcess = nullptr;
 
@@ -1284,6 +1294,24 @@ NTSTATUS NTAPI Hook_NtWriteVirtualMemory(
     return g_origNtWriteVirtualMemory(ProcessHandle, BaseAddress, Buffer, NumberOfBytesToWrite, NumberOfBytesWritten);
 }
 
+NTSTATUS NTAPI Hook_NtSuspendProcess(
+    HANDLE Handle
+) {
+    UINT64 ns = get_ns_time();
+    DWORD tpid = GetProcessId(Handle);
+    emit_etw_msg_ns("NtSuspendProcess", tpid, ns);
+    return g_origNtSuspendProcess(Handle);
+}
+
+NTSTATUS NTAPI Hook_NtResumeProcess(
+    HANDLE Handle
+) {
+    UINT64 ns = get_ns_time();
+    DWORD tpid = GetProcessId(Handle);
+    emit_etw_msg_ns("NtResumeProcess", tpid, ns);
+    return g_origNtResumeProcess(Handle);
+}
+
 NTSTATUS NTAPI Hook_NtClose(
     HANDLE Handle
 ) {
@@ -1339,6 +1367,8 @@ bool InstallHooks() {
         //{"NtQueryInformationProcess", {(void*)Hook_NtQueryInformationProcess, (void**)&g_origNtQueryInformationProcess}},
         {"NtReadVirtualMemory", {(void*)Hook_NtReadVirtualMemory, (void**)&g_origNtReadVirtualMemory}},
         {"NtWriteVirtualMemory", {(void*)Hook_NtWriteVirtualMemory, (void**)&g_origNtWriteVirtualMemory}},
+        //{"NtSuspendProcess", {(void*)Hook_NtSuspendProcess, (void**)&g_origNtSuspendProcess}},
+        //{"NtResumeProcess", {(void*)Hook_NtResumeProcess, (void**)&g_origNtResumeProcess}},
         {"NtClose", {(void*)Hook_NtClose, (void**)&g_origNtClose}},
         {"NtTerminateProcess", {(void*)Hook_NtTerminateProcess, (void**)&g_origNtTerminateProcess}}
     };
