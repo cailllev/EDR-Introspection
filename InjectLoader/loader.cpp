@@ -2,6 +2,7 @@
 #include <tlhelp32.h>
 #include <iostream>
 #include <string>
+#include <winternl.h>
 
 #include "hooker.h"
 
@@ -52,16 +53,51 @@ int RemoteFreeLibrary(HANDLE hProcess, HMODULE remoteModule) {
     return 0;
 }
 
+typedef NTSTATUS(NTAPI* PFN_NtOpenEvent)(
+    PHANDLE            EventHandle,
+    ACCESS_MASK        DesiredAccess,
+    POBJECT_ATTRIBUTES ObjectAttributes
+    ); 
+
+typedef ULONG(WINAPI* PFN_RtlNtStatusToDosError)(
+    NTSTATUS Status
+    );
+
+PFN_NtOpenEvent g_origNtOpenEvent = nullptr;
+PFN_RtlNtStatusToDosError g_origRtlNtStatusToDosError = nullptr;
+
 int unload(int pid, std::string dllName) {
-    char eventName[64];
-    sprintf_s(eventName, "Global\\DLL_Stop_%lu", pid);
-    HANDLE evt = OpenEventA(EVENT_MODIFY_STATE, FALSE, eventName);
-    if (!evt) {
-        std::cerr << "[!] InjectLoader: Failed to open stop event " << eventName << ": " << GetLastError() << "\n";
+    HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
+    if (!ntdll) return 1;
+
+    g_origNtOpenEvent = (PFN_NtOpenEvent)GetProcAddress(ntdll, "NtOpenEvent");
+    g_origRtlNtStatusToDosError = (PFN_RtlNtStatusToDosError)GetProcAddress(ntdll, "RtlNtStatusToDosError");
+    if (g_origNtOpenEvent == nullptr || g_origRtlNtStatusToDosError == nullptr) {
+        std::wcerr << L"[!] InjectLoader: Failed to get NtOpenEvent or RtlNtStatusToDosError address.\n";
+        return 1;
+	}
+
+    wchar_t eventName[64];
+    swprintf_s(eventName, _countof(eventName), L"\\BaseNamedObjects\\DLL_Stop_%lu", pid);
+
+    HANDLE hEvent = NULL;
+
+    UNICODE_STRING usName = { 0 };
+    usName.Buffer = (PWSTR)eventName;
+    usName.Length = (USHORT)(wcslen(eventName) * sizeof(wchar_t));
+    usName.MaximumLength = usName.Length + sizeof(wchar_t);
+
+    OBJECT_ATTRIBUTES oa;
+    InitializeObjectAttributes(&oa, &usName, OBJ_CASE_INSENSITIVE, NULL, NULL);
+
+    NTSTATUS status = g_origNtOpenEvent(&hEvent, EVENT_MODIFY_STATE | SYNCHRONIZE, &oa);
+    if (!NT_SUCCESS(status)) {
+       std::wcerr << L"[!] InjectLoader: Failed to open stop event " << eventName << L": " << g_origRtlNtStatusToDosError(status) << L"\n";
         return 1;
     }
-	SetEvent(evt); // send the stop signal
-	std::cout << "[*] InjectLoader: Signaled stop event " << eventName << "\n";
+
+	SetEvent(hEvent); // send the stop signal
+	std::wcout << L"[*] InjectLoader: Signaled stop event " << eventName << L"\n";
 	Sleep(2000); // wait a bit for cleanup
 
 	HMODULE hMod = GetRemoteModuleHandle(pid, std::wstring(dllName.begin(), dllName.end()));
