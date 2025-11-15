@@ -37,7 +37,7 @@ void print_and_emit_event(std::string msg, std::string pre) {
 	UINT64 ns = get_ns_time();
     TraceLoggingWrite(
         g_hProvider,
-        "Attack-Provider", // this is the event name
+        "AttackTask", // this is the event name
 		TraceLoggingValue(msg.c_str(), "message"),
 		TraceLoggingUInt64(ns, "ns_since_epoch")
     );
