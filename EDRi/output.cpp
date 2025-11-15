@@ -282,7 +282,8 @@ void print_time_differences() {
 }
 
 // dumps all relevant info from antimalware provider event id 3,8,74,104
-void dump_signatures(std::map<Classifier, std::vector<json>>& etw_events) {
+void dump_signatures(std::map<Classifier, std::vector<json>>& etw_events, std::string output_path) {
+    std::vector<std::string> data = {};
     for (const auto& ev : etw_events[Relevant]) {
         try {
             if (ev[PROVIDER_NAME] != ANTIMALWARE_PROVIDER) {
@@ -307,7 +308,7 @@ void dump_signatures(std::map<Classifier, std::vector<json>>& etw_events) {
                     sr += r.length();
                     std::string sig = m.substr(ss, es - ss);
                     std::string res = m.substr(sr, er - sr);
-                    std::cout << "[*] Output: Found signature: " << sig << " in " << res << "\n";
+                    data.push_back("Found signature : " + sig + " in " + res);
                 }
             }
             if (ev[EVENT_ID] == 8) {
@@ -324,19 +325,19 @@ void dump_signatures(std::map<Classifier, std::vector<json>>& etw_events) {
                     continue;
                 }
                 std::string path_translated = translate_if_path(ev[NAME]);
-                std::cout << "[*] Output: Behaviour Monitoring Detection: " <<
-                    "pid=" << get_val(ev, PID) << ", sig=" << path_translated << "\n";
+                data.push_back("Behaviour Monitoring Detection : pid=" + get_val(ev, PID) + ", sig=" + path_translated);
             }
             if (ev[EVENT_ID] == 74) {
-                std::cout << "[*] Output: Sense Remidiation" <<
+                std::ostringstream oss;
+                oss << "Sense Remidiation" <<
                     ": threatname=" << get_val(ev, THREATNAME) <<
                     ", signature=" << get_val(ev, SIGSEQ) <<
                     ", sigsha=" << get_val(ev, SIGSHA) <<
                     ", classification=" << get_val(ev, CLASSIFICATION) <<
                     ", determination=" << get_val(ev, DETERMINATION) <<
                     ", realpath=" << get_val(ev, REALPATH) <<
-                    ", resource=" << get_val(ev, RESOURCESCHEMA) <<
-                    "\n";
+                    ", resource=" << get_val(ev, RESOURCESCHEMA);
+                data.push_back(oss.str());
             }
             if (ev[EVENT_ID] == 104) {
                 if (!ev.contains(FIRST_PARAM) || !ev.contains(SECOND_PARAM)) {
@@ -348,6 +349,21 @@ void dump_signatures(std::map<Classifier, std::vector<json>>& etw_events) {
         }
         catch (const std::exception& ex) {
             std::cerr << "[!] Output: dump_signatures exception: " << ex.what() << "\n";
+        }
+
+        std::ofstream out(output_path);
+        if (!out.is_open()) {
+            std::cerr << "[!] Output: Failed to open output file: " << output_path << "\n";
+            for (auto& d : data) {
+                std::cout << "[*] Output: " << d << "\n";
+            }
+        }
+        else {
+            for (auto& d : data) {
+                out << d << "\n";
+                std::cout << "[*] Output: " << d << "\n";
+            }
+            out.close();
         }
     }
 }
