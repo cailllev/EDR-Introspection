@@ -308,7 +308,7 @@ void dump_signatures(std::map<Classifier, std::vector<json>>& etw_events, std::s
                     sr += r.length();
                     std::string sig = m.substr(ss, es - ss);
                     std::string res = m.substr(sr, er - sr);
-                    data.push_back("Found signature : " + sig + " in " + res);
+                    data.push_back("Found signature: " + sig + " in " + res);
                 }
             }
             if (ev[EVENT_ID] == 8) {
@@ -325,7 +325,7 @@ void dump_signatures(std::map<Classifier, std::vector<json>>& etw_events, std::s
                     continue;
                 }
                 std::string path_translated = translate_if_path(ev[NAME]);
-                data.push_back("Behaviour Monitoring Detection : pid=" + get_val(ev, PID) + ", sig=" + path_translated);
+                data.push_back("Behaviour Monitoring Detection: pid=" + get_val(ev, PID) + ", sig=" + path_translated);
             }
             if (ev[EVENT_ID] == 74) {
                 std::ostringstream oss;
@@ -350,20 +350,20 @@ void dump_signatures(std::map<Classifier, std::vector<json>>& etw_events, std::s
         catch (const std::exception& ex) {
             std::cerr << "[!] Output: dump_signatures exception: " << ex.what() << "\n";
         }
+    }
 
-        std::ofstream out(output_path);
-        if (!out.is_open()) {
-            std::cerr << "[!] Output: Failed to open output file: " << output_path << "\n";
-            for (auto& d : data) {
-                std::cout << "[*] Output: " << d << "\n";
-            }
+    std::ofstream out(output_path);
+    if (!out.is_open()) {
+        std::cerr << "[!] Output: Failed to open output file: " << output_path << "\n";
+        for (auto& d : data) {
+            std::cout << "[*] Output: " << d << "\n";
         }
-        else {
-            for (auto& d : data) {
-                out << d << "\n";
-                std::cout << "[*] Output: " << d << "\n";
-            }
-            out.close();
+    }
+    else {
+        for (auto& d : data) {
+            out << d << "\n";
+            std::cout << "[*] Output: " << d << "\n";
         }
+        out.close();
     }
 }
