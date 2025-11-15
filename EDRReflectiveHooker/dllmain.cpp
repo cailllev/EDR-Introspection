@@ -453,7 +453,7 @@ void emit_etw_ok(std::string msg) {
     UINT64 ns = get_ns_time();
     TraceLoggingWrite(
         g_hProvider,
-        "EDRHookTask", // the first event name is used for all events, unless using a manifest file
+        "HookTask", // the first event name is used for all events, unless using a manifest file
         TraceLoggingString(msg.c_str(), "message"),
         TraceLoggingUInt64(ns, "ns_since_epoch"),
         TraceLoggingUInt64(PID, "targetpid")
@@ -465,7 +465,7 @@ void emit_etw_error(std::string error) {
     UINT64 ns = get_ns_time();
     TraceLoggingWrite(
         g_hProvider,
-        "EDRHookError",
+        "HookError",
         TraceLoggingString(error.c_str(), "message"),
         TraceLoggingUInt64(ns, "ns_since_epoch"),
         TraceLoggingUInt64(PID, "targetpid")
@@ -476,7 +476,7 @@ void emit_etw_error(std::string error) {
 void emit_etw_msg_ns(const char msg[], UINT64 tpid, UINT64 ns) {
     TraceLoggingWrite(
         g_hProvider,
-        "EDRHookTask",
+        "HookTask",
         TraceLoggingString(msg, "message"),
         TraceLoggingUInt64(ns, "ns_since_epoch"),
         TraceLoggingUInt64(tpid, "targetpid")
@@ -1544,7 +1544,7 @@ void RemoveHooks() {
     MH_Uninitialize();
 }
 
-static const char* HOOKED_PROCS = "C:\\Users\\Public\\Downloads\\hooked.txt";
+static const char* HOOKED_PROCS = "C:\\Users\\Public\\Downloads\\hooked.txt"; // should match the path in EDRi (utils.cpp)
 static const char* TEMP_FILE = "C:\\Users\\Public\\Downloads\\temp.txt";
 
 // append PID to file

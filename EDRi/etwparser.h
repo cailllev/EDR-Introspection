@@ -98,7 +98,7 @@ std::map<std::string, std::vector<float>> get_time_diffs();
 std::vector<json> get_all_etw_events();
 
 // internal functions
-std::string get_kernel_api_task_name(int id);
+std::string get_kernel_api_task_name(int); // from https://www.elastic.co/security-labs/kernel-etw-best-etw
 json parse_custom_etw_event(Event);
 json parse_etw_event(Event);
 std::string get_val(const json&, std::string);

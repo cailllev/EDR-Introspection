@@ -79,7 +79,7 @@ void emit_etw_event(std::string msg, std::string pre, bool print_when_debug) {
     UINT64 ns = get_ns_time();
     TraceLoggingWrite(
         g_hProvider,
-        "EDRi-Event", // this is the event name, not further used
+        "EDRiTask",
         TraceLoggingValue(msg.c_str(), "message"), // cannot be a variable
         TraceLoggingUInt64(ns, "ns_since_epoch")
     );

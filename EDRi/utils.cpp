@@ -21,7 +21,7 @@ static const std::string encrypt_password = "much signature bypass, such wow";
 static std::wstring attacks_subfolder = L"attacks\\";
 static std::string enc_attack_suffix = ".exe.enc";
 
-const std::string hooked_procs_file = "C:\\Users\\Public\\Downloads\\hooked.txt";
+const std::string hooked_procs_file = "C:\\Users\\Public\\Downloads\\hooked.txt"; // should match the path in EDRReflectiveHooker (dllmain.cpp)
 
 static bool initialized_snapshot = false;
 
