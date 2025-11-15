@@ -88,14 +88,14 @@ void emit_etw_event(std::string msg, std::string pre, bool print_when_debug) {
     }
 }
 
-void process_results(std::string output, bool dump_sig, bool colored) {
+void process_results(std::string output_events, std::string output_signatures, bool dump_sig, bool colored) {
     std::cout << "[+] EDRi: Processing the results...\n";
     if (g_super_debug) {
         dump_proc_map();
     }
 	std::vector<json> all_etw_events = get_all_etw_events();
     std::map<Classifier, std::vector<json>> etw_events = filter_all_events(all_etw_events);
-    write_events_to_file(etw_events, output, colored);
+    write_events_to_file(etw_events, output_events, colored);
 
     print_etw_counts(etw_events);
     if (g_debug) {
@@ -103,15 +103,15 @@ void process_results(std::string output, bool dump_sig, bool colored) {
     }
 
     if (dump_sig) {
-        dump_signatures(etw_events); // can only dump from antimalware provider
+        dump_signatures(etw_events, output_signatures); // can only dump from antimalware provider
     }
     std::cout << "[*] EDRi: Done\n";
 }
 
-void cleanup(std::string output, bool dump_sig, bool colored) {
+void cleanup(std::string output_events, std::string output_signatures, bool dump_sig, bool colored) {
     remove_file(g_attack_exe_path); // remove again if it still exists
     stop_all_etw_traces();
-    process_results(output, dump_sig, colored);
+    process_results(output_events, output_signatures, dump_sig, colored);
 }
 
 int main(int argc, char* argv[]) {
@@ -124,7 +124,7 @@ int main(int argc, char* argv[]) {
         ("p,edr-profile", "The EDR to track, supporting: " + get_available_edrs(), cxxopts::value<std::string>())
         ("a,attack-exe", "The attack to execute, supporting: " + get_available_attacks(), cxxopts::value<std::string>())
         ("r,run-as-child", "If the attack should run (automatically) as a child of the EDRi.exe or if it should be executed manually")
-        ("o,output", "The output name of the csv results, base-dir: " + get_output_path(""), cxxopts::value<std::string>())
+        ("o,output", "Writing events to " + get_output_path("[name]") + ".csv and signatures to " + get_output_path("[name]") + "-signatures.txt", cxxopts::value<std::string>())
         ("m,trace-etw-misc", "Trace misc ETW")
         ("i,trace-etw-ti", "Trace ETW-TI (needs PPL)")
         ("n,hook-ntdll", "Hook ntdll.dll (needs PPL)")
@@ -188,13 +188,14 @@ int main(int argc, char* argv[]) {
 	std::string attack_exe_enc_path = get_attack_enc_path(attack_name);
     std::string output_name;
     if (result.count("output") == 0) {
-        output_name = "results.csv";
+        output_name = "results";
     }
     else {
         output_name = result["output"].as<std::string>();
     }
-    std::string output = get_output_path(output_name);
-    std::cout << "[*] EDRi: Writing events to: " << output << "\n";
+    std::string output_events = get_output_path(output_name + ".csv");
+    std::string output_signatures = get_output_path(output_name + "-signatures.txt");
+    std::cout << "[*] EDRi: Writing events to: " << output_events << " and " << output_signatures << "\n";
 
     bool run_as_child = false;
     if (result.count("run-as-child") > 0) {
@@ -385,14 +386,14 @@ int main(int argc, char* argv[]) {
         try {
             if (!launch_as_child(g_attack_exe_path)) {
                 std::cerr << "[!] EDRi: Failed to launch the attack exe: " << g_attack_exe_path << ". Was it marked as a virus?\n";
-                cleanup(output, dump_sig, colored);
+                cleanup(output_events, output_signatures, dump_sig, colored);
                 return 0;
             }
         }
         catch (...) {
             std::cerr << "[!] EDRi: Launching attack as child failed: " << GetLastError() << "\n";
             Sleep(wait_after_termination_ms);
-            cleanup(output, dump_sig, colored);
+            cleanup(output_events, output_signatures, dump_sig, colored);
         }
     }
     else {
@@ -404,7 +405,7 @@ int main(int argc, char* argv[]) {
         cnt_waited += 100;
         if (cnt_waited > wait_attack_not_found_threshold_ms) {
             std::cerr << "[!] EDRi: Timeout waiting for attack PID, did you start " << g_attack_exe_path << ", or was it marked as a virus?\n";
-            cleanup(output, dump_sig, colored);
+            cleanup(output_events, output_signatures, dump_sig, colored);
             return 0;
         }
     }
@@ -443,6 +444,6 @@ int main(int argc, char* argv[]) {
 
     remove_file(g_attack_exe_path); // remove again
 
-    process_results(output, dump_sig, colored);
+    process_results(output_events, output_signatures, dump_sig, colored);
 	return 0;
 }
