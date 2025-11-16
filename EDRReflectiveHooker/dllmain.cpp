@@ -653,6 +653,7 @@ DWORD WINAPI ReadProcInfoResolverThread(LPVOID lpParam)
     else if (pic == 0x3C) {
         _snprintf_s(infoClass, sizeof(infoClass), _TRUNCATE, "ProcessCommandLineInformation");
     }
+	// TODO pic == 0x60, "ProcessLoggingInformation", https://www.legacyy.xyz/defenseevasion/windows/2024/04/24/disabling-etw-ti-without-ppl.html
     else {
         _snprintf_s(infoClass, sizeof(infoClass), _TRUNCATE, "0x%X", pic);
     }
