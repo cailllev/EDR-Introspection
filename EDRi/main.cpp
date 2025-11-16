@@ -124,7 +124,7 @@ int main(int argc, char* argv[]) {
         ("p,edr-profile", "The EDR to track, supporting: " + get_available_edrs(), cxxopts::value<std::string>())
         ("a,attack-exe", "The attack to execute, supporting: " + get_available_attacks(), cxxopts::value<std::string>())
         ("r,run-as-child", "If the attack should run (automatically) as a child of the EDRi.exe or if it should be executed manually")
-        ("o,output", "Writing events to " + get_output_path("[name]") + ".csv and signatures to " + get_output_path("[name]") + "-signatures.txt", cxxopts::value<std::string>())
+        ("o,output", "Writing to " + get_output_path("[name]") + "-events.csv and [name]-signatures.txt", cxxopts::value<std::string>())
         ("m,trace-etw-misc", "Trace misc ETW")
         ("i,trace-etw-ti", "Trace ETW-TI (needs PPL)")
         ("n,hook-ntdll", "Hook ntdll.dll (needs PPL)")
@@ -193,9 +193,9 @@ int main(int argc, char* argv[]) {
     else {
         output_name = result["output"].as<std::string>();
     }
-    std::string output_events = get_output_path(output_name + ".csv");
+    std::string output_events = get_output_path(output_name + "-events.csv");
     std::string output_signatures = get_output_path(output_name + "-signatures.txt");
-    std::cout << "[*] EDRi: Writing events to: " << output_events << " and " << output_signatures << "\n";
+    std::cout << "[*] EDRi: Writing to " << output_events << " and " << output_name << "-signatures.txt" << "\n";
 
     bool run_as_child = false;
     if (result.count("run-as-child") > 0) {
