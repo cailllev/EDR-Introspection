@@ -32,6 +32,7 @@
 * - too many strings in A SINGLE SWITCH STATEMENT ??
 * - char[size_to_big] can break loading sometimes ??
 * - not using an allocated char[small_size] ??
+* - == vs & in comparisions ??
 * - ? changing to much code at once ?
 * - ? breathing at the compiled DLL ?
 * 
@@ -326,13 +327,17 @@ void ReflectiveLoader()
 }
 
 // ------------------ HOOKS ------------------ //
-static UINT64 PID;
+static HANDLE H_PROC = NULL; // GetCurrentProcess() can be buggy after hooks installed
+static UINT64 PID = 0; // GetCurrentProcessId() can be buggy after hooks installed
 
 TRACELOGGING_DEFINE_PROVIDER(
     g_hProvider,
     "Hook-Provider", // name in the ETW, cannot be a variable
     (0x72248411, 0x7166, 0x4feb, 0xa3, 0x86, 0x34, 0xd8, 0xf3, 0x5b, 0xb6, 0x37)  // this cannot be a variable
 );
+
+// helper functions to combat recursion (GetCurrentProcessId -> NtQueryInformationProcess -> GetCurrentProcessId -> ...)
+typedef NTSTATUS(NTAPI* PFN_GetCurrentProcessId)();
 
 // hooked function definitions
 typedef NTSTATUS (NTAPI* PFN_NtCreateFile)(
@@ -418,6 +423,9 @@ typedef NTSTATUS(NTAPI* PFN_NtTerminateProcess)(
     NTSTATUS ExitStatus
     );
 
+// helper functions to minimize calls (GetCurrentProcessId -> NtQueryInformationProcess -> ... -> )
+static PFN_GetCurrentProcessId g_origGetCurrentProcessId = nullptr;
+
 // trampolines created by MinHook
 static PFN_NtCreateFile g_origNtCreateFile = nullptr;
 static PFN_NtOpenFile g_origNtOpenFile = nullptr;
@@ -485,6 +493,33 @@ void emit_etw_msg_ns(const char msg[], UINT64 tpid, UINT64 ns) {
 
 const size_t MISC_LEN = 128;
 const size_t MSG_LEN = 1024;
+
+// -------- UN-RECURSION LOGIC -------- //
+
+// when hooking NtQueryInformationProcess, GetProcessId is also affected
+DWORD UnhookedGetProcessId(HANDLE hProcess) {
+    if (hProcess == NULL) return 0; // do NOT check for INVALID_HANDLE_VALUE, it's valid: https://devblogs.microsoft.com/oldnewthing/20230914-00/?p=108766
+
+    PROCESS_BASIC_INFORMATION pbi;
+    ULONG retLen;
+
+    NTSTATUS status = g_origNtQueryInformationProcess(hProcess,
+        ProcessBasicInformation,
+        &pbi,
+        sizeof(pbi),
+        &retLen);
+
+    if (status < 0) return 0; // handle not a process
+
+    return (DWORD)(ULONG_PTR)pbi.UniqueProcessId;
+}
+
+// avoid recursion for GetCurrentProcessId calls
+DWORD WINAPI Hook_GetCurrentProcessId() {
+    return PID;
+}
+
+// ------- RESOLVER THREAD STRUCTS ------- //
 
 // helper structure for ReadFile handle resolving
 typedef struct _FNQ_ARGS {
@@ -578,24 +613,6 @@ bool EnqueueResolverTask(LPTHREAD_START_ROUTINE func, LPVOID arg) {
     lock.unlock();
     g_cv.notify_one();
     return true;
-}
-
-// when hooking NtQueryInformationProcess, GetProcessId is also affected
-DWORD UnhookedGetProcessId(HANDLE hProcess) {
-    if (hProcess == NULL) return 0; // do NOT check for INVALID_HANDLE_VALUE, it's valid: https://devblogs.microsoft.com/oldnewthing/20230914-00/?p=108766
-
-    PROCESS_BASIC_INFORMATION pbi;
-    ULONG retLen;
-
-    NTSTATUS status = g_origNtQueryInformationProcess(hProcess,
-        ProcessBasicInformation,
-        &pbi,
-        sizeof(pbi),
-        &retLen);
-
-    if (status < 0) return 0; // handle not a process
-
-    return (DWORD)(ULONG_PTR)pbi.UniqueProcessId;
 }
 
 // worker thread: resolve procinfo and emit ETW
@@ -917,8 +934,8 @@ NTSTATUS NTAPI Hook_NtQueryInformationProcess(
     // duplicate handle to ensure validity in worker thread
     HANDLE dup = NULL;
     BOOL ok = DuplicateHandle(
-        GetCurrentProcess(), ProcessHandle,
-        GetCurrentProcess(), &dup,
+        H_PROC, ProcessHandle,
+        H_PROC, &dup,
         0, FALSE, DUPLICATE_SAME_ACCESS
     );
     if (!ok) {
@@ -1212,8 +1229,8 @@ NTSTATUS NTAPI Hook_NtReadFile(
     BOOL ok = false;
     if (FileHandle && FileHandle != INVALID_HANDLE_VALUE) {
         ok = DuplicateHandle(
-            GetCurrentProcess(), FileHandle,
-            GetCurrentProcess(), &dup,
+            H_PROC, FileHandle,
+            H_PROC, &dup,
             0, FALSE, DUPLICATE_SAME_ACCESS
         );
     }
@@ -1332,8 +1349,8 @@ NTSTATUS NTAPI Hook_NtReadVirtualMemory(
     BOOL ok = false;
     if (ProcessHandle != NULL) { // do not check for INVALID_HANDLE_VALUE: https://devblogs.microsoft.com/oldnewthing/20230914-00/?p=108766
         ok = DuplicateHandle(
-            GetCurrentProcess(), ProcessHandle,
-            GetCurrentProcess(), &dup,
+            H_PROC, ProcessHandle,
+            H_PROC, &dup,
             0, FALSE, DUPLICATE_SAME_ACCESS
         );
     }
@@ -1482,13 +1499,20 @@ bool InstallHooks() {
         return false;
     }
 
+    // un-recursion helper
+    HMODULE hKernelBase = GetModuleHandleW(L"kernelbase.dll");
+    if (hKernelBase) {
+        FARPROC p = GetProcAddress(hKernelBase, "GetCurrentProcessId");
+        MH_CreateHook(p, Hook_GetCurrentProcessId, (LPVOID*)&g_origGetCurrentProcessId);
+    }
+
     HMODULE hNtdll = GetModuleHandleW(L"ntdll.dll");
     if (!hNtdll) {
         emit_etw_error("ntdll not loaded");
         return false;
     }
 
-    // all functions to hook (order does matter sometimes)
+    // all functions to hook (order does matter depending on the phase of the moon, or my buggy programming)
     HookInfo funcs[] = {
         {"NtQueryInformationProcess", (void*)Hook_NtQueryInformationProcess, (void**)&g_origNtQueryInformationProcess},
         {"NtCreateFile", (void*)Hook_NtCreateFile, (void**)&g_origNtCreateFile},
@@ -1660,23 +1684,28 @@ void watcher_thread() { // or just use a stopRequest.txt
 
     CreateThread(NULL, 0, [](LPVOID param) -> DWORD {
         HANDLE evt = (HANDLE)param;
-        WaitForSingleObject(evt, INFINITE);
-		std::cout << "[-] Hook-DLL: Stop event signaled, unloading...\n";
+		WaitForSingleObject(evt, INFINITE); // do not try to wait for H_PROC (own process on process shutdown) here, will crash the process
         cleanup(true);
         return 0;
-        }, hEvent, 0, NULL);
+        }
+    , hEvent, 0, NULL);
 }
 
 DWORD WINAPI t_InitHooks(LPVOID param) {
     std::cout << "[+] Hook-DLL: Executing init thread...\n";
+
     PID = GetCurrentProcessId();
-    if (is_already_hooked()) {
+	if (is_already_hooked()) { // must be BEFORE H_PROC is re-assigned in case of multiple injections
         std::cout << "[+] Hook-DLL: Process " << PID << " already hooked, ensure the allocated memory is freed again\n";
         return 0;
     }
+
+	H_PROC = OpenProcess(PROCESS_ALL_ACCESS | SYNCHRONIZE, FALSE, PID); // all access to duplicate handles later, synchronize for wait in watcher_thread
+
     TraceLoggingRegister(g_hProvider);
 	watcher_thread(); // start watcher thread to unload DLL again
     InitResolverPool(8); // logical cpus * 2
+
     if (InstallHooks()) {
         append_pid_to_file();
     }
@@ -1705,9 +1734,7 @@ BOOL WINAPI DllMain(HINSTANCE hinst, DWORD reason, LPVOID reserved) {
         break;
     case DLL_THREAD_DETACH: // disabled by DisableThreadLibraryCalls
         break;
-    case DLL_PROCESS_DETACH:
-        std::cout << "[-] Hook-DLL: Process detach, unloading...\n";
-        cleanup(true);
+    case DLL_PROCESS_DETACH: // is not called when the DLL was reflectively loaded
         break;
     }
     return TRUE;
