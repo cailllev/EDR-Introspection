@@ -66,7 +66,7 @@ static const int wait_between_events_ms = 1000;
 static const int wait_after_termination_ms = 5000;
 static const int wait_attack_not_found_threshold_ms = 20000;
 static const int wait_time_between_start_markers_ms = 1000;
-static const int wait_callbacks_reenable_ms = 10000;
+static const int wait_callbacks_reenable_ms = 15000;
 static const int timeout_for_hooker_init = 30;
 
 // etw print prefixes
@@ -124,7 +124,7 @@ int main(int argc, char* argv[]) {
         ("p,edr-profile", "The EDR to track, supporting: " + get_available_edrs(), cxxopts::value<std::string>())
         ("a,attack-exe", "The attack to execute, supporting: " + get_available_attacks(), cxxopts::value<std::string>())
         ("r,run-as-child", "If the attack should run (automatically) as a child of the EDRi.exe or if it should be executed manually")
-        ("o,output", "Writing to " + get_output_path("[name]") + "-events.csv and [name]-signatures.txt", cxxopts::value<std::string>())
+        ("o,output-path-custom", "Writing to " + get_output_path("[name]") + "-events.csv and [name]-signatures.txt", cxxopts::value<std::string>())
         ("m,trace-etw-misc", "Trace misc ETW")
         ("i,trace-etw-ti", "Trace ETW-TI (needs PPL)")
         ("n,hook-ntdll", "Hook ntdll.dll (needs PPL)")
@@ -187,8 +187,8 @@ int main(int argc, char* argv[]) {
 	}
 	std::string attack_exe_enc_path = get_attack_enc_path(attack_name);
     std::string output_name;
-    if (result.count("output") == 0) {
-        output_name = "results";
+    if (result.count("output-path-custom") == 0) {
+        output_name = edr_name + "-vs-" + attack_name;
     }
     else {
         output_name = result["output"].as<std::string>();
