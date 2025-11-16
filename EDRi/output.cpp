@@ -205,11 +205,21 @@ void write_events_to_file(std::map<Classifier, std::vector<json>>& etw_events, c
             std::string csv_output = create_timeline_csv(events, csv_header_start, colored);
             std::string output_base = output.substr(0, output.find_last_of('.')); // without .csv
             std::string output_final = output_base + "-" + classifier_names[c.first] + ".csv"; // add classifier to filename
+
             std::ofstream out(output_final);
-            if (!out.is_open()) {
-                std::cerr << "[!] Output: Failed to open output file: " << output_final << "\n";
+            std::string backup_path = "C:\\Users\\Public\\Downloads\\" + classifier_names[c.first] + "-events.csv";
+
+			if (!out.is_open()) { // check if normal path failed
+                std::cerr << "[!] Output: Failed to open output file: " << output_final << ", trying backup: " << backup_path << "\n";
+                out.open(backup_path);
             }
-            else {
+			if (!out.is_open()) { // backup failed too
+                std::cerr << "[!] Output: Failed to open backup path: " << backup_path << ", dumping to console...\n";
+				std::cout << csv_output;
+				std::cout << "[!] Output: End of dumped events, press ENTER to continue\n";
+				std::cin.get();
+			}
+			else { // normal or backup path succeeded --> write to file
                 out << csv_output;
                 out.close();
             }
@@ -354,16 +364,19 @@ void dump_signatures(std::map<Classifier, std::vector<json>>& etw_events, std::s
 
     std::ofstream out(output_path);
     if (!out.is_open()) {
-        std::cerr << "[!] Output: Failed to open output file: " << output_path << "\n";
-        for (auto& d : data) {
-            std::cout << "[*] Output: " << d << "\n";
+        std::string backup_path = "C:\\Users\\Public\\Downloads\\signatures.txt";
+        std::cerr << "[!] Output: Failed to open output file: " << output_path << ", trying backup: " << backup_path << "\n";
+        out.open(backup_path);
+        if (!out.is_open()) {
+            std::cerr << "[!] Output: Failed to open backup output file: " << backup_path << ", printing to console instead\n";
         }
     }
     else {
         for (auto& d : data) {
-            out << d << "\n";
+            if (out.is_open()) {
+                out << d << "\n";
+            }
             std::cout << "[*] Output: " << d << "\n";
         }
-        out.close();
     }
 }
