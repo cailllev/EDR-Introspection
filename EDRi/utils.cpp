@@ -11,16 +11,22 @@
 #include <unordered_map>
 #include <vector>
 #include <shared_mutex>
+#include <shlwapi.h>
 #include <tlhelp32.h> // import after windows.h, else all breaks, that's crazy, yo
 
 #include "utils.h"
 #include "globals.h"
+
+#pragma comment(lib, "Shlwapi.lib")
 
 
 static const std::string encrypt_password = "much signature bypass, such wow";
 static std::wstring attacks_subfolder = L"attacks\\";
 static std::string enc_attack_suffix = ".exe.enc";
 
+static std::string dumps_relative_path = "..\\..\\EDRi\\dumps\\";
+
+// TODO detect system reboot -> clear PIDs from hooked.txt
 const std::string hooked_procs_file = "C:\\Users\\Public\\Downloads\\hooked.txt"; // should match the path in EDRReflectiveHooker (dllmain.cpp)
 
 static bool initialized_snapshot = false;
@@ -267,9 +273,15 @@ std::string get_hook_dll_path() {
     return wstring2string(base_path) + "EDRReflectiveHooker.dll";
 }
 
+// calculates the absolute output path for a given name and the static dumps_relative_path
 std::string get_output_path(std::string name) {
     std::wstring base_path = get_base_path();
-    return wstring2string(base_path) + "..\\..\\EDRi\\dumps\\" + name;
+    std::string raw = wstring2string(base_path) + "\\..\\..\\EDRi\\dumps\\" + name;
+    char out[MAX_PATH];
+    if (PathCanonicalizeA(out, raw.c_str())) {
+        return std::string(out);
+    }
+    return raw; // fallback if canonicalization fails
 }
 
 // returns the files from /EDRi/attacks
@@ -511,19 +523,59 @@ bool launch_as_child(const std::string& path) {
     return true;
 }
 
-void save_hooked_procs(const std::vector<int> hooked_procs) {
-    std::ofstream ofs(hooked_procs_file, std::ios::trunc);
-    if (!ofs.is_open()) {
-        std::cerr << "[!] Utils: Failed to open file for writing: " << hooked_procs_file << "\n";
+// removes the hooked_procs_file if its out of date (last write time is before the last system boot time -> procs have changed)
+void remove_if_out_of_date() {
+    if (GetFileAttributesA(hooked_procs_file.c_str()) == INVALID_FILE_ATTRIBUTES) {
+        if (g_debug)
+            std::cerr << "[-] Utils: " << hooked_procs_file << " not found\n";
         return;
     }
-    for (int pid : hooked_procs) {
-        ofs << pid << "\n";
+
+    // system uptime -> last boot FILETIME
+    ULONGLONG uptimeFt = GetTickCount64() * 10000ULL;
+    FILETIME nowFt; GetSystemTimeAsFileTime(&nowFt);
+    ULONGLONG now = ((ULONGLONG)nowFt.dwHighDateTime << 32) | nowFt.dwLowDateTime;
+    ULONGLONG boot = now - uptimeFt;
+
+    // get file write time
+    HANDLE h = CreateFileA(hooked_procs_file.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, 0);
+    if (h == INVALID_HANDLE_VALUE) {
+        if (g_debug)
+            std::cerr << "[!] Utils: Could not open " << hooked_procs_file << "\n";
+        return;
     }
-    ofs.close();
+    FILETIME writeFt;
+    if (!GetFileTime(h, nullptr, nullptr, &writeFt)) {
+        CloseHandle(h);
+        if (g_debug)
+            std::cerr << "[!] Utils: GetFileTime failed on " << hooked_procs_file << "\n";
+        return;
+    }
+    CloseHandle(h);
+
+    ULONGLONG write = ((ULONGLONG)writeFt.dwHighDateTime << 32) | writeFt.dwLowDateTime;
+
+    // compare & delete
+    if (write < boot) {
+        std::ofstream ofs(hooked_procs_file, std::ios::trunc);
+		if (ofs.is_open()) {
+            if (g_debug)
+                std::cout << "[-] Utils: Hooked procs in " << hooked_procs_file << " out of date, deleted the file\n";
+            return;
+        }
+        else {
+            if (g_debug)
+                std::cerr << "[!] Utils: Failed to delete out of date " << hooked_procs_file << "\n";
+        }
+    }
+    else {
+        if (g_debug)
+		    std::cout << "[+] Utils: Hooked procs in " << hooked_procs_file << " up to date, keeping the file\n";
+    }
 }
 
 std::vector<int> get_hooked_procs() {
+    remove_if_out_of_date();
     std::vector<int> hooked_procs;
     std::ifstream ifs(hooked_procs_file);
     if (!ifs.is_open()) {
@@ -536,4 +588,16 @@ std::vector<int> get_hooked_procs() {
     }
     ifs.close();
     return hooked_procs;
+}
+
+void save_hooked_procs(const std::vector<int> hooked_procs) {
+    std::ofstream ofs(hooked_procs_file, std::ios::app);
+    if (!ofs.is_open()) {
+        std::cerr << "[!] Utils: Failed to open file for writing: " << hooked_procs_file << "\n";
+        return;
+    }
+    for (int pid : hooked_procs) {
+        ofs << pid << "\n";
+    }
+    ofs.close();
 }
