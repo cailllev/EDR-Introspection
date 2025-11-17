@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "helpers/json.hpp"
+
 #include "filter.h"
 
 void clean_events(std::map<Classifier, std::vector<json>>&);

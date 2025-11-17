@@ -34,6 +34,10 @@ std::vector<ProcInfo> get_tracked_procs();
 std::string unnecessary_tools_running();
 void dump_proc_map();
 
+UINT64 filetime_to_unix_epoch_ns(__int64 timestamp);
+std::string filetime_to_iso8601(__int64 timestamp);
+std::string unix_epoch_ns_to_iso8601(uint64_t);
+
 std::string get_random_3digit_num();
 
 bool filepath_match(std::string, std::string);
@@ -51,6 +55,5 @@ std::string get_available_attacks();
 bool is_attack_available(const std::string&);
 std::string get_attack_enc_path(const std::string&);
 
-UINT64 filetime_to_unix_epoch_ns(__int64 timestamp);
-std::string filetime_to_iso8601(__int64 timestamp);
-std::string unix_epoch_ns_to_iso8601(uint64_t);
+void update_defender2yara_sigs();
+std::string get_yara_rule(std::string);
