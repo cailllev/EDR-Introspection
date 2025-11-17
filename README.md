@@ -13,10 +13,35 @@ The enabling technologies of this projects are:
 - [kdu.exe](https://github.com/hfiref0x/KDU) to run procs as PPL-AntiMalware
 - [EDRSandblast](https://github.com/cailllev/EDRSandblast) to disable kernel callbacks
 
+## How To
+### Run the Framework
+Depends on the EDR, harderning, etc. Generally, loading of vulnerable signed drivers and memory integrity (both in Device Security > Core Isolation) must be disabled for KDU and EDRSandblast to work.
+Without EDRSandblast (without disabling kernel callbacks) the hooks cannot be injected. Without KDU (without PPL) no ETW-TI can be consumed and no hooks can be injected.<br><br>
+It is recomended to **make an exclusion** for the EDR-Introspection folder, and **then** clone the repo to this folder!
+```powershell
+# print help
+.\x64\Release\EDRi.exe -h
+
+# run simplest attack: no ETW-TI, no hooking, minimal traces, run attack as child proc, no debug
+.\x64\Release\EDRi.exe --edr-profile MDE --attack Injector_standard -r
+
+# opposite: ETW-TI, hooking ntdll, all traces, debug
+.\helpers\KDU\kdu.exe -pse "$(pwd)\x64\Release\EDRi.exe --edr-profile MDE --attack Injector_deconditioning_alloc -t -d" -prv 54
+```
+
+### Create own attack
+1. Copy folder `.\attacks\Injector` to `.\attacks\YourAttack`
+2. rename all references in vcproj files from `Injector` to `YourAttack`
+3. build YourAttack with all features: `.\attacks\YourAttack\build-features.bat`
+4. the created (encrypted) exes should now be visible in the EDRi under available attacks
+```powershell
+# print just the attacks
+.\x64\Release\EDRi.exe --edr-profile MDE --attack 
+```
+
 ## Misc Tools
 To play around or test stuff, helper exes are provided for the following actions.
 All tools below must be run as Administrator.
-It is recomended to exclude EDR-Introspection folder from the EDR, and then clone the repo!
 
 ### Start a Proc as PPL-AntiMalware
 Normally EDR processes run as PPL-AntiMalware. The kernel only allows opening of these processes via `OpenProcess("edr.exe")` from other PPL-AntiMalware procs (or higher).
