@@ -29,7 +29,7 @@ bool g_hooker_started = false;
 bool g_attack_terminated = false;
 
 // procs to check for hook init msg
-std::vector<int> procs_with_hooks_initialized = {};
+int detected_hook_start_markers = 0;
 
 // static
 static bool cleaned_events = false;
@@ -557,13 +557,13 @@ bool check_traces_started(json& j) {
 bool check_hooker_started(json& j) {
     if (j[PROVIDER_NAME] == HOOK_PROVIDER && j.contains(MESSAGE)) {
         if (j[MESSAGE] == NTDLL_HOOKER_TRACE_START_MARKER) {
-            procs_with_hooks_initialized.push_back(j[PID]);
+            detected_hook_start_markers++;
             if (g_debug) {
                 std::cout << "[+] ETW: Detected hook initialization in " << j[PID] << "\n";
             }
         }
     }
-    return procs_with_hooks_initialized.size() == g_newly_hooked_procs.size();
+    return detected_hook_start_markers == g_newly_hooked_procs.size();
 }
 
 // monitors events: mark procs as started or terminated (also attack and injected on their own), and check traces startes
