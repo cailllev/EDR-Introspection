@@ -1,20 +1,9 @@
-#define WIN32_LEAN_AND_MEAN // wtf c++
-#include <windows.h>
 #include <chrono>
 #include <iostream>
 #include <map>
-#include <regex>
 #include <set>
-#include <sstream>
 #include <string>
-#include <string.h>
-#include <unordered_map>
 #include <vector>
-#include <wchar.h>
-#include <TraceLoggingProvider.h>
-
-#include "helpers/cxxopts.hpp"
-#include "helpers/json.hpp"
 
 #include "globals.h"
 #include "hooker.h"
@@ -25,6 +14,10 @@
 #include "etwreader.h"
 #include "output.h"
 #include "main.h"
+
+#include "helpers/cxxopts.hpp"
+#include "helpers/json.hpp"
+#include <TraceLoggingProvider.h>
 
 /*
 - creates krabs ETW traces for Antimalware, Kernel, etc. and the attack provider
@@ -114,6 +107,22 @@ void cleanup(std::string output_events, std::string output_signatures, bool dump
     process_results(output_events, output_signatures, dump_sig, colored);
 }
 
+bool is_admin() {
+    BOOL is_admin = FALSE;
+    PSID admin_group = nullptr;
+    SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
+    if (AllocateAndInitializeSid(
+        &NtAuthority, 2,
+        SECURITY_BUILTIN_DOMAIN_RID,
+        DOMAIN_ALIAS_RID_ADMINS,
+        0, 0, 0, 0, 0, 0,
+        &admin_group)) {
+        CheckTokenMembership(nullptr, admin_group, &is_admin);
+        FreeSid(admin_group);
+    }
+    return is_admin == TRUE;
+}
+
 int main(int argc, char* argv[]) {
     cxxopts::Options options("EDRi", "EDR Introspection Framework");
     
@@ -121,6 +130,7 @@ int main(int argc, char* argv[]) {
     options.add_options()
         ("h,help", "Print usage")
         ("e,encrypt", "The path of the attack executable to encrypt", cxxopts::value<std::string>())
+		("y,update-defender2yara", "Update the defender2yara signatures")
         ("p,edr-profile", "The EDR to track, supporting: " + get_available_edrs(), cxxopts::value<std::string>())
         ("a,attack-exe", "The attack to execute, supporting: " + get_available_attacks(), cxxopts::value<std::string>())
         ("r,run-as-child", "If the attack should run (automatically) as a child of the EDRi.exe or if it should be executed manually")
@@ -146,6 +156,18 @@ int main(int argc, char* argv[]) {
     std::cout << "[*] EDRi: EDR Introspection Framework\n";
 
     // PARSING
+    if (result.count("help")) {
+        std::cout << options.help() << "\n";
+        return 0;
+    }
+
+	// update defender2yara
+    if (result.count("update-defender2yara") > 0) {
+        update_defender2yara_sigs();
+        std::cout << "[*] EDRi: Updated defender2yara signatures\n";
+        return 0;
+    }
+
     // encrypt an exe
     if (result.count("e") > 0) {
         std::string in_path = result["encrypt"].as<std::string>();
@@ -159,11 +181,13 @@ int main(int argc, char* argv[]) {
 			return 1;
         }
     }
-    if (result.count("help")) {
-        std::cout << options.help() << "\n";
-        return 0;
+
+    // normal run
+    if (!is_admin()) {
+        std::cerr << "[!] EDRi: Please run as administrator\n";
+        return 1;
     }
-    build_device_map();
+	build_device_map(); 
 
     // check edr profile, attack exe and output
     if (result.count("edr-profile") == 0) {
@@ -185,22 +209,7 @@ int main(int argc, char* argv[]) {
         std::cerr << "[!] EDRi: Unsupported attack specified, use one of: " << get_available_attacks() << "\n";
         return 1;
 	}
-	std::string attack_exe_enc_path = get_attack_enc_path(attack_name);
-    std::string output_name;
-    if (result.count("output-path-custom") == 0) {
-        output_name = edr_name + "-vs-" + attack_name;
-    }
-    else {
-        output_name = result["output"].as<std::string>();
-    }
-    std::string output_events = get_output_path(output_name + "-events.csv");
-    std::string output_signatures = get_output_path(output_name + "-signatures.txt");
-    std::cout << "[*] EDRi: Writing to " << output_events << " and " << output_name << "-signatures.txt" << "\n";
 
-    bool run_as_child = false;
-    if (result.count("run-as-child") > 0) {
-        run_as_child = true;
-	}
 
     // check tracking options
     bool trace_etw_misc = false, trace_etw_ti = false, hook_ntdll = false;
@@ -218,14 +227,36 @@ int main(int argc, char* argv[]) {
             hook_ntdll = true;
         }
     }
-	std::cout << "[*] EDRi: Tracking options: ETW-Misc: " << (trace_etw_misc ? "Yes" : "No") 
-		<< ", ETW-TI: " << (trace_etw_ti ? "Yes" : "No")
-		<< ", Hook-ntdll: " << (hook_ntdll ? "Yes" : "No") << "\n";
-	bool dump_sig = trace_etw_misc; // can only dump signatures if antimalware provider is traced
+    std::cout << "[*] EDRi: Tracking options: ETW-Misc: " << (trace_etw_misc ? "Yes" : "No")
+        << ", ETW-TI: " << (trace_etw_ti ? "Yes" : "No")
+        << ", Hook-ntdll: " << (hook_ntdll ? "Yes" : "No") << "\n";
+    bool dump_sig = trace_etw_misc; // can only dump signatures if antimalware provider is traced
 
-	bool disable_kernel_callbacks_needed = hook_ntdll && edr_profile.needs_kernel_callbacks_disabling; // normally needed when hooking ntdll
+    bool disable_kernel_callbacks_needed = hook_ntdll && edr_profile.needs_kernel_callbacks_disabling; // normally needed when hooking ntdll
     if (result.count("no-disable-kernel-callbacks") > 0) {
         disable_kernel_callbacks_needed = false; // may be not needed when manually disabled / EDR not protecting
+    }
+
+    // check output path
+	std::string attack_exe_enc_path = get_attack_enc_path(attack_name);
+    std::string output_name;
+    if (result.count("output-path-custom") == 0) {
+        output_name = edr_name + "-vs-" + attack_name;
+    }
+    else {
+        output_name = result["output-path-custom"].as<std::string>();
+    }
+    std::string output_events = get_output_path(output_name + "-events.csv");
+    std::string output_signatures = get_output_path(output_name + "-signatures.txt");
+    std::cout << "[*] EDRi: Writing to " << output_events;
+    if (dump_sig) {
+        std::cout << " and " << output_signatures;
+	}
+	std::cout << "\n";
+
+    bool run_as_child = false;
+    if (result.count("run-as-child") > 0) {
+        run_as_child = true;
 	}
 
     // debug

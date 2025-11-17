@@ -14,8 +14,8 @@
 #include <shlwapi.h>
 #include <tlhelp32.h> // import after windows.h, else all breaks, that's crazy, yo
 
-#include "utils.h"
 #include "globals.h"
+#include "utils.h"
 
 #pragma comment(lib, "Shlwapi.lib")
 
@@ -25,6 +25,8 @@ static std::wstring attacks_subfolder = L"attacks\\";
 static std::string enc_attack_suffix = ".exe.enc";
 
 static std::string dumps_relative_path = "..\\..\\EDRi\\dumps\\";
+static std::string defender2yara_relative_path = "..\\..\\EDRi\\defender2yara\\";
+static std::string defender2yara_sigs_url = "https://github.com/t-tani/defender2yara/tree/yara-rules";
 
 // TODO detect system reboot -> clear PIDs from hooked.txt
 const std::string hooked_procs_file = "C:\\Users\\Public\\Downloads\\hooked.txt"; // should match the path in EDRReflectiveHooker (dllmain.cpp)
@@ -273,15 +275,19 @@ std::string get_hook_dll_path() {
     return wstring2string(base_path) + "EDRReflectiveHooker.dll";
 }
 
-// calculates the absolute output path for a given name and the static dumps_relative_path
-std::string get_output_path(std::string name) {
+std::string resolve_path(std::string relative_path) {
     std::wstring base_path = get_base_path();
-    std::string raw = wstring2string(base_path) + "\\..\\..\\EDRi\\dumps\\" + name;
+	std::string raw = wstring2string(base_path) + relative_path;
     char out[MAX_PATH];
     if (PathCanonicalizeA(out, raw.c_str())) {
         return std::string(out);
     }
     return raw; // fallback if canonicalization fails
+}
+
+// calculates the absolute output path for a given name and the static dumps_relative_path
+std::string get_output_path(std::string name) {
+	return resolve_path(dumps_relative_path + name);
 }
 
 // returns the files from /EDRi/attacks
@@ -601,3 +607,95 @@ void save_hooked_procs(const std::vector<int> hooked_procs) {
     }
     ofs.close();
 }
+
+// execute powershell command to download zip and extract
+void update_defender2yara_sigs() {
+	std::string full_path = resolve_path(defender2yara_relative_path);
+	std::string zip_output_path = full_path + "defender2yara-yara-rules.zip";
+    std::string ps_command = "powershell -Command \""
+		"$ProgressPreference = 'SilentlyContinue'; " // do not show progress bar
+		"$url = 'https://github.com/t-tani/defender2yara/archive/refs/heads/yara-rules.zip'; "
+		"$output = '" + zip_output_path + "'; "
+		"Invoke-WebRequest -Uri $url -OutFile $output; "
+		"Expand-Archive -Path $output -DestinationPath '" + full_path + "' -Force; "
+		"Remove-Item $output; "
+		"Move-Item -Path '" + full_path + "defender2yara-yara-rules\\*' -Destination '" + full_path + "' -Force; " // move all files up one level
+        "Remove-Item -Path '" + full_path + "defender2yara-yara-rules' -Recurse -Force;\"";
+	std::cout << "[*] Utils: Updating defender2yara signatures with command: " << ps_command << "\n";
+	system(ps_command.c_str());    
+}
+
+bool read_file(const std::string& path, std::string& output) {
+    std::ifstream file(path, std::ios::in | std::ios::binary);
+    if (!file) return false;
+    std::ostringstream ss;
+    ss << file.rdbuf();
+    output = ss.str();
+    return true;
+}
+
+bool extract_rule(const std::string& file_content, const std::string& rule_name, std::string& rule_out) {
+    std::string key = "rule " + rule_name;
+    size_t pos = file_content.find(key);
+    if (pos == std::string::npos) return false;
+
+    // find opening brace
+    size_t brace_open = file_content.find("{", pos);
+    if (brace_open == std::string::npos) return false;
+
+    int brace_count = 0;
+    size_t i = brace_open;
+    for (; i < file_content.size(); ++i) {
+        if (file_content[i] == '{') brace_count++;
+        else if (file_content[i] == '}') brace_count--;
+        if (brace_count == 0) {
+            // include final closing brace
+            rule_out = file_content.substr(pos, i - pos + 1);
+            return true;
+        }
+    }
+    return false;
+}
+
+bool find_rule_in_dir(const std::string& dir, const std::string& rule_name, std::string& result) {
+    std::string search = dir + "\\*";
+    WIN32_FIND_DATAA fd;
+    HANDLE h = FindFirstFileA(search.c_str(), &fd);
+    if (h == INVALID_HANDLE_VALUE) return false;
+
+    do {
+        std::string name = fd.cFileName;
+        if (name == "." || name == "..") continue;
+
+        std::string fullpath = dir + "\\" + name;
+
+        if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+            if (find_rule_in_dir(fullpath, rule_name, result)) return true;
+        }
+        else {
+            // check extension
+            if (name.size() > 4) {
+                std::string ext = name.substr(name.find_last_of('.') + 1);
+                if (ext == "yar" || ext == "yara") {
+                    std::string content;
+                    if (read_file(fullpath, content)) {
+                        if (extract_rule(content, rule_name, result)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+    } while (FindNextFileA(h, &fd));
+    FindClose(h);
+    return false;
+}
+
+// traverse the defender2yara yara-rules directory and get the complete rule for a given signature name
+std::string get_yara_rule(const std::string rule_name) {
+    std::string yara_rules_path = resolve_path(defender2yara_relative_path);
+    std::string rule_text = "";
+    find_rule_in_dir(yara_rules_path, rule_name, rule_text);
+    return rule_text;
+}
+

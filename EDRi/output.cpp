@@ -8,6 +8,7 @@
 #include "helpers/json.hpp"
 
 #include "globals.h"
+#include "utils.h"
 #include "output.h"
 
 
@@ -28,6 +29,7 @@ std::vector<std::string> csv_header_start = {
     FILEPATH, "cachename", "result", "vname", "name", "sigseq", "sigsha", "commandline", "firstparam", "secondparam",
 };
 
+// store translations like \\Device\\HarddiskVolumeX -> C:
 void build_device_map() {
     if (!g_deviceMap.empty()) return; // build only once
 
@@ -73,6 +75,10 @@ std::string translate_if_path(const std::string& s) {
     static const std::regex extendedPrefix(R"(\\\\\?\\([A-Za-z]:)\\)",
         std::regex_constants::icase);
     s2 = std::regex_replace(s2, extendedPrefix, "$1\\\\");
+
+	// finally replace any double backslashes with single backslashes
+	static const std::regex doubleBackslash(R"(\\\\+)");
+	s2 = std::regex_replace(s2, doubleBackslash, R"(\)");
 
     return s2;
 }
@@ -294,6 +300,7 @@ void print_time_differences() {
 // dumps all relevant info from antimalware provider event id 3,8,74,104
 void dump_signatures(std::map<Classifier, std::vector<json>>& etw_events, std::string output_path) {
     std::vector<std::string> data = {};
+	std::vector<std::string> yara_rules = {};
     for (const auto& ev : etw_events[Relevant]) {
         try {
             if (ev[PROVIDER_NAME] != ANTIMALWARE_PROVIDER) {
@@ -311,14 +318,14 @@ void dump_signatures(std::map<Classifier, std::vector<json>>& etw_events, std::s
                 std::string r = "resource=";
                 size_t ss = m.find(s);
                 size_t sr = m.find(r);
-                if (ss != std::string::npos && sr != std::string::npos) { // only some 3 events have signatures
+                if (ss != std::string::npos && sr != std::string::npos) { // only some id=3 events have signatures
                     size_t es = m.find(", ", ss);
                     size_t er = m.find(", ", sr);
                     ss += s.length();
                     sr += r.length();
                     std::string sig = m.substr(ss, es - ss);
                     std::string res = m.substr(sr, er - sr);
-                    data.push_back("Found signature: " + sig + " in " + res);
+                    data.push_back("Found signal/signature: " + sig + " for " + translate_if_path(res));
                 }
             }
             if (ev[EVENT_ID] == 8) {
@@ -334,8 +341,12 @@ void dump_signatures(std::map<Classifier, std::vector<json>>& etw_events, std::s
                     }
                     continue;
                 }
-                std::string path_translated = translate_if_path(ev[NAME]);
-                data.push_back("Behaviour Monitoring Detection: pid=" + get_val(ev, PID) + ", sig=" + path_translated);
+				std::string sig = get_val(ev, NAME);
+                data.push_back("Behaviour Monitoring Detection: pid=" + get_val(ev, PID) + ", sig=" + sig);
+                std::string rule = get_yara_rule(sig);
+                if (!rule.empty()) {
+                    yara_rules.push_back(rule);
+				}
             }
             if (ev[EVENT_ID] == 74) {
                 std::ostringstream oss;
@@ -377,6 +388,33 @@ void dump_signatures(std::map<Classifier, std::vector<json>>& etw_events, std::s
                 out << d << "\n";
             }
             std::cout << "[*] Output: " << d << "\n";
+        }
+    }
+
+    if (yara_rules.empty()) {
+        if (g_debug) {
+            std::cout << "[-] Output: No matching YARA rules found from events\n";
+        }
+        return;
+	}
+
+	std::string yara_output_path = output_path + ".yara";
+    out.open(yara_output_path);
+    if (!out.is_open()) {
+        std::string backup_path = "C:\\Users\\Public\\Downloads\\signatures.yara";
+        std::cerr << "[!] Output: Failed to open output file: " << yara_output_path << ", trying backup: " << backup_path << "\n";
+        out.open(backup_path);
+        if (!out.is_open()) {
+            std::cerr << "[!] Output: Failed to open backup output file: " << backup_path << ", printing to console instead\n";
+        }
+    }
+    else {
+        std::cout << "[*] Output: Printing YARA rules...\n";
+        for (auto& d : yara_rules) {
+            if (out.is_open()) {
+                out << d << "\n";
+            }
+            std::cout << d << "\n";
         }
     }
 }
