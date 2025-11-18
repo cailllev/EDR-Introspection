@@ -87,7 +87,7 @@ void process_results(std::string output_events, std::string output_signatures, b
         dump_proc_map();
     }
     std::vector<json>all_etw_events;
-    concat_all_etw_events(all_etw_events);
+    parse_all_etw_events(all_etw_events);
     std::map<Classifier, std::vector<json>> etw_events = filter_all_events(all_etw_events); // do not use all_etw_events after here, are moved
     write_events_to_file(etw_events, output_events, colored);
 
@@ -278,24 +278,30 @@ int main(int argc, char* argv[]) {
     std::cout << "[+] EDRi: Own provider registered\n";
 
     std::vector<HANDLE> threads;
+    int wait_for_traces = 0;
     if (hook_ntdll) {
         if (!start_etw_hook_trace(threads)) {
             std::cerr << "[!] EDRi: Failed to start ETW-Hook traces\n";
             return 1;
         }
+        wait_for_traces += 3000;
     }
     if (trace_etw_ti) {
         if (!start_etw_ti_trace(threads)) {
             std::cerr << "[!] EDRi: Failed to start ETW-TI traces\n";
             return 1;
         }
+        wait_for_traces += 5000; // expensive start
     }
     if (trace_etw_misc) {
         if (!start_etw_misc_traces(threads)) {
             std::cerr << "[!] EDRi: Failed to start misc ETW traces(s)\n";
             return 1;
         }
+        wait_for_traces += 10000; // very expensive start
     }
+    Sleep(wait_for_traces); // other traces may take longer to start
+
     if (!start_etw_default_traces(threads)) { // start last (start marker is detected here)
         std::cerr << "[!] EDRi: Failed to start default ETW traces(s)\n";
         return 1;
@@ -307,10 +313,7 @@ int main(int argc, char* argv[]) {
         emit_etw_event(EDRi_TRACE_START_MARKER, "", false);
         Sleep(wait_time_between_start_markers_ms);
     }
-    if (hook_ntdll || trace_etw_ti || trace_etw_misc) {
-        Sleep(add_wait_for_other_traces); // other traces may take longer to start, wait for them too
-    }
-    std::cout << "[*] EDRi: Traces started\n";
+    std::cout << "[*] EDRi: All traces should be running now\n";
 
     // GET PROCS TO TRACK
     // add all EDR specific procs
@@ -451,7 +454,7 @@ int main(int argc, char* argv[]) {
         std::cout << "[*] EDRi: Execute " << g_attack_exe_path << " now manually\n";
     }
     int cnt_waited = 0;
-    while (g_attack_proc.PID == 0) { // always wait for the attack_PID, lauch_as_child() might succeed even when attack is not started
+    while (!g_attack_started) { // always wait for the attack_PID, lauch_as_child() might return true even when attack is not really started
         Sleep(100);
         cnt_waited += 100;
         if (cnt_waited > wait_attack_not_found_threshold_ms) {

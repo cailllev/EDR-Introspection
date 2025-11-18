@@ -13,11 +13,10 @@
 
 
 // all events
-std::vector<json> std_events = {};
-std::vector<json> misc_events = {};
-std::vector<json> etw_ti_events = {};
-std::vector<json> hook_events = {};
-std::vector<std::vector<json>*> all_etw_events = { &std_events, &misc_events, &etw_ti_events, &hook_events };
+std::vector<Event> std_events = {};
+std::vector<Event> misc_events = {};
+std::vector<Event> etw_ti_events = {};
+std::vector<Event> hook_events = {};
 
 std::map<std::string, std::vector<UINT64>> time_diffs_ns = { // differences in nanoseconds between ETW time and system time
     { EDRi_PROVIDER, {} },
@@ -31,7 +30,10 @@ ProcInfo g_attack_proc = null_proc;
 ProcInfo g_injected_proc = null_proc;
 bool g_traces_started = false;
 bool g_hooker_started = false;
+bool g_attack_started = false;
 bool g_attack_terminated = false;
+
+int attack_pid = 0;
 
 // procs to check for hook init msg
 int detected_hook_start_markers = 0;
@@ -58,96 +60,162 @@ MergeCategory filepath_keys = {
 };
 std::vector<MergeCategory> key_categories_to_merge = { ppid_keys, tpid_keys, ttid_keys, filepath_keys };
 
-// get all events as one flat vector
-void concat_all_etw_events(std::vector<json>& out) {
-    out.clear();
-    for (auto v_ptr : all_etw_events) {
-        out.insert(out.end(),
-                   std::make_move_iterator(v_ptr->begin()),
-                   std::make_move_iterator(v_ptr->end()));
-        v_ptr->clear(); // original vectors are now empty
-    }
-}
-
 // get time difference statistics
 std::map<std::string, std::vector<UINT64>> get_time_diffs() {
     return time_diffs_ns;
 }
 
-// hand over schema for parsing
+// lightweight check for a given ev, key and val (str)
+bool check_ev_str(Event& ev, std::string key, std::string val) {
+    krabs::parser parser(ev.schema);
+    for (auto& p : parser.properties()) {
+        const std::wstring& property_name = p.name();
+        const auto property_type = p.type();
+
+        // create key and convert it to lowercase
+        std::string k = wstring2string((std::wstring&)property_name);
+        std::transform(k.begin(), k.end(), k.begin(),
+            [](unsigned char c) { return std::tolower(c); });
+
+        // check if it's the searched key, and the value matches
+        if (k == key && property_type == TDH_INTYPE_ANSISTRING) {
+            std::string v = parser.parse<std::string>(property_name);
+            if (v == val) {
+                return true;
+            }
+            return false;
+        }
+    }
+    return false;
+}
+
+// lightweight check for a given ev, key and val (int)
+bool check_ev_int(Event& ev, std::string key, int val) {
+    krabs::parser parser(ev.schema);
+    for (auto& p : parser.properties()) {
+        const std::wstring& property_name = p.name();
+        const auto property_type = p.type();
+
+        // create key and convert it to lowercase
+        std::string k = wstring2string((std::wstring&)property_name);
+        std::transform(k.begin(), k.end(), k.begin(),
+            [](unsigned char c) { return std::tolower(c); });
+        if (k != key) {
+            continue;
+        }
+
+        switch (property_type) {
+        case TDH_INTYPE_INT8:
+            if (val == (int32_t)parser.parse<CHAR>(property_name))
+                return true;
+        case TDH_INTYPE_UINT8:
+            if (val == (uint32_t)parser.parse<UCHAR>(property_name))
+                return true;
+        case TDH_INTYPE_INT16:
+            if (val == (int32_t)parser.parse<SHORT>(property_name))
+                return true;
+        case TDH_INTYPE_UINT16:
+            if (val == (int32_t)parser.parse<USHORT>(property_name))
+                return true;
+        case TDH_INTYPE_INT32:
+            if (val == (int32_t)parser.parse<int32_t>(property_name))
+                return true;
+        case TDH_INTYPE_UINT32:
+            if (val == (uint32_t)parser.parse<uint32_t>(property_name))
+                return true;
+        case TDH_INTYPE_INT64:
+            if (val == (int64_t)parser.parse<int64_t>(property_name))
+                return true;
+        case TDH_INTYPE_UINT64:
+            if (val == (uint64_t)parser.parse<uint64_t>(property_name))
+                return true;
+        }
+    }
+    return false;
+}
+
+// checks if the trace marker is present
+void check_traces_init(Event& ev) {
+    if (!g_traces_started && check_ev_str(ev, MESSAGE, EDRi_TRACE_START_MARKER)) {
+        g_traces_started = true;
+        if (g_debug) {
+            std::cout << "[+] ETW: Start marker detected\n";
+        }
+    }
+}
+
+// check if a new proc matches the attack path
+void check_attack_init(Event& ev) {
+    if (!g_attack_started && check_ev_str(ev, FILEPATH, g_attack_exe_path)) {
+        g_attack_started = true;
+        attack_pid = ev.record.EventHeader.ProcessId;
+    }
+}
+
+// checks if a terminated proc matches the attack PID
+void check_attack_done(Event& ev) {
+    if (!g_attack_terminated) {
+        std::string provider = wchar2string(ev.schema.provider_name());
+        int event_id = ev.schema.event_id();
+        if (provider == KERNEL_PROCESS_PROVIDER && event_id == KERNEL_PROC_STOP_EVENT_ID && check_ev_int(ev, TARGET_PID, attack_pid)) {
+            g_attack_terminated = true;
+            if (g_debug) {
+                std::cout << "[+] ETW: Attack termination detected\n";
+            }
+        }
+    }
+}
+
+void check_hook_init(Event& ev) {
+    if (!g_hooker_started && g_newly_hooked_procs.size() > 0) {
+        // get payload size
+        const BYTE* data = (const BYTE*)ev.record.UserData;
+        ULONG size = ev.record.UserDataLength;
+
+        // PARSE MESSAGE
+        const char* msg = reinterpret_cast<const char*>(data); // read until first null byte
+        size_t msg_len = strnlen(msg, size);
+        if (msg_len == 0) {
+            msg = "(empty message)";
+            std::cout << "[*] ETW: Warning: Hook event with empty message\n";
+        }
+        else if (msg == NTDLL_HOOKER_TRACE_START_MARKER) {
+            detected_hook_start_markers++;
+            if (g_debug) {
+                std::cout << "[+] ETW: Detected hook initialization in " << ev.record.EventHeader.ProcessId << "\n";
+            }
+        }
+        g_hooker_started = detected_hook_start_markers == g_newly_hooked_procs.size();
+    }
+}
+
+// store record + schema, check for attack started + stopped
 void event_callback_std(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
-    try {
-        krabs::schema schema(record, trace_context.schema_locator);
-        json ev = parse_etw_event(Event{ record, schema });
-        if (ev.is_null()) {
-            return; // ignore empty events
-        }
-        post_parsing_checks(ev);
-        std_events.push_back(ev);
-    }
-    catch (const std::exception& e) {
-        std::cerr << "[!] ETW: event_callback_std exception: " << e.what() << "\n";
-    }
-    catch (...) {
-        std::cerr << "[!] ETW: event_callback_std unknown exception\n";
-    }
+    krabs::schema schema(record, trace_context.schema_locator);
+    Event ev = { record, schema };
+    check_traces_init(ev);
+    check_attack_init(ev);
+    std_events.emplace_back(std::move(ev));
 }
 
-// hand over schema for parsing
+// store record + schema
 void event_callback_misc(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
-    try {
-        krabs::schema schema(record, trace_context.schema_locator);
-        json ev = parse_etw_event(Event{ record, schema });
-        if (ev.is_null()) {
-            return; // ignore empty events
-        }
-        // post parsing checks not needed
-        misc_events.push_back(ev);
-    }
-    catch (const std::exception& e) {
-        std::cerr << "[!] ETW: event_callback_misc exception: " << e.what() << "\n";
-    }
-    catch (...) {
-        std::cerr << "[!] ETW: event_callback_misc unknown exception\n";
-    }
+    krabs::schema schema(record, trace_context.schema_locator);
+    misc_events.emplace_back(record, schema);
 }
 
-// hand over schema for parsing
+// store record + schema
 void event_callback_etw_ti(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
-    try {
-        krabs::schema schema(record, trace_context.schema_locator);
-        json ev = parse_etw_event(Event{ record, schema });
-        if (ev.is_null()) {
-            return; // ignore empty events
-        }
-        // post parsing checks not needed
-        etw_ti_events.push_back(ev);
-    }
-    catch (const std::exception& e) {
-        std::cerr << "[!] ETW: event_callback_etw_ti exception: " << e.what() << "\n";
-    }
-    catch (...) {
-        std::cerr << "[!] ETW: event_callback_etw_ti unknown exception\n";
-    }
+    krabs::schema schema(record, trace_context.schema_locator);
+    etw_ti_events.emplace_back(record, schema);
 }
 
-// hand over schema for parsing
+// store record + schema, check for hooker started
 void event_callback_hooks(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
-    try {
-        krabs::schema schema(record, trace_context.schema_locator);
-        json ev = parse_etw_event(Event{ record, schema });
-        if (ev.is_null()) {
-            return; // ignore empty events
-        }
-        post_parsing_checks_hooks(ev);
-        hook_events.push_back(ev);
-    }
-    catch (const std::exception& e) {
-        std::cerr << "[!] ETW: event_callback_hooks exception: " << e.what() << "\n";
-    }
-    catch (...) {
-        std::cerr << "[!] ETW: event_callback_hooks unknown exception\n";
-    }
+    krabs::schema schema(record, trace_context.schema_locator);
+    Event ev = { record, schema };
+    check_hook_init(ev);
+    std_events.emplace_back(std::move(ev));
 }
 
 // parses attack events
@@ -233,8 +301,50 @@ json parse_custom_etw_event(Event e) {
     }
 }
 
+std::string get_kernel_api_task_name(int event_id) {
+    if (event_id == 1)
+        return "PsSetLoadImageNotifyRoutineEx";
+    if (event_id == 2)
+        return "NtTerminateProcess";
+    if (event_id == 3)
+        return "NtCreateSymbolicLinkObject";
+    if (event_id == 4)
+        return "NtSetContextThread";
+    if (event_id == 5)
+        return "PsOpenProcess";
+    if (event_id == 6)
+        return "PsOpenThread";
+    if (event_id == 7)
+        return "IoRegisterLastChanceShutdownNotification";
+    if (event_id == 8)
+        return "IoRegisterShutdownNotification";
+    return "unmapped kernel api event id";
+}
+
+std::string get_val(const json& j, std::string key) {
+    if (!j.contains(key)) {
+        return ""; // key not present
+    }
+    if (j[key].is_string()) {
+        return j[key].get<std::string>();
+    }
+    else if (j[key].is_number()) {
+        return std::to_string(j[key].get<double>());
+    }
+    else if (j[key].is_boolean()) {
+        return j[key].get<bool>() ? "true" : "false";
+    }
+    else if (j[key].is_null()) {
+        return "null";
+    }
+    else {
+        // array or object
+        return j[key].dump();
+    }
+}
+
 // parses all other ETW events
-json parse_etw_event(Event e) {
+json parse_etw_event(Event& e) {
     try {
 		std::string provider_name = wchar2string(e.schema.provider_name());
         if (provider_name == EDRi_PROVIDER || provider_name == ATTACK_PROVIDER || provider_name == HOOK_PROVIDER) {
@@ -556,48 +666,6 @@ json parse_etw_event(Event e) {
     }
 }
 
-std::string get_kernel_api_task_name(int event_id) {
-    if (event_id == 1)
-        return "PsSetLoadImageNotifyRoutineEx";
-    if (event_id == 2)
-        return "NtTerminateProcess";
-    if (event_id == 3)
-        return "NtCreateSymbolicLinkObject";
-    if (event_id == 4)
-        return "NtSetContextThread";
-    if (event_id == 5)
-        return "PsOpenProcess";
-    if (event_id == 6)
-        return "PsOpenThread";
-    if (event_id == 7)
-        return "IoRegisterLastChanceShutdownNotification";
-    if (event_id == 8)
-        return "IoRegisterShutdownNotification";
-    return "unmapped kernel api event id";
-}
-
-std::string get_val(const json& j, std::string key) {
-    if (!j.contains(key)) {
-        return ""; // key not present
-    }
-    if (j[key].is_string()) {
-        return j[key].get<std::string>();
-    }
-    else if (j[key].is_number()) {
-        return std::to_string(j[key].get<double>());
-    }
-    else if (j[key].is_boolean()) {
-        return j[key].get<bool>() ? "true" : "false";
-    }
-    else if (j[key].is_null()) {
-        return "null";
-    }
-    else {
-        // array or object
-        return j[key].dump();
-    }
-}
-
 // check proc started via kernel etw
 int check_new_proc(json& j) {
     if (j[PROVIDER_NAME] == KERNEL_PROCESS_PROVIDER && j[EVENT_ID] == KERNEL_PROC_START_EVENT_ID && j.contains(TARGET_PID)) {
@@ -612,27 +680,6 @@ int check_proc_termination(json& j) {
         return j[TARGET_PID]; // kernel proc uses this key
     }
     return 0;
-}
-
-// check when the first EDRi event is registered --> trace running
-bool check_traces_started(json& j) {
-    if (j.contains(MESSAGE)) {
-        return j[MESSAGE] == EDRi_TRACE_START_MARKER;
-    }
-    return false;
-}
-
-// check if the hooker emits ETW messages --> hooks installed
-bool check_hooker_started(json& j) {
-    if (j[PROVIDER_NAME] == HOOK_PROVIDER && j.contains(MESSAGE)) {
-        if (j[MESSAGE] == NTDLL_HOOKER_TRACE_START_MARKER) {
-            detected_hook_start_markers++;
-            if (g_debug) {
-                std::cout << "[+] ETW: Detected hook initialization in " << j[PID] << "\n";
-            }
-        }
-    }
-    return detected_hook_start_markers == g_newly_hooked_procs.size();
 }
 
 // monitors events: mark procs as started or terminated (also attack and injected on their own), and check traces startes
@@ -662,7 +709,6 @@ void post_parsing_checks(json& j) {
             if (g_attack_proc.PID == 0) {
                 if (filepath_match(j[FILEPATH], g_attack_exe_path)) { // depends on the attack path, but this is fixed
                     g_attack_proc = ProcInfo{ pid, timestamp_ns, MAX_PROC_END, exe_name, true };
-                    std::cout << "[+] ETW: Got attack PID: " << pid << "\n";
                     to_track = true;
                 }
             }
@@ -683,29 +729,18 @@ void post_parsing_checks(json& j) {
     if (pid != 0) {
         UINT64 timestamp_ns = j[TIMESTAMP_NS];
         mark_termination(pid, timestamp_ns);
-        
-        // also check if the attack is done
-        if (!g_attack_terminated && pid == g_attack_proc.PID) {
-            if (g_debug) {
-                std::cout << "[+] ETW: Attack termination detected\n";
-            }
-            g_attack_terminated = true;
-        }
-        // no need to check for injected termination, only g_attack_terminated is relevant
-    }
-
-    // checks if the trace started
-    if (!g_traces_started && check_traces_started(j)) {
-        if (g_debug) {
-            std::cout << "[+] ETW: Start marker detected\n";
-        }
-        g_traces_started = true;
     }
 }
 
-void post_parsing_checks_hooks(json& j) {
-    // checks if the hooker is started (only if new procs were hooked, and the hooker is not started yet)
-    if (!g_hooker_started && g_newly_hooked_procs.size() > 0 && check_hooker_started(j)) {
-        g_hooker_started = true;
+// get all events as one flat vector
+void parse_all_etw_events(std::vector<json>& out) {
+    std::cout << "[*] Parser: Parsing all recorded events";
+    out.clear();
+    std::vector<std::vector<Event>*> all_etw_events = { &std_events, &misc_events, &etw_ti_events, &hook_events };
+    for (auto v_ptr : all_etw_events) {
+        for (auto& e : *v_ptr) {
+            out.push_back(parse_etw_event(e));  // parse each event
+        }
+        v_ptr->clear();  // empty original vectors
     }
 }
