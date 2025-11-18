@@ -49,8 +49,23 @@ static const std::wstring THREAT_INTEL_PROVIDER_W = std::wstring(THREAT_INTEL_PR
 
 // the struct that is passed from function to function (or as a json after parsing)
 struct Event {
-    const EVENT_RECORD& record;
-    const krabs::schema schema;
+    EVENT_RECORD record;
+    krabs::schema schema;
+
+    // constructor to store the values from callbacks
+    Event(const EVENT_RECORD& r, const krabs::schema& s)
+        : record(r), schema(s) {
+    }
+
+    // move constructor (noexcept --> prefer moving to copying)
+    Event(Event&&) noexcept = default;
+    // move assignment operator
+    Event& operator=(Event&&) noexcept = default;
+
+    // copy constructor (needed even if not preferred)
+    Event(const Event&) = default;
+    // copy assignment operator
+    Event& operator=(const Event&) = default;
 };
 
 // fixed attributes inside the header and schema --> string can be chosen "freely", but must be unique over all properties!
@@ -98,12 +113,6 @@ void event_callback_etw_ti(const EVENT_RECORD&, const krabs::trace_context&);
 void event_callback_hooks(const EVENT_RECORD&, const krabs::trace_context&);
 
 std::map<std::string, std::vector<UINT64>> get_time_diffs();
-void concat_all_etw_events(std::vector<json>&);
+void parse_all_etw_events(std::vector<json>&);
 
-// internal functions
-std::string get_kernel_api_task_name(int); // from https://www.elastic.co/security-labs/kernel-etw-best-etw
-json parse_custom_etw_event(Event);
-json parse_etw_event(Event);
 std::string get_val(const json&, std::string);
-void post_parsing_checks(json&);
-void post_parsing_checks_hooks(json& j);

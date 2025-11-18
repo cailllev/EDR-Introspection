@@ -44,6 +44,7 @@ extern std::shared_mutex g_procs_mutex;
 
 extern bool g_traces_started;
 extern bool g_hooker_started;
+extern bool g_attack_started;
 extern bool g_attack_terminated;
 
 extern bool g_debug;
