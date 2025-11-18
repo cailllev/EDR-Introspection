@@ -1,2 +1,0 @@
-Behaviour Monitoring Detection: pid= 3268 MsMpEng.exe, sig=Behavior:Win64/Exploit_LPE.Gigabyte.A
-Found signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess in "\Device\HarddiskVolume4\Users\Public\Downloads\attack-824.exe"
