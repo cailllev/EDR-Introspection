@@ -29,7 +29,7 @@ DWORD WINAPI t_start_default_traces(LPVOID param) {
         std::vector<unsigned short> process_event_ids = { 1, 2, 3, 4, 5, 6, 11 };
         krabs::event_filter process_filter(process_event_ids);
         process_provider.trace_flags(process_provider.trace_flags() | EVENT_ENABLE_PROPERTY_STACK_TRACE);
-        process_filter.add_on_event_callback(event_callback);
+        process_filter.add_on_event_callback(event_callback_std);
         process_provider.add_filter(process_filter);
         std::cout << "[+] ETW: Enabling " << KERNEL_PROCESS_PROVIDER << ": 1, 2, 3, 4, 5, 6, 11\n";
         trace_etw.enable(process_provider);
@@ -37,14 +37,14 @@ DWORD WINAPI t_start_default_traces(LPVOID param) {
         // my attack trace
         krabs::guid attack_guid(ATTACK_GUID);
         krabs::provider<> attack_provider(attack_guid);
-        attack_provider.add_on_event_callback(event_callback);
+        attack_provider.add_on_event_callback(event_callback_std);
         std::cout << "[+] ETW: Enabling Injector-Attack: (all)\n";
         trace_etw.enable(attack_provider);
 
         // my EDRi trace, start last (start marker is consumed in this trace)
         krabs::guid parser_guid(EDRi_PROVIDER_GUID_W);
         krabs::provider<> parser_provider(parser_guid);
-        parser_provider.add_on_event_callback(event_callback);
+        parser_provider.add_on_event_callback(event_callback_std);
         std::cout << "[+] ETW: Enabling EDRi: (all)\n";
         trace_etw.enable(parser_provider);
 
@@ -80,7 +80,7 @@ DWORD WINAPI t_start_etw_misc_traces(LPVOID param) {
         std::vector<unsigned short> auditapi_event_ids = { 3, 4, 5, 6 };
         krabs::event_filter auditapi_filter(auditapi_event_ids);
         auditapi_provider.trace_flags(auditapi_provider.trace_flags() | EVENT_ENABLE_PROPERTY_STACK_TRACE);
-        auditapi_filter.add_on_event_callback(event_callback);
+        auditapi_filter.add_on_event_callback(event_callback_misc);
         auditapi_provider.add_filter(auditapi_filter);
         std::cout << "[+] ETW: Enabling " << KERNEL_API_PROVIDER << ": 3, 4, 5, 6\n";
         trace_etw_misc.enable(auditapi_provider);
@@ -106,7 +106,7 @@ DWORD WINAPI t_start_etw_misc_traces(LPVOID param) {
         std::vector<unsigned short> kernelfile_event_ids = { 10, 30 };
         krabs::event_filter kernelfile_filter(kernelfile_event_ids);
         kernelfile_provider.trace_flags(kernelfile_provider.trace_flags() | EVENT_ENABLE_PROPERTY_STACK_TRACE);
-        kernelfile_filter.add_on_event_callback(event_callback);
+        kernelfile_filter.add_on_event_callback(event_callback_misc);
         kernelfile_provider.add_filter(kernelfile_filter);
         std::cout << "[+] ETW: Enabling " << KERNEL_FILE_PROVIDER << ": 10, 30\n";
         trace_etw_misc.enable(kernelfile_provider);
@@ -125,14 +125,14 @@ DWORD WINAPI t_start_etw_misc_traces(LPVOID param) {
         std::vector<unsigned short> kernelnetwork_event_ids = { 12, 15, 28, 31, 42, 43, 58, 59 };
         krabs::event_filter kernelnetwork_filter(kernelnetwork_event_ids);
         kernelnetwork_provider.trace_flags(kernelnetwork_provider.trace_flags() | EVENT_ENABLE_PROPERTY_STACK_TRACE);
-        kernelnetwork_filter.add_on_event_callback(event_callback);
+        kernelnetwork_filter.add_on_event_callback(event_callback_misc);
         kernelnetwork_provider.add_filter(kernelnetwork_filter);
         std::cout << "[+] ETW: Enabling " << KERNEL_NETWORK_PROVIDER << ": 12, 15, 28, 31, 42, 43, 58, 59\n";
         trace_etw_misc.enable(kernelnetwork_provider);
 
         // Antimalware trace
         krabs::provider<> antimalwareengine_provider(ANTIMALWARE_PROVIDER_W);
-        antimalwareengine_provider.add_on_event_callback(event_callback);
+        antimalwareengine_provider.add_on_event_callback(event_callback_misc);
         std::cout << "[+] ETW: Enabling " << ANTIMALWARE_PROVIDER << " (all)\n";
         trace_etw_misc.enable(antimalwareengine_provider);
 
@@ -154,7 +154,7 @@ DWORD WINAPI t_start_etw_misc_traces(LPVOID param) {
 DWORD WINAPI t_start_etw_ti_trace(LPVOID param) {
     try {
         krabs::provider<> ti_provider(THREAT_INTEL_PROVIDER_W); // "Microsoft-Windows-Threat-Intelligence"
-        ti_provider.add_on_event_callback(event_callback);
+        ti_provider.add_on_event_callback(event_callback_etw_ti);
         std::cout << "[+] ETW: Enabling ETW-TI: (all)\n";
         trace_etw_ti.enable(ti_provider);
 
@@ -177,7 +177,7 @@ DWORD WINAPI t_start_etw_hook_trace(LPVOID param) {
     try {
         krabs::guid hooks_guid(HOOKS_GUID);
         krabs::provider<> hooks_provider(hooks_guid);
-        hooks_provider.add_on_event_callback(event_callback);
+        hooks_provider.add_on_event_callback(event_callback_hooks);
         std::cout << "[+] ETW: Enabling Hook-Provider: (all)\n";
         trace_etw_hook.enable(hooks_provider);
 

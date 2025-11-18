@@ -13,13 +13,13 @@
 
 
 // ------------------- CSV IMPLEMENTATION ------------------- //
-static const std::string COLOR_HEADER = "Color,";
-static const std::string COLOR_GREEN = "green,";
-static const std::string COLOR_RED = "red,";
-static const std::string COLOR_BLUE = "blue,";
-static const std::string COLOR_PURPLE = "purple,";
-static const std::string COLOR_YELLOW = "yellow,";
-static const std::string COLOR_GRAY = "gray,";
+static const std::string COLOR_HEADER = ",Color";
+static const std::string COLOR_GREEN = ",green";
+static const std::string COLOR_RED = ",red";
+static const std::string COLOR_BLUE = ",blue";
+static const std::string COLOR_PURPLE = ",purple";
+static const std::string COLOR_YELLOW = ",yellow";
+static const std::string COLOR_GRAY = ",gray";
 
 static std::unordered_map<std::string, std::string> g_deviceMap;
 
@@ -83,15 +83,16 @@ std::string translate_if_path(const std::string& s) {
     return s2;
 }
 
-std::string normalized_value(json ev, std::string key) {
-    if (ev[key].is_string()) {
-        std::string s = ev[key].get<std::string>();
-        std::string st = translate_if_path(s);
-        std::replace(st.begin(), st.end(), '"', '\'');
-        return "\"" + st + "\"";
+std::string normalized_value(const json::iterator& it) {
+    const json& val = it.value();
+    if (val.is_string()) {
+        std::string s = val.get<std::string>();
+        s = translate_if_path(s);
+        std::replace(s.begin(), s.end(), '"', '\'');
+        return "\"" + s + "\"";
     }
     else {
-        return ev[key].dump();
+        return val.dump();
     }
 }
 
@@ -121,7 +122,7 @@ std::string add_color_info(const json& ev) {
 }
 
 // output all events as a sparse CSV timeline with merged PPID and FilePath
-std::string create_timeline_csv(const std::vector<json>& events, std::vector<std::string> header_start, bool colored) {
+std::string create_timeline_csv(std::vector<json>& events, std::vector<std::string> header_start, bool colored) {
     std::ostringstream csv_output;
 
     std::vector<std::string> all_keys;
@@ -159,39 +160,43 @@ std::string create_timeline_csv(const std::vector<json>& events, std::vector<std
     }
 
     // add header to csv_output
-    for (const auto& key : all_keys) {
-        csv_output << key << ",";
+    for (size_t i = 0; i < all_keys.size(); ++i) {
+        csv_output << all_keys[i];
+        if (i < all_keys.size() - 1) csv_output << ","; // add comma, except for last
     }
     if (colored) {
         csv_output << COLOR_HEADER; // add color info column
     }
-    // replace last comma with newline
-    csv_output.seekp(-1, std::ios_base::cur);
-    csv_output << "\n";
 
+    int c = 0;
+    if (g_debug) {
+        std::cout << "[+] Output: Transforming " << events.size() << " events to CSV: ";
+    }
     // print each event as a row    
-    for (const auto& ev : events) {
-        if (ev.is_null()) continue; // skip null events
-
+    for (auto& ev : events) {
         // traverse keys IN ORDER OF CSV HEADER
         // i.e. given: key from csv, check: if event has it, add value, else skip (add "")
         for (const auto& key : all_keys) {
-            // check if this event has a value for this key
-            if (ev.contains(key)) {
-                csv_output << normalized_value(ev, key);
+            auto it = ev.find(key);
+            if (it != ev.end()) {
+                csv_output << normalized_value(it);
             }
-            // else print "" to skip it
             else {
-                csv_output << "";
+                csv_output << ""; // add empty if key not in event
             }
-            csv_output << ",";
+            if (&key != &all_keys.back()) csv_output << ",";
         }
         if (colored) {
             csv_output << add_color_info(ev);
         }
-        // replace last comma with newline
-        csv_output.seekp(-1, std::ios_base::cur);
+        if (g_debug && (c % 100 == 0)) {
+            std::cout << c << ", ";
+        }
         csv_output << "\n";
+        c++;
+    }
+    if (g_debug) {
+        std::cout << " done\n";
     }
     return csv_output.str();
 }
@@ -199,21 +204,28 @@ std::string create_timeline_csv(const std::vector<json>& events, std::vector<std
 void write_events_to_file(std::map<Classifier, std::vector<json>>& etw_events, const std::string& output, bool colored) {
     for (auto& c : etw_events) {
         std::vector<json>& events = etw_events[c.first];
+        std::string classifier_name = classifier_names[c.first];
         try {
+            // construct filename
+            std::string output_base = output.substr(0, output.find_last_of('.')); // without .csv
+            std::string output_final = output_base + "-" + classifier_name + ".csv"; // add classifier to filename
+            
+            if (g_debug) {
+                std::cout << "[+] Output: Sorting " << events.size() << " events in " << classifier_name << "\n";
+            }
+
             // sort events by timestamp
             std::sort(events.begin(), events.end(), [](const json& a, const json& b) {
-                const std::string& ts1 = a[TIMESTAMP_SYS];
-                const std::string& ts2 = b[TIMESTAMP_SYS];
-                return ts1 < ts2; // lexicographical compare works for ISO-like timestamps
+                return a[TIMESTAMP_NS] < b[TIMESTAMP_NS]; // all events must have a TIMESTAMP_NS field and be int, as by filter_all_events
                 });
 
-            // write to csv
+            if (g_debug) {
+                std::cout << "[+] Output: Creating csv from events and writing to file " << output_final << "\n";
+            }
+            // create and save csv
             std::string csv_output = create_timeline_csv(events, csv_header_start, colored);
-            std::string output_base = output.substr(0, output.find_last_of('.')); // without .csv
-            std::string output_final = output_base + "-" + classifier_names[c.first] + ".csv"; // add classifier to filename
-
             std::ofstream out(output_final);
-            std::string backup_path = "C:\\Users\\Public\\Downloads\\" + classifier_names[c.first] + "-events.csv";
+            std::string backup_path = "C:\\Users\\Public\\Downloads\\" + classifier_name + "-events.csv";
 
 			if (!out.is_open()) { // check if normal path failed
                 std::cerr << "[!] Output: Failed to open output file: " << output_final << ", trying backup: " << backup_path << "\n";
@@ -283,15 +295,15 @@ void print_etw_counts(std::map<Classifier, std::vector<json>>& etw_events) {
 
 // print diffs between timestamp_sys and timestamp_etw per provider
 void print_time_differences() {
-    std::map<std::string, std::vector<float>> time_diffs_ns = get_time_diffs();
+    std::map<std::string, std::vector<UINT64>> time_diffs_ns = get_time_diffs();
     std::cout << std::fixed << std::setprecision(1); // set precision to one decimal place
     for (auto& c : time_diffs_ns) {
-        std::vector<float>& diffs = c.second;
+        std::vector<UINT64>& diffs = c.second;
         if (diffs.size() == 0) {
             continue;
         }
-        float avg = (std::accumulate(diffs.begin(), diffs.end(), 0.0f) / diffs.size()) / 1000.0f; // in microseconds
-        float max = *std::max_element(diffs.begin(), diffs.end()) / 1000.0f; // in microseconds
+        double avg = (double)std::accumulate(diffs.begin(), diffs.end(), 0LL) / diffs.size() / 1000.0; // in mircoseconds
+        double max = (double)*std::max_element(diffs.begin(), diffs.end()) / 1000.0; // in mircoseconds
         std::cout << "[+] Output: Time differences in microseconds for " << c.first << ": avg=" << avg << ", max=" << max << "\n";
     }
     std::cout.unsetf(std::ios::fixed); // revert precision
