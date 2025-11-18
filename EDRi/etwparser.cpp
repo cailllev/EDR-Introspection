@@ -734,9 +734,16 @@ void post_parsing_checks(json& j) {
 
 // get all events as one flat vector
 void parse_all_etw_events(std::vector<json>& out) {
-    std::cout << "[*] Parser: Parsing all recorded events";
-    out.clear();
     std::vector<std::vector<Event>*> all_etw_events = { &std_events, &misc_events, &etw_ti_events, &hook_events };
+    int events_count = 0;
+    for (auto v_ptr : all_etw_events) {
+        events_count += v_ptr->size();
+    }
+
+    std::cout << "[*] Parser: Parsing all " << events_count << " recorded events\n";
+    out.clear();
+    out.reserve(events_count);
+
     for (auto v_ptr : all_etw_events) {
         for (auto& e : *v_ptr) {
             out.push_back(parse_etw_event(e));  // parse each event
