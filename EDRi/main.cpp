@@ -86,8 +86,9 @@ void process_results(std::string output_events, std::string output_signatures, b
     if (g_super_debug) {
         dump_proc_map();
     }
-	std::vector<json> all_etw_events = get_all_etw_events();
-    std::map<Classifier, std::vector<json>> etw_events = filter_all_events(all_etw_events);
+    std::vector<json>all_etw_events;
+    concat_all_etw_events(all_etw_events);
+    std::map<Classifier, std::vector<json>> etw_events = filter_all_events(all_etw_events); // do not use all_etw_events after here, are moved
     write_events_to_file(etw_events, output_events, colored);
 
     print_etw_counts(etw_events);
@@ -125,12 +126,12 @@ bool is_admin() {
 
 int main(int argc, char* argv[]) {
     cxxopts::Options options("EDRi", "EDR Introspection Framework");
-    
+
     // PARSER OPTIONS
     options.add_options()
         ("h,help", "Print usage")
         ("e,encrypt", "The path of the attack executable to encrypt", cxxopts::value<std::string>())
-		("y,update-defender2yara", "Update the defender2yara signatures")
+        ("y,update-defender2yara", "Update the defender2yara signatures")
         ("p,edr-profile", "The EDR to track, supporting: " + get_available_edrs(), cxxopts::value<std::string>())
         ("a,attack-exe", "The attack to execute, supporting: " + get_available_attacks(), cxxopts::value<std::string>())
         ("r,run-as-child", "If the attack should run (automatically) as a child of the EDRi.exe or if it should be executed manually")
@@ -141,8 +142,8 @@ int main(int argc, char* argv[]) {
         ("t,track-all", "Trace misc ETW, ETW-TI and hooks ntdll.dll")
         ("k,no-disable-kernel-callbacks", "Do not disable kernel callbacks (only applicable if hook-ntdll)")
         ("d,debug", "Print debug info")
-        ("v,verbose-debug", "Print very verbose debug info");
-        ("c,color", "Add color formatting information");
+        ("v,verbose-debug", "Print very verbose debug info")
+        ("c,colored", "Add color formatting information");
 
     cxxopts::ParseResult result;
     try {
@@ -152,7 +153,7 @@ int main(int argc, char* argv[]) {
         std::cerr << "Error parsing options: " << e.what() << "\n";
         std::cout << options.help() << "\n";
         return 1;
-	}
+    }
     std::cout << "[*] EDRi: EDR Introspection Framework\n";
 
     // PARSING
@@ -161,7 +162,7 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-	// update defender2yara
+    // update defender2yara
     if (result.count("update-defender2yara") > 0) {
         update_defender2yara_sigs();
         std::cout << "[*] EDRi: Updated defender2yara signatures\n";
@@ -178,7 +179,7 @@ int main(int argc, char* argv[]) {
         }
         else {
             std::cerr << "[!] EDRi: Failed to encrypt " << in_path << "\n";
-			return 1;
+            return 1;
         }
     }
 
@@ -187,14 +188,14 @@ int main(int argc, char* argv[]) {
         std::cerr << "[!] EDRi: Please run as administrator\n";
         return 1;
     }
-	build_device_map(); 
+    build_device_map();
 
     // check edr profile, attack exe and output
     if (result.count("edr-profile") == 0) {
         std::cerr << "[!] EDRi: No EDR specified, use -p and one of: " << get_available_edrs() << "\n";
         return 1;
-	}
-	std::string edr_name = result["edr-profile"].as<std::string>();
+    }
+    std::string edr_name = result["edr-profile"].as<std::string>();
     if (edr_profiles.find(edr_name) == edr_profiles.end()) {
         std::cerr << "[!] EDRi: Unsupported EDR specified, use one of: " << get_available_edrs() << "\n";
         return 1;
@@ -203,12 +204,12 @@ int main(int argc, char* argv[]) {
     if (result.count("attack-exe") == 0) {
         std::cerr << "[!] EDRi: No attack specified, use -a and one of: " << get_available_attacks() << "\n";
         return 1;
-	}
-	std::string attack_name = result["attack-exe"].as<std::string>();
+    }
+    std::string attack_name = result["attack-exe"].as<std::string>();
     if (!is_attack_available(attack_name)) {
         std::cerr << "[!] EDRi: Unsupported attack specified, use one of: " << get_available_attacks() << "\n";
         return 1;
-	}
+    }
 
 
     // check tracking options
@@ -238,7 +239,7 @@ int main(int argc, char* argv[]) {
     }
 
     // check output path
-	std::string attack_exe_enc_path = get_attack_enc_path(attack_name);
+    std::string attack_exe_enc_path = get_attack_enc_path(attack_name);
     std::string output_name;
     if (result.count("output-path-custom") == 0) {
         output_name = edr_name + "-vs-" + attack_name;
@@ -251,13 +252,13 @@ int main(int argc, char* argv[]) {
     std::cout << "[*] EDRi: Writing to " << output_events;
     if (dump_sig) {
         std::cout << " and " << output_signatures;
-	}
-	std::cout << "\n";
+    }
+    std::cout << "\n";
 
     bool run_as_child = false;
     if (result.count("run-as-child") > 0) {
         run_as_child = true;
-	}
+    }
 
     // debug
     if (result.count("debug") > 0) {
@@ -298,7 +299,7 @@ int main(int argc, char* argv[]) {
     if (!start_etw_default_traces(threads)) { // start last (start marker is detected here)
         std::cerr << "[!] EDRi: Failed to start default ETW traces(s)\n";
         return 1;
-	}
+    }
 
     // WAIT UNTIL TRACES ARE READY
     std::cout << "[*] EDRi: Waiting until start marker is detected...\n";
@@ -322,12 +323,12 @@ int main(int argc, char* argv[]) {
     snapshot_procs();
     std::cout << "[*] EDRi: Get running procs\n";
     UINT64 proc_snapshot_timestamp = get_ns_time();
-	std::string ut = unnecessary_tools_running();
+    std::string ut = unnecessary_tools_running();
     if (!ut.empty()) {
         std::cout << "[!] EDRi: Unnecessary tools running: " << ut << "\n";
         std::cout << "[!] EDRi: It is recommended to close them and start again, continuing in 3 sec...\n";
-		Sleep(3000);
-	}
+        Sleep(3000);
+    }
 
     // HOOK NTDLL
     // hooking emits etw events, so hooking must be done after the traces are started
@@ -413,8 +414,8 @@ int main(int argc, char* argv[]) {
     }
 
     // ATTACK
-	// decrypt the attack exe
-	emit_etw_event("Before decrypting the attack exe from " + attack_exe_enc_path, bef, true);
+    // decrypt the attack exe
+    emit_etw_event("Before decrypting the attack exe from " + attack_exe_enc_path, bef, true);
     if (xor_file(attack_exe_enc_path, g_attack_exe_path)) {
         std::cout << "[*] EDRi: Decrypted the attack exe: " << g_attack_exe_path << "\n";
     }
@@ -459,13 +460,13 @@ int main(int argc, char* argv[]) {
             return 0;
         }
     }
-	emit_etw_event("After starting the attack exe", aft, true);
+    emit_etw_event("After starting the attack exe", aft, true);
 
-	// wait until the attack.exe terminates again
+    // wait until the attack.exe terminates again
     std::cout << "[+] EDRi: Waiting for the attack exe to finish...\n";
     while (!g_attack_terminated) {
         Sleep(100);
-	}
+    }
     std::cout << "[+] EDRi: Waiting for any final events...\n";
     Sleep(wait_after_termination_ms);
 
@@ -486,8 +487,8 @@ int main(int argc, char* argv[]) {
         try {
             CloseHandle(h);
         }
-		catch (...) {
-			std::cerr << "[!] EDRi: Closing thread handle failed, ignoring...\n";
+        catch (...) {
+            std::cerr << "[!] EDRi: Closing thread handle failed, ignoring...\n";
         }
     }
     threads.clear();
@@ -495,5 +496,5 @@ int main(int argc, char* argv[]) {
     remove_file(g_attack_exe_path); // remove again
 
     process_results(output_events, output_signatures, dump_sig, colored);
-	return 0;
+    return 0;
 }

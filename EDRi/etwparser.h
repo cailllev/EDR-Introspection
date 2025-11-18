@@ -92,10 +92,13 @@ struct MergeCategory {
 extern MergeCategory ppid_keys, tpid_keys, ttid_keys, filepath_keys;
 
 // processing the events
-void event_callback(const EVENT_RECORD&, const krabs::trace_context&);
+void event_callback_std(const EVENT_RECORD&, const krabs::trace_context&);
+void event_callback_misc(const EVENT_RECORD&, const krabs::trace_context&);
+void event_callback_etw_ti(const EVENT_RECORD&, const krabs::trace_context&);
+void event_callback_hooks(const EVENT_RECORD&, const krabs::trace_context&);
 
-std::map<std::string, std::vector<float>> get_time_diffs();
-std::vector<json> get_all_etw_events();
+std::map<std::string, std::vector<UINT64>> get_time_diffs();
+void concat_all_etw_events(std::vector<json>&);
 
 // internal functions
 std::string get_kernel_api_task_name(int); // from https://www.elastic.co/security-labs/kernel-etw-best-etw
@@ -103,3 +106,4 @@ json parse_custom_etw_event(Event);
 json parse_etw_event(Event);
 std::string get_val(const json&, std::string);
 void post_parsing_checks(json&);
+void post_parsing_checks_hooks(json& j);

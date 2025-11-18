@@ -48,7 +48,7 @@ static const std::vector<std::pair<std::string, std::string>> kapi_irrelevant_ex
 
 
 // -------------------- FILTERING FUNCTIONS -------------------- //
-std::map<Classifier, std::vector<json>> filter_all_events(std::vector<json>);
+std::map<Classifier, std::vector<json>> filter_all_events(std::vector<json>&);
 void add_exe_information(json&, Classifier c);
 
 // pid fields that should have the exe name added at print time

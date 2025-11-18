@@ -1,6 +1,7 @@
 #include <krabs.hpp>
 #include "helpers/json.hpp"
 #include <iostream>
+#include <cstdlib>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #pragma comment(lib, "Ws2_32.lib")
@@ -12,9 +13,13 @@
 
 
 // all events
-std::vector<json> all_etw_events = {};
+std::vector<json> std_events = {};
+std::vector<json> misc_events = {};
+std::vector<json> etw_ti_events = {};
+std::vector<json> hook_events = {};
+std::vector<std::vector<json>*> all_etw_events = { &std_events, &misc_events, &etw_ti_events, &hook_events };
 
-std::map<std::string, std::vector<float>> time_diffs_ns = { // differences in nanoseconds between ETW time and system time
+std::map<std::string, std::vector<UINT64>> time_diffs_ns = { // differences in nanoseconds between ETW time and system time
     { EDRi_PROVIDER, {} },
     { ATTACK_PROVIDER, {} },
     { HOOK_PROVIDER, {} }
@@ -53,18 +58,24 @@ MergeCategory filepath_keys = {
 };
 std::vector<MergeCategory> key_categories_to_merge = { ppid_keys, tpid_keys, ttid_keys, filepath_keys };
 
-// get time difference statistics
-std::vector<json> get_all_etw_events() {
-    return all_etw_events;
+// get all events as one flat vector
+void concat_all_etw_events(std::vector<json>& out) {
+    out.clear();
+    for (auto v_ptr : all_etw_events) {
+        out.insert(out.end(),
+                   std::make_move_iterator(v_ptr->begin()),
+                   std::make_move_iterator(v_ptr->end()));
+        v_ptr->clear(); // original vectors are now empty
+    }
 }
 
 // get time difference statistics
-std::map<std::string, std::vector<float>> get_time_diffs() {
+std::map<std::string, std::vector<UINT64>> get_time_diffs() {
     return time_diffs_ns;
 }
 
-// pre-filter EDR events and hand over schema for parsing
-void event_callback(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
+// hand over schema for parsing
+void event_callback_std(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
     try {
         krabs::schema schema(record, trace_context.schema_locator);
         json ev = parse_etw_event(Event{ record, schema });
@@ -72,13 +83,70 @@ void event_callback(const EVENT_RECORD& record, const krabs::trace_context& trac
             return; // ignore empty events
         }
         post_parsing_checks(ev);
-		all_etw_events.push_back(ev);
+        std_events.push_back(ev);
     }
     catch (const std::exception& e) {
-        std::cerr << "[!] ETW: event_callback exception: " << e.what() << "\n";
+        std::cerr << "[!] ETW: event_callback_std exception: " << e.what() << "\n";
     }
     catch (...) {
-        std::cerr << "[!] ETW: event_callback unknown exception\n";
+        std::cerr << "[!] ETW: event_callback_std unknown exception\n";
+    }
+}
+
+// hand over schema for parsing
+void event_callback_misc(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
+    try {
+        krabs::schema schema(record, trace_context.schema_locator);
+        json ev = parse_etw_event(Event{ record, schema });
+        if (ev.is_null()) {
+            return; // ignore empty events
+        }
+        // post parsing checks not needed
+        misc_events.push_back(ev);
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[!] ETW: event_callback_misc exception: " << e.what() << "\n";
+    }
+    catch (...) {
+        std::cerr << "[!] ETW: event_callback_misc unknown exception\n";
+    }
+}
+
+// hand over schema for parsing
+void event_callback_etw_ti(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
+    try {
+        krabs::schema schema(record, trace_context.schema_locator);
+        json ev = parse_etw_event(Event{ record, schema });
+        if (ev.is_null()) {
+            return; // ignore empty events
+        }
+        // post parsing checks not needed
+        etw_ti_events.push_back(ev);
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[!] ETW: event_callback_etw_ti exception: " << e.what() << "\n";
+    }
+    catch (...) {
+        std::cerr << "[!] ETW: event_callback_etw_ti unknown exception\n";
+    }
+}
+
+// hand over schema for parsing
+void event_callback_hooks(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
+    try {
+        krabs::schema schema(record, trace_context.schema_locator);
+        json ev = parse_etw_event(Event{ record, schema });
+        if (ev.is_null()) {
+            return; // ignore empty events
+        }
+        post_parsing_checks_hooks(ev);
+        hook_events.push_back(ev);
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[!] ETW: event_callback_hooks exception: " << e.what() << "\n";
+    }
+    catch (...) {
+        std::cerr << "[!] ETW: event_callback_hooks unknown exception\n";
     }
 }
 
@@ -90,7 +158,7 @@ json parse_custom_etw_event(Event e) {
 
         std::string provider = wchar2string(e.schema.provider_name());
 
-		__int64 timestamp_filetime = static_cast<__int64>(e.record.EventHeader.TimeStamp.QuadPart);
+		UINT64 timestamp_filetime = static_cast<UINT64>(e.record.EventHeader.TimeStamp.QuadPart);
         j[TIMESTAMP_NS] = filetime_to_unix_epoch_ns(timestamp_filetime);
         j[TIMESTAMP_ETW] = filetime_to_iso8601(timestamp_filetime);
         j[TYPE] = "myETW";
@@ -135,11 +203,12 @@ json parse_custom_etw_event(Event e) {
         if (ptr_field + sizeof(UINT64) <= data + size) {
             memcpy(&system_ns_since_unix_epoch, ptr_field, sizeof(UINT64));
             UINT64 etw_ns_since_unix_epoch = (timestamp_filetime - WINDOWS_TICKS_TO_UNIX_EPOCH) * NS_PER_WINDOWS_TICK;
-            time_diffs_ns[j[PROVIDER_NAME]].push_back((float)(etw_ns_since_unix_epoch - system_ns_since_unix_epoch));
+            INT64 diff = static_cast<INT64>(etw_ns_since_unix_epoch) - static_cast<INT64>(system_ns_since_unix_epoch); // etw time should be greater, but do not trust time...
+            time_diffs_ns[j[PROVIDER_NAME]].push_back(std::abs(diff));
             ptr_field += sizeof(UINT64);
         }
         else if (g_debug) {
-            std::cerr << "[!] ETW: Custom event with no " << TIMESTAMP_SYS << " field: " << j.dump() << "\n";
+            std::cerr << "[!] ETW: Custom event with no " << TIMESTAMP_NS << " field: " << j.dump() << "\n";
 		}
         std::string iso_time = unix_epoch_ns_to_iso8601(system_ns_since_unix_epoch);
         j[TIMESTAMP_SYS] = iso_time;
@@ -632,7 +701,9 @@ void post_parsing_checks(json& j) {
         }
         g_traces_started = true;
     }
+}
 
+void post_parsing_checks_hooks(json& j) {
     // checks if the hooker is started (only if new procs were hooked, and the hooker is not started yet)
     if (!g_hooker_started && g_newly_hooked_procs.size() > 0 && check_hooker_started(j)) {
         g_hooker_started = true;

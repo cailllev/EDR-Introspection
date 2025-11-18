@@ -44,12 +44,11 @@ void add_exe_information(json& j, Classifier c) {
         else if (g_debug) {
             std::cout << "[!] Filter: Empty " << TIMESTAMP_NS << " field in event, cannot add exe information: " << j.dump() << "\n";
         }
-
     }
 }
 
 // filter all events
-std::map<Classifier, std::vector<json>> filter_all_events(std::vector<json> events) {
+std::map<Classifier, std::vector<json>> filter_all_events(std::vector<json>& events) {
 	std::cout << "[+] Filter: Filtering " << events.size() << " events into All, Relevant and Minimal\n";
     std::map<Classifier, std::vector<json>> etw_events = {
         { All, {} },
@@ -59,8 +58,9 @@ std::map<Classifier, std::vector<json>> filter_all_events(std::vector<json> even
 
     tracked_procs = get_tracked_procs();
     int skipped = 0;
+
     for (auto& ev : events) {
-        if (ev.is_null() || !ev.contains(TIMESTAMP_SYS) || !ev[TIMESTAMP_SYS].is_string()) {
+        if (ev.is_null() || !ev.contains(TIMESTAMP_NS) || !ev[TIMESTAMP_NS].is_number_integer()) {
             skipped++;
 			continue;
         }
@@ -69,25 +69,30 @@ std::map<Classifier, std::vector<json>> filter_all_events(std::vector<json> even
             add_exe_information(ev, c); // now add exe info to all pid fields
             c = filter_post_exe(ev, c);
 
-            switch (c) {
-            case Minimal:
-                etw_events[Minimal].push_back(ev);
-                // do not break, also add to relevant and all
-            case Relevant:
-                etw_events[Relevant].push_back(ev);
-                // do not break, also add to all
-            case All:
-                etw_events[All].push_back(ev);
-                break;
+            // Store all events in All
+            etw_events[All].push_back(std::move(ev));
+
+            // Store Relevant | Minimal in Relevant
+            if (c == Relevant || c == Minimal) {
+                etw_events[Relevant].push_back(etw_events[All].back());
+            }
+
+            // Only store Minimal in Minimal
+            if (c == Minimal) {
+                etw_events[Minimal].push_back(etw_events[All].back());
             }
         }
+        catch (const std::exception& e) {
+            std::cout << "[!] Filter filter_all_events exception: " << e.what() << " on event: " << ev.dump() << "\n";
+        }
         catch (...) {
-            std::cout << "[!] Filter: filter_all_events exception on event: " << ev.dump() << "\n";
+            std::cout << "[!] Filter: filter_all_events unknown exception on event: " << ev.dump() << "\n";
         }
 	}
     if (g_debug) {
-        std::cout << "[-] Filter: Skipped " << skipped << " events due to missing " << TIMESTAMP_SYS << " field\n";
+        std::cout << "[-] Filter: Skipped " << skipped << " events due to missing " << TIMESTAMP_NS << " field\n";
     }
+    events.clear(); // save the memory
 
     return etw_events;
 }
