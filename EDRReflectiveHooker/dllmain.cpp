@@ -1700,7 +1700,7 @@ DWORD WINAPI t_InitHooks(LPVOID param) {
 
     PID = GetCurrentProcessId();
 	if (is_already_hooked()) { // must be BEFORE H_PROC is re-assigned in case of multiple injections
-        std::cout << "[+] Hook-DLL: Process " << PID << " already hooked, ensure the allocated memory is freed again\n";
+        std::cout << "[+] Hook-DLL: Process " << PID << " already hooked, 2MB memory wasted (when reflectively injected, I'm not cleaning that up)\n";
         return 0;
     }
 
