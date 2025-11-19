@@ -29,11 +29,10 @@ void add_exe_information(json& j, Classifier c) {
                 std::string exe_name = get_proc_name(value, timestamp_ns, RESERVE_NS);
 
                 if (exe_name == PROC_NOT_FOUND && c == Minimal && g_debug) { // warn when important event cannot add it's PID name
-                    try {
-                        std::cout << "[!] Utils: No process found with " << key << "=" << value << " at " << unix_epoch_ns_to_iso8601(timestamp_ns) << " : ";
+                    if (j.contains(PROVIDER_NAME) && j.contains(EVENT_ID) && j.contains(TASK)) {
+                        std::cout << "[~] Utils: No process found with " << key << "=" << value << " at " << unix_epoch_ns_to_iso8601(timestamp_ns) << " : ";
                         std::cout << "provider=" << j[PROVIDER_NAME] << ",eventId=" << j[EVENT_ID] << ",task=" << j[TASK] << "\n";
                     }
-                    catch (...) {}
                 }
 
                 std::ostringstream oss;
@@ -45,100 +44,6 @@ void add_exe_information(json& j, Classifier c) {
             std::cout << "[!] Filter: Empty " << TIMESTAMP_NS << " field in event, cannot add exe information: " << j.dump() << "\n";
         }
     }
-}
-
-// filter all events
-std::map<Classifier, std::vector<json>> filter_all_events(std::vector<json>& events) {
-	std::cout << "[+] Filter: Filtering " << events.size() << " events into All, Relevant and Minimal\n";
-    std::map<Classifier, std::vector<json>> etw_events = {
-        { All, {} },
-        { Relevant, {} },
-        { Minimal, {} }
-    };
-
-    tracked_procs = get_tracked_procs();
-    int skipped = 0;
-
-    for (auto& ev : events) {
-        if (ev.is_null() || !ev.contains(TIMESTAMP_NS) || !ev[TIMESTAMP_NS].is_number_integer()) {
-            skipped++;
-			continue;
-        }
-        try {
-            Classifier c = filter(ev);
-            add_exe_information(ev, c); // now add exe info to all pid fields
-            c = filter_post_exe(ev, c);
-
-            // Store all events in All
-            etw_events[All].push_back(std::move(ev));
-
-            // Store Relevant | Minimal in Relevant
-            if (c == Relevant || c == Minimal) {
-                etw_events[Relevant].push_back(etw_events[All].back());
-            }
-
-            // Only store Minimal in Minimal
-            if (c == Minimal) {
-                etw_events[Minimal].push_back(etw_events[All].back());
-            }
-        }
-        catch (const std::exception& e) {
-            std::cout << "[!] Filter filter_all_events exception: " << e.what() << " on event: " << ev.dump() << "\n";
-        }
-        catch (...) {
-            std::cout << "[!] Filter: filter_all_events unknown exception on event: " << ev.dump() << "\n";
-        }
-	}
-    if (g_debug) {
-        std::cout << "[-] Filter: Skipped " << skipped << " events due to missing " << TIMESTAMP_NS << " field\n";
-    }
-    events.clear(); // save the memory
-
-    return etw_events;
-}
-
-// filter based on provider
-Classifier filter(json& ev) {
-    if (ev[PROVIDER_NAME] == KERNEL_PROCESS_PROVIDER) {
-        return filter_kernel_process(ev);
-    }
-
-    else if (ev[PROVIDER_NAME] == THREAT_INTEL_PROVIDER) {
-        return filter_threat_intel(ev);
-    }
-
-    else if (ev[PROVIDER_NAME] == KERNEL_API_PROVIDER) {
-        return filter_kernel_api_call(ev);
-    }
-
-    else if (ev[PROVIDER_NAME] == KERNEL_FILE_PROVIDER) {
-        return filter_kernel_file(ev);
-    }
-
-    else if (ev[PROVIDER_NAME] == KERNEL_NETWORK_PROVIDER) {
-        return filter_kernel_network(ev);
-    }
-
-    else if (ev[PROVIDER_NAME] == ANTIMALWARE_PROVIDER) {
-        return filter_antimalware(ev);
-    }
-
-    // MY PROVIDERS
-    else if (ev[PROVIDER_NAME] == HOOK_PROVIDER) {
-        return filter_hooks(ev);
-    }
-    else if (ev[PROVIDER_NAME] == EDRi_PROVIDER) {
-        return Minimal; // do not filter
-    }
-    else if (ev[PROVIDER_NAME] == ATTACK_PROVIDER) {
-        return Minimal; // do not filter
-    }
-
-    if (g_super_debug) {
-        std::cout << "[+] Filter: Unfiltered provider " << ev[PROVIDER_NAME] << ", not filtering its event ID " << ev[EVENT_ID] << "\n";
-    }
-
-    return Relevant; // do not filter unregistered providers
 }
 
 bool is_exe_in_field(json& ev, std::string field, std::string exe_name) {
@@ -365,4 +270,103 @@ Classifier filter_hooks(json& ev) {
     }
     // else event has a usable targetpid --> classify based on target pid
     return classify_to(ev, TARGET_PID, { g_attack_proc, g_injected_proc });
+}
+
+// filter based on provider
+Classifier filter(json& ev) {
+    if (ev[PROVIDER_NAME] == KERNEL_PROCESS_PROVIDER) {
+        return filter_kernel_process(ev);
+    }
+
+    else if (ev[PROVIDER_NAME] == THREAT_INTEL_PROVIDER) {
+        return filter_threat_intel(ev);
+    }
+
+    else if (ev[PROVIDER_NAME] == KERNEL_API_PROVIDER) {
+        return filter_kernel_api_call(ev);
+    }
+
+    else if (ev[PROVIDER_NAME] == KERNEL_FILE_PROVIDER) {
+        return filter_kernel_file(ev);
+    }
+
+    else if (ev[PROVIDER_NAME] == KERNEL_NETWORK_PROVIDER) {
+        return filter_kernel_network(ev);
+    }
+
+    else if (ev[PROVIDER_NAME] == ANTIMALWARE_PROVIDER) {
+        return filter_antimalware(ev);
+    }
+
+    // MY PROVIDERS
+    else if (ev[PROVIDER_NAME] == HOOK_PROVIDER) {
+        return filter_hooks(ev);
+    }
+    else if (ev[PROVIDER_NAME] == EDRi_PROVIDER) {
+        return Minimal; // do not filter
+    }
+    else if (ev[PROVIDER_NAME] == ATTACK_PROVIDER) {
+        return Minimal; // do not filter
+    }
+
+    if (g_super_debug) {
+        std::cout << "[+] Filter: Unfiltered provider " << ev[PROVIDER_NAME] << ", not filtering its event ID " << ev[EVENT_ID] << "\n";
+    }
+
+    return Relevant; // do not filter unregistered providers
+}
+
+// filter all events, save references to original events vector
+std::map<Classifier, std::vector<json*>> filter_all_events(std::vector<json>& events) {
+    std::cout << "[+] Filter: Filtering " << events.size() << " events into All, Relevant and Minimal\n";
+    std::map<Classifier, std::vector<json*>> etw_events = {
+        { All, {} },
+        { Relevant, {} },
+        { Minimal, {} }
+    };
+    std::map<Classifier, std::vector<size_t>> etw_event_indices;
+
+    tracked_procs = get_tracked_procs();
+    int skipped = 0;
+
+    for (auto& ev : events) {
+        if (ev.is_null() || !ev.contains(TIMESTAMP_NS) || !ev[TIMESTAMP_NS].is_number_integer()) {
+            skipped++;
+            continue;
+        }
+        try {
+            Classifier c = filter(ev);
+            add_exe_information(ev, c); // now add exe info to all pid fields
+            c = filter_post_exe(ev, c);
+
+            // store all events in All
+            etw_events[All].push_back(&ev);
+
+            // store minimal & relevant events in Relevant
+            if (c == Relevant || c == Minimal) {
+                etw_events[Relevant].push_back(&ev);
+            }
+
+            // store only minimal in Minimal
+            if (c == Minimal) {
+                etw_events[Minimal].push_back(&ev);
+            }
+        }
+        catch (const std::exception& e) {
+            std::cout << "[!] Filter filter_all_events exception: " << e.what() << " on event: " << ev.dump() << "\n";
+        }
+        catch (...) {
+            std::cout << "[!] Filter: filter_all_events unknown exception on event: " << ev.dump() << "\n";
+        }
+    }
+    if (g_debug) {
+        if (skipped == 0) {
+            std::cout << "[+] Filter: No incomplete events, no errors in parsing\n";
+        }
+        else {
+            std::cout << "[-] Filter: Skipped " << skipped << " incomplete events (missing " << TIMESTAMP_NS << " field)\n";
+        }
+    }
+
+    return etw_events;
 }
