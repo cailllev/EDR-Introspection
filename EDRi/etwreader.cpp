@@ -13,6 +13,8 @@ krabs::user_trace trace_etw_misc(L"EDRi-Misc");
 krabs::user_trace trace_etw_ti(L"EDRi-TI");
 krabs::user_trace trace_etw_hook(L"EDR-Hook");
 
+bool with_stack_trace = false;
+
 DWORD WINAPI t_start_default_traces(LPVOID param) {
     try {
         // https://github.com/jdu2600/Etw-SyscallMonitor/tree/main/src/ETW
@@ -28,7 +30,9 @@ DWORD WINAPI t_start_default_traces(LPVOID param) {
         krabs::provider<> process_provider(KERNEL_PROCESS_PROVIDER_W);
         std::vector<unsigned short> process_event_ids = { 1, 2, 3, 4, 5, 6, 11 };
         krabs::event_filter process_filter(process_event_ids);
-        process_provider.trace_flags(process_provider.trace_flags() | EVENT_ENABLE_PROPERTY_STACK_TRACE);
+        if (with_stack_trace) {
+            process_provider.trace_flags(process_provider.trace_flags() | EVENT_ENABLE_PROPERTY_STACK_TRACE);
+        }
         process_filter.add_on_event_callback(event_callback_std);
         process_provider.add_filter(process_filter);
         std::cout << "[+] ETW: Enabling " << KERNEL_PROCESS_PROVIDER << ": 1, 2, 3, 4, 5, 6, 11\n";
@@ -79,7 +83,9 @@ DWORD WINAPI t_start_etw_misc_traces(LPVOID param) {
         krabs::provider<> auditapi_provider(KERNEL_API_PROVIDER_W);
         std::vector<unsigned short> auditapi_event_ids = { 3, 4, 5, 6 };
         krabs::event_filter auditapi_filter(auditapi_event_ids);
-        auditapi_provider.trace_flags(auditapi_provider.trace_flags() | EVENT_ENABLE_PROPERTY_STACK_TRACE);
+        if (with_stack_trace) {
+            auditapi_provider.trace_flags(auditapi_provider.trace_flags() | EVENT_ENABLE_PROPERTY_STACK_TRACE);
+        }
         auditapi_filter.add_on_event_callback(event_callback_misc);
         auditapi_provider.add_filter(auditapi_filter);
         std::cout << "[+] ETW: Enabling " << KERNEL_API_PROVIDER << ": 3, 4, 5, 6\n";
@@ -105,7 +111,9 @@ DWORD WINAPI t_start_etw_misc_traces(LPVOID param) {
         krabs::provider<> kernelfile_provider(KERNEL_FILE_PROVIDER_W);
         std::vector<unsigned short> kernelfile_event_ids = { 10, 30 };
         krabs::event_filter kernelfile_filter(kernelfile_event_ids);
-        kernelfile_provider.trace_flags(kernelfile_provider.trace_flags() | EVENT_ENABLE_PROPERTY_STACK_TRACE);
+        if (with_stack_trace) {
+            kernelfile_provider.trace_flags(kernelfile_provider.trace_flags() | EVENT_ENABLE_PROPERTY_STACK_TRACE);
+        }
         kernelfile_filter.add_on_event_callback(event_callback_misc);
         kernelfile_provider.add_filter(kernelfile_filter);
         std::cout << "[+] ETW: Enabling " << KERNEL_FILE_PROVIDER << ": 10, 30\n";
@@ -124,7 +132,9 @@ DWORD WINAPI t_start_etw_misc_traces(LPVOID param) {
         krabs::provider<> kernelnetwork_provider(KERNEL_NETWORK_PROVIDER_W);
         std::vector<unsigned short> kernelnetwork_event_ids = { 12, 15, 28, 31, 42, 43, 58, 59 };
         krabs::event_filter kernelnetwork_filter(kernelnetwork_event_ids);
-        kernelnetwork_provider.trace_flags(kernelnetwork_provider.trace_flags() | EVENT_ENABLE_PROPERTY_STACK_TRACE);
+        if (with_stack_trace) {
+            kernelnetwork_provider.trace_flags(kernelnetwork_provider.trace_flags() | EVENT_ENABLE_PROPERTY_STACK_TRACE);
+        }
         kernelnetwork_filter.add_on_event_callback(event_callback_misc);
         kernelnetwork_provider.add_filter(kernelnetwork_filter);
         std::cout << "[+] ETW: Enabling " << KERNEL_NETWORK_PROVIDER << ": 12, 15, 28, 31, 42, 43, 58, 59\n";
