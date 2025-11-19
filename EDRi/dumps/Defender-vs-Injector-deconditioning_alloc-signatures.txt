@@ -1,2 +1,2 @@
-Found signal/signature: SLF:Aurora.A!rfn for "C:\Users\Public\Downloads\attack-834.exe"
-Behaviour Monitoring Detection: pid= 3300 MsMpEng.exe, sig=Behavior:Win32/BmNoFriendlyFlightDataRecorder
+Found signal/signature: SLF:Aurora.A!rfn for "C:\Users\Public\Downloads\attack-803.exe"
+Behaviour Monitoring Detection: pid= 4392 MsMpEng.exe, sig=Behavior:Win32/BmNoFriendlyFlightDataRecorder
