@@ -17,7 +17,6 @@ std::vector<json> std_events = {};
 std::vector<json> misc_events = {};
 std::vector<json> etw_ti_events = {};
 std::vector<json> hook_events = {};
-std::vector<std::vector<json>*> all_etw_events = { &std_events, &misc_events, &etw_ti_events, &hook_events };
 
 std::map<std::string, std::vector<UINT64>> time_diffs_ns = { // differences in nanoseconds between ETW time and system time
     { EDRi_PROVIDER, {} },
@@ -25,13 +24,20 @@ std::map<std::string, std::vector<UINT64>> time_diffs_ns = { // differences in n
     { HOOK_PROVIDER, {} }
 };
 
+int null_events = 0; // errors
+
 // globals
 ProcInfo null_proc = { 0, 0, 0, "", false };
 ProcInfo g_attack_proc = null_proc;
 ProcInfo g_injected_proc = null_proc;
-bool g_traces_started = false;
+bool g_start_marked_detected = false;
 bool g_hooker_started = false;
 bool g_attack_terminated = false;
+
+// when check is needed, they are set to false again
+bool g_misc_trace_started = true;
+bool g_etw_ti_trace_started = true;
+bool g_hook_trace_started = true;
 
 // procs to check for hook init msg
 int detected_hook_start_markers = 0;
@@ -58,114 +64,33 @@ MergeCategory filepath_keys = {
 };
 std::vector<MergeCategory> key_categories_to_merge = { ppid_keys, tpid_keys, ttid_keys, filepath_keys };
 
-// get all events as one flat vector
-void concat_all_etw_events(std::vector<json>& out) {
-    out.clear();
-    for (auto v_ptr : all_etw_events) {
-        out.insert(out.end(),
-                   std::make_move_iterator(v_ptr->begin()),
-                   std::make_move_iterator(v_ptr->end()));
-        v_ptr->clear(); // original vectors are now empty
-    }
-}
-
 // get time difference statistics
 std::map<std::string, std::vector<UINT64>> get_time_diffs() {
     return time_diffs_ns;
 }
 
-// hand over schema for parsing
-void event_callback_std(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
-    try {
-        krabs::schema schema(record, trace_context.schema_locator);
-        json ev = parse_etw_event(Event{ record, schema });
-        if (ev.is_null()) {
-            return; // ignore empty events
-        }
-        post_parsing_checks(ev);
-        std_events.push_back(ev);
-    }
-    catch (const std::exception& e) {
-        std::cerr << "[!] ETW: event_callback_std exception: " << e.what() << "\n";
-    }
-    catch (...) {
-        std::cerr << "[!] ETW: event_callback_std unknown exception\n";
-    }
+// potentially corrupted events, or complete parsing errors
+int get_null_events_count() {
+    return null_events;
 }
 
-// hand over schema for parsing
-void event_callback_misc(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
-    try {
-        krabs::schema schema(record, trace_context.schema_locator);
-        json ev = parse_etw_event(Event{ record, schema });
-        if (ev.is_null()) {
-            return; // ignore empty events
-        }
-        // post parsing checks not needed
-        misc_events.push_back(ev);
-    }
-    catch (const std::exception& e) {
-        std::cerr << "[!] ETW: event_callback_misc exception: " << e.what() << "\n";
-    }
-    catch (...) {
-        std::cerr << "[!] ETW: event_callback_misc unknown exception\n";
-    }
-}
-
-// hand over schema for parsing
-void event_callback_etw_ti(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
-    try {
-        krabs::schema schema(record, trace_context.schema_locator);
-        json ev = parse_etw_event(Event{ record, schema });
-        if (ev.is_null()) {
-            return; // ignore empty events
-        }
-        // post parsing checks not needed
-        etw_ti_events.push_back(ev);
-    }
-    catch (const std::exception& e) {
-        std::cerr << "[!] ETW: event_callback_etw_ti exception: " << e.what() << "\n";
-    }
-    catch (...) {
-        std::cerr << "[!] ETW: event_callback_etw_ti unknown exception\n";
-    }
-}
-
-// hand over schema for parsing
-void event_callback_hooks(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
-    try {
-        krabs::schema schema(record, trace_context.schema_locator);
-        json ev = parse_etw_event(Event{ record, schema });
-        if (ev.is_null()) {
-            return; // ignore empty events
-        }
-        post_parsing_checks_hooks(ev);
-        hook_events.push_back(ev);
-    }
-    catch (const std::exception& e) {
-        std::cerr << "[!] ETW: event_callback_hooks exception: " << e.what() << "\n";
-    }
-    catch (...) {
-        std::cerr << "[!] ETW: event_callback_hooks unknown exception\n";
-    }
-}
-
+// -------------- EVENT PARSING -------------- //
 // parses attack events
-json parse_custom_etw_event(Event e) {
+json parse_custom_etw_event(const EVENT_RECORD& record, const krabs::schema& schema) {
     try {
-        krabs::parser parser(e.schema);
+        krabs::parser parser(schema);
         json j;
 
-        std::string provider = wchar2string(e.schema.provider_name());
+        std::string provider = wchar2string(schema.provider_name());
 
-		UINT64 timestamp_filetime = static_cast<UINT64>(e.record.EventHeader.TimeStamp.QuadPart);
+		UINT64 timestamp_filetime = static_cast<UINT64>(record.EventHeader.TimeStamp.QuadPart);
         j[TIMESTAMP_NS] = filetime_to_unix_epoch_ns(timestamp_filetime);
         j[TIMESTAMP_ETW] = filetime_to_iso8601(timestamp_filetime);
         j[TYPE] = "myETW";
-        j[PID] = e.record.EventHeader.ProcessId;
-		std::string task = wchar2string(e.schema.task_name());
+        j[PID] = record.EventHeader.ProcessId;
+		std::string task = wchar2string(schema.task_name());
         j[TASK] = task;
-        j[PROVIDER_NAME] = wchar2string(e.schema.provider_name());
+        j[PROVIDER_NAME] = wchar2string(schema.provider_name());
         if (j[PROVIDER_NAME] == EDRi_PROVIDER) {
             j[EVENT_ID] = EDRi_PROVIDER_EVENT_ID;
         }
@@ -185,8 +110,8 @@ json parse_custom_etw_event(Event e) {
 
         // custom parsing when not using manifest based ETW --> cannot use property parsing
         // get payload size
-        const BYTE* data = (const BYTE*)e.record.UserData;
-        ULONG size = e.record.UserDataLength;
+        const BYTE* data = (const BYTE*)record.UserData;
+        ULONG size = record.UserDataLength;
 
         // PARSE MESSAGE
         const char* msg = reinterpret_cast<const char*>(data); // read until first null byte
@@ -233,23 +158,65 @@ json parse_custom_etw_event(Event e) {
     }
 }
 
+std::string get_kernel_api_task_name(int event_id) {
+    if (event_id == 1)
+        return "PsSetLoadImageNotifyRoutineEx";
+    if (event_id == 2)
+        return "NtTerminateProcess";
+    if (event_id == 3)
+        return "NtCreateSymbolicLinkObject";
+    if (event_id == 4)
+        return "NtSetContextThread";
+    if (event_id == 5)
+        return "PsOpenProcess";
+    if (event_id == 6)
+        return "PsOpenThread";
+    if (event_id == 7)
+        return "IoRegisterLastChanceShutdownNotification";
+    if (event_id == 8)
+        return "IoRegisterShutdownNotification";
+    return "unmapped kernel api event id";
+}
+
+std::string get_val(const json& j, const std::string& key) {
+    if (!j.contains(key)) {
+        return ""; // key not present
+    }
+    if (j[key].is_string()) {
+        return j[key].get<std::string>();
+    }
+    else if (j[key].is_number()) {
+        return std::to_string(j[key].get<double>());
+    }
+    else if (j[key].is_boolean()) {
+        return j[key].get<bool>() ? "true" : "false";
+    }
+    else if (j[key].is_null()) {
+        return "null";
+    }
+    else {
+        // array or object
+        return j[key].dump();
+    }
+}
+
 // parses all other ETW events
-json parse_etw_event(Event e) {
+json parse_etw_event(const EVENT_RECORD& record, const krabs::schema& schema) {
     try {
-		std::string provider_name = wchar2string(e.schema.provider_name());
+		std::string provider_name = wchar2string(schema.provider_name());
         if (provider_name == EDRi_PROVIDER || provider_name == ATTACK_PROVIDER || provider_name == HOOK_PROVIDER) {
-            return parse_custom_etw_event(e);
+            return parse_custom_etw_event(record, schema);
 		}
 
         json j;
 
-        __int64 timestamp_filetime = static_cast<__int64>(e.record.EventHeader.TimeStamp.QuadPart);
+        __int64 timestamp_filetime = static_cast<__int64>(record.EventHeader.TimeStamp.QuadPart);
         j[TIMESTAMP_NS] = filetime_to_unix_epoch_ns(timestamp_filetime);
         j[TIMESTAMP_ETW] = filetime_to_iso8601(timestamp_filetime);
         j[TIMESTAMP_SYS] = j[TIMESTAMP_ETW]; // normal ETW events only have their timestamp, not the custom system timestamp
-        j[PID] = e.record.EventHeader.ProcessId;
-        j[TID] = e.record.EventHeader.ThreadId;
-        j[EVENT_ID] = e.schema.event_id(); // opcode is also an ID, but not documented?
+        j[PID] = record.EventHeader.ProcessId;
+        j[TID] = record.EventHeader.ThreadId;
+        j[EVENT_ID] = schema.event_id(); // opcode is also an ID, but not documented?
         j[PROVIDER_NAME] = provider_name;
 
         if (j[PROVIDER_NAME] == THREAT_INTEL_PROVIDER) {
@@ -261,15 +228,15 @@ json parse_etw_event(Event e) {
 
         if (provider_name == KERNEL_API_PROVIDER) {
             // special handling for kernel api provider to get better task names
-            std::string task_name = get_kernel_api_task_name(e.schema.event_id());
+            std::string task_name = get_kernel_api_task_name(schema.event_id());
             j[TASK] = task_name;
         }
         else {
-            std::wstring combined = std::wstring(e.schema.task_name()) + L" " + std::wstring(e.schema.opcode_name());
+            std::wstring combined = std::wstring(schema.task_name()) + L" " + std::wstring(schema.opcode_name());
             j[TASK] = wstring2string(combined);
         }
 
-        krabs::parser parser(e.schema);
+        krabs::parser parser(schema);
         // parse all properties defined in the schema
         for (const auto& property : parser.properties()) {
             std::string last_key;
@@ -535,7 +502,7 @@ json parse_etw_event(Event e) {
             try {
                 j["stacktrace"] = json::array();
                 int idx = 0;
-                for (auto& return_address : e.schema.stack_trace()) {
+                for (auto& return_address : schema.stack_trace()) {
                     // only add non-kernelspace addresses
                     if (return_address < 0xFFFF080000000000) {
                         j["stacktrace"].push_back(return_address);
@@ -556,48 +523,7 @@ json parse_etw_event(Event e) {
     }
 }
 
-std::string get_kernel_api_task_name(int event_id) {
-    if (event_id == 1)
-        return "PsSetLoadImageNotifyRoutineEx";
-    if (event_id == 2)
-        return "NtTerminateProcess";
-    if (event_id == 3)
-        return "NtCreateSymbolicLinkObject";
-    if (event_id == 4)
-        return "NtSetContextThread";
-    if (event_id == 5)
-        return "PsOpenProcess";
-    if (event_id == 6)
-        return "PsOpenThread";
-    if (event_id == 7)
-        return "IoRegisterLastChanceShutdownNotification";
-    if (event_id == 8)
-        return "IoRegisterShutdownNotification";
-    return "unmapped kernel api event id";
-}
-
-std::string get_val(const json& j, std::string key) {
-    if (!j.contains(key)) {
-        return ""; // key not present
-    }
-    if (j[key].is_string()) {
-        return j[key].get<std::string>();
-    }
-    else if (j[key].is_number()) {
-        return std::to_string(j[key].get<double>());
-    }
-    else if (j[key].is_boolean()) {
-        return j[key].get<bool>() ? "true" : "false";
-    }
-    else if (j[key].is_null()) {
-        return "null";
-    }
-    else {
-        // array or object
-        return j[key].dump();
-    }
-}
-
+// -------------- POST PARSING CHECKS -------------- //
 // check proc started via kernel etw
 int check_new_proc(json& j) {
     if (j[PROVIDER_NAME] == KERNEL_PROCESS_PROVIDER && j[EVENT_ID] == KERNEL_PROC_START_EVENT_ID && j.contains(TARGET_PID)) {
@@ -695,11 +621,11 @@ void post_parsing_checks(json& j) {
     }
 
     // checks if the trace started
-    if (!g_traces_started && check_traces_started(j)) {
+    if (!g_start_marked_detected && check_traces_started(j)) {
         if (g_debug) {
             std::cout << "[+] ETW: Start marker detected\n";
         }
-        g_traces_started = true;
+        g_start_marked_detected = true;
     }
 }
 
@@ -707,5 +633,73 @@ void post_parsing_checks_hooks(json& j) {
     // checks if the hooker is started (only if new procs were hooked, and the hooker is not started yet)
     if (!g_hooker_started && g_newly_hooked_procs.size() > 0 && check_hooker_started(j)) {
         g_hooker_started = true;
+    }
+}
+
+// hand over schema for parsing
+void event_callback_std(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
+    json ev = parse_etw_event(record, krabs::schema(record, trace_context.schema_locator));
+    if (ev.is_null()) {
+        null_events++;
+        return; // ignore empty events
+    }
+    post_parsing_checks(ev);
+    std_events.push_back(ev);
+}
+
+// hand over schema for parsing
+void event_callback_misc(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
+    g_misc_trace_started = true;
+    json ev = parse_etw_event(record, krabs::schema(record, trace_context.schema_locator));
+    if (ev.is_null()) {
+        null_events++;
+        return; // ignore empty events
+    }
+    misc_events.push_back(ev);
+}
+
+// hand over schema for parsing
+void event_callback_etw_ti(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
+    g_etw_ti_trace_started = true;
+    json ev = parse_etw_event(record, krabs::schema(record, trace_context.schema_locator));
+    if (ev.is_null()) {
+        null_events++;
+        return; // ignore empty events
+    }
+    etw_ti_events.push_back(ev);
+}
+
+// hand over schema for parsing
+void event_callback_hooks(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
+    g_hook_trace_started = true;
+    json ev = parse_etw_event(record, krabs::schema(record, trace_context.schema_locator));
+    if (ev.is_null()) {
+        null_events++;
+        return; // ignore empty events
+    }
+    post_parsing_checks_hooks(ev);
+    hook_events.push_back(ev);
+}
+
+// get all events as one flat vector
+void concat_all_etw_events(std::vector<json>& out) {
+    std::vector<std::vector<json>*> all_etw_events = { &std_events, &misc_events, &etw_ti_events, &hook_events };
+    size_t events_count = 0;
+    for (auto v_ptr : all_etw_events) {
+        events_count += v_ptr->size();
+    }
+
+    if (g_debug) {
+        std::cout << "[*] ETW: Flattening all " << events_count << " recorded events\n";
+    }
+    out.clear();
+    out.reserve(events_count);
+
+    for (auto v_ptr : all_etw_events) {
+        out.insert(out.end(),
+            std::make_move_iterator(v_ptr->begin()),
+            std::make_move_iterator(v_ptr->end()));
+        v_ptr->clear(); // original vectors are now empty
+        v_ptr->shrink_to_fit(); // release the ~kraken~ memory
     }
 }

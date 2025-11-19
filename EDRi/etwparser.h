@@ -47,12 +47,6 @@ static const std::wstring ANTIMALWARE_PROVIDER_W = std::wstring(ANTIMALWARE_PROV
 static const std::string THREAT_INTEL_PROVIDER = "Microsoft-Windows-Threat-Intelligence";
 static const std::wstring THREAT_INTEL_PROVIDER_W = std::wstring(THREAT_INTEL_PROVIDER.begin(), THREAT_INTEL_PROVIDER.end());
 
-// the struct that is passed from function to function (or as a json after parsing)
-struct Event {
-    const EVENT_RECORD& record;
-    const krabs::schema schema;
-};
-
 // fixed attributes inside the header and schema --> string can be chosen "freely", but must be unique over all properties!
 // most properties do not use _, it's safe to use _ for these fixed attributes here
 static const std::string TIMESTAMP_ETW = "timestamp_etw";
@@ -83,6 +77,11 @@ static const std::string THREATNAME = "threatname";
 static const std::string DATA = "data";
 static const std::string SOURCE = "source";
 
+// tracking which traces are already started
+extern bool g_misc_trace_started;
+extern bool g_etw_ti_trace_started;
+extern bool g_hook_trace_started;
+
 
 // keys that get merged together
 struct MergeCategory {
@@ -99,11 +98,5 @@ void event_callback_hooks(const EVENT_RECORD&, const krabs::trace_context&);
 
 std::map<std::string, std::vector<UINT64>> get_time_diffs();
 void concat_all_etw_events(std::vector<json>&);
-
-// internal functions
-std::string get_kernel_api_task_name(int); // from https://www.elastic.co/security-labs/kernel-etw-best-etw
-json parse_custom_etw_event(Event);
-json parse_etw_event(Event);
-std::string get_val(const json&, std::string);
-void post_parsing_checks(json&);
-void post_parsing_checks_hooks(json& j);
+std::string get_val(const json&, const std::string&);
+int get_null_events_count();
