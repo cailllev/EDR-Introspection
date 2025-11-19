@@ -39,6 +39,11 @@ It is recomended to **make an exclusion** for the EDR-Introspection folder, and 
 .\x64\Release\EDRi.exe --edr-profile MDE --attack 
 ```
 
+## System Requirements
+Recommendation for longer tests or tests with potentially many alerts:
+* 16GB of RAM, (8GB for Windows, 8GB for longer tests / more traces attached)
+* 4 virtual CPUs
+
 ## Misc Tools
 To play around or test stuff, helper exes are provided for the following actions.
 All tools below must be run as Administrator.
