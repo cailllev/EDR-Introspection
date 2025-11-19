@@ -51,20 +51,24 @@ static const std::wstring THREAT_INTEL_PROVIDER_W = std::wstring(THREAT_INTEL_PR
 struct Event {
     EVENT_RECORD record;
     krabs::schema schema;
+    std::vector<BYTE> userDataCopy;
 
-    // constructor to store the values from callbacks
     Event(const EVENT_RECORD& r, const krabs::schema& s)
-        : record(r), schema(s) {
+        : record(r), schema(s)
+    {
+        // deep-copy event data (required to avoid vrfcore crashes)
+        if (r.UserData && r.UserDataLength > 0) {
+            userDataCopy.assign(
+                (BYTE*)r.UserData,
+                (BYTE*)r.UserData + r.UserDataLength
+            );
+            record.UserData = userDataCopy.data();
+        }
     }
 
-    // move constructor (noexcept --> prefer moving to copying)
     Event(Event&&) noexcept = default;
-    // move assignment operator
     Event& operator=(Event&&) noexcept = default;
-
-    // copy constructor (needed even if not preferred)
     Event(const Event&) = default;
-    // copy assignment operator
     Event& operator=(const Event&) = default;
 };
 
@@ -81,9 +85,11 @@ static const std::string TID = "thread_id";
 // properties from the actual events --> values cannot be changed!
 static const std::string PPID = "ppid";
 static const std::string TARGET_PID = "targetpid";
+static const std::string TARGET_PID_KERNEL = "processid"; // gets merged into TARGET_PID at parsing
 static const std::string TARGET_TID = "targettid";
 static const std::string ORIGINATING_PID = "pid"; // antimalware-traces + kernel-network-traces
 static const std::string FILEPATH = "filepath";
+static const std::string FILEPATH_KERNEL = "imagename"; // gets merged into FILEPATH at parsing
 static const std::string MESSAGE = "message";
 static const std::string SIGSEQ = "sigseq";
 static const std::string SIGSHA = "sigsha";

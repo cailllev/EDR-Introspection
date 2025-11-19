@@ -155,6 +155,7 @@ std::string create_timeline_csv(std::vector<json>& events, std::vector<std::stri
             }
         }
     }
+    csv_output << "\n";
     if (g_super_debug) {
         std::cout << "\n";
     }

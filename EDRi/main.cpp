@@ -306,6 +306,7 @@ int main(int argc, char* argv[]) {
         std::cerr << "[!] EDRi: Failed to start default ETW traces(s)\n";
         return 1;
     }
+    Sleep(5000); // wait for default traces
 
     // WAIT UNTIL TRACES ARE READY
     std::cout << "[*] EDRi: Waiting until start marker is detected...\n";
@@ -435,8 +436,8 @@ int main(int argc, char* argv[]) {
     if (g_debug) {
         std::cout << "[~] EDRi: The EDR might block the attack and a pop up is displayed. In this case, just close it or click OK\n";
     }
-    Sleep(wait_between_events_ms);
     if (run_as_child) {
+        Sleep(wait_between_events_ms);
         try {
             if (!launch_as_child(g_attack_exe_path)) {
                 std::cerr << "[!] EDRi: Failed to launch the attack exe: " << g_attack_exe_path << ". Was it marked as a virus?\n";
