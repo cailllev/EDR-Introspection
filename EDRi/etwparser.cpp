@@ -48,7 +48,7 @@ MergeCategory ppid_keys = {
 };
 MergeCategory tpid_keys = { // all refer to yet another pid (event has an emitter (process_id), original proc (pid), and the target proc (tpid))
     TARGET_PID,
-    {"processid", "tpid", "targetprocessid", "frozenprocessid"} // processid in kernel means tpid, processid in antimalware means pid (but only event 95 has this)
+    {TARGET_PID_KERNEL, "tpid", "targetprocessid", "frozenprocessid"} // processid in kernel means tpid, processid in antimalware means pid (but only event 95 has this)
 };
 MergeCategory ttid_keys = { // both refer to yet another pid (event has an emitter (process_id), original proc (pid), and the target proc (tpid))
     TARGET_TID,
@@ -56,7 +56,7 @@ MergeCategory ttid_keys = { // both refer to yet another pid (event has an emitt
 };
 MergeCategory filepath_keys = {
     FILEPATH,
-    {"basepath", "filename", "imagename", "path", "reasonimagepath"}
+    {"basepath", "filename", FILEPATH_KERNEL, "path", "reasonimagepath"}
 };
 std::vector<MergeCategory> key_categories_to_merge = { ppid_keys, tpid_keys, ttid_keys, filepath_keys };
 
@@ -66,7 +66,7 @@ std::map<std::string, std::vector<UINT64>> get_time_diffs() {
 }
 
 // lightweight check for a given ev, key and val (str)
-bool check_ev_str(Event& ev, std::string key, std::string val) {
+bool check_ev_start_marker(Event& ev, std::string key, std::string val) {
     krabs::parser parser(ev.schema);
     for (auto& p : parser.properties()) {
         const std::wstring& property_name = p.name();
@@ -79,9 +79,14 @@ bool check_ev_str(Event& ev, std::string key, std::string val) {
 
         // check if it's the searched key, and the value matches
         if (k == key && property_type == TDH_INTYPE_ANSISTRING) {
-            std::string v = parser.parse<std::string>(property_name);
-            if (v == val) {
-                return true;
+            try {
+                std::string v = parser.parse<std::string>(property_name);
+                if (v == val) {
+                    return true;
+                }
+            }
+            catch (const std::exception& ex) {
+                std::cerr << "[!] ETW: Parse error when checking for etw start marker: " << ex.what() << "\n";
             }
             return false;
         }
@@ -89,8 +94,59 @@ bool check_ev_str(Event& ev, std::string key, std::string val) {
     return false;
 }
 
+// lightweight check for a given ev, key and val (str)
+bool check_ev_attack_start(Event& ev, std::string key, std::string filepath) {
+    krabs::parser parser(ev.schema);
+    bool found = false;
+    int pid = 0;
+    for (auto& p : parser.properties()) {
+        const std::wstring& property_name = p.name();
+        const auto property_type = p.type();
+
+        // create key and convert it to lowercase
+        std::string k = wstring2string((std::wstring&)property_name);
+        std::transform(k.begin(), k.end(), k.begin(),
+            [](unsigned char c) { return std::tolower(c); });
+
+        // store PID for event
+        if (k == TARGET_PID_KERNEL) {
+            if (property_type != TDH_INTYPE_UINT32) {
+                std::cout << "[!] ETW: Expected UINT32 for key=" << TARGET_PID_KERNEL << ", actual type is " << property_type << ", cannot parse new PID\n";
+                continue;
+            }
+            try {
+                pid = (uint32_t)parser.parse<uint32_t>(property_name);
+            }
+            catch (const std::exception& ex) {
+                std::cerr << "[!] ETW: Parse error when checking for attack start: " << ex.what() << "\n";
+            }
+        }
+
+        // check if path matches
+        if (k == key && property_type == TDH_INTYPE_UNICODESTRING) {
+            std::wstringstream wss;
+            try {
+                wss << parser.parse<std::wstring>(property_name);
+                std::string v = wstring2string((std::wstring&)wss.str());
+                if (filepath_match(v, filepath)) {
+                    found = true;
+                }
+            }
+            catch (...) {
+                std::cout << "[!] ETW: Detected unicode filepath. Unable to convert widestring to string, EDRi does not support unicode at this stage!\n";
+                std::wcout << wss.str();
+            }
+        }
+    }
+    if (found && pid != 0) {
+        attack_pid = pid;
+        return true;
+    }
+    return false;
+}
+
 // lightweight check for a given ev, key and val (int)
-bool check_ev_int(Event& ev, std::string key, int val) {
+bool check_ev_attack_done(Event& ev, std::string key, int val) {
     krabs::parser parser(ev.schema);
     for (auto& p : parser.properties()) {
         const std::wstring& property_name = p.name();
@@ -100,35 +156,22 @@ bool check_ev_int(Event& ev, std::string key, int val) {
         std::string k = wstring2string((std::wstring&)property_name);
         std::transform(k.begin(), k.end(), k.begin(),
             [](unsigned char c) { return std::tolower(c); });
+
         if (k != key) {
             continue;
         }
+        if (property_type != TDH_INTYPE_UINT32) {
+            std::cout << "[!] ETW: Expected UINT32 for key=" << key << ", actual type is " << property_type << "\n";
+            continue;
+        }
 
-        switch (property_type) {
-        case TDH_INTYPE_INT8:
-            if (val == (int32_t)parser.parse<CHAR>(property_name))
+        try {
+            if (val == (uint32_t)parser.parse<uint32_t>(property_name)) {
                 return true;
-        case TDH_INTYPE_UINT8:
-            if (val == (uint32_t)parser.parse<UCHAR>(property_name))
-                return true;
-        case TDH_INTYPE_INT16:
-            if (val == (int32_t)parser.parse<SHORT>(property_name))
-                return true;
-        case TDH_INTYPE_UINT16:
-            if (val == (int32_t)parser.parse<USHORT>(property_name))
-                return true;
-        case TDH_INTYPE_INT32:
-            if (val == (int32_t)parser.parse<int32_t>(property_name))
-                return true;
-        case TDH_INTYPE_UINT32:
-            if (val == (uint32_t)parser.parse<uint32_t>(property_name))
-                return true;
-        case TDH_INTYPE_INT64:
-            if (val == (int64_t)parser.parse<int64_t>(property_name))
-                return true;
-        case TDH_INTYPE_UINT64:
-            if (val == (uint64_t)parser.parse<uint64_t>(property_name))
-                return true;
+            }
+        }
+        catch (const std::exception& ex) {
+            std::cerr << "[!] ETW: Parse error when checking if attack is done: " << ex.what() << "\n";
         }
     }
     return false;
@@ -136,7 +179,7 @@ bool check_ev_int(Event& ev, std::string key, int val) {
 
 // checks if the trace marker is present
 void check_traces_init(Event& ev) {
-    if (!g_traces_started && check_ev_str(ev, MESSAGE, EDRi_TRACE_START_MARKER)) {
+    if (!g_traces_started && check_ev_start_marker(ev, MESSAGE, EDRi_TRACE_START_MARKER)) {
         g_traces_started = true;
         if (g_debug) {
             std::cout << "[+] ETW: Start marker detected\n";
@@ -146,18 +189,19 @@ void check_traces_init(Event& ev) {
 
 // check if a new proc matches the attack path
 void check_attack_init(Event& ev) {
-    if (!g_attack_started && check_ev_str(ev, FILEPATH, g_attack_exe_path)) {
+    if (!g_attack_started && check_ev_attack_start(ev, FILEPATH_KERNEL, g_attack_exe_path)) {
         g_attack_started = true;
-        attack_pid = ev.record.EventHeader.ProcessId;
+        // attack_pid already set in check_ev_attack_start
+        std::cout << "[+] ETW: Detected executing of " << g_attack_exe_path << " -> pid=" << attack_pid << "\n";
     }
 }
 
 // checks if a terminated proc matches the attack PID
 void check_attack_done(Event& ev) {
-    if (!g_attack_terminated) {
+    if (g_attack_started && !g_attack_terminated) {
         std::string provider = wchar2string(ev.schema.provider_name());
         int event_id = ev.schema.event_id();
-        if (provider == KERNEL_PROCESS_PROVIDER && event_id == KERNEL_PROC_STOP_EVENT_ID && check_ev_int(ev, TARGET_PID, attack_pid)) {
+        if (provider == KERNEL_PROCESS_PROVIDER && event_id == KERNEL_PROC_STOP_EVENT_ID && check_ev_attack_done(ev, TARGET_PID_KERNEL, attack_pid)) {
             g_attack_terminated = true;
             if (g_debug) {
                 std::cout << "[+] ETW: Attack termination detected\n";
@@ -195,6 +239,7 @@ void event_callback_std(const EVENT_RECORD& record, const krabs::trace_context& 
     Event ev = { record, schema };
     check_traces_init(ev);
     check_attack_init(ev);
+    check_attack_done(ev);
     std_events.emplace_back(std::move(ev));
 }
 
@@ -218,7 +263,7 @@ void event_callback_hooks(const EVENT_RECORD& record, const krabs::trace_context
     std_events.emplace_back(std::move(ev));
 }
 
-// parses attack events
+// parses my own events
 json parse_custom_etw_event(Event e) {
     try {
         krabs::parser parser(e.schema);
@@ -735,7 +780,7 @@ void post_parsing_checks(json& j) {
 // get all events as one flat vector
 void parse_all_etw_events(std::vector<json>& out) {
     std::vector<std::vector<Event>*> all_etw_events = { &std_events, &misc_events, &etw_ti_events, &hook_events };
-    int events_count = 0;
+    size_t events_count = 0;
     for (auto v_ptr : all_etw_events) {
         events_count += v_ptr->size();
     }
