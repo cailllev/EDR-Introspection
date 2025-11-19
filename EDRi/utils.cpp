@@ -185,7 +185,7 @@ std::string unnecessary_tools_running() {
         std::cerr << "[!] Utils: Cannot use unnecessary_tools_running() before snapshot_procs()\n";
         return r;
 	}
-    std::vector<std::string> procs = { "procexp64.exe" };
+    std::vector<std::string> procs = { "procexp64.exe", "taskmgr.exe" };
     for (auto& p : procs) {
         if (!get_PID_by_name(p, ns).empty()) {
             r += p + " ";
