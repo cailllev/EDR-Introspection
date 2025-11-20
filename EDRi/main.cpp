@@ -293,6 +293,7 @@ int main(int argc, char* argv[]) {
             std::cerr << "[!] EDRi: Failed to start misc ETW traces(s)\n";
             return 1;
         }
+        wait_for_traces += 3000;
     }
     if (trace_etw_ti) {
         g_etw_ti_trace_started = false; // needs to be checked, so set to false
@@ -300,6 +301,7 @@ int main(int argc, char* argv[]) {
             std::cerr << "[!] EDRi: Failed to start ETW-TI traces\n";
             return 1;
         }
+        wait_for_traces += 5000; // expensive start
     }
     if (hook_ntdll) {
         g_hook_trace_started = false; // needs to be checked, so set to false
@@ -307,11 +309,15 @@ int main(int argc, char* argv[]) {
             std::cerr << "[!] EDRi: Failed to start ETW-Hook traces\n";
             return 1;
         }
+        wait_for_traces += 10000; // very expensive start
     }
+    Sleep(wait_for_traces); // other traces may take longer to start
+
     if (!start_etw_default_traces(threads)) { // start last (start marker is detected here)
         std::cerr << "[!] EDRi: Failed to start default ETW traces(s)\n";
         return 1;
     }
+    Sleep(5000); // wait for default traces
 
     // WAIT UNTIL TRACES ARE READY
     std::cout << "[*] EDRi: Waiting until all traces are live and start markers is detected...\n";
@@ -450,8 +456,8 @@ int main(int argc, char* argv[]) {
     if (g_debug) {
         std::cout << "[~] EDRi: The EDR might block the attack and a pop up is displayed. In this case, just close it or click OK\n";
     }
-    Sleep(wait_between_events_ms);
     if (run_as_child) {
+        Sleep(wait_between_events_ms);
         try {
             if (!launch_as_child(g_attack_exe_path)) {
                 std::cerr << "[!] EDRi: Failed to launch the attack exe: " << g_attack_exe_path << ". Was it marked as a virus?\n";
@@ -469,7 +475,7 @@ int main(int argc, char* argv[]) {
         std::cout << "[*] EDRi: Execute " << g_attack_exe_path << " now manually\n";
     }
     int cnt_waited = 0;
-    while (g_attack_proc.PID == 0) { // always wait for the attack_PID, lauch_as_child() might succeed even when attack is not started
+    while (!g_attack_started) { // always wait for the attack_PID, lauch_as_child() might return true even when attack is not really started
         Sleep(100);
         cnt_waited += 100;
         if (cnt_waited > wait_attack_not_found_threshold_ms) {
