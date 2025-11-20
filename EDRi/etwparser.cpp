@@ -671,7 +671,7 @@ void event_callback_etw_ti(const EVENT_RECORD& record, const krabs::trace_contex
 
 // hand over schema for parsing
 void event_callback_hooks(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
-    g_hook_trace_started = true;
+    // g_hook_trace_started = true; // when there are no hooked binaries, there are no events --> must be set in etwreader, even if it's not super accurate there
     json ev = parse_etw_event(record, krabs::schema(record, trace_context.schema_locator));
     if (ev.is_null()) {
         null_events++;

@@ -72,7 +72,7 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="output.h">
-      <Filter>Source Files</Filter>
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

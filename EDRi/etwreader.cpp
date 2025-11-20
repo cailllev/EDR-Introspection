@@ -193,6 +193,7 @@ DWORD WINAPI t_start_etw_hook_trace(LPVOID param) {
 
         // trace_start is blocking, hence threaded
         std::cout << "[+] ETW: NTDLL-Hook trace registered, starting...\n";
+        g_hook_trace_started = true; // when there are no hooked binaries, there are no events --> must be "checked" here (even tho this sets it a bit too early to true)
         trace_etw_hook.start();
     }
     catch (const std::exception& e) {

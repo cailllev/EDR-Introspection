@@ -5,8 +5,8 @@
 #include <string>
 #include <vector>
 
-#include "globals.h"
 #include "hooker.h"
+#include "globals.h"
 #include "sandblast.h"
 #include "utils.h"
 #include "filter.h"
