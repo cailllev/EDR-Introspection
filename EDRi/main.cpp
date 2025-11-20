@@ -55,6 +55,7 @@ bool reflective_inject = true;
 
 // wait times
 static const int add_wait_for_other_traces = 10000; // ensure all other traces are also started (additional wait)
+static const int wait_own_traces_ms = 5000; // own traces also need some time to register
 static const int wait_between_events_ms = 1000;
 static const int wait_after_termination_ms = 5000;
 static const int wait_attack_not_found_threshold_ms = 20000;
@@ -82,13 +83,20 @@ void emit_etw_event(std::string msg, std::string pre, bool print_when_debug) {
 }
 
 void process_results(std::string output_events, std::string output_signatures, bool dump_sig, bool colored) {
+    std::cout << "\n------------------------------------- Result parsing -------------------------------------\n";
     std::cout << "[+] EDRi: Processing the results...\n";
+
+    int n = get_null_events_count();
+    if (n != 0 && g_debug) {
+        std::cout << "[-] EDRi: Discarded " << n << " null events due to parsing errors or invalidated by ETW traces before parsed\n";
+    }
+
     if (g_super_debug) {
         dump_proc_map();
     }
     std::vector<json>all_etw_events;
-    parse_all_etw_events(all_etw_events);
-    std::map<Classifier, std::vector<json>> etw_events = filter_all_events(all_etw_events); // do not use all_etw_events after here, are moved
+    concat_all_etw_events(all_etw_events);
+    std::map<Classifier, std::vector<json*>> etw_events = filter_all_events(all_etw_events); // etw_events just point to all_etw_events
     write_events_to_file(etw_events, output_events, colored);
 
     print_etw_counts(etw_events);
@@ -154,6 +162,7 @@ int main(int argc, char* argv[]) {
         std::cout << options.help() << "\n";
         return 1;
     }
+    std::cout << "\n------------------------------------- EDRi init -------------------------------------\n";
     std::cout << "[*] EDRi: EDR Introspection Framework\n";
 
     // PARSING
@@ -278,43 +287,51 @@ int main(int argc, char* argv[]) {
     std::cout << "[+] EDRi: Own provider registered\n";
 
     std::vector<HANDLE> threads;
-    int wait_for_traces = 0;
-    if (hook_ntdll) {
-        if (!start_etw_hook_trace(threads)) {
-            std::cerr << "[!] EDRi: Failed to start ETW-Hook traces\n";
-            return 1;
-        }
-        wait_for_traces += 3000;
-    }
-    if (trace_etw_ti) {
-        if (!start_etw_ti_trace(threads)) {
-            std::cerr << "[!] EDRi: Failed to start ETW-TI traces\n";
-            return 1;
-        }
-        wait_for_traces += 5000; // expensive start
-    }
     if (trace_etw_misc) {
+        g_misc_trace_started = false; // needs to be checked, so set to false
         if (!start_etw_misc_traces(threads)) {
             std::cerr << "[!] EDRi: Failed to start misc ETW traces(s)\n";
             return 1;
         }
-        wait_for_traces += 10000; // very expensive start
     }
-    Sleep(wait_for_traces); // other traces may take longer to start
-
+    if (trace_etw_ti) {
+        g_etw_ti_trace_started = false; // needs to be checked, so set to false
+        if (!start_etw_ti_trace(threads)) {
+            std::cerr << "[!] EDRi: Failed to start ETW-TI traces\n";
+            return 1;
+        }
+    }
+    if (hook_ntdll) {
+        g_hook_trace_started = false; // needs to be checked, so set to false
+        if (!start_etw_hook_trace(threads)) {
+            std::cerr << "[!] EDRi: Failed to start ETW-Hook traces\n";
+            return 1;
+        }
+    }
     if (!start_etw_default_traces(threads)) { // start last (start marker is detected here)
         std::cerr << "[!] EDRi: Failed to start default ETW traces(s)\n";
         return 1;
     }
-    Sleep(5000); // wait for default traces
 
     // WAIT UNTIL TRACES ARE READY
-    std::cout << "[*] EDRi: Waiting until start marker is detected...\n";
-    while (!g_traces_started) {
+    int waited_for_traces_ms = 0;
+    std::cout << "[*] EDRi: Waiting until all traces are live and start markers is detected...\n";
+    while (!g_start_marked_detected) {
         emit_etw_event(EDRi_TRACE_START_MARKER, "", false);
         Sleep(wait_time_between_start_markers_ms);
+        waited_for_traces_ms += wait_time_between_start_markers_ms;
+        if (g_debug && ((waited_for_traces_ms / wait_time_between_start_markers_ms) % 5 == 0)) {
+            std::cout << "[~] EDRi: Still waiting for own trace...\n"; // print all 10 iterations of waiting
+        }
     }
-    std::cout << "[*] EDRi: All traces should be running now\n";
+    while (!g_misc_trace_started || !g_etw_ti_trace_started || !g_hook_trace_started) {
+        Sleep(wait_time_between_start_markers_ms);
+        waited_for_traces_ms += wait_time_between_start_markers_ms;
+        if (g_debug && ((waited_for_traces_ms / wait_time_between_start_markers_ms) % 5 == 0)) {
+            std::cout << "[~] EDRi: Still waiting for other traces...\n"; // print all 10 iterations of waiting
+        }
+    }
+    std::cout << "[*] EDRi: All traces started\n";
 
     // GET PROCS TO TRACK
     // add all EDR specific procs
@@ -416,6 +433,7 @@ int main(int argc, char* argv[]) {
             Sleep(wait_callbacks_reenable_ms); // wait until callbacks are reenabled
         }
     }
+    std::cout << "\n------------------------------------- Conducting test ------------------------------------\n";
 
     // ATTACK
     // decrypt the attack exe
@@ -436,8 +454,8 @@ int main(int argc, char* argv[]) {
     if (g_debug) {
         std::cout << "[~] EDRi: The EDR might block the attack and a pop up is displayed. In this case, just close it or click OK\n";
     }
+    Sleep(wait_between_events_ms);
     if (run_as_child) {
-        Sleep(wait_between_events_ms);
         try {
             if (!launch_as_child(g_attack_exe_path)) {
                 std::cerr << "[!] EDRi: Failed to launch the attack exe: " << g_attack_exe_path << ". Was it marked as a virus?\n";
@@ -455,7 +473,7 @@ int main(int argc, char* argv[]) {
         std::cout << "[*] EDRi: Execute " << g_attack_exe_path << " now manually\n";
     }
     int cnt_waited = 0;
-    while (!g_attack_started) { // always wait for the attack_PID, lauch_as_child() might return true even when attack is not really started
+    while (g_attack_proc.PID == 0) { // always wait for the attack_PID, lauch_as_child() might succeed even when attack is not started
         Sleep(100);
         cnt_waited += 100;
         if (cnt_waited > wait_attack_not_found_threshold_ms) {

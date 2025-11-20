@@ -122,7 +122,7 @@ std::string add_color_info(const json& ev) {
 }
 
 // output all events as a sparse CSV timeline with merged PPID and FilePath
-std::string create_timeline_csv(std::vector<json>& events, std::vector<std::string> header_start, bool colored) {
+std::string create_timeline_csv(std::vector<json*>& events, std::vector<std::string> header_start, bool colored) {
     std::ostringstream csv_output;
 
     std::vector<std::string> all_keys;
@@ -144,7 +144,7 @@ std::string create_timeline_csv(std::vector<json>& events, std::vector<std::stri
         std::cout << "[+] Output: Adding new keys for CSV header: ";
     }
     for (const auto& ev : events) {
-        for (auto it = ev.begin(); it != ev.end(); ++it) {
+        for (auto it = ev->begin(); it != ev->end(); ++it) {
             // skip already inserted keys
             if (std::find(all_keys.begin(), all_keys.end(), it.key()) != all_keys.end()) continue;
 
@@ -178,8 +178,8 @@ std::string create_timeline_csv(std::vector<json>& events, std::vector<std::stri
         // traverse keys IN ORDER OF CSV HEADER
         // i.e. given: key from csv, check: if event has it, add value, else skip (add "")
         for (const auto& key : all_keys) {
-            auto it = ev.find(key);
-            if (it != ev.end()) {
+            auto it = ev->find(key);
+            if (it != ev->end()) {
                 csv_output << normalized_value(it);
             }
             else {
@@ -188,7 +188,7 @@ std::string create_timeline_csv(std::vector<json>& events, std::vector<std::stri
             if (&key != &all_keys.back()) csv_output << ",";
         }
         if (colored) {
-            csv_output << add_color_info(ev);
+            csv_output << add_color_info((*ev));
         }
         if (g_debug && (c % 100 == 0)) {
             std::cout << c << ", ";
@@ -202,9 +202,9 @@ std::string create_timeline_csv(std::vector<json>& events, std::vector<std::stri
     return csv_output.str();
 }
 
-void write_events_to_file(std::map<Classifier, std::vector<json>>& etw_events, const std::string& output, bool colored) {
+void write_events_to_file(std::map<Classifier, std::vector<json*>>& etw_events, const std::string& output, bool colored) {
     for (auto& c : etw_events) {
-        std::vector<json>& events = etw_events[c.first];
+        std::vector<json*>& events = etw_events[c.first];
         std::string classifier_name = classifier_names[c.first];
         try {
             // construct filename
@@ -216,8 +216,8 @@ void write_events_to_file(std::map<Classifier, std::vector<json>>& etw_events, c
             }
 
             // sort events by timestamp
-            std::sort(events.begin(), events.end(), [](const json& a, const json& b) {
-                return a[TIMESTAMP_NS] < b[TIMESTAMP_NS]; // all events must have a TIMESTAMP_NS field and be int, as by filter_all_events
+            std::sort(events.begin(), events.end(), [](const json* a, const json* b) {
+                return a->at(TIMESTAMP_NS) < b->at(TIMESTAMP_NS); // all events must have a TIMESTAMP_NS field and be int, as by filter_all_events
                 });
 
             if (g_debug) {
@@ -254,19 +254,19 @@ void write_events_to_file(std::map<Classifier, std::vector<json>>& etw_events, c
 
 // ------------------- MISC stuff ------------------- //
 // print count by provider by classification
-void print_etw_counts(std::map<Classifier, std::vector<json>>& etw_events) {
+void print_etw_counts(std::map<Classifier, std::vector<json*>>& etw_events) {
     for (auto& c : etw_events) {
         std::ostringstream oss;
         Classifier classifier = c.first;
-        std::vector<json>& events = c.second;
+        std::vector<json*>& events = c.second;
 
         // count by provider
         std::map<std::string, int> provider_counts;
         for (auto& ev : events) {
             try {
                 std::string provider = "<empty provider>";
-                if (ev.contains(PROVIDER_NAME)) {
-                    provider = ev[PROVIDER_NAME];
+                if (ev->contains(PROVIDER_NAME)) {
+                    provider = ev->at(PROVIDER_NAME);
                 }
                 if (provider_counts.find(provider) == provider_counts.end()) {
                     provider_counts[provider] = 1;
@@ -311,22 +311,22 @@ void print_time_differences() {
 }
 
 // dumps all relevant info from antimalware provider event id 3,8,74,104
-void dump_signatures(std::map<Classifier, std::vector<json>>& etw_events, std::string output_path) {
+void dump_signatures(std::map<Classifier, std::vector<json*>>& etw_events, std::string output_path) {
     std::vector<std::string> data = {};
 	std::vector<std::string> yara_rules = {};
     for (const auto& ev : etw_events[Relevant]) {
         try {
-            if (ev[PROVIDER_NAME] != ANTIMALWARE_PROVIDER) {
+            if (ev->contains(PROVIDER_NAME) && ev->at(PROVIDER_NAME) != ANTIMALWARE_PROVIDER) {
                 continue; // only this provider contains the signatures
             }
-            if (ev[EVENT_ID] == 3) {
-                if (!ev.contains(MESSAGE)) {
+            if (ev->contains(EVENT_ID) && ev->at(EVENT_ID) == 3) {
+                if (!ev->contains(MESSAGE)) {
                     if (g_debug) {
-                        std::cout << "[-] Output: Warning: Event with ID 3 missing " << MESSAGE << " field: " << ev.dump() << "\n";
+                        std::cout << "[-] Output: Warning: Event with ID 3 missing " << MESSAGE << " field: " << ev->dump() << "\n";
                     }
                     continue;
                 }
-                std::string m = get_val(ev, MESSAGE);
+                std::string m = get_val((*ev), MESSAGE);
                 std::string s = "signame=";
                 std::string r = "resource=";
                 size_t ss = m.find(s);
@@ -341,42 +341,42 @@ void dump_signatures(std::map<Classifier, std::vector<json>>& etw_events, std::s
                     data.push_back("Found signal/signature: " + sig + " for " + translate_if_path(res));
                 }
             }
-            if (ev[EVENT_ID] == 8) {
-                if (!ev.contains(PID)) {
+            if (ev->contains(EVENT_ID) && ev->at(EVENT_ID) == 8) {
+                if (!ev->contains(PID)) {
                     if (g_debug) {
-                        std::cout << "[-] Output: Warning: Event with ID 8 missing " << PID << " field: " << ev.dump() << "\n";
+                        std::cout << "[-] Output: Warning: Event with ID 8 missing " << PID << " field: " << ev->dump() << "\n";
                     }
                     continue;
                 }
-                if (!ev.contains(NAME)) {
+                if (!ev->contains(NAME)) {
                     if (g_debug) {
-                        std::cout << "[-] Output: Warning: Event with ID 8 missing " << NAME << " field: " << ev.dump() << "\n";
+                        std::cout << "[-] Output: Warning: Event with ID 8 missing " << NAME << " field: " << ev->dump() << "\n";
                     }
                     continue;
                 }
-				std::string sig = get_val(ev, NAME);
-                data.push_back("Behaviour Monitoring Detection: pid=" + get_val(ev, PID) + ", sig=" + sig);
+				std::string sig = get_val((*ev), NAME);
+                data.push_back("Behaviour Monitoring Detection: pid=" + get_val((*ev), PID) + ", sig=" + sig);
                 std::string rule = get_yara_rule(sig);
                 if (!rule.empty()) {
                     yara_rules.push_back(rule);
 				}
             }
-            if (ev[EVENT_ID] == 74) {
+            if (ev->contains(EVENT_ID) && ev->at(EVENT_ID) == 74) {
                 std::ostringstream oss;
                 oss << "Sense Remidiation" <<
-                    ": threatname=" << get_val(ev, THREATNAME) <<
-                    ", signature=" << get_val(ev, SIGSEQ) <<
-                    ", sigsha=" << get_val(ev, SIGSHA) <<
-                    ", classification=" << get_val(ev, CLASSIFICATION) <<
-                    ", determination=" << get_val(ev, DETERMINATION) <<
-                    ", realpath=" << get_val(ev, REALPATH) <<
-                    ", resource=" << get_val(ev, RESOURCESCHEMA);
+                    ": threatname=" << get_val((*ev), THREATNAME) <<
+                    ", signature=" << get_val((*ev), SIGSEQ) <<
+                    ", sigsha=" << get_val((*ev), SIGSHA) <<
+                    ", classification=" << get_val((*ev), CLASSIFICATION) <<
+                    ", determination=" << get_val((*ev), DETERMINATION) <<
+                    ", realpath=" << get_val((*ev), REALPATH) <<
+                    ", resource=" << get_val((*ev), RESOURCESCHEMA);
                 data.push_back(oss.str());
             }
-            if (ev[EVENT_ID] == 104) {
-                if (!ev.contains(FIRST_PARAM) || !ev.contains(SECOND_PARAM)) {
+            if (ev->contains(EVENT_ID) && ev->at(EVENT_ID) == 104) {
+                if (!ev->contains(FIRST_PARAM) || !ev->contains(SECOND_PARAM)) {
                     if (g_debug) {
-                        std::cout << "[-] Output: Warning: Event with ID 104 missing " << FIRST_PARAM << " or " << SECOND_PARAM << " field: " << ev.dump() << "\n";
+                        std::cout << "[-] Output: Warning: Event with ID 104 missing " << FIRST_PARAM << " or " << SECOND_PARAM << " field: " << ev->dump() << "\n";
                     }
                 }
             }
