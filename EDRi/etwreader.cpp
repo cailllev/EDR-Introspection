@@ -250,7 +250,7 @@ bool start_etw_hook_trace(std::vector<HANDLE>& threads) {
 void stop_all_etw_traces() {
     try {
         trace_etw.stop();
-		trace_etw_misc.stop();
+        trace_etw_misc.stop();
         trace_etw_ti.stop();
         trace_etw_hook.stop();
     }
