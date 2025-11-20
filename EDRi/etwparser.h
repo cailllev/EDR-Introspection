@@ -60,11 +60,9 @@ static const std::string TID = "thread_id";
 // properties from the actual events --> values cannot be changed!
 static const std::string PPID = "ppid";
 static const std::string TARGET_PID = "targetpid";
-static const std::string TARGET_PID_KERNEL = "processid"; // gets merged into TARGET_PID at parsing
 static const std::string TARGET_TID = "targettid";
 static const std::string ORIGINATING_PID = "pid"; // antimalware-traces + kernel-network-traces
 static const std::string FILEPATH = "filepath";
-static const std::string FILEPATH_KERNEL = "imagename"; // gets merged into FILEPATH at parsing
 static const std::string MESSAGE = "message";
 static const std::string SIGSEQ = "sigseq";
 static const std::string SIGSHA = "sigsha";
@@ -83,7 +81,6 @@ static const std::string SOURCE = "source";
 extern bool g_misc_trace_started;
 extern bool g_etw_ti_trace_started;
 extern bool g_hook_trace_started;
-
 
 // keys that get merged together
 struct MergeCategory {
