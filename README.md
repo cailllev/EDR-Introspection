@@ -31,9 +31,10 @@ It is recomended to **make an exclusion** for the EDR-Introspection folder, and 
 
 ### Create own attack
 1. Copy folder `.\attacks\Injector` to `.\attacks\YourAttack`
-2. rename all references in vcproj files from `Injector` to `YourAttack`
-3. build YourAttack with all features: `.\attacks\YourAttack\build-features.bat`
-4. the created (encrypted) exes should now be visible in the EDRi under available attacks
+2. rename all `.\attacks\YourAttack\Injector.vcxproj*` to `.\attacks\YourAttack\YourAttack.vcxproj*`
+3. rename all (both) references in `.\attacks\YourAttack\YourAttack.vcxproj` and `built-features.bat` from `Injector` to `YourAttack`
+4. build YourAttack with all features: `.\attacks\YourAttack\build-features.bat`
+5. the created (encrypted) exes should now be visible in the EDRi under available attacks
 ```powershell
 # print just the attacks
 .\x64\Release\EDRi.exe --edr-profile MDE --attack 
