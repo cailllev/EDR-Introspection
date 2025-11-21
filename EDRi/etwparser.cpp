@@ -612,9 +612,7 @@ void post_parsing_checks(json& j) {
 
         // also check if the attack is done
         if (!g_attack_terminated && pid == g_attack_proc.PID) {
-            if (g_debug) {
-                std::cout << "[+] ETW: Attack termination detected\n";
-            }
+            std::cout << "[+] ETW: Attack termination detected\n";
             g_attack_terminated = true;
         }
         // no need to check for injected termination, only g_attack_terminated is relevant
@@ -660,7 +658,7 @@ void event_callback_misc(const EVENT_RECORD& record, const krabs::trace_context&
 
 // hand over schema for parsing
 void event_callback_etw_ti(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
-    g_etw_ti_trace_started = true;
+    // g_etw_ti_trace_started = true; // when there are no "threat" events, there are no etw-tievents --> must be set in etwreader, even if it's not super accurate there
     json ev = parse_etw_event(record, krabs::schema(record, trace_context.schema_locator));
     if (ev.is_null()) {
         null_events++;

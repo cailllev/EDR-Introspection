@@ -168,8 +168,9 @@ DWORD WINAPI t_start_etw_ti_trace(LPVOID param) {
         std::cout << "[+] ETW: Enabling ETW-TI: (all)\n";
         trace_etw_ti.enable(ti_provider);
 
-        // trace_start is blocking, hence threaded
+        // trace_start is blocking, hence threaded  
         std::cout << "[+] ETW: TI trace registered, starting...\n";
+        g_etw_ti_trace_started = true; // when there are no "threat" events, there are no etw-tievents --> must be "checked" here (even tho this sets it a bit too early to true)
         trace_etw_ti.start();
     }
     catch (const std::exception& e) {

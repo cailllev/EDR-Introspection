@@ -190,7 +190,7 @@ std::string create_timeline_csv(std::vector<json*>& events, std::vector<std::str
         if (colored) {
             csv_output << add_color_info((*ev));
         }
-        if (g_debug && (c % 100 == 0)) {
+        if (g_debug && c > 0 && (c % 5000 == 0)) {
             std::cout << c << ", ";
         }
         csv_output << "\n";

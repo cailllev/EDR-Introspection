@@ -328,7 +328,11 @@ int main(int argc, char* argv[]) {
         Sleep(wait_time_between_start_markers_ms);
         waited_for_traces_ms += wait_time_between_start_markers_ms;
         if (g_debug && ((waited_for_traces_ms / wait_time_between_start_markers_ms) % 5 == 0)) {
-            std::cout << "[~] EDRi: Still waiting for other traces...\n"; // print all 10 iterations of waiting
+            std::string t = "";
+            if (!g_misc_trace_started) { t += "misc "; }
+            if (!g_etw_ti_trace_started) { t += "etw-ti "; }
+            if (!g_hook_trace_started) { t += "hook "; }
+            std::cout << "[~] EDRi: Still waiting for " << t << "traces...\n"; // print all 10 iterations of waiting
         }
     }
     std::cout << "[*] EDRi: All traces started\n";
@@ -407,12 +411,13 @@ int main(int argc, char* argv[]) {
         }
         save_hooked_procs(g_newly_hooked_procs); // and save for next round
 
-        // check if ALL NEWLY hooked procs emitted the hook start msg
+        // no new procs hooked -> no checks
         if (procs_to_be_hooked.empty()) {
             if (g_debug) {
                 std::cout << "[~] EDRi: No new process hooked, no need to check for initialization of the hooker\n";
             }
         }
+        // else check if ALL NEWLY hooked procs emitted the hook start msg
         else {
             if (g_debug) {
                 std::cout << "[+] EDRi: Hooked " << procs_to_be_hooked.size() << " new process(es), waiting for initialization marker of the hooker...\n";

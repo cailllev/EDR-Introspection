@@ -119,7 +119,7 @@ void mark_termination(int pid, UINT64 timestamp_ns) {
         latest_proc->end_time = timestamp_ns;
     }
     else if (g_debug) {
-        std::cout << "[!] Utils: Cannot add termination for unregistered proc " << pid << " at " << unix_epoch_ns_to_iso8601(timestamp_ns) << "\n";
+        std::cout << "[~] Utils: Cannot add termination for unregistered proc " << pid << " at " << unix_epoch_ns_to_iso8601(timestamp_ns) << "\n";
     }
 }
 
