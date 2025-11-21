@@ -23,18 +23,19 @@ It is recomended to **make an exclusion** for the EDR-Introspection folder, and 
 .\x64\Release\EDRi.exe -h
 
 # run simplest attack: no ETW-TI, no hooking, minimal traces, run attack as child proc, no debug
-.\x64\Release\EDRi.exe --edr-profile MDE --attack Injector_standard -r
+.\x64\Release\EDRi.exe --edr-profile MDE --attack CalcExample_standard -r
 
 # opposite: ETW-TI, hooking ntdll, all traces, debug
-.\helpers\KDU\kdu.exe -pse "$(pwd)\x64\Release\EDRi.exe --edr-profile MDE --attack Injector_deconditioning_alloc -t -d" -prv 54
+.\helpers\KDU\kdu.exe -pse "$(pwd)\x64\Release\EDRi.exe --edr-profile MDE --attack CalcExample_deconditioning_alloc -t -d" -prv 54
 ```
 
 ### Create own attack
-1. Copy folder `.\attacks\Injector` to `.\attacks\YourAttack`
-2. rename all `.\attacks\YourAttack\Injector.vcxproj*` to `.\attacks\YourAttack\YourAttack.vcxproj*`
-3. rename all (both) references in `.\attacks\YourAttack\YourAttack.vcxproj` and `built-features.bat` from `Injector` to `YourAttack`
-4. build YourAttack with all features: `.\attacks\YourAttack\build-features.bat`
-5. the created (encrypted) exes should now be visible in the EDRi under available attacks
+1. Copy folder `.\attacks\CalcExample` to `.\attacks\YourAttack`
+2. rename all `.\attacks\YourAttack\CalcExample.vcxproj*` to `.\attacks\YourAttack\YourAttack.vcxproj*`
+3. rename both references in `.\attacks\YourAttack\YourAttack.vcxproj` from `CalcExample` to `YourAttack`
+4. rename both references in `.\attacks\YourAttack\build-features.bat` from `CalcExample.vcxproj` to `YourAttack.vcxproj` and both `CalcExample-%%C.exe` to `YourAttack-%%C.exe`
+5. build YourAttack with all features: `.\attacks\YourAttack\build-features.bat`
+6. the created (encrypted) exes should now be visible in the EDRi under available attacks
 ```powershell
 # print just the attacks
 .\x64\Release\EDRi.exe --edr-profile MDE --attack 
