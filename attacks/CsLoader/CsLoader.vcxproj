@@ -70,9 +70,9 @@
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{3FF21867-EA53-463C-9336-E43B13FA2B29}</ProjectGuid>
-    <RootNamespace>CSInjector</RootNamespace>
+    <RootNamespace>CsLoader</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectName>CSInjector</ProjectName>
+    <ProjectName>CSLoader</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
