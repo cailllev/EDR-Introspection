@@ -39,10 +39,10 @@ It is recomended to **make an exclusion** for the EDR-Introspection folder, and 
 .\x64\Release\EDRi.exe --edr-profile MDE --attack 
 ```
 
-## System Requirements
-Recommendation for longer tests or tests with potentially many alerts:
-* 16GB of RAM, (8GB for Windows, 8GB for longer tests / more traces attached)
-* 4 virtual CPUs
+## Requirements
+* Windows 10 / 11 (others not tested)
+* ability to load vulnerable drivers (when testing with ETW-TI or ntdll hooking)
+* excluding the EDR-Introspection/ folder from your EDR
 
 ## Misc Tools
 To play around or test stuff, helper exes are provided for the following actions.
