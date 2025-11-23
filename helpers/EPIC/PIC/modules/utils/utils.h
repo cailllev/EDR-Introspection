@@ -9,8 +9,8 @@
 #include <epic.h>
 
 namespace utils {
+	MODULE void message(const char* msg, const char* title);
+	MODULE int get_pid_by_name(const wchar_t* target);
 	MODULE HANDLE open_process_by_pid(int pid);
-	MODULE HANDLE open_process_by_name(const char* msg);
-	MODULE BOOL read_memory(HANDLE h, uint64_t addr, void* buf, SIZE_T size);
-	MODULE void message(const char *msg);
+	MODULE bool read_data_section(HANDLE h, LPVOID outBuffer, SIZE_T outBufferSize);
 }

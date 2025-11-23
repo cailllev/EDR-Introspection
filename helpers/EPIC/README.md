@@ -14,3 +14,7 @@ cd EDR-Introspection/helpers/EPIC/
 ./EPIC.exe pic-link Out/ -o Out/ -a
 ../shellcode/runshc64.exe Out/payload.bin
 ```
+3a. launching payload with PPL
+```powershell
+.\helpers\KDU\kdu.exe -psw "$(pwd)\helpers\shellcode\runshc64.exe $(pwd)\helpers\EPIC\Out\payload.bin" -prv 54
+```

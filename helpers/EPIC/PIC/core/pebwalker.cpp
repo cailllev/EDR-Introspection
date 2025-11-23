@@ -16,43 +16,25 @@
 #include "pebwalker.h"
 
 PPEB GetPEB() {
-    uint64_t value = 0;
-
-    // Read from the GS segment
-    __asm__ volatile("movq %%gs:%1, %0"
-                     : "=r"(value)            // output
-                     : "m"(*(uint64_t*)0x60)  // input
-                     :);
-
-    return (PPEB)value;
+    PPEB peb;
+    __asm__ volatile("movq %%gs:0x60, %0" : "=r"(peb));
+    return peb;
 }
 
 HMODULE GetDllFromMemory(const wchar_t* name) {
     PPEB peb = GetPEB();
+    if (!peb || !peb->Ldr) return NULL;
 
-    PLIST_ENTRY           item = peb->Ldr->InMemoryOrderModuleList.Blink;
-    PLDR_DATA_TABLE_ENTRY dll  = NULL;
+    LIST_ENTRY* head = &peb->Ldr->InMemoryOrderModuleList;
+    LIST_ENTRY* curr = head->Flink;
 
-    do {
-        dll = CONTAINING_RECORD(item, LDR_DATA_TABLE_ENTRY, InMemoryOrderLinks);
-
-#ifdef MONOLITH
-		printf("[GetDllFromMemory] ------------\n");
-        printf("[GetDllFromMemory] BaseDllName: %ls\n", dll->BaseDllName.Buffer);
-        printf("[GetDllFromMemory] FullDllName: %ls\n", dll->FullDllName.Buffer);
-#endif
-
-        if (wcscmp(dll->BaseDllName.Buffer, name) == 0) {
-
-#ifdef MONOLITH
-            printf("[GetDllFromMemory] Found: %ls\n", dll->BaseDllName.Buffer);
-#endif
-
+    while (curr != head) {
+        LDR_DATA_TABLE_ENTRY* dll = CONTAINING_RECORD(curr, LDR_DATA_TABLE_ENTRY, InMemoryOrderLinks);
+        if (dll->BaseDllName.Buffer && wcsicmp(dll->BaseDllName.Buffer, name) == 0) {
             return (HMODULE)dll->DllBase;
         }
-
-        item = item->Blink;
-    } while (item != NULL);
+        curr = curr->Flink;
+    }
 
     return NULL;
 }

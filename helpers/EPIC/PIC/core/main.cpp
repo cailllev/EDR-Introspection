@@ -8,36 +8,37 @@
 
 void print_message() {
     auto ctx = GET_CONTEXT();
-    utils::message(ctx->message);
+    utils::message(ctx->message, "Main");
 }
 
 extern "C" void main_pic() {
     auto ctx = GET_CONTEXT();
-    ctx->message = "Start";
-    print_message();
 
-    int pid = 5716;
-    uint64_t addr = 0x7FF728920000LL; // proc base
-
-    char buffer[2];
-    memset(buffer, 0, sizeof(buffer));
-    HANDLE h = utils::open_process_by_pid(pid);
-    if (h != NULL) {
-        if (utils::read_memory(h, addr, buffer, sizeof(buffer))) {
-            buffer[sizeof(buffer)] = 0; // null terminate
-            ctx->message = buffer;
-            utils::message(ctx->message);
-        }
-        else {
-            ctx->message = "Read Memory failed";
-            print_message();
-        }
+    wchar_t proc[] = L"explorer.exe";
+    uint64_t pid = utils::get_pid_by_name(proc);
+    if (pid == -1) {
+        ctx->message = "Get pid failed!";
+        print_message();
+        return;
     }
-    else {
+
+    HANDLE h = utils::open_process_by_pid(pid);
+    if (h == NULL) {
         ctx->message = "Unable to open proc!";
         print_message();
+        return;
     }
 
-    ctx->message = "Done";
+    size_t bufferSize;
+    char buffer[bufferSize];
+    bool readOk = utils::read_data_section(h, &buffer, bufferSize);
+    if (!readOk) {
+        ctx->message = "Read data section failed!";
+        print_message();
+        return;
+    }
+
+    buffer[64] = 0; // null terminate
+    ctx->message = buffer;
     print_message();
 }

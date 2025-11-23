@@ -10,5 +10,6 @@
 #include <epic.h>
 #include <win32/windows.h>
 
+PPEB GetPEB();
 HMODULE GetDllFromMemory(const wchar_t* name);
 void* GetProcAddr(HMODULE dll, const char* funcName);
