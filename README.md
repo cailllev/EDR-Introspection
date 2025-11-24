@@ -12,6 +12,7 @@ The enabling technologies of this projects are:
 	- hook ntdll of EDR procs
 - [kdu.exe](https://github.com/hfiref0x/KDU) to run procs as PPL-AntiMalware
 - [EDRSandblast](https://github.com/cailllev/EDRSandblast) to disable kernel callbacks
+- [EPIC](https://github.com/Print3M/epic) to develop the lsass reader as position independent code
 
 ## How To
 ### Run the Framework
