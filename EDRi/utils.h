@@ -48,7 +48,7 @@ std::vector<int> get_hooked_procs();
 
 std::wstring get_base_path();
 std::string get_hook_dll_path();
-std::string get_output_path(std::string);
+std::string get_output_path(std::string, bool);
 bool xor_file(std::string, std::string);
 bool remove_file(const std::string&);
 std::string get_available_attacks();

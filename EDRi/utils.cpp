@@ -28,6 +28,9 @@ static std::string dumps_relative_path = "..\\..\\EDRi\\dumps\\";
 static std::string defender2yara_relative_path = "..\\..\\EDRi\\defender2yara\\";
 static std::string defender2yara_sigs_url = "https://github.com/t-tani/defender2yara/tree/yara-rules";
 
+static const std::string outTypeEvent = "events\\";
+static const std::string outTypeSigs = "signatures\\";
+
 // TODO detect system reboot -> clear PIDs from hooked.txt
 const std::string hooked_procs_file = "C:\\Users\\Public\\Downloads\\hooked.txt"; // should match the path in EDRReflectiveHooker (dllmain.cpp)
 
@@ -286,8 +289,18 @@ std::string resolve_path(std::string relative_path) {
 }
 
 // calculates the absolute output path for a given name and the static dumps_relative_path
-std::string get_output_path(std::string name) {
-	return resolve_path(dumps_relative_path + name);
+std::string get_output_path(std::string name, bool eventsType) {
+    std::string type;
+    std::string fileT;
+    if (eventsType) {
+        type = outTypeEvent;
+        fileT = ".csv";
+    }
+    else {
+        type = outTypeSigs;
+        fileT = ".txt";
+    }
+	return resolve_path(dumps_relative_path + type + name + fileT);
 }
 
 // returns the files from /EDRi/attacks
