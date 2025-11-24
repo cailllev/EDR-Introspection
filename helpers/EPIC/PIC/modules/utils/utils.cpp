@@ -96,19 +96,6 @@ namespace utils {
         message(out, title);
     }
 
-    void message_wchar(const wchar_t* msg, const char* title) {
-        size_t len = 0;
-        while (msg[len] != L'\0') {
-            len++;
-        }
-        char out[len + 1];
-        for (size_t i = 0; i < len; i++) {
-            out[i] = (char)(msg[i]);
-        }
-        out[len] = '\0';
-        message(out, title);
-    }
-
     int64_t get_pid_by_name(const wchar_t* targetName) {
 
         auto ntdll = GetDllFromMemory(L"ntdll.dll");
@@ -149,100 +136,6 @@ namespace utils {
         auto OpenProcess = (OpenProcessPtr)GetProcAddr(kernel32, "OpenProcess");
         HANDLE h = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pid);
         return h;
-    }
-
-    bool read_data_section(HANDLE h, LPVOID outBuffer, SIZE_T outBufferSize) {
-        auto ntdll = GetDllFromMemory(L"ntdll.dll");
-        if (!ntdll) return false;
-
-        auto ZwQueryInformationProcess = (NtQueryInformationProcessPtr)GetProcAddr(ntdll, "ZwQueryInformationProcess");
-        if (!ZwQueryInformationProcess) return false;
-
-        auto NtReadVirtualMemory = (NtReadVirtualMemoryPtr)GetProcAddr(ntdll, "NtReadVirtualMemory");
-        if (!NtReadVirtualMemory) return false;
-
-        PROCESS_BASIC_INFORMATION pbi = { 0 };
-        ULONG outLen = 0;
-
-        NTSTATUS st = ZwQueryInformationProcess(h, ProcessBasicInformation, &pbi, sizeof(pbi), &outLen);
-        if (st != 0) return false;
-
-        PVOID remotePEB = pbi.PebBaseAddress;
-
-        PEB localPEB = { 0 };
-        SIZE_T bytes = 0;
-
-        if (NtReadVirtualMemory(h, remotePEB, &localPEB, sizeof(localPEB), &bytes) != 0)
-            return false;
-
-        PEB_LDR_DATA ldr = { 0 };
-        if (NtReadVirtualMemory(h, localPEB.Ldr, &ldr, sizeof(ldr), &bytes) != 0)
-            return false;
-
-        PLIST_ENTRY remoteHeadAddr = (PLIST_ENTRY)((uintptr_t)localPEB.Ldr + offsetof(PEB_LDR_DATA, InMemoryOrderModuleList));
-        PLIST_ENTRY currAddr = remoteHeadAddr;
-        message_hex(currAddr, "start");
-
-        do {
-            LDR_DATA_TABLE_ENTRY_PARTIAL entry = { 0 };
-
-            if (NtReadVirtualMemory(h, currAddr, &entry, sizeof(entry), &bytes) != 0) {
-                message("failed", "ntread");
-                return false;
-            }
-
-            // read BaseDllName
-            WCHAR nameBuf[260] = { 0 };
-            if (entry.BaseDllName.Buffer && entry.BaseDllName.Length < sizeof(nameBuf)) {
-                st = NtReadVirtualMemory(h, entry.BaseDllName.Buffer, nameBuf, entry.BaseDllName.Length, &bytes);
-                if (st != STATUS_SUCCESS) {
-                    //message_hex((void*)st, "read mem");
-                    continue;
-                }
-                message_wchar(nameBuf, "image name");
-
-                // match the main module (first in list)
-                if (entry.DllBase != NULL) {
-
-                    BYTE hdrBuf[0x1000] = { 0 };
-                    if (NtReadVirtualMemory(h, entry.DllBase, hdrBuf, sizeof(hdrBuf), &bytes) != 0)
-                        return false;
-
-                    auto dos = (IMAGE_DOS_HEADER*)hdrBuf;
-                    auto nt = (IMAGE_NT_HEADERS*)((BYTE*)hdrBuf + dos->e_lfanew);
-
-                    IMAGE_SECTION_HEADER* sec = IMAGE_FIRST_SECTION(nt);
-                    for (int i = 0; i < nt->FileHeader.NumberOfSections; i++, sec++) {
-
-                        bool is_data = true;
-                        const char dataname[5] = { '.','d','a','t','a' };
-                        for (int j = 0; j < 5; j++) {
-                            if (sec->Name[j] != dataname[j]) {
-                                is_data = false;
-                                break;
-                            }
-                        }
-
-                        if (is_data) {
-                            // cut down to outBufferSize if too big
-                            SIZE_T toRead = (outBufferSize <= sec->Misc.VirtualSize) ? outBufferSize : sec->Misc.VirtualSize;
-                            PVOID remoteData = (BYTE*)entry.DllBase + sec->VirtualAddress;
-                            if (NtReadVirtualMemory(h, remoteData, outBuffer, toRead, &bytes) == 0) {
-                                return true;
-                            }
-                        }
-                    }
-                }
-            }
-            
-            LIST_ENTRY listEntry = { 0 };
-            if (NtReadVirtualMemory(h, (PVOID)currAddr, &listEntry, sizeof(listEntry), &bytes) != 0)
-                return false;
-
-            currAddr = listEntry.Flink;
-        } while (currAddr != remoteHeadAddr);
-
-        return false;
     }
 
     bool read_process_heap(HANDLE h, LPVOID outBuffer, SIZE_T outBufferSize) {

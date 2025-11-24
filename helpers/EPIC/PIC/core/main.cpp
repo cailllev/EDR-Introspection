@@ -20,12 +20,13 @@ extern "C" void main_pic() {
         return;
     }
 
-    size_t bufferSize = 1024;
+    size_t bufferSize = 4 * 1024; // KB
+    size_t printSize = 1 * 1024; // KB
     char buffer[bufferSize];
     bool readOk = utils::read_process_heap(h, &buffer, bufferSize);
     if (!readOk) {
         utils::message("Read process heap failed!", "main error");
         return;
     }
-    utils::message_encode(buffer, bufferSize, "heap");
+    utils::message_encode(buffer, printSize, "heap");
 }
