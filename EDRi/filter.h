@@ -9,6 +9,8 @@
 
 enum Classifier { All, Relevant, Minimal };
 extern std::map<Classifier, std::string> classifier_names;
+static const std::string CLASSIFIER_CONTAINED = "1";
+static const std::string CLASSIFIER_NOT_CONTAINED = "0";
 
 // -------------------- FILTERING LISTS -------------------- //
 // Antimalware Trace
@@ -48,7 +50,7 @@ static const std::vector<std::pair<std::string, std::string>> kapi_irrelevant_ex
 
 
 // -------------------- FILTERING FUNCTIONS -------------------- //
-std::map<Classifier, std::vector<json*>> filter_all_events(std::vector<json>&);
+void filter_all_events(std::vector<json>&);
 void add_exe_information(json&, Classifier c);
 
 // pid fields that should have the exe name added at print time

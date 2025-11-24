@@ -60,7 +60,7 @@ static const int wait_between_events_ms = 1000;
 static const int wait_after_termination_ms = 5000;
 static const int wait_attack_not_found_threshold_ms = 20000;
 static const int wait_time_between_start_markers_ms = 1000;
-static const int wait_callbacks_reenable_ms = 15000;
+static const int wait_callbacks_reenable_ms = 21000;
 static const int timeout_for_hooker_init = 30;
 
 // etw print prefixes
@@ -94,18 +94,17 @@ void process_results(std::string output_events, std::string output_signatures, b
     if (g_super_debug) {
         dump_proc_map();
     }
-    std::vector<json>all_etw_events;
-    concat_all_etw_events(all_etw_events);
-    std::map<Classifier, std::vector<json*>> etw_events = filter_all_events(all_etw_events); // etw_events just point to all_etw_events
-    write_events_to_file(etw_events, output_events, colored);
+    std::vector<json> all_etw_events = concat_all_etw_events();
+    filter_all_events(all_etw_events); // etw_events just point to all_etw_events
+    write_events_to_file(all_etw_events, output_events, colored);
 
-    print_etw_counts(etw_events);
     if (g_debug) {
+        print_etw_counts(all_etw_events);
         print_time_differences();
     }
 
     if (dump_sig) {
-        dump_signatures(etw_events, output_signatures); // can only dump from antimalware provider
+        dump_signatures(all_etw_events, output_signatures); // can only dump from antimalware provider
     }
     std::cout << "[*] EDRi: Done\n";
 }
@@ -133,7 +132,10 @@ bool is_admin() {
 }
 
 int main(int argc, char* argv[]) {
-    cxxopts::Options options("EDRi", "EDR Introspection Framework");
+    std::cout << BANNER;
+
+    cxxopts::Options options("EDRi"); 
+    options.set_width(120);
 
     // PARSER OPTIONS
     options.add_options()
@@ -142,16 +144,16 @@ int main(int argc, char* argv[]) {
         ("y,update-defender2yara", "Update the defender2yara signatures")
         ("p,edr-profile", "The EDR to track, supporting: " + get_available_edrs(), cxxopts::value<std::string>())
         ("a,attack-exe", "The attack to execute, supporting: " + get_available_attacks(), cxxopts::value<std::string>())
-        ("r,run-as-child", "If the attack should run (automatically) as a child of the EDRi.exe or if it should be executed manually")
-        ("o,output-path-custom", "Writing to " + get_output_path("[name]") + "-events.csv and [name]-signatures.txt", cxxopts::value<std::string>())
+        ("r,run-as-child", "Execute the attack automatically as a child-proc or manually")
+        ("o,output-path-custom", "Writing to " + get_output_path("[name]", true), cxxopts::value<std::string>())
         ("m,trace-etw-misc", "Trace misc ETW")
         ("i,trace-etw-ti", "Trace ETW-TI (needs PPL)")
         ("n,hook-ntdll", "Hook ntdll.dll (needs PPL)")
         ("t,track-all", "Trace misc ETW, ETW-TI and hooks ntdll.dll")
-        ("k,no-disable-kernel-callbacks", "Do not disable kernel callbacks (only applicable if hook-ntdll)")
+        ("k,no-disable-krnl-callb", "Do not disable kernel callbacks (only applicable if hook-ntdll)")
         ("d,debug", "Print debug info")
         ("v,verbose-debug", "Print very verbose debug info")
-        ("c,colored", "Add color formatting information");
+        ("c,colored", "Add color formatting information"); 
 
     cxxopts::ParseResult result;
     try {
@@ -162,8 +164,6 @@ int main(int argc, char* argv[]) {
         std::cout << options.help() << "\n";
         return 1;
     }
-    std::cout << "\n------------------------------------- EDRi init -------------------------------------\n";
-    std::cout << "[*] EDRi: EDR Introspection Framework\n";
 
     // PARSING
     if (result.count("help")) {
@@ -193,6 +193,7 @@ int main(int argc, char* argv[]) {
     }
 
     // normal run
+    std::cout << "\n------------------------------------- EDRi init -------------------------------------\n";
     if (!is_admin()) {
         std::cerr << "[!] EDRi: Please run as administrator\n";
         return 1;
@@ -243,7 +244,7 @@ int main(int argc, char* argv[]) {
     bool dump_sig = trace_etw_misc; // can only dump signatures if antimalware provider is traced
 
     bool disable_kernel_callbacks_needed = hook_ntdll && edr_profile.needs_kernel_callbacks_disabling; // normally needed when hooking ntdll
-    if (result.count("no-disable-kernel-callbacks") > 0) {
+    if (result.count("no-disable-krnl-callb") > 0) {
         disable_kernel_callbacks_needed = false; // may be not needed when manually disabled / EDR not protecting
     }
 
@@ -256,8 +257,8 @@ int main(int argc, char* argv[]) {
     else {
         output_name = result["output-path-custom"].as<std::string>();
     }
-    std::string output_events = get_output_path(output_name + "-events.csv");
-    std::string output_signatures = get_output_path(output_name + "-signatures.txt");
+    std::string output_events = get_output_path(output_name, true);
+    std::string output_signatures = get_output_path(output_name, false);
     std::cout << "[*] EDRi: Writing to " << output_events;
     if (dump_sig) {
         std::cout << " and " << output_signatures;
@@ -435,7 +436,7 @@ int main(int argc, char* argv[]) {
         }
 
         if (disable) { // only wait when EDRSandblast was invoked in the first place
-            Sleep(wait_callbacks_reenable_ms); // wait until callbacks are reenabled
+            Sleep(wait_callbacks_reenable_ms); // wait until callbacks are reenabled, at least as long as EDRSandblast waits
         }
     }
     std::cout << "\n------------------------------------- Conducting test ------------------------------------\n";

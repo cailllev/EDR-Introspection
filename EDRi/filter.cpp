@@ -7,9 +7,9 @@
 
 
 std::map<Classifier, std::string> classifier_names = {
-    { All, "All" },
-    { Relevant, "Relevant" },
-    { Minimal, "Minimal" }
+    { All, CLASSIFIER_ALL },
+    { Relevant, CLASSIFIER_RELEVANT },
+    { Minimal, CLASSIFIER_MINIMAL }
 };
 
 // calculate once before doing all the filtering
@@ -317,14 +317,8 @@ Classifier filter(json& ev) {
 }
 
 // filter all events, save references to original events vector
-std::map<Classifier, std::vector<json*>> filter_all_events(std::vector<json>& events) {
+void filter_all_events(std::vector<json>& events) {
     std::cout << "[+] Filter: Filtering " << events.size() << " events into All, Relevant and Minimal\n";
-    std::map<Classifier, std::vector<json*>> etw_events = {
-        { All, {} },
-        { Relevant, {} },
-        { Minimal, {} }
-    };
-    std::map<Classifier, std::vector<size_t>> etw_event_indices;
 
     tracked_procs = get_tracked_procs();
     int skipped = 0;
@@ -337,20 +331,26 @@ std::map<Classifier, std::vector<json*>> filter_all_events(std::vector<json>& ev
         try {
             Classifier c = filter(ev);
             add_exe_information(ev, c); // now add exe info to all pid fields
-            c = filter_post_exe(ev, c);
+            c = filter_post_exe(ev, c); // apply filters now that depend on exe name
 
-            // store all events in All
-            etw_events[All].push_back(&ev);
+            // events are automatically assumed to be in Classifier_All
 
             // store minimal & relevant events in Relevant
             if (c == Relevant || c == Minimal) {
-                etw_events[Relevant].push_back(&ev);
+                ev[CLASSIFIER_RELEVANT] = CLASSIFIER_CONTAINED;
+            }
+            else {
+                ev[CLASSIFIER_RELEVANT] = CLASSIFIER_NOT_CONTAINED;
             }
 
             // store only minimal in Minimal
             if (c == Minimal) {
-                etw_events[Minimal].push_back(&ev);
+                ev[CLASSIFIER_MINIMAL] = CLASSIFIER_CONTAINED;
             }
+            else {
+                ev[CLASSIFIER_MINIMAL] = CLASSIFIER_NOT_CONTAINED;
+            }
+            continue;
         }
         catch (const std::exception& e) {
             std::cout << "[!] Filter filter_all_events exception: " << e.what() << " on event: " << ev.dump() << "\n";
@@ -358,15 +358,13 @@ std::map<Classifier, std::vector<json*>> filter_all_events(std::vector<json>& ev
         catch (...) {
             std::cout << "[!] Filter: filter_all_events unknown exception on event: " << ev.dump() << "\n";
         }
+        // fallback
+        ev[CLASSIFIER_RELEVANT] = CLASSIFIER_NOT_CONTAINED;
+        ev[CLASSIFIER_MINIMAL] = CLASSIFIER_NOT_CONTAINED;
     }
-    if (g_debug) {
-        if (skipped == 0) {
-            std::cout << "[+] Filter: No incomplete events, no errors in parsing\n";
-        }
-        else {
-            std::cout << "[-] Filter: Skipped " << skipped << " incomplete events (missing " << TIMESTAMP_NS << " field)\n";
-        }
+    if (skipped > 0) {
+        std::cout << "[-] Filter: Skipped " << skipped << " incomplete events (missing " << TIMESTAMP_NS << " field)\n";
+    } else if (g_debug) {
+        std::cout << "[+] Filter: No incomplete events, no errors in parsing\n";
     }
-
-    return etw_events;
 }

@@ -680,10 +680,11 @@ void event_callback_hooks(const EVENT_RECORD& record, const krabs::trace_context
 }
 
 // get all events as one flat vector
-void concat_all_etw_events(std::vector<json>& out) {
-    std::vector<std::vector<json>*> all_etw_events = { &std_events, &misc_events, &etw_ti_events, &hook_events };
+std::vector<json> concat_all_etw_events() {
+    std::vector<json> out;
+    std::vector<std::vector<json>*> event_traces = { &std_events, &misc_events, &etw_ti_events, &hook_events };
     size_t events_count = 0;
-    for (auto v_ptr : all_etw_events) {
+    for (auto v_ptr : event_traces) {
         events_count += v_ptr->size();
     }
 
@@ -693,11 +694,12 @@ void concat_all_etw_events(std::vector<json>& out) {
     out.clear();
     out.reserve(events_count);
 
-    for (auto v_ptr : all_etw_events) {
+    for (auto v_ptr : event_traces) {
         out.insert(out.end(),
             std::make_move_iterator(v_ptr->begin()),
             std::make_move_iterator(v_ptr->end()));
         v_ptr->clear(); // original vectors are now empty
         v_ptr->shrink_to_fit(); // release the ~kraken~ memory
     }
+    return out;
 }

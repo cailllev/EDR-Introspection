@@ -56,6 +56,9 @@ static const std::string EVENT_ID = "event_id";
 static const std::string TASK = "task_info"; // task_name + opcode_name
 static const std::string PID = "process_id";
 static const std::string TID = "thread_id";
+static const std::string CLASSIFIER_ALL = "C_all";
+static const std::string CLASSIFIER_RELEVANT = "C_relevant";
+static const std::string CLASSIFIER_MINIMAL = "C_minimal";
 
 // properties from the actual events --> values cannot be changed!
 static const std::string PPID = "ppid";
@@ -96,6 +99,6 @@ void event_callback_etw_ti(const EVENT_RECORD&, const krabs::trace_context&);
 void event_callback_hooks(const EVENT_RECORD&, const krabs::trace_context&);
 
 std::map<std::string, std::vector<UINT64>> get_time_diffs();
-void concat_all_etw_events(std::vector<json>&);
+std::vector<json> concat_all_etw_events();
 std::string get_val(const json&, const std::string&);
 int get_null_events_count();
