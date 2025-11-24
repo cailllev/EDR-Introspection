@@ -84,6 +84,18 @@ namespace utils {
         message(out, title);
     }
 
+    void message_encode(const char* msg, int len, const char* title) {
+        char out[len * 2 + 1];       // 2 hex chars per byte + NULL
+        const char HEX[] = "0123456789ABCDEF";
+        for (int i = 0; i < len; i++) {
+            unsigned char b = (unsigned char)msg[i];
+            out[i * 2] = HEX[b >> 4];
+            out[i * 2 + 1] = HEX[b & 0x0F];
+        }
+        out[len * 2] = 0; // null terminate
+        message(out, title);
+    }
+
     void message_wchar(const wchar_t* msg, const char* title) {
         size_t len = 0;
         while (msg[len] != L'\0') {
@@ -184,7 +196,7 @@ namespace utils {
             if (entry.BaseDllName.Buffer && entry.BaseDllName.Length < sizeof(nameBuf)) {
                 st = NtReadVirtualMemory(h, entry.BaseDllName.Buffer, nameBuf, entry.BaseDllName.Length, &bytes);
                 if (st != STATUS_SUCCESS) {
-                    message_hex((void*)st, "read mem");
+                    //message_hex((void*)st, "read mem");
                     continue;
                 }
                 message_wchar(nameBuf, "image name");
@@ -230,6 +242,46 @@ namespace utils {
             currAddr = listEntry.Flink;
         } while (currAddr != remoteHeadAddr);
 
+        return false;
+    }
+
+    bool read_process_heap(HANDLE h, LPVOID outBuffer, SIZE_T outBufferSize) {
+        auto ntdll = GetDllFromMemory(L"ntdll.dll");
+        if (!ntdll) return false;
+
+        auto ZwQueryInformationProcess = (NtQueryInformationProcessPtr)GetProcAddr(ntdll, "ZwQueryInformationProcess");
+        if (!ZwQueryInformationProcess) return false;
+
+        auto NtReadVirtualMemory = (NtReadVirtualMemoryPtr)GetProcAddr(ntdll, "NtReadVirtualMemory");
+        if (!NtReadVirtualMemory) return false;
+
+        // Retrieve PEB of remote process
+        PROCESS_BASIC_INFORMATION pbi = { 0 };
+        ULONG outLen = 0;
+
+        if (ZwQueryInformationProcess(h, ProcessBasicInformation, &pbi, sizeof(pbi), &outLen) != STATUS_SUCCESS) {
+            return false;
+        }
+
+        // Read remote PEB structure
+        PEB remotePEB = { 0 };
+        SIZE_T bytes = 0;
+
+        if (NtReadVirtualMemory(h, pbi.PebBaseAddress, &remotePEB, sizeof(remotePEB), &bytes) != STATUS_SUCCESS) {
+            return false;
+        }
+
+        // Remote process default heap
+        PVOID remoteHeap = remotePEB.ProcessHeap;
+        if (!remoteHeap) return false;
+
+        // Read the beginning of the heap
+        SIZE_T toRead = outBufferSize;
+
+        NTSTATUS st = NtReadVirtualMemory(h, remoteHeap, outBuffer, toRead,&bytes);
+        if (st == STATUS_SUCCESS) {
+            return true;
+        }
         return false;
     }
 

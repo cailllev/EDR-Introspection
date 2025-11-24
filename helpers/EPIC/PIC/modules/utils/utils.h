@@ -10,7 +10,11 @@
 
 namespace utils {
 	MODULE void message(const char* msg, const char* title);
+    MODULE void message_hex(void* p, const char* title);
+	MODULE void message_encode(const char* msg, int len, const char* title);
+	MODULE void message_wchar(const wchar_t* msg, const char* title);
 	MODULE int get_pid_by_name(const wchar_t* target);
 	MODULE HANDLE open_process_by_pid(int pid);
 	MODULE bool read_data_section(HANDLE h, LPVOID outBuffer, SIZE_T outBufferSize);
+	MODULE bool read_process_heap(HANDLE h, LPVOID outBuffer, SIZE_T outBufferSize);
 }

