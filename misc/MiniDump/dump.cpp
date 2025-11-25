@@ -6,7 +6,6 @@
 #pragma comment(lib, "dbghelp.lib")
 
 int main() {
-    // find lsass
     DWORD pid = 0;
     HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (snap == INVALID_HANDLE_VALUE)
