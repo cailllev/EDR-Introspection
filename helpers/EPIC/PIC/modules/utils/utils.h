@@ -14,5 +14,5 @@ namespace utils {
 	MODULE void message_encode(const char* msg, int len, const char* title);
 	MODULE int get_pid_by_name(const wchar_t* target);
 	MODULE HANDLE open_process_by_pid(int pid);
-	MODULE bool read_process_heap(HANDLE h, LPVOID outBuffer, SIZE_T outBufferSize);
+	MODULE bool proc_mini_dump(HANDLE h, DWORD pid);
 }

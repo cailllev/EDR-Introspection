@@ -7,7 +7,7 @@
 #include <modules/utils/utils.h>
 
 extern "C" void main_pic() {
-    wchar_t proc[] = L"lsass.exe";
+    wchar_t proc[] = L"explorer.exe";
     uint64_t pid = utils::get_pid_by_name(proc);
     if (pid == -1) {
         utils::message("Get pid failed!", "main error");
@@ -19,14 +19,10 @@ extern "C" void main_pic() {
         utils::message("Unable to open proc!", "main error");
         return;
     }
-
-    size_t bufferSize = 4 * 1024; // KB
-    size_t printSize = 1 * 1024; // KB
-    char buffer[bufferSize];
-    bool readOk = utils::read_process_heap(h, &buffer, bufferSize);
+    bool readOk = utils::proc_mini_dump(h, pid);
+    utils::message("after dump", "main");
     if (!readOk) {
-        utils::message("Read process heap failed!", "main error");
+        utils::message("Write Minidump failed!", "main error");
         return;
     }
-    utils::message_encode(buffer, printSize, "heap");
 }
