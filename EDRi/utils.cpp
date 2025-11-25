@@ -22,11 +22,11 @@
 
 static const std::string encrypt_password = "much signature bypass, such wow";
 static std::wstring attacks_subfolder = L"attacks\\";
-static std::string enc_attack_suffix = ".exe.enc";
+static const std::string enc_attack_suffix = ".exe.enc";
 
-static std::string dumps_relative_path = "..\\..\\EDRi\\dumps\\";
-static std::string defender2yara_relative_path = "..\\..\\EDRi\\defender2yara\\";
-static std::string defender2yara_sigs_url = "https://github.com/t-tani/defender2yara/tree/yara-rules";
+static const std::string dumps_relative_path = "..\\..\\EDRi\\dumps\\";
+static const std::string defender2yara_relative_path = "..\\..\\EDRi\\defender2yara\\";
+static const std::string defender2yara_sigs_url = "https://github.com/t-tani/defender2yara/tree/yara-rules";
 
 static const std::string outTypeEvent = "events\\";
 static const std::string outTypeSigs = "signatures\\";
@@ -220,7 +220,7 @@ std::string get_random_3digit_num() {
 }
 
 // encrypt/decrypt a file with a static password
-bool xor_file(std::string in_path, std::string out_path) {
+bool xor_file(std::string in_path, std::string out_path, bool just_copy) {
     // open input file in binary mode
     std::ifstream infile(in_path, std::ios::binary);
     if (!infile) {
@@ -233,9 +233,10 @@ bool xor_file(std::string in_path, std::string out_path) {
         std::istreambuf_iterator<char>());
     infile.close();
 
-    // xor encrypt with password
-    for (size_t i = 0; i < buffer.size(); ++i) {
-        buffer[i] ^= encrypt_password[i % encrypt_password.size()];
+    if (!just_copy) { // xor encrypt with pre-defined password
+        for (size_t i = 0; i < buffer.size(); ++i) {
+            buffer[i] ^= encrypt_password[i % encrypt_password.size()];
+        }
     }
 
     // write encrypted data to output file
@@ -348,6 +349,26 @@ bool is_attack_available(const std::string& attack) {
 std::string get_attack_enc_path(const std::string& attack) {
 	std::wstring exe_path = get_base_path();
     return wstring2string(exe_path) + wstring2string(attacks_subfolder) + attack + enc_attack_suffix;
+}
+
+std::pair<std::string, std::string> check_custum_attack_path(const std::string& path) {
+    size_t pos = path.find_last_of('\\');
+    if (pos == std::string::npos) {
+        return { "", "" }; // no backslash --> invalid path
+    }
+
+    std::string folder = path.substr(0, pos + 1);
+    std::string name = path.substr(pos + 1);
+
+    WIN32_FIND_DATAA findData;
+    HANDLE hFind = FindFirstFileA(path.c_str(), &findData); // check if file exists
+
+    if (hFind == INVALID_HANDLE_VALUE) {
+        return { "", "" }; // does not exist
+    }
+
+    FindClose(hFind);
+    return { folder, name };
 }
 
 

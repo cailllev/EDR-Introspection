@@ -134,7 +134,7 @@ bool is_admin() {
 int main(int argc, char* argv[]) {
     std::cout << BANNER;
 
-    cxxopts::Options options("EDRi"); 
+    cxxopts::Options options("EDRi");
     options.set_width(120);
 
     // PARSER OPTIONS
@@ -144,6 +144,7 @@ int main(int argc, char* argv[]) {
         ("y,update-defender2yara", "Update the defender2yara signatures")
         ("p,edr-profile", "The EDR to track, supporting: " + get_available_edrs(), cxxopts::value<std::string>())
         ("a,attack-exe", "The attack to execute, supporting: " + get_available_attacks(), cxxopts::value<std::string>())
+        ("own-attack-exe", "An own supplied C:\\path\\to\\attack.exe", cxxopts::value<std::string>())
         ("r,run-as-child", "Execute the attack automatically as a child-proc or manually")
         ("o,output-path-custom", "Writing to " + get_output_path("[name]", true), cxxopts::value<std::string>())
         ("m,trace-etw-misc", "Trace misc ETW")
@@ -153,7 +154,7 @@ int main(int argc, char* argv[]) {
         ("k,no-disable-krnl-callb", "Do not disable kernel callbacks (only applicable if hook-ntdll)")
         ("d,debug", "Print debug info")
         ("v,verbose-debug", "Print very verbose debug info")
-        ("c,colored", "Add color formatting information"); 
+        ("c,colored", "Add color formatting information");
 
     cxxopts::ParseResult result;
     try {
@@ -211,16 +212,32 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     EDR_Profile edr_profile = edr_profiles.at(edr_name);
-    if (result.count("attack-exe") == 0) {
-        std::cerr << "[!] EDRi: No attack specified, use -a and one of: " << get_available_attacks() << "\n";
-        return 1;
-    }
-    std::string attack_name = result["attack-exe"].as<std::string>();
-    if (!is_attack_available(attack_name)) {
-        std::cerr << "[!] EDRi: Unsupported attack specified, use one of: " << get_available_attacks() << "\n";
-        return 1;
-    }
 
+    // check supplied attack exe (pre-defined or custom)
+    std::string attack_name;
+    std::string attack_exe_enc_path;
+    bool just_copy = true;
+    if (result.count("attack-exe") > 0) {
+        attack_name = result["attack-exe"].as<std::string>();
+        if (!is_attack_available(attack_name)) {
+            std::cerr << "[!] EDRi: Unsupported attack specified, use one of: " << get_available_attacks() << "\n";
+            return 1;
+        }
+        just_copy = false;
+        attack_exe_enc_path = get_attack_enc_path(attack_name);
+    }
+    else if (result.count("own-attack-exe") > 0) {
+        std::string own_attack_path = result["own-attack-exe"].as<std::string>();
+        std::tie(attack_name, attack_exe_enc_path) = check_custum_attack_path(own_attack_path);
+        if (attack_name == "" || attack_exe_enc_path == "") {
+            std::cerr << "[!] EDRi: Cannot find own attack exe, please supply a valid path\n";
+            return 1;
+        }
+    }
+    else {
+        std::cerr << "[!] EDRi: No attack specified, set an own attack or use -a and one of: " << get_available_attacks() << "\n";
+        return 1;
+    }
 
     // check tracking options
     bool trace_etw_misc = false, trace_etw_ti = false, hook_ntdll = false;
@@ -249,7 +266,6 @@ int main(int argc, char* argv[]) {
     }
 
     // check output path
-    std::string attack_exe_enc_path = get_attack_enc_path(attack_name);
     std::string output_name;
     if (result.count("output-path-custom") == 0) {
         output_name = edr_name + "-vs-" + attack_name;
@@ -444,15 +460,18 @@ int main(int argc, char* argv[]) {
     // ATTACK
     // decrypt the attack exe
     emit_etw_event("Before decrypting the attack exe from " + attack_exe_enc_path, bef, true);
-    if (xor_file(attack_exe_enc_path, g_attack_exe_path)) {
-        std::cout << "[*] EDRi: Decrypted the attack exe: " << g_attack_exe_path << "\n";
+    if (xor_file(attack_exe_enc_path, g_attack_exe_path, just_copy)) {
+        std::string action = just_copy ? "Copied" : "Decrypted";
+        std::cout << "[*] EDRi: " << action << " the attack exe to: " << g_attack_exe_path << "\n";
     }
     else {
-        std::cerr << "[!] EDRi: Failed to decrypt the attack exe: " << attack_exe_enc_path << "\n";
+        std::string action = just_copy ? "copy" : "decrypt";
+        std::cerr << "[!] EDRi: Failed to " << action << " the attack exe: " << attack_exe_enc_path << "\n";
         stop_all_etw_traces();
         return 1;
     }
-    emit_etw_event("After decrypting the attack exe", aft, true);
+    std::string action = just_copy ? "copying" : "decrypting";
+    emit_etw_event("After " + action + " the attack exe", aft, true);
     Sleep(wait_between_events_ms);
 
     // start the attack
