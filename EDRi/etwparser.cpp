@@ -83,9 +83,8 @@ json parse_custom_etw_event(const EVENT_RECORD& record, const krabs::schema& sch
 
         std::string provider = wchar2string(schema.provider_name());
 
-        UINT64 timestamp_filetime = static_cast<UINT64>(record.EventHeader.TimeStamp.QuadPart);
-        j[TIMESTAMP_NS] = filetime_to_unix_epoch_ns(timestamp_filetime);
-        j[TIMESTAMP_ETW] = filetime_to_iso8601(timestamp_filetime);
+        __int64 etw_timestamp_filetime = static_cast<__int64>(record.EventHeader.TimeStamp.QuadPart);
+        j[TIMESTAMP_ETW] = filetime_to_iso8601(etw_timestamp_filetime);
         j[TYPE] = "myETW";
         j[PID] = record.EventHeader.ProcessId;
         std::string task = wchar2string(schema.task_name());
@@ -124,19 +123,30 @@ json parse_custom_etw_event(const EVENT_RECORD& record, const krabs::schema& sch
         const BYTE* ptr_field = data + msg_len + 1;
 
         // PARSE NS_SINCE_EPOCH
-        UINT64 system_ns_since_unix_epoch = 0;
+        UINT64 system_timestamp_ns_since_unix_epoch = 0;
         if (ptr_field + sizeof(UINT64) <= data + size) {
-            memcpy(&system_ns_since_unix_epoch, ptr_field, sizeof(UINT64));
-            UINT64 etw_ns_since_unix_epoch = (timestamp_filetime - WINDOWS_TICKS_TO_UNIX_EPOCH) * NS_PER_WINDOWS_TICK;
-            INT64 diff = static_cast<INT64>(etw_ns_since_unix_epoch) - static_cast<INT64>(system_ns_since_unix_epoch); // etw time should be greater, but do not trust time...
-            time_diffs_ns[j[PROVIDER_NAME]].push_back(std::abs(diff));
+            memcpy(&system_timestamp_ns_since_unix_epoch, ptr_field, sizeof(UINT64));
+            UINT64 etw_ns_since_unix_epoch = static_cast<UINT64>(etw_timestamp_filetime) - WINDOWS_TICKS_TO_UNIX_EPOCH) * NS_PER_WINDOWS_TICK;
+            if (system_timestamp_ns_since_unix_epoch > 0) { // only diff if valid timestamp
+                INT64 diff = static_cast<INT64>(etw_ns_since_unix_epoch) - static_cast<INT64>(system_timestamp_ns_since_unix_epoch); // etw time should be greater, but do not trust time...
+                time_diffs_ns[j[PROVIDER_NAME]].push_back(std::abs(diff));
+            }
             ptr_field += sizeof(UINT64);
         }
         else if (g_debug) {
             std::cerr << "[!] ETW: Custom event with no " << TIMESTAMP_NS << " field: " << j.dump() << "\n";
         }
-        std::string iso_time = unix_epoch_ns_to_iso8601(system_ns_since_unix_epoch);
-        j[TIMESTAMP_SYS] = iso_time;
+        if (system_timestamp_ns_since_unix_epoch == 0) { // falback to ETW timestamp
+            j[TIMESTAMP_NS] = filetime_to_unix_epoch_ns(etw_timestamp_filetime);
+            j[TIMESTAMP_SYS] = j[TIMESTAMP_ETW];
+            if (g_debug) {
+                std::cerr << "[!] ETW: Custom event with invalid " << TIMESTAMP_NS << " field: " << j.dump() << "\n";
+            }
+        }
+        else { // use timestamp right before etw was emitted (more exact for hook events)
+            j[TIMESTAMP_NS] = filetime_to_unix_epoch_ns(system_timestamp_ns_since_unix_epoch);
+            j[TIMESTAMP_SYS] = unix_epoch_ns_to_iso8601(system_timestamp_ns_since_unix_epoch);
+        }
 
         if (provider == HOOK_PROVIDER) {
             // PARSE TARGETPID
@@ -210,9 +220,9 @@ json parse_etw_event(const EVENT_RECORD& record, const krabs::schema& schema) {
 
         json j;
 
-        __int64 timestamp_filetime = static_cast<__int64>(record.EventHeader.TimeStamp.QuadPart);
-        j[TIMESTAMP_NS] = filetime_to_unix_epoch_ns(timestamp_filetime);
-        j[TIMESTAMP_ETW] = filetime_to_iso8601(timestamp_filetime);
+        __int64 etw_timestamp_filetime = static_cast<__int64>(record.EventHeader.TimeStamp.QuadPart);
+        j[TIMESTAMP_NS] = filetime_to_unix_epoch_ns(etw_timestamp_filetime);
+        j[TIMESTAMP_ETW] = filetime_to_iso8601(etw_timestamp_filetime);
         j[TIMESTAMP_SYS] = j[TIMESTAMP_ETW]; // normal ETW events only have their timestamp, not the custom system timestamp
         j[PID] = record.EventHeader.ProcessId;
         j[TID] = record.EventHeader.ThreadId;
