@@ -1,6 +1,7 @@
 #pragma once
 
 const char* BANNER = "\n"
+"\n"
 "@@@@@@@@  @@@@@@@   @@@@@@@   @@@ \n"
 "@@###@@@  @@###@@@  @@###@@@  @#@ \n"
 "@#!       @#!  #@@  @#!  #@@  ##! \n"
@@ -12,4 +13,5 @@ const char* BANNER = "\n"
 " :: ::::   :::: ::  ::   :::   :: \n"
 ": .. ...   :. .  :  . .   . .  .  \n"
 "\n"
-":: EDR Introspection Framework ::\n\n";
+":: EDR Introspection Framework ::\n"
+"\n";

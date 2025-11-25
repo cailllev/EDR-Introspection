@@ -180,10 +180,11 @@ int main(int argc, char* argv[]) {
     }
 
     // encrypt an exe
+    bool just_copy = false;
     if (result.count("e") > 0) {
         std::string in_path = result["encrypt"].as<std::string>();
         std::string out_path = in_path + ".enc";
-        if (xor_file(in_path, out_path)) {
+        if (xor_file(in_path, out_path, just_copy)) {
             std::cout << "[*] EDRi: XOR encrypted " << in_path << " to " << out_path << "\n";
             return 0;
         }
@@ -216,23 +217,23 @@ int main(int argc, char* argv[]) {
     // check supplied attack exe (pre-defined or custom)
     std::string attack_name;
     std::string attack_exe_enc_path;
-    bool just_copy = true;
     if (result.count("attack-exe") > 0) {
         attack_name = result["attack-exe"].as<std::string>();
         if (!is_attack_available(attack_name)) {
             std::cerr << "[!] EDRi: Unsupported attack specified, use one of: " << get_available_attacks() << "\n";
             return 1;
         }
-        just_copy = false;
         attack_exe_enc_path = get_attack_enc_path(attack_name);
     }
     else if (result.count("own-attack-exe") > 0) {
-        std::string own_attack_path = result["own-attack-exe"].as<std::string>();
-        std::tie(attack_name, attack_exe_enc_path) = check_custum_attack_path(own_attack_path);
-        if (attack_name == "" || attack_exe_enc_path == "") {
+        just_copy = true;
+        std::string own_attack_path = result["own-attack-exe"].as<std::string>(); // do not use own_attack_path after here
+        attack_name = check_custum_attack_path(own_attack_path);
+        if (attack_name == "") {
             std::cerr << "[!] EDRi: Cannot find own attack exe, please supply a valid path\n";
             return 1;
         }
+        attack_exe_enc_path = own_attack_path;
     }
     else {
         std::cerr << "[!] EDRi: No attack specified, set an own attack or use -a and one of: " << get_available_attacks() << "\n";
@@ -368,8 +369,8 @@ int main(int argc, char* argv[]) {
     std::string ut = unnecessary_tools_running();
     if (!ut.empty()) {
         std::cout << "[!] EDRi: Unnecessary tools running: " << ut << "\n";
-        std::cout << "[!] EDRi: It is recommended to close them and start again, continuing in 3 sec...\n";
-        Sleep(3000);
+        std::cout << "[!] EDRi: It is recommended to close them and start again, continuing in 10 sec...\n";
+        Sleep(10000);
     }
 
     // HOOK NTDLL
