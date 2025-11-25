@@ -54,7 +54,7 @@ bool remove_file(const std::string&);
 std::string get_available_attacks();
 bool is_attack_available(const std::string&);
 std::string get_attack_enc_path(const std::string&);
-std::pair<std::string, std::string> check_custum_attack_path(const std::string&);
+std::string check_custum_attack_path(const std::string&);
 
 void update_defender2yara_sigs();
 std::string get_yara_rule(std::string);

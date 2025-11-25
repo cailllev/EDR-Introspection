@@ -188,7 +188,7 @@ std::string unnecessary_tools_running() {
         std::cerr << "[!] Utils: Cannot use unnecessary_tools_running() before snapshot_procs()\n";
         return r;
 	}
-    std::vector<std::string> procs = { "procexp64.exe", "taskmgr.exe" };
+    std::vector<std::string> procs = { "procexp64.exe", "taskmgr.exe", "mintty.exe" };
     for (auto& p : procs) {
         if (!get_PID_by_name(p, ns).empty()) {
             r += p + " ";
@@ -351,10 +351,10 @@ std::string get_attack_enc_path(const std::string& attack) {
     return wstring2string(exe_path) + wstring2string(attacks_subfolder) + attack + enc_attack_suffix;
 }
 
-std::pair<std::string, std::string> check_custum_attack_path(const std::string& path) {
+std::string check_custum_attack_path(const std::string& path) {
     size_t pos = path.find_last_of('\\');
     if (pos == std::string::npos) {
-        return { "", "" }; // no backslash --> invalid path
+        return ""; // no backslash --> invalid path
     }
 
     std::string folder = path.substr(0, pos + 1);
@@ -364,11 +364,11 @@ std::pair<std::string, std::string> check_custum_attack_path(const std::string& 
     HANDLE hFind = FindFirstFileA(path.c_str(), &findData); // check if file exists
 
     if (hFind == INVALID_HANDLE_VALUE) {
-        return { "", "" }; // does not exist
+        return ""; // does not exist
     }
 
     FindClose(hFind);
-    return { folder, name };
+    return name;
 }
 
 
