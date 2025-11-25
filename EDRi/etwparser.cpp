@@ -126,7 +126,7 @@ json parse_custom_etw_event(const EVENT_RECORD& record, const krabs::schema& sch
         UINT64 system_timestamp_ns_since_unix_epoch = 0;
         if (ptr_field + sizeof(UINT64) <= data + size) {
             memcpy(&system_timestamp_ns_since_unix_epoch, ptr_field, sizeof(UINT64));
-            UINT64 etw_ns_since_unix_epoch = static_cast<UINT64>(etw_timestamp_filetime) - WINDOWS_TICKS_TO_UNIX_EPOCH) * NS_PER_WINDOWS_TICK;
+            UINT64 etw_ns_since_unix_epoch = (static_cast<UINT64>(etw_timestamp_filetime) - WINDOWS_TICKS_TO_UNIX_EPOCH) * NS_PER_WINDOWS_TICK;
             if (system_timestamp_ns_since_unix_epoch > 0) { // only diff if valid timestamp
                 INT64 diff = static_cast<INT64>(etw_ns_since_unix_epoch) - static_cast<INT64>(system_timestamp_ns_since_unix_epoch); // etw time should be greater, but do not trust time...
                 time_diffs_ns[j[PROVIDER_NAME]].push_back(std::abs(diff));
