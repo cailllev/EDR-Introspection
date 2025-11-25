@@ -1,0 +1,2 @@
+Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-147.exe"
+Found signal/signature: SLF:Aurora.A!rfn for "C:\Users\Public\Downloads\attack-147.exe"
