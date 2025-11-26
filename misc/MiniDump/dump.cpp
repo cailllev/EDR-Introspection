@@ -51,6 +51,9 @@ int main() {
         std::cout << "MiniDumpWriteDump error: " << GetLastError() << "\n";
     }
 
+    std::cout << "done?\n";
+    std::cin.get();
+
     CloseHandle(hProc);
     CloseHandle(hFile);
     return 0;
