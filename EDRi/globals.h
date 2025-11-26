@@ -25,6 +25,9 @@ static const std::string injected_exe = "whoami.exe";
 static const std::string injected_path = "C:\\Windows\\System32\\" + injected_exe;
 static const std::string invoked_name = "microsoft.windowscalculator"; // windows apps are like ...\WindowsApps\Microsoft.WindowsCalculator_.... in the logs
 
+// cobaltstrike used exes
+static const std::string cs_injected_path = "C:\\Windows\\System32\\rundll32.exe"; // CS default, may need adaptation
+
 // executables to track for kernel event filtering, i.e. their PIDs at runtime
 extern std::vector<std::string> g_exes_to_track;
 extern std::vector<int> g_newly_hooked_procs;
@@ -38,7 +41,7 @@ struct ProcInfo {
 	bool to_track;
 };
 extern ProcInfo g_attack_proc;
-extern ProcInfo g_injected_proc;
+extern std::vector<ProcInfo> g_attack_and_injected_procs;
 extern std::vector<ProcInfo> g_running_procs;
 
 extern bool g_start_marked_detected;

@@ -29,7 +29,7 @@ int null_events = 0; // errors
 // globals
 ProcInfo null_proc = { 0, 0, 0, "", false };
 ProcInfo g_attack_proc = null_proc;
-ProcInfo g_injected_proc = null_proc;
+std::vector<ProcInfo> g_attack_and_injected_procs = {};
 bool g_start_marked_detected = false;
 bool g_hooker_started = false;
 bool g_attack_terminated = false;
@@ -136,7 +136,8 @@ json parse_custom_etw_event(const EVENT_RECORD& record, const krabs::schema& sch
         else if (g_debug) {
             std::cerr << "[!] ETW: Custom event with no " << TIMESTAMP_NS << " field: " << j.dump() << "\n";
         }
-        if (system_timestamp_ns_since_unix_epoch == 0) { // falback to ETW timestamp
+
+        if (system_timestamp_ns_since_unix_epoch == 0) { // falback to ETW timestamp if invalid
             j[TIMESTAMP_NS] = filetime_to_unix_epoch_ns(etw_timestamp_filetime);
             j[TIMESTAMP_SYS] = j[TIMESTAMP_ETW];
             if (g_debug) {
@@ -144,7 +145,7 @@ json parse_custom_etw_event(const EVENT_RECORD& record, const krabs::schema& sch
             }
         }
         else { // use timestamp right before etw was emitted (more exact for hook events)
-            j[TIMESTAMP_NS] = filetime_to_unix_epoch_ns(system_timestamp_ns_since_unix_epoch);
+            j[TIMESTAMP_NS] = system_timestamp_ns_since_unix_epoch;
             j[TIMESTAMP_SYS] = unix_epoch_ns_to_iso8601(system_timestamp_ns_since_unix_epoch);
         }
 
@@ -594,21 +595,21 @@ void post_parsing_checks(json& j) {
                 }
             }
 
-            // also check if the attack_PID and injected_PID can be set
+            // also check if this is an attack or injected proc
             if (g_attack_proc.PID == 0) {
                 if (filepath_match(j[FILEPATH], g_attack_exe_path)) { // depends on the attack path, but this is fixed
                     g_attack_proc = ProcInfo{ pid, timestamp_ns, MAX_PROC_END, exe_name, true };
+                    g_attack_and_injected_procs.push_back(g_attack_proc);
                     std::cout << "[+] ETW: Got attack PID: " << pid << "\n";
                     to_track = true;
                 }
             }
-            if (g_injected_proc.PID == 0) {
-                if (filepath_match(j[FILEPATH], injected_path)) {
-                    g_injected_proc = ProcInfo{ pid, timestamp_ns, MAX_PROC_END, exe_name, true };
-                    std::cout << "[+] ETW: Got injected PID: " << pid << "\n";
-                    to_track = true;
-                }
-            }
+
+            if (filepath_match(j[FILEPATH], injected_path) || filepath_match(j[FILEPATH], cs_injected_path)) {
+                g_attack_and_injected_procs.push_back(ProcInfo{ pid, timestamp_ns, MAX_PROC_END, exe_name, true });
+                std::cout << "[+] ETW: Got injected PID: " << pid << "\n";
+                to_track = true;
+            } 
 
             add_proc(pid, exe_name, timestamp_ns, to_track);
         }

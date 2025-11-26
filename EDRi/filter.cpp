@@ -12,6 +12,9 @@ std::map<Classifier, std::string> classifier_names = {
     { Minimal, CLASSIFIER_MINIMAL }
 };
 
+// monitor if tracked_procs are collected before classifying
+bool collected_tracked_procs = false;
+
 // calculate once before doing all the filtering
 static std::vector<ProcInfo> tracked_procs = {};
 
@@ -71,8 +74,18 @@ Classifier filter_post_exe(json& ev, Classifier previous_c) {
 }
 
 // returns a classifier based on if the value is in list
-Classifier classify_to(json& ev, std::string key, std::vector<ProcInfo> procs) {
+Classifier classify_to(json& ev, std::string key, ProcList p) {
     if (ev.contains(key)) {
+        if (!collected_tracked_procs) {
+            tracked_procs = get_tracked_procs();
+        }
+        std::vector<ProcInfo> procs;
+        switch (p) {
+        case TrackedProcs: procs = tracked_procs; break;
+        case AttackAndInjectedProcs: procs = g_attack_and_injected_procs; break;
+        case AttackProc: procs = { g_attack_proc }; break;
+        default: return All; // invalid filter
+        }
         for (auto& p : procs) {
             if (p.PID == ev[key]) { // check if a proc in procs match the searched PID
                 if (ev[TIMESTAMP_NS] >= p.start_time && ev[TIMESTAMP_NS] <= p.end_time) { // check if it was running at this time
@@ -92,8 +105,8 @@ Classifier classify_to(json& ev, std::string key, std::vector<ProcInfo> procs) {
 Classifier filter_kernel_process(json& ev) {
     if (std::find(kproc_event_ids_with_pid_or_tpid_minimal.begin(), kproc_event_ids_with_pid_or_tpid_minimal.end(), ev[EVENT_ID]) != kproc_event_ids_with_pid_or_tpid_minimal.end()) {
         // only include events if pid is attack or injected OR a tracked_process is the target of a process operation
-        Classifier c_pid = classify_to(ev, PID, { g_attack_proc, g_injected_proc });
-        Classifier c_tpid = classify_to(ev, TARGET_PID, tracked_procs);
+        Classifier c_pid = classify_to(ev, PID, AttackAndInjectedProcs);
+        Classifier c_tpid = classify_to(ev, TARGET_PID, TrackedProcs);
         if (c_pid == Minimal || c_tpid == Minimal) {
             return Minimal; // put in minimal if either matches
         } // else put it in relevant
@@ -101,8 +114,8 @@ Classifier filter_kernel_process(json& ev) {
     }
     // thread start and stop are only interesting with attack pid / tpid
     if (std::find(kproc_event_ids_with_attack_pid_tpid.begin(), kproc_event_ids_with_attack_pid_tpid.end(), ev[EVENT_ID]) != kproc_event_ids_with_attack_pid_tpid.end()) {
-        Classifier c_pid = classify_to(ev, PID, { g_attack_proc });
-        Classifier c_tpid = classify_to(ev, TARGET_PID, { g_attack_proc });
+        Classifier c_pid = classify_to(ev, PID, AttackProc);
+        Classifier c_tpid = classify_to(ev, TARGET_PID, AttackProc);
         if (c_pid == Minimal || c_tpid == Minimal) {
             return Minimal; // put in minimal if either matches
         } // else put it in relevant
@@ -110,7 +123,7 @@ Classifier filter_kernel_process(json& ev) {
     }
     // image load and unload events are at most relevant, not minimal (very noisy)
     if (std::find(kproc_event_ids_with_tpid_relevant.begin(), kproc_event_ids_with_tpid_relevant.end(), ev[EVENT_ID]) != kproc_event_ids_with_tpid_relevant.end()) {
-        Classifier c = classify_to(ev, TARGET_PID, tracked_procs);
+        Classifier c = classify_to(ev, TARGET_PID, TrackedProcs);
         if (c == Minimal) {
             return Relevant; // put in relevant if matches
         }
@@ -125,10 +138,10 @@ Classifier filter_kernel_api_call(json& ev) {
     if (std::find(kapi_event_ids_with_tpid.begin(), kapi_event_ids_with_tpid.end(), ev[EVENT_ID]) != kapi_event_ids_with_tpid.end()) {
         // only relevant if interacted with the attack / injected
         // X syscall -> Defender/System/smartscreen => irrelevant
-        return classify_to(ev, TARGET_PID, { g_attack_proc, g_injected_proc });
+        return classify_to(ev, TARGET_PID, AttackAndInjectedProcs);
     }
     if (std::find(kapi_event_ids_with_pid.begin(), kapi_event_ids_with_pid.end(), ev[EVENT_ID]) != kapi_event_ids_with_pid.end()) {
-        return classify_to(ev, PID, tracked_procs);
+        return classify_to(ev, PID, TrackedProcs);
     }
     return Relevant; // put event ids without a filter into relevant
 }
@@ -136,7 +149,7 @@ Classifier filter_kernel_api_call(json& ev) {
 // filter kernel file events
 Classifier filter_kernel_file(json& ev) {
     if (std::find(kfile_event_ids_with_pid.begin(), kfile_event_ids_with_pid.end(), ev[EVENT_ID]) != kfile_event_ids_with_pid.end()) {
-        return classify_to(ev, PID, tracked_procs);
+        return classify_to(ev, PID, TrackedProcs);
     }
     return Relevant; // put event ids without a filter into relevant
 }
@@ -145,8 +158,8 @@ Classifier filter_kernel_file(json& ev) {
 Classifier filter_kernel_network(json& ev) {
     // events to keep if PID or originating PID match
     if (std::find(knet_event_ids_with_pid_or_opid.begin(), knet_event_ids_with_pid_or_opid.end(), ev[EVENT_ID]) != knet_event_ids_with_pid_or_opid.end()) {
-        Classifier c_pid = classify_to(ev, PID, tracked_procs);
-        Classifier c_orig = classify_to(ev, ORIGINATING_PID, tracked_procs);
+        Classifier c_pid = classify_to(ev, PID, TrackedProcs);
+        Classifier c_orig = classify_to(ev, ORIGINATING_PID, TrackedProcs);
         if (c_pid == Minimal || c_orig == Minimal) {
             return Minimal; // put in minimal if either matches
         } // else put it in relevant
@@ -158,8 +171,8 @@ Classifier filter_kernel_network(json& ev) {
 Classifier filter_threat_intel(json& ev) {
     // either pid or tpid must match a tracked pid
     if (std::find(ti_events_with_pid_or_tpid.begin(), ti_events_with_pid_or_tpid.end(), ev[EVENT_ID]) != ti_events_with_pid_or_tpid.end()) {
-        Classifier c_pid = classify_to(ev, PID, tracked_procs);
-        Classifier c_orig = classify_to(ev, TARGET_PID, tracked_procs);
+        Classifier c_pid = classify_to(ev, PID, TrackedProcs);
+        Classifier c_orig = classify_to(ev, TARGET_PID, TrackedProcs);
         if (c_pid == Minimal || c_orig == Minimal) {
             return Minimal; // put in minimal if either matches
         } // else put it in relevant
@@ -176,7 +189,7 @@ Classifier filter_antimalware(json& ev) {
 
     // events to keep if originating PID matches attack or injected PID
     if (std::find(am_event_ids_with_opid.begin(), am_event_ids_with_opid.end(), ev[EVENT_ID]) != am_event_ids_with_opid.end()) {
-        Classifier c = classify_to(ev, ORIGINATING_PID, { g_attack_proc, g_injected_proc });
+        Classifier c = classify_to(ev, ORIGINATING_PID, AttackAndInjectedProcs);
         if (c == All) {
             return All; // put in all if it does not match
         }
@@ -188,8 +201,8 @@ Classifier filter_antimalware(json& ev) {
 
     // events to keep if originating PID or TargetPID matches attack PID or injected PID
     if (std::find(am_event_ids_with_opid_and_tpid.begin(), am_event_ids_with_opid_and_tpid.end(), ev[EVENT_ID]) != am_event_ids_with_opid_and_tpid.end()) {
-        Classifier c_orig = classify_to(ev, ORIGINATING_PID, { g_attack_proc, g_injected_proc });
-        Classifier c_target = classify_to(ev, TARGET_PID, { g_attack_proc, g_injected_proc });
+        Classifier c_orig = classify_to(ev, ORIGINATING_PID, AttackAndInjectedProcs);
+        Classifier c_target = classify_to(ev, TARGET_PID, AttackAndInjectedProcs);
         if (c_orig == Minimal || c_target == Minimal) {
             return Minimal; // put in minimal if either matches
         } // else put it in relevant
@@ -198,7 +211,7 @@ Classifier filter_antimalware(json& ev) {
 
     // events to keep if PID in Data matches
     if (std::find(am_event_ids_with_pid_in_data.begin(), am_event_ids_with_pid_in_data.end(), ev[EVENT_ID]) != am_event_ids_with_pid_in_data.end()) {
-        return classify_to(ev, DATA, { g_attack_proc, g_injected_proc });
+        return classify_to(ev, DATA, AttackAndInjectedProcs);
     }
 
     // events to keep if Message contains filter string (case insensitive)
@@ -240,8 +253,10 @@ Classifier filter_antimalware(json& ev) {
     if (std::find(am_event_ids_with_pipe.begin(), am_event_ids_with_pipe.end(), ev[EVENT_ID]) != am_event_ids_with_pipe.end()) {
         if (ev.contains(FILEPATH)) {
             std::string pipe_info = ev[FILEPATH]; // \\.\proc\Process:12888,134064706853298289
-            if (pipe_info.find(std::to_string(g_attack_proc.PID)) != std::string::npos || pipe_info.find(std::to_string(g_injected_proc.PID)) != std::string::npos) {
-                return Minimal;
+            for (auto& p : g_attack_and_injected_procs) {
+                if (pipe_info.find(std::to_string(p.PID)) != std::string::npos) {
+                    return Minimal;
+                }
             }
             return All;
         }
@@ -269,7 +284,7 @@ Classifier filter_hooks(json& ev) {
         }
     }
     // else event has a usable targetpid --> classify based on target pid
-    return classify_to(ev, TARGET_PID, { g_attack_proc, g_injected_proc });
+    return classify_to(ev, TARGET_PID, AttackAndInjectedProcs);
 }
 
 // filter based on provider
@@ -320,7 +335,9 @@ Classifier filter(json& ev) {
 void filter_all_events(std::vector<json>& events) {
     std::cout << "[+] Filter: Filtering " << events.size() << " events into All, Relevant and Minimal\n";
 
+    // must be collected after the test run, only attack and injected procs are garanteed to be captured live
     tracked_procs = get_tracked_procs();
+    collected_tracked_procs = true;
     int skipped = 0;
 
     for (auto& ev : events) {

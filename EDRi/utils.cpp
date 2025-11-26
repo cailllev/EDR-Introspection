@@ -173,10 +173,15 @@ std::string get_proc_name(int pid, UINT64 timestamp_ns, UINT64 buffer_ns) {
 std::vector<ProcInfo> get_tracked_procs() {
     std::shared_lock<std::shared_mutex> lock(procs_mutex); // reader lock (multiple allowed when no writers)
     std::vector<ProcInfo> tracked = {};
+    std::string debug_s = " ";
     for (auto it = g_running_procs.begin(); it != g_running_procs.end(); ++it) {
         if (it->to_track) {
             tracked.push_back(*it);
+            debug_s += it->name + ", ";
         }
+    }
+    if (g_debug) {
+        std::cout << "[+] Utils: Got tracked procs:" << debug_s << "\n";
     }
     return tracked;
 }

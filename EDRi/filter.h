@@ -8,6 +8,7 @@
 #include "etwparser.h"
 
 enum Classifier { All, Relevant, Minimal };
+enum ProcList { TrackedProcs, AttackAndInjectedProcs, AttackProc };
 extern std::map<Classifier, std::string> classifier_names;
 static const std::string CLASSIFIER_CONTAINED = "1";
 static const std::string CLASSIFIER_NOT_CONTAINED = "0";
