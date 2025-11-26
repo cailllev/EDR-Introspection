@@ -31,10 +31,11 @@ static const std::string defender2yara_sigs_url = "https://github.com/t-tani/def
 static const std::string outTypeEvent = "events\\";
 static const std::string outTypeSigs = "signatures\\";
 
-// TODO detect system reboot -> clear PIDs from hooked.txt
 const std::string hooked_procs_file = "C:\\Users\\Public\\Downloads\\hooked.txt"; // should match the path in EDRReflectiveHooker (dllmain.cpp)
 
 static bool initialized_snapshot = false;
+
+static std::shared_mutex procs_mutex;
 
 // get unix epoch time in nanoseconds (100 ns resolution)
 UINT64 get_ns_time() {
@@ -56,7 +57,7 @@ void snapshot_procs() {
     pe.dwSize = sizeof(PROCESSENTRY32);
     HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (Process32First(snapshot, &pe)) {
-        std::unique_lock<std::shared_mutex> lock(g_procs_mutex); // writer lock (one allowed, no readers)
+        std::unique_lock<std::shared_mutex> lock(procs_mutex); // writer lock (one allowed, no readers)
         do {
             std::string exe = wchar2string(pe.szExeFile);
             int pid = pe.th32ProcessID;
@@ -79,7 +80,7 @@ std::vector<int> get_PID_by_name(const std::string& name, UINT64 timestamp_ns) {
         return {};
     }
     std::vector<int> procs = {};
-    std::shared_lock<std::shared_mutex> lock(g_procs_mutex); // reader lock (multiple allowed when no writers)
+    std::shared_lock<std::shared_mutex> lock(procs_mutex); // reader lock (multiple allowed when no writers)
     for (auto it = g_running_procs.begin(); it != g_running_procs.end(); ++it) {
         if (_stricmp(it->name.c_str(), name.c_str()) == 0) { // check if name matches
             if (it->start_time < timestamp_ns && it->end_time > timestamp_ns) { // check if timestamp is inside start and end
@@ -99,7 +100,7 @@ void add_proc(int pid, const std::string& name, UINT64 timestamp_ns, bool to_tra
         }
         return;
     }
-    std::unique_lock<std::shared_mutex> lock(g_procs_mutex); // writer lock (one allowed, no readers)
+    std::unique_lock<std::shared_mutex> lock(procs_mutex); // writer lock (one allowed, no readers)
     ProcInfo pi = { pid, timestamp_ns, MAX_PROC_END, name, to_track };
     g_running_procs.push_back(pi);
     if (g_debug) {
@@ -109,7 +110,7 @@ void add_proc(int pid, const std::string& name, UINT64 timestamp_ns, bool to_tra
 
 // thread-safe marking the proc termination
 void mark_termination(int pid, UINT64 timestamp_ns) {
-    std::unique_lock<std::shared_mutex> lock(g_procs_mutex); // writer lock (one allowed, no readers)
+    std::unique_lock<std::shared_mutex> lock(procs_mutex); // writer lock (one allowed, no readers)
     ProcInfo* latest_proc = nullptr;
     for (auto it = g_running_procs.begin(); it != g_running_procs.end(); ++it) {
         if (it->PID == pid) {
@@ -170,7 +171,7 @@ std::string get_proc_name(int pid, UINT64 timestamp_ns, UINT64 buffer_ns) {
 
 // thread-safe retrieving all processes that were tracked
 std::vector<ProcInfo> get_tracked_procs() {
-    std::shared_lock<std::shared_mutex> lock(g_procs_mutex); // reader lock (multiple allowed when no writers)
+    std::shared_lock<std::shared_mutex> lock(procs_mutex); // reader lock (multiple allowed when no writers)
     std::vector<ProcInfo> tracked = {};
     for (auto it = g_running_procs.begin(); it != g_running_procs.end(); ++it) {
         if (it->to_track) {

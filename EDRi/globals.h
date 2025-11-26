@@ -40,7 +40,6 @@ struct ProcInfo {
 extern ProcInfo g_attack_proc;
 extern ProcInfo g_injected_proc;
 extern std::vector<ProcInfo> g_running_procs;
-extern std::shared_mutex g_procs_mutex;
 
 extern bool g_start_marked_detected;
 extern bool g_hooker_started;
