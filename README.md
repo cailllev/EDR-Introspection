@@ -31,10 +31,10 @@ It is recomended to **make an exclusion** for the EDR-Introspection folder, and 
 ```
 
 ### Create own attack
-1. Copy folder `.\attacks\CalcExample` to `.\attacks\YourAttack`
-2. rename all `.\attacks\YourAttack\CalcExample.vcxproj*` to `.\attacks\YourAttack\YourAttack.vcxproj*`
-3. rename both references in `.\attacks\YourAttack\YourAttack.vcxproj` from `CalcExample` to `YourAttack`
-4. rename both references in `.\attacks\YourAttack\build-features.bat` from `CalcExample.vcxproj` to `YourAttack.vcxproj` and both `CalcExample-%%C.exe` to `YourAttack-%%C.exe`
+1. Copy folder `.\attacks\ProcInject` to `.\attacks\YourAttack`
+2. rename all `.\attacks\YourAttack\ProcInject.vcxproj*` to `.\attacks\YourAttack\YourAttack.vcxproj*`
+3. rename both references in `.\attacks\YourAttack\YourAttack.vcxproj` from `ProcInject` to `YourAttack`
+4. rename both references in `.\attacks\YourAttack\build-features.bat` from `ProcInject.vcxproj` to `YourAttack.vcxproj` and both `ProcInject-%%C.exe` to `YourAttack-%%C.exe`
 5. build YourAttack with all features: `.\attacks\YourAttack\build-features.bat`
 6. the created (encrypted) exes should now be visible in the EDRi under available attacks
 ```powershell
