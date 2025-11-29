@@ -221,7 +221,7 @@ Classifier filter_antimalware(json& ev) {
             std::transform(msg.begin(), msg.end(), msg.begin(), [](unsigned char c) { return std::tolower(c); });
             if (msg.find(g_attack_exe_name) != std::string::npos ||
                 msg.find(injected_exe) != std::string::npos ||
-                msg.find(invoked_name) != std::string::npos) {
+                msg.find(poc_invoked_name) != std::string::npos) {
                 return Minimal; // do not filter if any of the strings match
             }
             return All; // else filter out

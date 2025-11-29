@@ -23,7 +23,7 @@ static const std::string NTDLL_HOOKER_TRACE_START_MARKER = "++ NTDLL-HOOKER STAR
 // executables used for the attack
 static const std::string injected_exe = "whoami.exe";
 static const std::string injected_path = "C:\\Windows\\System32\\" + injected_exe;
-static const std::string invoked_name = "microsoft.windowscalculator"; // windows apps are like ...\WindowsApps\Microsoft.WindowsCalculator_.... in the logs
+static const std::string poc_invoked_name = "microsoft.windowscalculator"; // windows apps are like ...\WindowsApps\Microsoft.WindowsCalculator_.... in the logs
 
 // cobaltstrike used exes
 static const std::string cs_injected_path = "C:\\Windows\\System32\\rundll32.exe"; // CS default, may need adaptation
