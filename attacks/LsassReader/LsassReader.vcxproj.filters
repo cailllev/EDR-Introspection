@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="inject-reader.cpp">
+    <ClCompile Include="read-lsass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
