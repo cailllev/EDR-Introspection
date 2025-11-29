@@ -268,7 +268,7 @@ int main(int argc, char** argv) {
         int i = 0;
         if (Process32First(snap, &pe)) {
             do {
-                if (pe.th32ProcessID == pid) {
+                if (pe.th32ProcessID == pid) { // TODO, there are more procs that hang the system, find them
                     continue; // do not interact with lsass yet
                 }
                 HANDLE hDecon = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pe.th32ProcessID);
