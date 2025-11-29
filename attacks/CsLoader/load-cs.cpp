@@ -185,7 +185,6 @@ int main(int argc, char** argv) {
                 WaitForSingleObject(hThreadDecon, INFINITE);
                 CloseHandle(hThreadDecon);
             }
-
         }
 
         for (int i = 0; i < sizeof(allocs) / sizeof(allocs[0]); i++) {
@@ -239,7 +238,6 @@ int main(int argc, char** argv) {
     print_and_emit_event(msg.str(), bef); msg.str({}); msg.clear();
 
     // write value into memory
-    SIZE_T bytes_written;
     if (memcpy(addr, shellcode, sizeof(shellcode))) {
         msg << "After writing shellcode at " << (void*)addr;
         print_and_emit_event(msg.str(), aft); msg.str({}); msg.clear();
