@@ -63,7 +63,7 @@ int main(int argc, char** argv) {
     print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
     auto start_ae_calc = std::chrono::high_resolution_clock::now();
     volatile bool dummy_ae_calc; // do no optimze "calc prime" loop away
-    for (UINT64 n = 2; n <= 20'000'000; ++n) { bool pr = true; for (UINT64 i = 2; i * i <= n; ++i) { if (n % i == 0) { pr = false; break; } } dummy_ae_calc = pr; }
+    for (UINT64 n = 2; n <= 10'000'000; ++n) { bool pr = true; for (UINT64 i = 2; i * i <= n; ++i) { if (n % i == 0) { pr = false; break; } } dummy_ae_calc = pr; }
     auto end_ae_calc = std::chrono::high_resolution_clock::now();
     auto ae_calc_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_ae_calc - start_ae_calc).count();
     msg << "Calculated for approximately " << ae_calc_elapsed << " ms";
