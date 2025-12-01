@@ -110,9 +110,6 @@ int main(int argc, char** argv) {
     msg << "' config";
     print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
 
-    msg << "Before opening process handle";
-    print_and_emit_event(msg.str(), bef); msg.str({}); msg.clear();
-
 #if defined deconditioning // https://github.com/dobin/SuperMega/blob/main/data/source/antiemulation/sirallocalot.c
     BYTE nonsense[4096] = {};
     constexpr int rounds = 100;
