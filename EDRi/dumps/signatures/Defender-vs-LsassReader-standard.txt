@@ -1,3 +1,1 @@
-Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-504.exe"
-Found signal/signature: ALF:INTL:HackTool:Win32/Multiverze for "C:\Users\Public\Downloads\attack-504.exe"
-Found signal/signature: ALF:INTL:HackTool:Win32/Multiverze for "C:\Users\Public\Downloads\attack-504.exe"
+Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-433.exe"
