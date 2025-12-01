@@ -99,7 +99,7 @@ int main(int argc, char** argv) {
     }
 
     // print current 
-    msg << "Injector started with PID " << GetCurrentProcessId();
+    msg << "Reader started with PID " << GetCurrentProcessId();
     print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
     Sleep(sleep_between_steps_ms);
 
