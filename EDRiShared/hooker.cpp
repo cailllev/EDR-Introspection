@@ -217,13 +217,13 @@ bool reflective_inject(int pid, HANDLE hProcess, const std::string& dllPath, boo
     DWORD64 reflective_loader_offset = get_reflective_loader_offset((DWORD64)file_buf, "ReflectiveLoader");
     if (!reflective_loader_offset) { printf("[!] Hooker: ReflectiveLoader export not found in %s\n", dllPath.c_str()); HeapFree(GetProcessHeap(), 0, file_buf); return false; }
     if (debug)
-        printf("[+] Hooker: ReflectiveLoader offset: 0x%llx\n", (unsigned long long)reflective_loader_offset);
+        printf("[+] Hooker: ReflectiveLoader offset at 0x%p\n", reflective_loader_offset);
 
     // allocate remote memory (use the file size)
     LPVOID remote_file_buf_address = VirtualAllocEx(hProcess, NULL, sz, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
     if (!remote_file_buf_address) { printf("[!] Hooker: VirtualAllocEx failed in remote proc %lu: %lu\n", pid, GetLastError()); CloseHandle(hProcess); HeapFree(GetProcessHeap(), 0, file_buf); return false; }
     if (debug)
-        printf("[+] Hooker: Remote memory allocated at %p\n", remote_file_buf_address);
+        printf("[+] Hooker: Remote memory allocated at 0x%p\n", remote_file_buf_address);
 
     // write file into remote process
     SIZE_T written = 0;

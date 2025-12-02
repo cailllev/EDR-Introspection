@@ -139,8 +139,9 @@ int main(int argc, char* argv[]) {
     options.add_options()
         ("h,help", "Print usage")
         ("e,encrypt", "The path of the attack executable to encrypt", cxxopts::value<std::string>())
-        ("y,update-defender2yara", "Update the defender2yara signatures")
+        ("update-defender2yara", "Update the defender2yara signatures")
         ("p,edr-profile", "The EDR to track, supporting: " + get_available_edrs(), cxxopts::value<std::string>())
+        ("just-hook", "Only inject hooks on the relevant EDR processes, then exit again")
         ("a,attack-exe", "The attack to execute, supporting: " + get_available_attacks(), cxxopts::value<std::string>())
         ("own-attack-exe", "An own supplied C:\\path\\to\\attack.exe", cxxopts::value<std::string>())
         ("r,run-as-child", "Execute the attack automatically as a child-proc or manually")
@@ -200,7 +201,13 @@ int main(int argc, char* argv[]) {
     }
     build_device_map();
 
-    // check edr profile, attack exe and output
+    // main variables
+    std::string attack_name, attack_exe_enc_path, output_name, output_events, output_signatures;
+    bool trace_etw_misc, trace_etw_ti, hook_ntdll, disable_kernel_callbacks_needed, dump_sig, run_as_child, colored;
+    std::vector<HANDLE> threads;
+    int waited_for_traces_ms;
+
+    // check edr profile
     if (result.count("edr-profile") == 0) {
         std::cerr << "[!] EDRi: No EDR specified, use -p and one of: " << get_available_edrs() << "\n";
         return 1;
@@ -211,78 +218,88 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     EDR_Profile edr_profile = edr_profiles.at(edr_name);
+    bool just_hook = false;
+    if (result.count("just-hook") > 0) {
+        just_hook = true;
+    }
 
     // check supplied attack exe (pre-defined or custom)
-    std::string attack_name;
-    std::string attack_exe_enc_path;
-    if (result.count("attack-exe") > 0) {
-        attack_name = result["attack-exe"].as<std::string>();
-        if (!is_attack_available(attack_name)) {
-            std::cerr << "[!] EDRi: Unsupported attack specified, use one of: " << get_available_attacks() << "\n";
+    if (!just_hook) {
+        if (result.count("attack-exe") > 0) {
+            attack_name = result["attack-exe"].as<std::string>();
+            if (!is_attack_available(attack_name)) {
+                std::cerr << "[!] EDRi: Unsupported attack specified, use one of: " << get_available_attacks() << "\n";
+                return 1;
+            }
+            attack_exe_enc_path = get_attack_enc_path(attack_name);
+        }
+        else if (result.count("own-attack-exe") > 0) {
+            just_copy = true;
+            std::string own_attack_path = result["own-attack-exe"].as<std::string>(); // do not use own_attack_path after here
+            attack_name = check_custum_attack_path(own_attack_path);
+            if (attack_name == "") {
+                std::cerr << "[!] EDRi: Cannot find own attack exe, please supply a valid path\n";
+                return 1;
+            }
+            attack_exe_enc_path = own_attack_path;
+        }
+        else {
+            std::cerr << "[!] EDRi: No attack specified, set an own attack or use -a and one of: " << get_available_attacks() << "\n";
             return 1;
         }
-        attack_exe_enc_path = get_attack_enc_path(attack_name);
-    }
-    else if (result.count("own-attack-exe") > 0) {
-        just_copy = true;
-        std::string own_attack_path = result["own-attack-exe"].as<std::string>(); // do not use own_attack_path after here
-        attack_name = check_custum_attack_path(own_attack_path);
-        if (attack_name == "") {
-            std::cerr << "[!] EDRi: Cannot find own attack exe, please supply a valid path\n";
-            return 1;
-        }
-        attack_exe_enc_path = own_attack_path;
-    }
-    else {
-        std::cerr << "[!] EDRi: No attack specified, set an own attack or use -a and one of: " << get_available_attacks() << "\n";
-        return 1;
     }
 
     // check tracking options
-    bool trace_etw_misc = false, trace_etw_ti = false, hook_ntdll = false;
-    if (result.count("track-all") > 0) {
-        trace_etw_misc = true, trace_etw_ti = true, hook_ntdll = true;
+    trace_etw_misc = false, trace_etw_ti = false, hook_ntdll = false;
+    if (just_hook) {
+        hook_ntdll = true;
     }
     else {
-        if (result.count("trace-etw-misc") > 0) {
-            trace_etw_misc = true;
+        if (result.count("track-all") > 0) {
+            trace_etw_misc = true, trace_etw_ti = true, hook_ntdll = true;
         }
-        if (result.count("trace-etw-ti") > 0) {
-            trace_etw_ti = true;
-        }
-        if (result.count("hook-ntdll") > 0) {
-            hook_ntdll = true;
+        else {
+            if (result.count("trace-etw-misc") > 0) {
+                trace_etw_misc = true;
+            }
+            if (result.count("trace-etw-ti") > 0) {
+                trace_etw_ti = true;
+            }
+            if (result.count("hook-ntdll") > 0) {
+                hook_ntdll = true;
+            }
         }
     }
     std::cout << "[*] EDRi: Tracking options: ETW-Misc: " << (trace_etw_misc ? "Yes" : "No")
         << ", ETW-TI: " << (trace_etw_ti ? "Yes" : "No")
         << ", Hook-ntdll: " << (hook_ntdll ? "Yes" : "No") << "\n";
-    bool dump_sig = trace_etw_misc; // can only dump signatures if antimalware provider is traced
+    dump_sig = trace_etw_misc; // can only dump signatures if antimalware provider is traced
 
-    bool disable_kernel_callbacks_needed = hook_ntdll && edr_profile.needs_kernel_callbacks_disabling; // normally needed when hooking ntdll
+    disable_kernel_callbacks_needed = hook_ntdll && edr_profile.needs_kernel_callbacks_disabling; // normally needed when hooking ntdll
     if (result.count("no-disable-krnl-callb") > 0) {
         disable_kernel_callbacks_needed = false; // may be not needed when manually disabled / EDR not protecting
     }
 
     // check output path
-    std::string output_name;
-    if (result.count("output-path-custom") == 0) {
-        output_name = edr_name + "-vs-" + attack_name;
-    }
-    else {
-        output_name = result["output-path-custom"].as<std::string>();
-    }
-    std::string output_events = get_output_path(output_name, true);
-    std::string output_signatures = get_output_path(output_name, false);
-    std::cout << "[*] EDRi: Writing to " << output_events;
-    if (dump_sig) {
-        std::cout << " and " << output_signatures;
-    }
-    std::cout << "\n";
+    if (!just_hook) {
+        if (result.count("output-path-custom") == 0) {
+            output_name = edr_name + "-vs-" + attack_name;
+        }
+        else {
+            output_name = result["output-path-custom"].as<std::string>();
+        }
+        output_events = get_output_path(output_name, true);
+        output_signatures = get_output_path(output_name, false);
+        std::cout << "[*] EDRi: Writing to " << output_events;
+        if (dump_sig) {
+            std::cout << " and " << output_signatures;
+        }
+        std::cout << "\n";
 
-    bool run_as_child = false;
-    if (result.count("run-as-child") > 0) {
-        run_as_child = true;
+        run_as_child = false;
+        if (result.count("run-as-child") > 0) {
+            run_as_child = true;
+        }
     }
 
     // debug
@@ -293,7 +310,7 @@ int main(int argc, char* argv[]) {
         g_debug = true;
         g_super_debug = true;
     }
-    bool colored = false;
+    colored = false;
     if (result.count("color") > 0) {
         colored = true;
     }
@@ -302,7 +319,6 @@ int main(int argc, char* argv[]) {
     TraceLoggingRegister(g_hProvider);
     std::cout << "[+] EDRi: Own provider registered\n";
 
-    std::vector<HANDLE> threads;
     if (trace_etw_misc) {
         g_misc_trace_started = false; // needs to be checked, so set to false
         if (!start_etw_misc_traces(threads)) {
@@ -330,7 +346,7 @@ int main(int argc, char* argv[]) {
     }
 
     // WAIT UNTIL TRACES ARE READY
-    int waited_for_traces_ms = 0;
+    waited_for_traces_ms = 0;
     std::cout << "[*] EDRi: Waiting until all traces are live and start markers is detected...\n";
     while (!g_start_marked_detected) {
         emit_etw_event(EDRi_TRACE_START_MARKER, "", false);
@@ -454,6 +470,11 @@ int main(int argc, char* argv[]) {
             Sleep(wait_callbacks_reenable_ms); // wait until callbacks are reenabled, at least as long as EDRSandblast waits
         }
     }
+    if (just_hook) {
+        std::cout << "[*] EDRi: Successfully hooked, all done\n";
+        return 0;
+    }
+
     std::cout << "\n------------------------------------- Conducting test ------------------------------------\n";
 
     // ATTACK
