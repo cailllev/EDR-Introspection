@@ -57,22 +57,6 @@ int main(int argc, char** argv) {
     print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
 #endif
 
-    enum StartupMode { NoWait, WaitTime, WaitForEnter };
-    StartupMode s = NoWait;
-    int wait_time = 5;
-
-    if (argc == 1) {
-        // default
-    }
-    if (argc >= 2) {
-        if (strcmp(argv[1], "--wait") == 0) {
-            s = WaitTime;
-        }
-        if (strcmp(argv[1], "--wait-enter") == 0) {
-            s = WaitForEnter;
-        }
-    }
-
     // print current 
     msg << "Loader started with PID " << GetCurrentProcessId();
     print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
@@ -90,18 +74,31 @@ int main(int argc, char** argv) {
     msg << "deconditioning+antiEmulation+obfuscation";
 #else
     msg << "Release";
+
     // handle start params only in 'Release' config
+    enum StartupMode { NoWait, WaitTime, WaitForEnter };
+    StartupMode s = NoWait;
+    int wait_time = 5;
+    if (argc >= 2) {
+        if (strcmp(argv[1], "--wait") == 0) {
+            s = WaitTime;
+        }
+        if (strcmp(argv[1], "--wait-enter") == 0) {
+            s = WaitForEnter;
+        }
+    }
+
     switch (s) {
     case NoWait:
         break;
     case WaitTime:
         for (int i = wait_time; i > 0; i--) {
-            std::cout << "[*] Starting injection in " << i << "\n";
+            std::cout << "[*] Loading CS in " << i << "\n";
             Sleep(1000);
         };
         break;
     case WaitForEnter:
-        std::cout << "[*] Press ENTER to start injection...\n";
+        std::cout << "[*] Press ENTER to load CS...\n";
         std::cin.get();
     default:
         break;

@@ -59,22 +59,6 @@ int main(int argc, char** argv) {
     print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
 #endif
 
-    enum StartupMode { NoWait, WaitTime, WaitForEnter };
-    StartupMode s = NoWait;
-    int wait_time = 5;
-
-    if (argc == 1) {
-        // default
-    }
-    if (argc >= 2) {
-        if (strcmp(argv[1], "--wait") == 0) {
-            s = WaitTime;
-        }
-        if (strcmp(argv[1], "--wait-enter") == 0) {
-            s = WaitForEnter;
-        }
-    }
-
     // print current 
     msg << "Injector started with PID " << GetCurrentProcessId();
     print_and_emit_event(msg.str(), ok); msg.str({}); msg.clear();
@@ -92,7 +76,20 @@ int main(int argc, char** argv) {
     msg << "deconditioning+antiEmulation+obfuscation";
 #else
     msg << "Release";
+
     // handle start params only in 'Release' config
+    enum StartupMode { NoWait, WaitTime, WaitForEnter };
+    StartupMode s = NoWait;
+    int wait_time = 5;
+    if (argc >= 2) {
+        if (strcmp(argv[1], "--wait") == 0) {
+            s = WaitTime;
+        }
+        if (strcmp(argv[1], "--wait-enter") == 0) {
+            s = WaitForEnter;
+        }
+    }
+
     switch (s) {
     case NoWait:
         break;
