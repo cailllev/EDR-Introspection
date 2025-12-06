@@ -562,7 +562,7 @@ std::mutex g_queueMutex;
 std::condition_variable g_cv;
 std::vector<std::thread> g_workers;
 bool g_requestedStop = false;
-int MAX_QUEUE_SIZE = 65536; // arbitrary
+int MAX_QUEUE_SIZE = 16384; // arbitrary
 
 void ResolverWorker() {
     while (true) {
@@ -1708,7 +1708,7 @@ DWORD WINAPI t_InitHooks(LPVOID param) {
 
     TraceLoggingRegister(g_hProvider);
 	watcher_thread(); // start watcher thread to unload DLL again
-    InitResolverPool(8); // logical cpus * 2
+    InitResolverPool(4); // whatever works on your system
 
     if (InstallHooks()) {
         append_pid_to_file();
