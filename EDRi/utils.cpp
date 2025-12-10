@@ -31,6 +31,8 @@ static const std::string defender2yara_sigs_url = "https://github.com/t-tani/def
 static const std::string outTypeEvent = "events\\";
 static const std::string outTypeSigs = "signatures\\";
 
+static const std::string edr_hooker_base_name = "EDRReflectiveHooker";
+
 const std::string hooked_procs_file = "C:\\Users\\Public\\Downloads\\hooked.txt"; // should match the path in EDRReflectiveHooker (dllmain.cpp)
 
 static bool initialized_snapshot = false;
@@ -280,9 +282,13 @@ std::wstring get_base_path() {
     return exePath.substr(0, pos + 1);
 }
 
-std::string get_hook_dll_path() {
+std::string get_hook_dll_path(bool minimal_hooks) {
     std::wstring base_path = get_base_path();
-    return wstring2string(base_path) + "EDRReflectiveHooker.dll";
+    std::string base_name = edr_hooker_base_name;
+    if (minimal_hooks) {
+        base_name += "-Min";
+    }
+    return wstring2string(base_path) + base_name + ".dll";
 }
 
 std::string resolve_path(std::string relative_path) {

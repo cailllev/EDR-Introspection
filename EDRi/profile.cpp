@@ -4,9 +4,10 @@
 #include "profile.h"
 
 bool needs_kernel_callbacks_disabling = true;
-EDR_Profile defender = { needs_kernel_callbacks_disabling, { "MsMpEng.exe" }, { "MpDefenderCoreService.exe" } };
-EDR_Profile mde = { needs_kernel_callbacks_disabling, { "MsMpEng.exe" }, { "MpDefenderCoreService.exe", "MsSense.exe", "SenseCnCProxy.exe", "SenseIR.exe", "SenseCE.exe", "SenseSampleUploader.exe", "SenseNdr.exe", "SenseSC.exe", "SenseCM.exe", "SenseTVM.exe" } };
-EDR_Profile cortex = { needs_kernel_callbacks_disabling, { "cyserver.exe", "cysandbox.exe" } , { "cywscsvc.exe", "tlaworker.exe", "cortex-xdr-payload.exe", "cyuserserver.exe", "cyrprtui.exe", "cydump.exe", "CyveraConsole.exe" } };
+EDR_Profile defender = { needs_kernel_callbacks_disabling, false, { "MsMpEng.exe" }, { "MpDefenderCoreService.exe" } };
+EDR_Profile mde = { needs_kernel_callbacks_disabling, false, { "MsMpEng.exe" }, { "MpDefenderCoreService.exe", "MsSense.exe", "SenseCnCProxy.exe", "SenseIR.exe", "SenseCE.exe", "SenseSampleUploader.exe", "SenseNdr.exe", "SenseSC.exe", "SenseCM.exe", "SenseTVM.exe" } };
+EDR_Profile cortex = { needs_kernel_callbacks_disabling, true, { "cyserver.exe", "cysandbox.exe" } , { "cywscsvc.exe", "tlaworker.exe", "cortex-xdr-payload.exe", "cyuserserver.exe", "cyrprtui.exe", "cydump.exe", "CyveraConsole.exe" } };
+// cortex needs minimal hooks, else crashes
 
 static const std::map<std::string, EDR_Profile> edr_profiles = {
     { "Defender", defender },

@@ -922,7 +922,6 @@ DWORD WINAPI ReadMemoryResolverThread(LPVOID lpParam) {
     return 0;
 }
 
-
 NTSTATUS NTAPI Hook_NtQueryInformationProcess(
     HANDLE           ProcessHandle,
     PROCESSINFOCLASS ProcessInformationClass,
@@ -1517,6 +1516,7 @@ bool InstallHooks() {
     }
 
     // all functions to hook (order does matter depending on the phase of the moon, or my buggy programming)
+#if not defined MinimalHooks
     HookInfo funcs[] = {
         {"NtQueryInformationProcess", (void*)Hook_NtQueryInformationProcess, (void**)&g_origNtQueryInformationProcess},
         {"NtCreateFile", (void*)Hook_NtCreateFile, (void**)&g_origNtCreateFile},
@@ -1530,6 +1530,19 @@ bool InstallHooks() {
         {"NtClose", (void*)Hook_NtClose, (void**)&g_origNtClose},
         {"NtTerminateProcess", (void*)Hook_NtTerminateProcess, (void**)&g_origNtTerminateProcess}
     };
+#else // only use "simple hooks", i.e. hooks without resolvers and further sys calls
+    // still needs queryInfoProc, but do not hook
+    g_origNtQueryInformationProcess = (PFN_NtQueryInformationProcess)GetProcAddress(hNtdll, "NtQueryInformationProcess");
+    HookInfo funcs[] = {
+        {"NtOpenFile", (void*)Hook_NtOpenFile, (void**)&g_origNtOpenFile},
+        {"NtOpenProcess", (void*)Hook_NtOpenProcess, (void**)&g_origNtOpenProcess},
+        {"NtWriteVirtualMemory", (void*)Hook_NtWriteVirtualMemory, (void**)&g_origNtWriteVirtualMemory},
+        {"NtSuspendProcess", (void*)Hook_NtSuspendProcess, (void**)&g_origNtSuspendProcess},
+        {"NtResumeProcess", (void*)Hook_NtResumeProcess, (void**)&g_origNtResumeProcess},
+        {"NtClose", (void*)Hook_NtClose, (void**)&g_origNtClose},
+        {"NtTerminateProcess", (void*)Hook_NtTerminateProcess, (void**)&g_origNtTerminateProcess}
+    };
+#endif
 
     /* more functions to hook:
     - NtCreateProcess(Ex)
@@ -1708,7 +1721,10 @@ DWORD WINAPI t_InitHooks(LPVOID param) {
 
     TraceLoggingRegister(g_hProvider);
 	watcher_thread(); // start watcher thread to unload DLL again
+
+#if not defined MinimalHooks // only needed for hooks with resolvers, not in Min
     InitResolverPool(4); // whatever works on your system
+#endif
 
     if (InstallHooks()) {
         append_pid_to_file();

@@ -9,7 +9,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EDRiShared", "EDRiShared\ED
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EDRReflectiveHooker", "EDRReflectiveHooker\EDRReflectiveHooker.vcxproj", "{BFBED5D2-CCF1-49B6-9786-C1BA89171616}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CSLoader", "attacks\CsLoader\CsLoader.vcxproj", "{3FF21867-EA53-463C-9336-E43B13FA2B29}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CsLoader", "attacks\CsLoader\CsLoader.vcxproj", "{3FF21867-EA53-463C-9336-E43B13FA2B29}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LsassReader", "attacks\LsassReader\LsassReader.vcxproj", "{3345A30F-84F7-4917-8F05-9B52DA60316B}"
 EndProject
