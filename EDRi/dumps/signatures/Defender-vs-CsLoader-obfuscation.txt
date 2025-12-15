@@ -1,3 +1,4 @@
-Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-509.exe"
-Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-509.exe"
-Behaviour Monitoring Detection: pid=12700 MsMpEng.exe, sig=Behavior:Win32/NewCreatedFileNetConnect.A
+Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-981.exe"
+Found signal/signature: ALF:Aurora.A!rfn for "C:\Users\Public\Downloads\attack-981.exe"
+Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-981.exe"
+Behaviour Monitoring Detection: pid=12324 MsMpEng.exe, sig=Behavior:Win32/NewCreatedFileNetConnect.A
