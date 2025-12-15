@@ -1,0 +1,6 @@
+Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-843.exe"
+Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-843.exe"
+Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-843.exe"
+Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-843.exe"
+Sense Remidiation: threatname=Trojan:Win32/Wacatac.C!ml, signature=0x26672002BB43, sigsha=988440bd2e8089da4b7c623bbf1f05fd0c3294d0, classification=0x8, determination=0.000000, realpath=C:\Users\Public\Downloads\attack-843.exe, resource=file
+Sense Remidiation: threatname=Trojan:Win32/Wacatac.C!ml, signature=0x26672002BB43, sigsha=988440bd2e8089da4b7c623bbf1f05fd0c3294d0, classification=0x0, determination=-1.000000, realpath=C:\Users\Public\Downloads\attack-843.exe, resource=file
