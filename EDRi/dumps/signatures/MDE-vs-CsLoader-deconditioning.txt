@@ -1,5 +1,0 @@
-Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-299.exe"
-Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-299.exe"
-Found signal/signature: TEL:Lua:SENSEDownloadLocalLow for "C:\Users\Public\Downloads\attack-299.exe"
-Sense Remidiation: threatname=Unknown, signature=0x555D4FB9C24, sigsha=68b7f163c37677d744a8a0d9772ac4a9d45a20b1, classification=0x44, determination=0.000000, realpath=C:\Users\Public\Downloads\attack-299.exe, resource=process
-Sense Remidiation: threatname=Unknown, signature=0x555D4FB9C24, sigsha=68b7f163c37677d744a8a0d9772ac4a9d45a20b1, classification=0x44, determination=0.000000, realpath=C:\Users\Public\Downloads\attack-299.exe, resource=file
