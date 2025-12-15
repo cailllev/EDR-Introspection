@@ -1,0 +1,5 @@
+Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-694.exe"
+Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-694.exe"
+Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-694.exe"
+Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-694.exe"
+Sense Remidiation: threatname=Trojan:Win32/Bearfoos.B!ml, signature=0x2667BEB2B371, sigsha=42dbc60c8c40d262810a794acebcb2dcc6ef716a, classification=0x8, determination=0.000000, realpath=C:\Users\Public\Downloads\attack-694.exe, resource=file
