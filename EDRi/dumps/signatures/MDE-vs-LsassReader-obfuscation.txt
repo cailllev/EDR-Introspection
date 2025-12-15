@@ -1,0 +1,9 @@
+Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-366.exe"
+Found signal/signature: SLF:IntentToEnumProcess for "C:\Users\Public\Downloads\attack-366.exe"
+Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-366.exe"
+Found signal/signature: TEL:Lua:SENSEDownloadLocalLow for "C:\Users\Public\Downloads\attack-366.exe"
+Found signal/signature: ALF:Aurora.A!rfn for "C:\Users\Public\Downloads\attack-366.exe"
+Found signal/signature: SLF:IntentToEnumProcess for "C:\Users\Public\Downloads\attack-366.exe"
+Sense Remidiation: threatname=Trojan:Win32/Wacatac.C!ml, signature=0x26673AE1241D, sigsha=c07bcfa0c33a6c70854e22064f9a1f51c79d9f72, classification=0x42, determination=-1.000000, realpath=C:\Users\Public\Downloads\attack-366.exe, resource=process
+Sense Remidiation: threatname=Trojan:Win32/Wacatac.C!ml, signature=0x26673AE1241D, sigsha=c07bcfa0c33a6c70854e22064f9a1f51c79d9f72, classification=0x48, determination=-1.000000, realpath=C:\Users\Public\Downloads\attack-366.exe, resource=file
+Found signal/signature: SLF:Trojan:Win32/NeoHash.TENCODE3 for "C:\users\public\downloads\attack-366.exe"

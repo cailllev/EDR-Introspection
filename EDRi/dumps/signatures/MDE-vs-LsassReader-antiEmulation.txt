@@ -1,0 +1,8 @@
+Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-358.exe"
+Found signal/signature: SLF:IntentToEnumProcess for "C:\Users\Public\Downloads\attack-358.exe"
+Found signal/signature: SLF:tempRaiseBinsToSyncLofiOnMalwareDropFolder.A for "C:\Users\Public\Downloads\attack-358.exe"
+Found signal/signature: TEL:Lua:SENSEDownloadLocalLow for "C:\Users\Public\Downloads\attack-358.exe"
+Found signal/signature: ALF:Aurora.A!rfn for "C:\Users\Public\Downloads\attack-358.exe"
+Found signal/signature: SLF:tempRaiseBinsToSyncLofiOnMalwareDropFolder.A for "C:\Users\Public\Downloads\attack-358.exe"
+Sense Remidiation: threatname=Unknown, signature=0x77DBDE6D36A01, sigsha=d617b4a5e955ee205726941839e3f7e5c07b1d9b, classification=0x44, determination=0.000000, realpath=C:\Users\Public\Downloads\attack-358.exe, resource=process
+Sense Remidiation: threatname=Unknown, signature=0x77DBDE6D36A01, sigsha=d617b4a5e955ee205726941839e3f7e5c07b1d9b, classification=0x44, determination=0.000000, realpath=C:\Users\Public\Downloads\attack-358.exe, resource=file

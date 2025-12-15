@@ -1,9 +1,9 @@
-Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-573.exe"
-Found signal/signature: SLF:IntentToEnumProcess for "C:\Users\Public\Downloads\attack-573.exe"
-Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-573.exe"
-Found signal/signature: TEL:Lua:SENSEDownloadLocalLow for "C:\Users\Public\Downloads\attack-573.exe"
-Found signal/signature: ALF:Aurora.A!rfn for "C:\Users\Public\Downloads\attack-573.exe"
-Found signal/signature: SLF:IntentToEnumProcess for "C:\Users\Public\Downloads\attack-573.exe"
-Sense Remidiation: threatname=Unknown, signature=0x60E78EC7B1CB, sigsha=88d8d1535ab7761f877525fe198961cd89989b83, classification=0x44, determination=0.000000, realpath=C:\Users\Public\Downloads\attack-573.exe, resource=process
-Sense Remidiation: threatname=Unknown, signature=0x60E78EC7B1CB, sigsha=88d8d1535ab7761f877525fe198961cd89989b83, classification=0x44, determination=0.000000, realpath=C:\Users\Public\Downloads\attack-573.exe, resource=file
-Found signal/signature: SLF:Trojan:Win32/NeoHash.TENCODE3 for "C:\users\public\downloads\attack-573.exe"
+Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-319.exe"
+Found signal/signature: SLF:IntentToEnumProcess for "C:\Users\Public\Downloads\attack-319.exe"
+Found signal/signature: TEL:Lua:SENSEDownloadLocalLow for "C:\Users\Public\Downloads\attack-319.exe"
+Found signal/signature: ALF:Aurora.A!rfn for "C:\Users\Public\Downloads\attack-319.exe"
+Sense Remidiation: threatname=Unknown, signature=0x1A6BD94FEF26D, sigsha=7862c8a131bfc08f41bb995f1ad04283949d0db3, classification=0x44, determination=0.000000, realpath=C:\Users\Public\Downloads\attack-319.exe, resource=process
+Sense Remidiation: threatname=Unknown, signature=0x1A6BD94FEF26D, sigsha=7862c8a131bfc08f41bb995f1ad04283949d0db3, classification=0x44, determination=0.000000, realpath=C:\Users\Public\Downloads\attack-319.exe, resource=file
+Found signal/signature: TEL:Lua:SENSEDownloadLocalLow for "C:\Users\Public\Downloads\attack-319.exe"
+Found signal/signature: ALF:Aurora.A!rfn for "C:\Users\Public\Downloads\attack-319.exe"
+Sense Remidiation: threatname=Unknown, signature=0x1A6BD94FEF26D, sigsha=7862c8a131bfc08f41bb995f1ad04283949d0db3, classification=0x44, determination=0.000000, realpath=C:\Users\Public\Downloads\attack-319.exe, resource=file
