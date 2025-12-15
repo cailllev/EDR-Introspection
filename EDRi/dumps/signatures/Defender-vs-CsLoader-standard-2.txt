@@ -1,0 +1,2 @@
+Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-626.exe"
+Behaviour Monitoring Detection: pid=12324 MsMpEng.exe, sig=Behavior:Win32/NewCreatedFileNetConnect.A
