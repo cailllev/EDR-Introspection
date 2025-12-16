@@ -1,1 +1,2 @@
-Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-473.exe"
+Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-654.exe"
+Behaviour Monitoring Detection: pid=  992 MsMpEng.exe, sig=Behavior:Win32/BmNoFriendlyFlightDataRecorder
