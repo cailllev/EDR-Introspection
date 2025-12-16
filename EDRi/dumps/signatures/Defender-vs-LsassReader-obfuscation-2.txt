@@ -1,0 +1,2 @@
+Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-938.exe"
+Found signal/signature: SLF:tempRaiseBinsToSyncLofiOnMalwareDropFolder.A for "C:\Users\Public\Downloads\attack-938.exe"
