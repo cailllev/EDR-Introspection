@@ -435,12 +435,14 @@ int main(int argc, char* argv[]) {
             }
             if (!inject_dll(pid, get_hook_dll_path(edr_profile.needs_minimal_hooks), g_debug, reflective_inject)) {
                 std::cerr << "[!] EDRi: Failed to inject the hooker dll into " << exe << "\n";
+				Sleep(1000); // small wait to ensure the hooker dll released the hooks.txt file
                 save_hooked_procs(g_newly_hooked_procs); // save newly hooked procs for next round
                 stop_all_etw_traces();
                 return 1;
             }
             g_newly_hooked_procs.push_back(pid); // add for next run
         }
+        Sleep(1000); // small wait to ensure the hooker dll released the hooks.txt file
         save_hooked_procs(g_newly_hooked_procs); // and save for next round
 
         // no new procs hooked -> no checks

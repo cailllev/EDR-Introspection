@@ -15,17 +15,18 @@ static const std::string CLASSIFIER_NOT_CONTAINED = "0";
 
 // -------------------- FILTERING LISTS -------------------- //
 // Antimalware Trace
-static const std::vector<int> am_event_ids_to_remove = { 7, 44, 62 };
+static const std::vector<int> am_event_ids_to_remove = { };
 static const std::vector<int> am_event_ids_with_opid = { 5, 6, 11, 15, 16, 26, 29, 104, 105, 109, 110, 111, 112, 60, 70, 71, 72, 73 };
 static const std::vector<int> am_event_ids_with_pid_but_noisy = { 11, 111, 112 };
 static const std::vector<int> am_event_ids_with_opid_and_tpid = { 53 };
 static const std::vector<int> am_event_ids_with_pid_in_data = { 43, 67 };
 static const std::vector<int> am_event_ids_with_message = { 3 };
-static const std::vector<int> am_event_ids_with_filepath = { 30, 31, 35, 36, 37, 38 };
+static const std::vector<int> am_event_ids_with_filepath = { 7, 30, 31, 35, 36, 37, 38 };
 static const std::vector<int> am_event_ids_with_pipe = { 32, 33 };
-static const std::vector<int> am_event_ids_with_signatures = { 59 }; 
-// event 59 just logs all Behaviour tracking tasks, but has no identifier tied to actual files / events / procs, etc.
-// -> sigseq and sigsha only identify the tracking task, NOT the file / event / proc --> put event 59 in Relevant
+static const std::vector<int> am_event_ids_relevant = { 44, 59 }; 
+// event 44 is a MetaStoreTask MetaStoreAction but it has no reversible identifiers
+// event 59 just logs all Behaviour tracking tasks, but has no identifier tied to actual files / events / procs, etc. -> sigseq and sigsha only identify the tracking task, NOT the file / event / proc
+// am_events_ids_relevant are automatically classified as Relevant (until the default classification changes)
 
 // Kernel Process Trace
 static const std::vector<int> kproc_event_ids_with_attack_pid_tpid = { 3, 4 };
