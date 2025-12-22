@@ -1,0 +1,18 @@
+Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-288.exe"
+Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-288.exe"
+Found signal/signature: TEL:Lua:SENSEDownloadLocalLow for "C:\Users\Public\Downloads\attack-288.exe"
+Found signal/signature: ALF:Aurora.A!rfn for "C:\Users\Public\Downloads\attack-288.exe"
+Sense Remidiation: threatname=Unknown, signature=0x555D4FB9C24, sigsha=68b7f163c37677d744a8a0d9772ac4a9d45a20b1, classification=0x44, determination=0.000000, realpath=C:\Users\Public\Downloads\attack-288.exe, resource=process
+Sense Remidiation: threatname=Unknown, signature=0x555D4FB9C24, sigsha=68b7f163c37677d744a8a0d9772ac4a9d45a20b1, classification=0x44, determination=0.000000, realpath=C:\Users\Public\Downloads\attack-288.exe, resource=file
+Found signal/signature: Trojan:Win64/Petwosel.A for "C:\Windows\System32\whoami.exe"
+Found signal/signature: Trojan:Win64/Petwosel.B for "C:\Windows\System32\whoami.exe"
+Found signal/signature: Trojan:Win32/LummaStealer.STG for "C:\Windows\System32\whoami.exe"
+Found signal/signature: Trojan:Win64/Cipduk.STA for "C:\Windows\System32\whoami.exe"
+Found signal/signature: Trojan:Win64/Toughprogress.A for "C:\Windows\System32\whoami.exe"
+Found signal/signature: Trojan:Win64/Cipduk.STB for "C:\Windows\System32\whoami.exe"
+Found signal/signature: SLF:Aurora.A!rfn for "C:\Users\Public\Downloads\attack-288.exe"
+Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-288.exe"
+Behaviour Monitoring Detection: pid= 8892 MsMpEng.exe, sig=Behavior:Win32/ScanCodeInjection.A
+Sense Remidiation: threatname=Behavior:Win32/ScanCodeInjection.A, signature=0xA6B39AC5F4B3, sigsha=ed1f697128e009400dc015a6ed1a678f797e41f6, classification=0x1, determination=-1.000000, realpath=C:\Users\Public\Downloads\attack-288.exe, resource=behavior
+Sense Remidiation: threatname=Behavior:Win32/ScanCodeInjection.A, signature=0xA6B39AC5F4B3, sigsha=ed1f697128e009400dc015a6ed1a678f797e41f6, classification=0x1, determination=-1.000000, realpath=C:\Users\Public\Downloads\attack-288.exe, resource=behavior
+Sense Remidiation: threatname=Behavior:Win32/ScanCodeInjection.A, signature=0xA6B39AC5F4B3, sigsha=ed1f697128e009400dc015a6ed1a678f797e41f6, classification=0x1, determination=-1.000000, realpath=C:\Windows\explorer.exe, resource=behavior
