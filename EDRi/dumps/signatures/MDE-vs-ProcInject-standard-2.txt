@@ -1,0 +1,7 @@
+Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-252.exe"
+Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-252.exe"
+Found signal/signature: SLF:Aurora.A!rfn for "C:\Users\admin\Desktop\EDR-Introspection\x64\Release\EDRi.exe"
+Found signal/signature: SLF:Aurora.A!rfn for "C:\Users\admin\Desktop\EDR-Introspection\x64\Release\EDRi.exe"
+Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-252.exe"
+Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-252.exe"
+Sense Remidiation: threatname=Trojan:Win32/Bearfoos.B!ml, signature=0x26671FD5A74A, sigsha=d7ad5731d7835344ae15edafa6b3a45cfd6772e0, classification=0x8, determination=0.000000, realpath=C:\Users\Public\Downloads\attack-252.exe, resource=file
