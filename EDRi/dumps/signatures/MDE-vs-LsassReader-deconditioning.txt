@@ -1,10 +1,14 @@
-Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-169.exe"
-Found signal/signature: SLF:IntentToEnumProcess for "C:\Users\Public\Downloads\attack-169.exe"
-Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-169.exe"
-Found signal/signature: TEL:Lua:SENSEDownloadLocalLow for "C:\Users\Public\Downloads\attack-169.exe"
-Found signal/signature: ALF:Aurora.A!rfn for "C:\Users\Public\Downloads\attack-169.exe"
-Found signal/signature: SLF:IntentToEnumProcess for "C:\Users\Public\Downloads\attack-169.exe"
-Sense Remidiation: threatname=Unknown, signature=0x60E78EC7B1CB, sigsha=88d8d1535ab7761f877525fe198961cd89989b83, classification=0x44, determination=0.000000, realpath=C:\Users\Public\Downloads\attack-169.exe, resource=process
-Sense Remidiation: threatname=Unknown, signature=0x60E78EC7B1CB, sigsha=88d8d1535ab7761f877525fe198961cd89989b83, classification=0x44, determination=0.000000, realpath=C:\Users\Public\Downloads\attack-169.exe, resource=file
-Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-169.exe"
-Found signal/signature: SLF:IntentToEnumProcess for "C:\Users\Public\Downloads\attack-169.exe"
+Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-369.exe"
+Found signal/signature: SLF:IntentToEnumProcess for "C:\Users\Public\Downloads\attack-369.exe"
+Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-369.exe"
+Found signal/signature: TEL:Lua:SENSEDownloadLocalLow for "C:\Users\Public\Downloads\attack-369.exe"
+Found signal/signature: ALF:Aurora.A!rfn for "C:\Users\Public\Downloads\attack-369.exe"
+Found signal/signature: SLF:IntentToEnumProcess for "C:\Users\Public\Downloads\attack-369.exe"
+Sense Remidiation: threatname=Unknown, signature=0x60E78EC7B1CB, sigsha=88d8d1535ab7761f877525fe198961cd89989b83, classification=0x44, determination=0.000000, realpath=C:\Users\Public\Downloads\attack-369.exe, resource=process
+Sense Remidiation: threatname=Unknown, signature=0x60E78EC7B1CB, sigsha=88d8d1535ab7761f877525fe198961cd89989b83, classification=0x44, determination=0.000000, realpath=C:\Users\Public\Downloads\attack-369.exe, resource=file
+Found signal/signature: SLF:Win32/LsassMemDump.A for "C:\Users\Public\Downloads\l.dmp"
+Found signal/signature: SLF:Win32/LsassMemDump.C for "C:\Users\Public\Downloads\l.dmp"
+Found signal/signature: SLF:Win32/LsassMemDump.gen!C for "C:\Users\Public\Downloads\l.dmp"
+Found signal/signature: SLF:Win32/LsassMemDump.A for "C:\Users\Public\Downloads\l.dmp"
+Found signal/signature: SLF:Win32/LsassMemDump.C for "C:\Users\Public\Downloads\l.dmp"
+Found signal/signature: SLF:Win32/LsassMemDump.gen!C for "C:\Users\Public\Downloads\l.dmp"
