@@ -1,0 +1,6 @@
+Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-400.exe"
+Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-400.exe"
+Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-400.exe"
+Found signal/signature: #Lowfi:Lua:WrittenToDownloadFolderByOtherParentProcess for "C:\Users\Public\Downloads\attack-400.exe"
+Sense Remidiation: threatname=Trojan:Win32/Wacatac.C!ml, signature=0x26676911A4E5, sigsha=bc93e2c0c22e24fc1b7923702b28f6c4f31c1031, classification=0x8, determination=0.000000, realpath=C:\Users\Public\Downloads\attack-400.exe, resource=file
+Sense Remidiation: threatname=Trojan:Win32/Wacatac.C!ml, signature=0x26676911A4E5, sigsha=bc93e2c0c22e24fc1b7923702b28f6c4f31c1031, classification=0x0, determination=-1.000000, realpath=C:\Users\Public\Downloads\attack-400.exe, resource=file
