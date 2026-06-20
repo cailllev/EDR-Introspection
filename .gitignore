@@ -384,6 +384,7 @@ FodyWeavers.xsd
 !/x64/Release/ProcTerminator.exe
 !/x64/Release/ReadPEB.exe
 !/x64/Release/DefenderBase.exe
+!/x64/Release/Handler.exe
 
 # pdb offsets
 helpers/EDRSandblast/offsets/
