@@ -1,10 +1,42 @@
-#include <windows.h>
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <Windows.h>
+#include <winternl.h>
 #include <tlhelp32.h>
 #include <iostream>
 #include <string>
-#include <winternl.h>
 
 #include "hooker.h"
+
+#pragma comment(lib, "ntdll.lib")
+
+#define ProcessHandleInformation 51 // Information class 0x33
+
+// Built-in structure for local handle snapshots
+typedef struct _PROCESS_HANDLE_TABLE_ENTRY_INFO {
+    HANDLE HandleValue;
+    ULONG_PTR HandleCount;
+    ULONG_PTR PointerCount;
+    ULONG GrantedAccess;
+    ULONG ObjectTypeIndex;
+    ULONG HandleAttributes;
+    ULONG Reserved;
+} PROCESS_HANDLE_TABLE_ENTRY_INFO, * PPROCESS_HANDLE_TABLE_ENTRY_INFO;
+
+typedef struct _PROCESS_HANDLE_SNAPSHOT_INFORMATION {
+    ULONG_PTR NumberOfHandles;
+    ULONG_PTR Reserved;
+    PROCESS_HANDLE_TABLE_ENTRY_INFO Handles[1];
+} PROCESS_HANDLE_SNAPSHOT_INFORMATION, * PPROCESS_HANDLE_SNAPSHOT_INFORMATION;
+
+typedef NTSTATUS(NTAPI* pfnNtQueryInformationProcess)(
+    HANDLE ProcessHandle,
+    ULONG ProcessInformationClass,
+    PVOID ProcessInformation,
+    ULONG ProcessInformationLength,
+    PULONG ReturnLength
+    );
 
 
 HMODULE GetRemoteModuleHandle(DWORD pid, const std::wstring& moduleName) {
@@ -66,7 +98,7 @@ typedef ULONG(WINAPI* PFN_RtlNtStatusToDosError)(
 PFN_NtOpenEvent g_origNtOpenEvent = nullptr;
 PFN_RtlNtStatusToDosError g_origRtlNtStatusToDosError = nullptr;
 
-int unload(int pid, std::string dllName) { // or just use a stopRequest.txt
+int Unload(int pid, std::string dllName) { // or just use a stopRequest.txt
     HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
     if (!ntdll) return 1;
 
@@ -93,7 +125,7 @@ int unload(int pid, std::string dllName) { // or just use a stopRequest.txt
 
     if (!NT_SUCCESS(st)) {
         DWORD winerr = g_origRtlNtStatusToDosError(st);
-        std::wcerr << "[!] InjectLoader: Failt to NtOpenEvent " << eventName << ", WinErr = " << winerr << L"\n";
+        std::wcerr << "[!] InjectLoader: Fail to NtOpenEvent " << eventName << ", WinErr = " << winerr << L"\n";
     }
     else {
         std::wcout << "[-] InjectLoader: NtOpenEvent " << eventName << " ok, sending stop signal\n";
@@ -112,6 +144,93 @@ int unload(int pid, std::string dllName) { // or just use a stopRequest.txt
     return 0;
 }
 
+HANDLE findProcHandle(int pid, BOOL debug) {
+    HMODULE hNtdll = GetModuleHandleW(L"ntdll.dll");
+    if (hNtdll == 0) {
+        printf("[!] InjectLoader: Failed to get handle to ntdll.dll\n");
+        return 0;
+    }
+    pfnNtQueryInformationProcess NtQueryInformationProcess = (pfnNtQueryInformationProcess)GetProcAddress(hNtdll, "NtQueryInformationProcess");
+    if (NtQueryInformationProcess == 0) {
+        printf("[!] InjectLoader: Failed to get address of NtQueryInformationProcess\n");
+        return 0;
+    }
+
+    ULONG bufferSize = 0x4000; // Start with 16KB (plenty for a single local process)
+    PVOID buffer = VirtualAlloc(NULL, bufferSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    ULONG returnLength = 0;
+
+    // Query only OUR process handle table
+    NTSTATUS status = NtQueryInformationProcess(
+        GetCurrentProcess(),
+        ProcessHandleInformation,
+        buffer,
+        bufferSize,
+        &returnLength
+    );
+
+    // Resize if needed
+    if (status == 0xC0000004) { // STATUS_INFO_LENGTH_MISMATCH
+        VirtualFree(buffer, 0, MEM_RELEASE);
+        bufferSize = returnLength;
+        buffer = VirtualAlloc(NULL, bufferSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+        status = NtQueryInformationProcess(GetCurrentProcess(), ProcessHandleInformation, buffer, bufferSize, &returnLength);
+    }
+
+    if (status == 0) {
+        PPROCESS_HANDLE_SNAPSHOT_INFORMATION localHandles = (PPROCESS_HANDLE_SNAPSHOT_INFORMATION)buffer;
+        if (localHandles == nullptr || localHandles->NumberOfHandles == 0) {
+            printf("[!] InjectLoader: No handles found in the current process.\n");
+            if (buffer != 0) VirtualFree(buffer, 0, MEM_RELEASE);
+            return 0;
+        }
+
+        typedef DWORD(WINAPI* pfnGetProcessId)(HANDLE);
+        HMODULE hKernel32 = GetModuleHandleW(L"kernel32.dll");
+        if (!hKernel32) {
+            printf("[!] InjectLoader: Failed to get handle to kernel32.dll\n");
+            if (buffer != 0) VirtualFree(buffer, 0, MEM_RELEASE);
+            return 0;
+        }
+        pfnGetProcessId _GetProcessId = (pfnGetProcessId)GetProcAddress(hKernel32, "GetProcessId");
+        if (!_GetProcessId) {
+            printf("[!] InjectLoader: Failed to get address of GetProcessId\n");
+            if (buffer != 0) VirtualFree(buffer, 0, MEM_RELEASE);
+            return 0;
+        }
+
+        for (ULONG_PTR i = 0; i < localHandles->NumberOfHandles; i++) {
+            PROCESS_HANDLE_TABLE_ENTRY_INFO entry = localHandles->Handles[i];
+
+            // Check if the handle is a process handle
+            DWORD targetPid = _GetProcessId(entry.HandleValue);
+            if (targetPid == pid) {
+                if (debug) {
+                    printf("[+] InjectLoader: Proc handle found ID=0x%p, PID=%lu, Access=0x%08X\n", entry.HandleValue, targetPid, entry.GrantedAccess);
+                }
+                if (entry.GrantedAccess != PROCESS_ALL_ACCESS) {
+                    printf("[!] InjectLoader: Warning: Handle to pid=%i found but limited access 0x%08X\n", pid, entry.GrantedAccess);
+                    printf("[*] InjectLoader: Continue searching? Y/n");
+                    int c = getchar();
+                    if (c == 'n') {
+                        if (buffer != 0) VirtualFree(buffer, 0, MEM_RELEASE);
+                        return entry.HandleValue;
+                    }
+                    else {
+                        // continue searching
+                    }
+                }
+                if (buffer != 0) VirtualFree(buffer, 0, MEM_RELEASE);
+                return entry.HandleValue;
+            }
+        }
+        printf("[!] InjectLoader: No process handles found in the current process.\n");
+    }
+
+    if (buffer != 0) VirtualFree(buffer, 0, MEM_RELEASE);
+    return 0;
+}
+
 enum Action {
     LOADLIBRARY_INJECTION,
     REFLECTIVE_INJECTION,
@@ -124,14 +243,17 @@ int main(int argc, char* argv[]) {
 
     std::string exePath = argv[0];
     std::string exeName = exePath.substr(exePath.find_last_of("\\/") + 1);
+    std::string usage = "";
+    usage += "[*] InjectLoader: Usage: " + exeName + " <DLL Path> <PID> <(L)oadLibrary | (R)eflective | (S)top> <Debug> <FindHandle>\n";
+    usage += "[*] InjectLoader: Usage: " + exeName + " C:\\path\\to\\dll.dll 1234 LoadLibrary 0 1\n";
 
     if (argc > 1 && strcmp(argv[1], "-h") == 0) {
-        std::cout << "[*] InjectLoader: Usage: " << exeName << " <DLL Path> <PID> [(L)oadLibrary | (R)eflective | (S)top] [(D)ebug]\n";
+        std::cout << usage;
         return 0;
     }
 
-    if (argc < 4) {
-        std::cout << "[*] InjectLoader: Usage: " << exeName << " <DLL Path> <PID> [(L)oadLibrary | (R)eflective | (S)top] [(D)ebug]\n";
+    if (argc < 6) {
+        std::cout << usage;
         return 1;
     }
 
@@ -165,25 +287,30 @@ int main(int argc, char* argv[]) {
     }
 
     bool debug = false;
-    if (argc >= 5 && (_stricmp(argv[4], "D") == 0 || _stricmp(argv[4], "debug") == 0)) {
+    if (argv[4][0] == '1') {
         std::cout << "[*] InjectLoader: Debug mode enabled.\n";
         debug = true;
     }
 
+    HANDLE hProc = NULL;
+    if (argv[5][0] == '1') {
+        std::cout << "[*] InjectLoader: Process handle already opened, searching for it...\n";
+        hProc = findProcHandle(pid, debug);
+    }
 
     switch (a) {
     case LOADLIBRARY_INJECTION:
         std::cout << "[*] InjectLoader: Attempting to inject DLL '" << dllPath << "' into PID=" << pid << " using LoadLibrary injection method.\n";
-        inject_dll(pid, dllPath, debug, false);
+        inject_dll(pid, dllPath, debug, false, hProc);
         break;
     case REFLECTIVE_INJECTION:
         std::cout << "[*] InjectLoader: Attempting to inject DLL '" << dllPath << "' into PID=" << pid << " using Reflective injection method.\n";
-        inject_dll(pid, dllPath, debug, true);
+        inject_dll(pid, dllPath, debug, true, hProc);
         break;
     case STOP_INJECTION:
         std::cout << "[*] InjectLoader: Unloading DLL in " << pid << "\n";
         std::string dllName = dllPath.substr(dllPath.find_last_of("\\/") + 1);
-        return unload(pid, dllName);
+        return Unload(pid, dllName);
     }
 
     return 0;

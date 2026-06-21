@@ -89,6 +89,10 @@ std::wstring print_defender_base(int pid) {
 	}
 
 	HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
+	if (ntdll == NULL) {
+		std::wcout << L"[-] Failed to resolve ntdll.dll\n";
+		return L"";
+	}
 	NtQueryInformationProcess_t NtQueryInformationProcess = (NtQueryInformationProcess_t)GetProcAddress(ntdll, "NtQueryInformationProcess");
 	if (NtQueryInformationProcess == 0) {
 		std::wcout << L"[-] Failed to get NtQueryInformationProcess address.\n";

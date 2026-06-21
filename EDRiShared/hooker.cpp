@@ -185,13 +185,13 @@ DWORD64 get_reflective_loader_offset(DWORD64 base_address, LPCSTR ReflectiveLoad
 }
 
 // Inject DLL into target process via Reflective DLL Injection
-bool reflective_inject(int pid, HANDLE hProcess, const std::string& dllPath, bool debug)
+bool reflective_inject(HANDLE hProcess, const std::string& dllPath, bool debug)
 {
     // open dll file
     HANDLE file_handle = CreateFileA(dllPath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (file_handle == INVALID_HANDLE_VALUE) { printf("[!] Hooker: CreateFile failed: %lu\n", GetLastError()); return false; }
     if (debug)
-        printf("[+] Hooker: Injecting DLL '%s' into remote process %lu\n", dllPath.c_str(), pid);
+        printf("[+] Hooker: Injecting DLL '%s' into remote process\n", dllPath.c_str());
 
     // get file size
     LARGE_INTEGER fileSize = { 0 };
@@ -217,11 +217,11 @@ bool reflective_inject(int pid, HANDLE hProcess, const std::string& dllPath, boo
     DWORD64 reflective_loader_offset = get_reflective_loader_offset((DWORD64)file_buf, "ReflectiveLoader");
     if (!reflective_loader_offset) { printf("[!] Hooker: ReflectiveLoader export not found in %s\n", dllPath.c_str()); HeapFree(GetProcessHeap(), 0, file_buf); return false; }
     if (debug)
-        printf("[+] Hooker: ReflectiveLoader offset at 0x%p\n", reflective_loader_offset);
+        printf("[+] Hooker: ReflectiveLoader offset at 0x%llu\n", reflective_loader_offset);
 
     // allocate remote memory (use the file size)
     LPVOID remote_file_buf_address = VirtualAllocEx(hProcess, NULL, sz, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-    if (!remote_file_buf_address) { printf("[!] Hooker: VirtualAllocEx failed in remote proc %lu: %lu\n", pid, GetLastError()); CloseHandle(hProcess); HeapFree(GetProcessHeap(), 0, file_buf); return false; }
+    if (!remote_file_buf_address) { printf("[!] Hooker: VirtualAllocEx failed in remote proc: %lu\n", GetLastError()); CloseHandle(hProcess); HeapFree(GetProcessHeap(), 0, file_buf); return false; }
     if (debug)
         printf("[+] Hooker: Remote memory allocated at 0x%p\n", remote_file_buf_address);
 
@@ -273,10 +273,18 @@ bool reflective_inject(int pid, HANDLE hProcess, const std::string& dllPath, boo
 }
 
 // Preparation for DLL injection
-bool inject_dll(int pid, const std::string& dllPath, bool debug, bool reflective) {
-    HANDLE hProcess = OpenProcess(
-        PROCESS_ALL_ACCESS,
-        FALSE, pid);
+bool inject_dll(int pid, const std::string& dllPath, bool debug, bool reflective, HANDLE hProcess) {
+    if (hProcess == NULL) {
+        if (debug) {
+            printf("[+] Hooker: Opening pid=%i\n", pid);
+        }
+        hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pid);
+    }
+    else {
+        if (debug) {
+            printf("[+] Hooker: Using existing handle=%p\n", hProcess);
+        }
+    }
 
     if (!hProcess) {
         std::cerr << "[!] Hooker: Failed to open target process. Error: " << GetLastError() << "\n";
@@ -297,7 +305,7 @@ bool inject_dll(int pid, const std::string& dllPath, bool debug, bool reflective
     }
     print_granted_access(hProcess, pid);
     if (reflective) {
-		return reflective_inject(pid, hProcess, dllPath, debug);
+		return reflective_inject(hProcess, dllPath, debug);
     }
     else {
 		return normal_inject(hProcess, dllPath, debug);
