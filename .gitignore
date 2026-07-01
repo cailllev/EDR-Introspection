@@ -385,6 +385,10 @@ FodyWeavers.xsd
 !/x64/Release/ReadPEB.exe
 !/x64/Release/DefenderBase.exe
 !/x64/Release/Handler.exe
+!/x64/Release/ExternalHooker.exe
+!/x64/Release/InternalHooks.dll
 
 # pdb offsets
 helpers/EDRSandblast/offsets/
+
+vcpkg_installed/
