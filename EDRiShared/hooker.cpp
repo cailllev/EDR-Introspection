@@ -3,8 +3,113 @@
 #include <tlhelp32.h>
 #include <string>
 #include <iostream>
+#include <fstream>
 #include <cctype>
+#include <vector>
 
+#include "hooker.h"
+
+//https://github.com/Paxai/DLLium
+typedef HMODULE(WINAPI* f_LoadLibraryA)(const char* lpLibFileName);
+typedef FARPROC(WINAPI* f_GetProcAddress)(HMODULE hModule, const char* lpProcName);
+typedef BOOL(WINAPI* f_DLL_ENTRY_POINT)(void* hDll, DWORD dwReason, void* pReserved);
+typedef BOOLEAN(WINAPI* f_RtlAddFunctionTable)(PRUNTIME_FUNCTION FunctionTable, DWORD EntryCount, DWORD64 BaseAddress);
+
+struct ShellcodeData {
+    f_LoadLibraryA pLoadLibraryA;
+    f_GetProcAddress pGetProcAddress;
+    f_RtlAddFunctionTable pRtlAddFunctionTable;
+
+    uintptr_t pDllBase;
+    uintptr_t EntryPoint;
+
+    uintptr_t RelocDir;
+    uintptr_t ImportDir;
+    uintptr_t ExceptionDir;
+    uintptr_t ExceptionSize;
+    uintptr_t TLSDir;
+};
+
+
+__declspec(noinline) void __stdcall UniversalShellcode(ShellcodeData* pData) {
+    if (!pData || !pData->pDllBase) {
+        return;
+    }
+
+    uintptr_t pBase = pData->pDllBase;
+
+    if (pData->ImportDir) {
+        auto* pImportDescr = reinterpret_cast<PIMAGE_IMPORT_DESCRIPTOR>(pBase + pData->ImportDir);
+        while (pImportDescr->Name) {
+            char* szMod = reinterpret_cast<char*>(pBase + pImportDescr->Name);
+            HMODULE hMod = pData->pLoadLibraryA(szMod);
+            if (!hMod) {
+                return;
+            }
+
+            auto* pIAT = reinterpret_cast<PIMAGE_THUNK_DATA>(pBase + pImportDescr->FirstThunk);
+
+            PIMAGE_THUNK_DATA pThunk = pIAT;
+            if (pImportDescr->OriginalFirstThunk) {
+                pThunk = reinterpret_cast<PIMAGE_THUNK_DATA>(pBase + pImportDescr->OriginalFirstThunk);
+            }
+
+            while (pThunk->u1.AddressOfData) {
+                if (IMAGE_SNAP_BY_ORDINAL(pThunk->u1.Ordinal)) {
+                    pIAT->u1.Function = (uintptr_t)pData->pGetProcAddress(hMod, (LPCSTR)(pThunk->u1.Ordinal & 0xFFFF));
+                }
+                else {
+                    auto* pImportByName = reinterpret_cast<IMAGE_IMPORT_BY_NAME*>(pBase + pThunk->u1.AddressOfData);
+                    pIAT->u1.Function = (uintptr_t)pData->pGetProcAddress(hMod, pImportByName->Name);
+                }
+                pThunk++;
+                pIAT++;
+            }
+            pImportDescr++;
+        }
+    }
+
+    if (pData->TLSDir) {
+        auto* pTLS = reinterpret_cast<PIMAGE_TLS_DIRECTORY>(pBase + pData->TLSDir);
+        auto* pCallback = reinterpret_cast<PIMAGE_TLS_CALLBACK*>(pTLS->AddressOfCallBacks);
+        if (pCallback) {
+            while (*pCallback) {
+                (*pCallback)(reinterpret_cast<void*>(pBase), DLL_PROCESS_ATTACH, nullptr);
+                pCallback++;
+            }
+        }
+    }
+
+    if (pData->pRtlAddFunctionTable && pData->ExceptionDir && pData->ExceptionSize) {
+        auto* pFuncTable = reinterpret_cast<PRUNTIME_FUNCTION>(pBase + pData->ExceptionDir);
+        DWORD count = (DWORD)(pData->ExceptionSize / sizeof(RUNTIME_FUNCTION));
+        pData->pRtlAddFunctionTable(pFuncTable, count, (DWORD64)pBase);
+    }
+
+    if (pData->EntryPoint) {
+        auto fEntryPoint = reinterpret_cast<f_DLL_ENTRY_POINT>(pBase + pData->EntryPoint);
+        fEntryPoint(reinterpret_cast<void*>(pBase), DLL_PROCESS_ATTACH, nullptr);
+    }
+}
+
+__declspec(noinline) void __stdcall UniversalShellcodeEnd() {
+}
+
+static void* ResolveFunction(void* ptr) {
+    unsigned char* b = (unsigned char*)ptr;
+    if (b[0] == 0xE9) {
+        int rel = *(int*)(b + 1);
+        return (void*)(b + 5 + rel);
+    }
+    if (b[0] == 0xFF && b[1] == 0x25) {
+        int disp = *(int*)(b + 2);
+        void** target = (void**)(b + 6 + disp);
+        return *target;
+    }
+    return ptr;
+}
+
+// my funny code
 std::string get_proc_access_details(DWORD granted) {
     struct { DWORD mask; const char* name; } flags[] = {
         {0x0001, "PROCESS_TERMINATE"},
@@ -64,7 +169,7 @@ void print_granted_access(HANDLE h, int pid) {
 }
 
 // Inject DLL into target process via CreateRemoteThread + LoadLibrary onto DLL path
-bool normal_inject(HANDLE hProcess, const std::string& dllPath, bool debug)
+bool loadlibrary_inject(HANDLE hProcess, const std::string& dllPath, bool debug)
 {
     // Allocate memory for DLL path in target
     size_t size = dllPath.length() + 1;
@@ -184,9 +289,240 @@ DWORD64 get_reflective_loader_offset(DWORD64 base_address, LPCSTR ReflectiveLoad
     return 0;
 }
 
-// Inject DLL into target process via Reflective DLL Injection
-bool reflective_inject(HANDLE hProcess, const std::string& dllPath, bool debug)
-{
+// https://github.com/Paxai/DLLium/blob/de79b82bbeb011778b03022b21c0a9d623f3d813/DLLium/injection.cpp#L357
+void RelocateImage(PBYTE buffer, uintptr_t targetBase) {
+    auto* pDosHdr = reinterpret_cast<IMAGE_DOS_HEADER*>(buffer);
+    auto* pNt = reinterpret_cast<IMAGE_NT_HEADERS*>(buffer + pDosHdr->e_lfanew);
+    auto* pOpt = &pNt->OptionalHeader;
+
+    uintptr_t delta = targetBase - (uintptr_t)pOpt->ImageBase;
+    if (delta == 0) return;
+
+    auto relocDir = pOpt->DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC];
+    if (relocDir.Size == 0) return;
+
+    auto* pReloc = reinterpret_cast<IMAGE_BASE_RELOCATION*>(buffer + relocDir.VirtualAddress);
+    uintptr_t relocEnd = (uintptr_t)pReloc + relocDir.Size;
+
+    while (pReloc && (uintptr_t)pReloc < relocEnd && pReloc->SizeOfBlock > sizeof(IMAGE_BASE_RELOCATION)) {
+        UINT  count = (pReloc->SizeOfBlock - sizeof(IMAGE_BASE_RELOCATION)) / sizeof(WORD);
+        WORD* info = reinterpret_cast<WORD*>(pReloc + 1);
+
+        for (UINT i = 0; i < count; ++i) {
+            WORD type = info[i] >> 12;
+            WORD offset = info[i] & 0xFFF;
+
+            if (type == IMAGE_REL_BASED_DIR64) {
+                uintptr_t* patch = reinterpret_cast<uintptr_t*>(buffer + pReloc->VirtualAddress + offset);
+                *patch += delta;
+            }
+            else if (type == IMAGE_REL_BASED_HIGHLOW) {
+                uint32_t* patch = reinterpret_cast<uint32_t*>(buffer + pReloc->VirtualAddress + offset);
+                *patch += (uint32_t)delta;
+            }
+        }
+
+        pReloc = reinterpret_cast<IMAGE_BASE_RELOCATION*>(
+            reinterpret_cast<BYTE*>(pReloc) + pReloc->SizeOfBlock);
+    }
+}
+
+
+bool handle_cleanup(HANDLE hProcess, std::vector<LPVOID> remoteAddrs, LPVOID localAddr) {
+	if (!remoteAddrs.empty()) {
+		for (LPVOID addr : remoteAddrs) {
+			if (addr) {
+				VirtualFreeEx(hProcess, addr, 0, MEM_RELEASE);
+			}
+		}
+	}
+	if (localAddr) {
+		VirtualFree(localAddr, 0, MEM_RELEASE);
+	}
+	CloseHandle(hProcess);
+	return false;
+}
+
+// write dll to remote proc and handle patching from external -> remote shellcode to setup
+// https://github.com/Paxai/DLLium/blob/de79b82bbeb011778b03022b21c0a9d623f3d813/DLLium/injection.cpp#L161
+bool external_inject(HANDLE hProcess, const std::string& dllPath, bool debug) {
+
+    std::ifstream File(dllPath, std::ios::binary | std::ios::ate);
+    if (File.fail()) { printf("[!] Hooker: Open file failed: %lu\n", GetLastError()); return false; }
+    if (debug)
+        printf("[+] Hooker: Injecting DLL '%s' into remote process\n", dllPath.c_str());
+
+    std::streampos fileSize = File.tellg();
+    if (fileSize < 0x1000) { File.close(); return false; }
+    if (debug)
+        printf("[+] Hooker: DLL size: %llu bytes\n", (unsigned long long)fileSize);
+
+    std::vector<BYTE> pSrcData((size_t)fileSize);
+    File.seekg(0, std::ios::beg);
+    File.read((char*)pSrcData.data(), fileSize);
+    File.close();
+    if (debug)
+        printf("[+] Hooker: DLL read into memory\n");
+
+    auto* pDosLocal = reinterpret_cast<IMAGE_DOS_HEADER*>(pSrcData.data());
+    if (pDosLocal->e_magic != IMAGE_DOS_SIGNATURE) { printf("[!] Unable to find magic bytes in DLL '%s'\n", dllPath.c_str()); return false; }
+
+    auto* pNtLocal = reinterpret_cast<IMAGE_NT_HEADERS*>(pSrcData.data() + pDosLocal->e_lfanew);
+    if (pNtLocal->Signature != IMAGE_NT_SIGNATURE) { printf("[!] Unable to find NT header signature in DLL '%s'\n", dllPath.c_str()); return false; }
+    auto* pOpt = &pNtLocal->OptionalHeader;
+
+    LPVOID pTargetBase = VirtualAllocEx(hProcess, nullptr, pOpt->SizeOfImage,
+        MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+    if (!pTargetBase) {
+		printf("[!] Hooker: VirtualAllocEx failed at remote process: %lu\n", GetLastError());
+        return handle_cleanup(hProcess, {}, nullptr);
+    }
+
+    BYTE* pLocalImage = (BYTE*)VirtualAlloc(nullptr, pOpt->SizeOfImage,
+        MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    if (!pLocalImage) {
+		printf("[!] Hooker: VirtualAlloc failed at local process: %lu\n", GetLastError());
+        return handle_cleanup(hProcess, {pTargetBase}, nullptr);
+    }
+    if (debug)
+		printf("[+] Hooker: Allocated DLL into local %p and remote memory %p\n", pLocalImage, pTargetBase);
+
+    memcpy(pLocalImage, pSrcData.data(), pOpt->SizeOfHeaders);
+
+    auto* pSection = IMAGE_FIRST_SECTION(pNtLocal);
+    for (UINT i = 0; i < pNtLocal->FileHeader.NumberOfSections; ++i, ++pSection) {
+        if (pSection->SizeOfRawData > 0) {
+            memcpy(pLocalImage + pSection->VirtualAddress,
+                pSrcData.data() + pSection->PointerToRawData,
+                pSection->SizeOfRawData);
+            if (debug)
+				printf("[+] Hooker: Copied section %.8s to local image\n", pSection->Name);
+        }
+    }
+
+    // relocate image
+    auto* pDosHdr = reinterpret_cast<IMAGE_DOS_HEADER*>(pLocalImage);
+    auto* rpNt = reinterpret_cast<IMAGE_NT_HEADERS*>(pLocalImage + pDosHdr->e_lfanew);
+    auto* rpOpt = &rpNt->OptionalHeader;
+
+    uintptr_t delta = (uintptr_t)pTargetBase - (uintptr_t)rpOpt->ImageBase;
+    if (delta == 0) { printf("[!] Hooker: Invalid delta (0) between remote DLL base and remote process base\n"); return false; }
+
+    auto relocDir = rpOpt->DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC];
+    if (relocDir.Size == 0) { printf("[*] Hooker: Empty relocation dir found\n"); } // return false?
+
+    auto* pReloc = reinterpret_cast<IMAGE_BASE_RELOCATION*>(pLocalImage + relocDir.VirtualAddress);
+    uintptr_t relocEnd = (uintptr_t)pReloc + relocDir.Size;
+
+    while (pReloc && (uintptr_t)pReloc < relocEnd && pReloc->SizeOfBlock > sizeof(IMAGE_BASE_RELOCATION)) {
+        UINT  count = (pReloc->SizeOfBlock - sizeof(IMAGE_BASE_RELOCATION)) / sizeof(WORD);
+        WORD* info = reinterpret_cast<WORD*>(pReloc + 1);
+
+        for (UINT i = 0; i < count; ++i) {
+            WORD type = info[i] >> 12;
+            WORD offset = info[i] & 0xFFF;
+
+            if (type == IMAGE_REL_BASED_DIR64) {
+                uintptr_t* patch = reinterpret_cast<uintptr_t*>(pLocalImage + pReloc->VirtualAddress + offset);
+                *patch += delta;
+            }
+            else if (type == IMAGE_REL_BASED_HIGHLOW) {
+                uint32_t* patch = reinterpret_cast<uint32_t*>(pLocalImage + pReloc->VirtualAddress + offset);
+                *patch += (uint32_t)delta;
+            }
+        }
+
+        pReloc = reinterpret_cast<IMAGE_BASE_RELOCATION*>(reinterpret_cast<BYTE*>(pReloc) + pReloc->SizeOfBlock);
+        if (debug)
+			printf("[+] Hooker: Processed relocation block at %p\n", pReloc);
+    }
+
+    if (!WriteProcessMemory(hProcess, pTargetBase, pLocalImage, pOpt->SizeOfImage, nullptr)) {
+		printf("[!] Hooker: WriteProcessMemory failed: %lu at remote process\n", GetLastError());
+		return handle_cleanup(hProcess, { pTargetBase }, pLocalImage);
+    }
+    VirtualFree(pLocalImage, 0, MEM_RELEASE);
+    pLocalImage = nullptr;
+    if (debug)
+		printf("[+] Hooker: Wrote DLL to remote process memory at %p\n", pTargetBase);
+
+    HMODULE hK32Local = GetModuleHandleA("kernel32.dll");
+    if (!hK32Local) {
+		printf("[!] Hooker: GetModuleHandleA failed for kernel32.dll at local process: %lu\n", GetLastError());
+		return handle_cleanup(hProcess, { pTargetBase }, nullptr);
+    }
+
+    auto pRtlAddFuncTableLocal = (f_RtlAddFunctionTable)GetProcAddress(hK32Local, "RtlAddFunctionTable");
+    auto pLoadLibraryALocal = (f_LoadLibraryA)GetProcAddress(hK32Local, "LoadLibraryA");
+    auto pGetProcAddressLocal = (f_GetProcAddress)GetProcAddress(hK32Local, "GetProcAddress");
+
+    if (!pLoadLibraryALocal || !pGetProcAddressLocal) {
+		printf("[!] Hooker: GetProcAddress failed for LoadLibraryA or GetProcAddress at local process: %lu\n", GetLastError());
+        return handle_cleanup(hProcess, { pTargetBase }, nullptr);
+    }
+    if (debug)
+		printf("[+] Hooker: Resolved LoadLibraryA, GetProcAddress, and RtlAddFunctionTable at local process\n");
+
+    ShellcodeData data = {};
+    data.pDllBase = (uintptr_t)pTargetBase;
+    data.EntryPoint = pOpt->AddressOfEntryPoint;
+    data.ImportDir = pOpt->DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
+    data.RelocDir = pOpt->DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].VirtualAddress;
+    data.ExceptionDir = pOpt->DataDirectory[IMAGE_DIRECTORY_ENTRY_EXCEPTION].VirtualAddress;
+    data.ExceptionSize = pOpt->DataDirectory[IMAGE_DIRECTORY_ENTRY_EXCEPTION].Size;
+    data.TLSDir = pOpt->DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS].VirtualAddress;
+    data.pLoadLibraryA = pLoadLibraryALocal;
+    data.pGetProcAddress = pGetProcAddressLocal;
+    data.pRtlAddFunctionTable = pRtlAddFuncTableLocal;
+
+    LPVOID pRemoteData = VirtualAllocEx(hProcess, nullptr, sizeof(ShellcodeData),
+        MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    if (!pRemoteData) {
+		printf("[!] Hooker: VirtualAllocEx failed for remote data: %lu\n", GetLastError());
+        return handle_cleanup(hProcess, { pTargetBase }, nullptr);
+    }
+    WriteProcessMemory(hProcess, pRemoteData, &data, sizeof(ShellcodeData), nullptr);
+    if (debug)
+		printf("[+] Hooker: Wrote shellcode data to remote process memory at %p\n", pRemoteData);
+
+    void* scStart = ResolveFunction((void*)UniversalShellcode);
+    void* scEnd = ResolveFunction((void*)UniversalShellcodeEnd);
+    size_t shellcodeSize = (uintptr_t)scEnd - (uintptr_t)scStart;
+
+    if (shellcodeSize == 0 || shellcodeSize > 0x8000) {
+        shellcodeSize = 0x1000;
+    }
+
+    LPVOID pRemoteShellcode = VirtualAllocEx(hProcess, nullptr, shellcodeSize,
+        MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+    if (!pRemoteShellcode) {
+		printf("[!] Hooker: VirtualAllocEx failed for remote shellcode: %lu\n", GetLastError());
+        return handle_cleanup(hProcess, { pTargetBase, pRemoteData }, nullptr);
+    }
+    WriteProcessMemory(hProcess, pRemoteShellcode, scStart, shellcodeSize, nullptr);
+    if (debug)
+		printf("[+] Hooker: Wrote shellcode to remote process memory at %p, size: %zu bytes\n", pRemoteShellcode, shellcodeSize);
+
+    HANDLE hThread = CreateRemoteThread(hProcess, nullptr, 0,
+        (LPTHREAD_START_ROUTINE)pRemoteShellcode, pRemoteData, 0, nullptr);
+    if (!hThread) {
+		printf("[!] Hooker: CreateRemoteThread failed: %lu\n", GetLastError());
+        return handle_cleanup(hProcess, { pTargetBase, pRemoteData, pRemoteShellcode }, nullptr);
+    }
+
+    printf("[+] Hooker: Remote thread created\n");
+
+    WaitForSingleObject(hThread, INFINITE);
+    CloseHandle(hThread);
+    CloseHandle(hProcess);
+
+    if (debug)
+        printf("[+] Hooker: DllMain successfully exited\n");
+    return true;
+}
+
+// write dll to remote proc and call self-reflective loader (handles image address, system function resol., mem alloc, header copy, section copy, IAT resolution, relocations, and call DllMain)
+bool reflective_inject(HANDLE hProcess, const std::string& dllPath, bool debug) {
     // open dll file
     HANDLE file_handle = CreateFileA(dllPath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (file_handle == INVALID_HANDLE_VALUE) { printf("[!] Hooker: CreateFile failed: %lu\n", GetLastError()); return false; }
@@ -246,7 +582,7 @@ bool reflective_inject(HANDLE hProcess, const std::string& dllPath, bool debug)
             VirtualFreeEx(hProcess, remote_file_buf_address, 0, MEM_RELEASE);
             CloseHandle(hProcess);
             HeapFree(GetProcessHeap(), 0, file_buf);
-			return false;
+            return false;
         }
         if (debug)
             printf("[+] Hooker: Remote memory protection changed to RWX\n");
@@ -273,7 +609,7 @@ bool reflective_inject(HANDLE hProcess, const std::string& dllPath, bool debug)
 }
 
 // Preparation for DLL injection
-bool inject_dll(int pid, const std::string& dllPath, bool debug, bool reflective, HANDLE hProcess) {
+bool inject_dll(int pid, const std::string& dllPath, bool debug, Action a, HANDLE hProcess) {
     if (hProcess == NULL) {
         if (debug) {
             printf("[+] Hooker: Opening pid=%i\n", pid);
@@ -304,10 +640,26 @@ bool inject_dll(int pid, const std::string& dllPath, bool debug, bool reflective
         return false;
     }
     print_granted_access(hProcess, pid);
-    if (reflective) {
+
+	switch (a) {
+	case LOADLIBRARY_INJECTION:
+		if (debug) {
+			std::cout << "[*] Hooker: Using LoadLibrary injection\n";
+		}
+		return loadlibrary_inject(hProcess, dllPath, debug);
+	case EXTERNAL_INJECTION:
+		if (debug) {
+			std::cout << "[*] Hooker: Using External injection\n";
+		}
+		return external_inject(hProcess, dllPath, debug);
+	case REFLECTIVE_INJECTION:
+		if (debug) {
+			std::cout << "[*] Hooker: Using Reflective injection\n";
+		}
 		return reflective_inject(hProcess, dllPath, debug);
-    }
-    else {
-		return normal_inject(hProcess, dllPath, debug);
-    }
+	default:
+		std::cerr << "[!] Hooker: Unknown action\n";
+		CloseHandle(hProcess);
+		return false;
+	}
 }

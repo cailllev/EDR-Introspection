@@ -231,12 +231,6 @@ HANDLE findProcHandle(int pid, BOOL debug) {
     return 0;
 }
 
-enum Action {
-    LOADLIBRARY_INJECTION,
-    REFLECTIVE_INJECTION,
-    STOP_INJECTION
-};
-
 int main(int argc, char* argv[]) {
     int pid = 0;
     std::string dllPath;
@@ -244,7 +238,7 @@ int main(int argc, char* argv[]) {
     std::string exePath = argv[0];
     std::string exeName = exePath.substr(exePath.find_last_of("\\/") + 1);
     std::string usage = "";
-    usage += "[*] InjectLoader: Usage: " + exeName + " <DLL Path> <PID> <(L)oadLibrary | (R)eflective | (S)top> <Debug> <FindHandle>\n";
+    usage += "[*] InjectLoader: Usage: " + exeName + " <DLL Path> <PID> <(L)oadLibrary | (E)xternal | (R)eflective | (S)top> <Debug> <FindHandle>\n";
     usage += "[*] InjectLoader: Usage: " + exeName + " C:\\path\\to\\dll.dll 1234 LoadLibrary 0 1\n";
 
     if (argc > 1 && strcmp(argv[1], "-h") == 0) {
@@ -273,6 +267,9 @@ int main(int argc, char* argv[]) {
     else if (_stricmp(argv[3], "R") == 0 || _stricmp(argv[3], "reflective") == 0) {
         a = REFLECTIVE_INJECTION;
     }
+    else if (_stricmp(argv[3], "E") == 0 || _stricmp(argv[3], "external") == 0) {
+        a = EXTERNAL_INJECTION;
+    }
     else {
         a = LOADLIBRARY_INJECTION;
     }
@@ -296,16 +293,25 @@ int main(int argc, char* argv[]) {
     if (argv[5][0] == '1') {
         std::cout << "[*] InjectLoader: Process handle already opened, searching for it...\n";
         hProc = findProcHandle(pid, debug);
+		if (hProc == NULL) {
+			std::cerr << "[!] InjectLoader: Failed to find process handle for PID " << pid << ".\n";
+			return 1;
+		}
+		else {
+			std::cout << "[*] InjectLoader: Found process handle: " << hProc << "\n";
+		}
     }
 
+    std::string actionStr;
     switch (a) {
     case LOADLIBRARY_INJECTION:
-        std::cout << "[*] InjectLoader: Attempting to inject DLL '" << dllPath << "' into PID=" << pid << " using LoadLibrary injection method.\n";
-        inject_dll(pid, dllPath, debug, false, hProc);
+        actionStr = "LoadLibrary";
+        break;
+    case EXTERNAL_INJECTION:
+        actionStr = "External";
         break;
     case REFLECTIVE_INJECTION:
-        std::cout << "[*] InjectLoader: Attempting to inject DLL '" << dllPath << "' into PID=" << pid << " using Reflective injection method.\n";
-        inject_dll(pid, dllPath, debug, true, hProc);
+        actionStr = "Reflective";
         break;
     case STOP_INJECTION:
         std::cout << "[*] InjectLoader: Unloading DLL in " << pid << "\n";
@@ -313,5 +319,6 @@ int main(int argc, char* argv[]) {
         return Unload(pid, dllName);
     }
 
-    return 0;
+    std::cout << "[*] InjectLoader: Attempting to inject DLL '" << dllPath << "' into PID=" << pid << " using " << actionStr << " injection method.\n";
+    return inject_dll(pid, dllPath, debug, a, hProc);
 }
