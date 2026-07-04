@@ -6,7 +6,6 @@
 #include <detours/detours.h>
 #include <iostream>
 
-// Standard setup...
 using FnNtOpenProcess = NTSTATUS(NTAPI*)(PHANDLE, ACCESS_MASK, PVOID, PVOID);
 FnNtOpenProcess TrueNtOpenProcess = nullptr;
 
@@ -15,7 +14,7 @@ NTSTATUS NTAPI MyNtOpenProcess(PHANDLE PH, ACCESS_MASK AM, PVOID OA, PVOID CI) {
     return TrueNtOpenProcess(PH, AM, OA, CI);
 }
 
-// EXPORT THIS FUNCTION: This is your remote trigger
+// local or remote trigger, but only from current process
 extern "C" __declspec(dllexport) void CALLBACK ActivateHook() {
     HMODULE hNtdll = GetModuleHandleA("ntdll.dll");
     if (hNtdll == NULL) {
@@ -30,6 +29,12 @@ extern "C" __declspec(dllexport) void CALLBACK ActivateHook() {
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID reserved) {
-    return TRUE; // Do nothing here!
+    switch (reason) {
+	case DLL_PROCESS_ATTACH:
+		CreateThread(nullptr, 0, (LPTHREAD_START_ROUTINE)ActivateHook, nullptr, 0, nullptr);
+		break;
+    default:
+        break;
+    }
 }
 
