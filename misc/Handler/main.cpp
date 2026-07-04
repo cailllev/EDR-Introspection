@@ -3,11 +3,15 @@
 #endif
 #include <Windows.h>
 #include <winternl.h>
+#include <tlhelp32.h>
 #include <iostream>
+#include <iomanip>
 
 #pragma comment(lib, "ntdll.lib")
 
 #define ProcessHandleInformation 51 // Information class 0x33
+#define ThreadQuerySetWin32StartAddress 9
+#define ObjectBasicInformation 0
 
 // Built-in structure for local handle snapshots
 typedef struct _PROCESS_HANDLE_TABLE_ENTRY_INFO {
@@ -69,9 +73,41 @@ typedef struct my_PEB {
     my_PPEB_LDR_DATA Ldr;
 } my_PEB, * my_PPEB;
 
+typedef NTSTATUS(NTAPI* fnNtQueryInformationThread)(
+    HANDLE ThreadHandle,
+    ULONG ThreadInformationClass,
+    PVOID ThreadInformation,
+    ULONG ThreadInformationLength,
+    PULONG ReturnLength
+    );
+
+typedef NTSTATUS(NTAPI* fnNtQueryObject)(
+    HANDLE Handle,
+    ULONG ObjectInformationClass,
+    PVOID ObjectInformation,
+    ULONG ObjectInformationLength,
+    PULONG ReturnLength
+    );
+
+typedef struct my_OBJECT_BASIC_INFORMATION {
+    ULONG Attributes;
+    ACCESS_MASK GrantedAccess;
+    ULONG HandleCount;
+    ULONG PointerCount;
+    ULONG PagedPoolUsage;
+    ULONG NonPagedPoolUsage;
+    ULONG Reserved[3];
+    ULONG NameInformationLength;
+    ULONG TypeInformationLength;
+    ULONG SecurityDescriptorLength;
+    LARGE_INTEGER CreationTime;
+} my_OBJECT_BASIC_INFORMATION, * my_POBJECT_BASIC_INFORMATION;
+
 
 // traverses the PEB and prints all loaded DLLs and their base addrs
 void print_bases(HANDLE hProcess) {
+	printf("[*] Traversing PEB for loaded DLLs...\n");
+
     PROCESS_BASIC_INFORMATION pbi;
     NtQueryInformationProcess(hProcess, ProcessBasicInformation, &pbi, sizeof(pbi), nullptr);
 
@@ -95,6 +131,11 @@ void print_bases(HANDLE hProcess) {
     ReadProcessMemory(hProcess, headAddr, &head, sizeof(head), nullptr);
     PVOID current = head.Flink;
 
+    std::cout << std::left
+        << std::setw(19) << "Base Address"
+        << std::setw(100) << "DLL Name" << "\n";
+    std::cout << std::string(48, '-') << "\n";
+
     while (current && current != headAddr) {
         my_LDR_DATA_TABLE_ENTRY entry{};
         if (!ReadProcessMemory(hProcess, CONTAINING_RECORD(current, my_LDR_DATA_TABLE_ENTRY, InMemoryOrderLinks), &entry, sizeof(entry), nullptr)) {
@@ -104,18 +145,98 @@ void print_bases(HANDLE hProcess) {
         }
         if (entry.FullDllName.Buffer) {
             wchar_t dll_name[MAX_PATH];
+            std::cout << "0x" << std::hex << std::setw(17) << entry.DllBase;
             if (ReadProcessMemory(hProcess, entry.FullDllName.Buffer, dll_name, entry.FullDllName.Length, nullptr)) {
                 dll_name[entry.FullDllName.Length / sizeof(wchar_t)] = L'\0'; // null-terminate
-                printf("[:] Found module: %p:%ls\n", entry.DllBase, dll_name);
+				std::wcout << std::left << std::setw(100) << dll_name << "\n";
             }
             else {
-                printf("[-] Failed to read module name. Error: %lu", GetLastError());
+				std::cout << std::setw(100) << "FAILED to read module name: " << GetLastError() << "\n";
             }
         }
         current = entry.InMemoryOrderLinks.Flink;
     }
 
     CloseHandle(hProcess);
+}
+
+// opens all threads with all access by a given pid, checks the actual acess rights and prints them plus threadID and base address of the thread
+void check_threads(DWORD processId) {
+	printf("[*] Checking threads for given process\n");
+
+    HMODULE hNtdll = GetModuleHandleA("ntdll.dll");
+    if (!hNtdll) return;
+
+    auto NtQueryInformationThread = (fnNtQueryInformationThread)GetProcAddress(hNtdll, "NtQueryInformationThread");
+    auto NtQueryObject = (fnNtQueryObject)GetProcAddress(hNtdll, "NtQueryObject");
+
+    if (!NtQueryInformationThread || !NtQueryObject) {
+        std::cerr << "[-] Failed to resolve Native APIs.\n";
+        return;
+    }
+
+    HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+    if (hSnapshot == INVALID_HANDLE_VALUE) {
+        std::cerr << "[-] Failed to create thread snapshot.\n";
+        return;
+    }
+
+    THREADENTRY32 te;
+    te.dwSize = sizeof(THREADENTRY32);
+
+    std::cout << std::left
+        << std::setw(10) << "Thread ID"
+        << std::setw(18) << "Granted Access"
+        << std::setw(18) << "Base Address" << "\n";
+    std::cout << std::string(48, '-') << "\n";
+
+    if (Thread32First(hSnapshot, &te)) {
+        do {
+            if (te.th32OwnerProcessID == processId) {
+
+                HANDLE hThread = OpenThread(THREAD_ALL_ACCESS, FALSE, te.th32ThreadID);
+                //HANDLE hThread = OpenThread(THREAD_SET_CONTEXT | THREAD_GET_CONTEXT | THREAD_SUSPEND_RESUME, FALSE, te.th32ThreadID);
+
+                if (hThread != NULL) {
+                    my_OBJECT_BASIC_INFORMATION objInfo = { 0 };
+                    PVOID pStartAddress = nullptr;
+                    ULONG returnLength = 0;
+
+					// query actual granted access rights for the thread handle
+                    NTSTATUS statusObj = NtQueryObject(hThread, ObjectBasicInformation, &objInfo, sizeof(objInfo), &returnLength);
+
+					// get the base address of the thread (start address)
+                    NTSTATUS statusThread = NtQueryInformationThread(hThread, ThreadQuerySetWin32StartAddress, &pStartAddress, sizeof(pStartAddress), NULL);
+
+                    std::cout << std::left << std::setw(10) << te.th32ThreadID;
+
+                    if (statusObj == 0) { // STATUS_SUCCESS
+                        std::cout << "0x" << std::hex << std::setw(16) << objInfo.GrantedAccess;
+                    }
+                    else {
+                        std::cout << std::setw(18) << "Access Unknown";
+                    }
+
+                    if (statusThread == 0) { // STATUS_SUCCESS
+                        std::cout << "0x" << std::hex << pStartAddress << "\n";
+                    }
+                    else {
+                        std::cout << "Address Unknown\n";
+                    }
+
+                    CloseHandle(hThread);
+                }
+                else {
+                    // Handled if OpenThread fails entirely (e.g., Access Denied)
+                    std::cout << std::left << std::setw(10) << te.th32ThreadID
+                        << std::setw(18) << "OPEN_FAILED"
+                        << "N/A\n";
+                }
+            }
+        } while (Thread32Next(hSnapshot, &te));
+    }
+
+    CloseHandle(hSnapshot);
 }
 
 int main() {
@@ -187,6 +308,7 @@ int main() {
                     entry.HandleValue, targetPid, entry.GrantedAccess);
 				procHandleFound = TRUE;
                 print_bases(entry.HandleValue);
+                check_threads(targetPid);
             }
         }
 		if (!procHandleFound) {
