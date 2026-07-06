@@ -16,6 +16,8 @@ NTSTATUS NTAPI MyNtOpenProcess(PHANDLE PH, ACCESS_MASK AM, PVOID OA, PVOID CI) {
 
 // local or remote trigger, but only from current process
 extern "C" __declspec(dllexport) void CALLBACK ActivateHook() {
+	std::cout << "[*] ActivateHook called!\n";
+
     HMODULE hNtdll = GetModuleHandleA("ntdll.dll");
     if (hNtdll == NULL) {
         return;
