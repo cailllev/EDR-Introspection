@@ -109,6 +109,70 @@ static void* ResolveFunction(void* ptr) {
     return ptr;
 }
 
+struct SR_REMOTE_DATA {
+    unsigned char State;
+    unsigned long long Ret;
+    unsigned int LastWin32Error;
+    void* pArg;
+    void* pRoutine;
+};
+
+// Single direct function to locate a thread skipping WrQueue states
+DWORD FindSafeThread(DWORD targetProcessId) {
+	HMODULE ntdll = GetModuleHandleA("ntdll.dll");
+	if (!ntdll) return 0;
+
+    auto NtQuerySystemInformation = (long (WINAPI*)(ULONG, PVOID, ULONG, PULONG))GetProcAddress(ntdll, "NtQuerySystemInformation");
+
+    ULONG size = 1024 * 1024;
+    BYTE* buffer = new BYTE[size];
+
+    // 5 = SystemProcessInformation
+    if (!NtQuerySystemInformation || NtQuerySystemInformation(5, buffer, size, &size) != 0) {
+        delete[] buffer;
+        return 0;
+    }
+
+    DWORD chosenThreadId = 0;
+    BYTE* current = buffer;
+
+    while (true) {
+        // Use the official SDK structure pointer
+        auto* proc = reinterpret_cast<SYSTEM_PROCESS_INFORMATION*>(current);
+
+        // Explicitly check if this entry matches our target PID
+        if (reinterpret_cast<uintptr_t>(proc->UniqueProcessId) == targetProcessId) {
+
+            // Threads are positioned exactly after the process header structure
+            auto* threads = reinterpret_cast<SYSTEM_THREAD_INFORMATION*>(
+                current + sizeof(SYSTEM_PROCESS_INFORMATION)
+                );
+
+            for (ULONG i = 0; i < proc->NumberOfThreads; ++i) {
+                DWORD tid = static_cast<DWORD>(reinterpret_cast<uintptr_t>(threads[i].ClientId.UniqueThread));
+
+                // Skip the injector's own threads (should never happen, targetProcessId != Process Id)
+                if (tid == GetCurrentThreadId()) continue;
+
+                // 5 = Waiting, 8 = WrQueue (Thread Pool worker)
+                if (threads[i].ThreadState == 5 && threads[i].WaitReason == 8) {
+                    continue;
+                }
+
+                chosenThreadId = tid;
+                break;
+            }
+        }
+
+        // Jump explicitly to the next process block using the kernel-provided offset
+        if (proc->NextEntryOffset == 0 || chosenThreadId != 0) break;
+        current += proc->NextEntryOffset;
+    }
+
+    delete[] buffer;
+    return chosenThreadId;
+}
+
 // my funny code
 std::string get_proc_access_details(DWORD granted) {
     struct { DWORD mask; const char* name; } flags[] = {
@@ -345,7 +409,7 @@ bool handle_cleanup(HANDLE hProcess, std::vector<LPVOID> remoteAddrs, LPVOID loc
 
 // write dll to remote proc and handle patching from external -> remote shellcode to setup
 // https://github.com/Paxai/DLLium/blob/de79b82bbeb011778b03022b21c0a9d623f3d813/DLLium/injection.cpp#L161
-bool external_inject(HANDLE hProcess, const std::string& dllPath, bool debug) {
+bool external_inject(HANDLE hProcess, const std::string& dllPath, bool debug, bool hijackThread) {
 
     std::ifstream File(dllPath, std::ios::binary | std::ios::ate);
     if (File.fail()) { printf("[!] Hooker: Open file failed: %lu\n", GetLastError()); return false; }
@@ -400,13 +464,13 @@ bool external_inject(HANDLE hProcess, const std::string& dllPath, bool debug) {
         }
     }
 
-    // relocate image
+    // get local offsets for relocation 
     auto* pDosHdr = reinterpret_cast<IMAGE_DOS_HEADER*>(pLocalImage);
     auto* rpNt = reinterpret_cast<IMAGE_NT_HEADERS*>(pLocalImage + pDosHdr->e_lfanew);
     auto* rpOpt = &rpNt->OptionalHeader;
 
     uintptr_t delta = (uintptr_t)pTargetBase - (uintptr_t)rpOpt->ImageBase;
-    if (delta == 0) { printf("[!] Hooker: Invalid delta (0) between remote DLL base and remote process base\n"); return false; }
+    if (delta == 0) { printf("[!] Hooker: Invalid delta (0) between local DLL base and remote process base\n"); return false; }
 
     auto relocDir = rpOpt->DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC];
     if (relocDir.Size == 0) { printf("[*] Hooker: Empty relocation dir found\n"); } // return false?
@@ -414,6 +478,7 @@ bool external_inject(HANDLE hProcess, const std::string& dllPath, bool debug) {
     auto* pReloc = reinterpret_cast<IMAGE_BASE_RELOCATION*>(pLocalImage + relocDir.VirtualAddress);
     uintptr_t relocEnd = (uintptr_t)pReloc + relocDir.Size;
 
+    // relocate images (known dlls use the same offset over all processes, calculate via local process)
     while (pReloc && (uintptr_t)pReloc < relocEnd && pReloc->SizeOfBlock > sizeof(IMAGE_BASE_RELOCATION)) {
         UINT  count = (pReloc->SizeOfBlock - sizeof(IMAGE_BASE_RELOCATION)) / sizeof(WORD);
         WORD* info = reinterpret_cast<WORD*>(pReloc + 1);
@@ -437,6 +502,7 @@ bool external_inject(HANDLE hProcess, const std::string& dllPath, bool debug) {
 			printf("[+] Hooker: Processed relocation block at %p\n", pReloc);
     }
 
+	// write the image to the remote process, same address
     if (!WriteProcessMemory(hProcess, pTargetBase, pLocalImage, pOpt->SizeOfImage, nullptr)) {
 		printf("[!] Hooker: WriteProcessMemory failed: %lu at remote process\n", GetLastError());
 		return handle_cleanup(hProcess, { pTargetBase }, pLocalImage);
@@ -452,6 +518,7 @@ bool external_inject(HANDLE hProcess, const std::string& dllPath, bool debug) {
 		return handle_cleanup(hProcess, { pTargetBase }, nullptr);
     }
 
+    // get address of setup functions
     auto pRtlAddFuncTableLocal = (f_RtlAddFunctionTable)GetProcAddress(hK32Local, "RtlAddFunctionTable");
     auto pLoadLibraryALocal = (f_LoadLibraryA)GetProcAddress(hK32Local, "LoadLibraryA");
     auto pGetProcAddressLocal = (f_GetProcAddress)GetProcAddress(hK32Local, "GetProcAddress");
@@ -475,6 +542,7 @@ bool external_inject(HANDLE hProcess, const std::string& dllPath, bool debug) {
     data.pGetProcAddress = pGetProcAddressLocal;
     data.pRtlAddFunctionTable = pRtlAddFuncTableLocal;
 
+	// allocate memory for shellcode data in remote process
     LPVOID pRemoteData = VirtualAllocEx(hProcess, nullptr, sizeof(ShellcodeData),
         MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     if (!pRemoteData) {
@@ -489,31 +557,180 @@ bool external_inject(HANDLE hProcess, const std::string& dllPath, bool debug) {
     void* scEnd = ResolveFunction((void*)UniversalShellcodeEnd);
     size_t shellcodeSize = (uintptr_t)scEnd - (uintptr_t)scStart;
 
-    if (shellcodeSize == 0 || shellcodeSize > 0x8000) {
-        shellcodeSize = 0x1000;
-    }
+	HANDLE hThread = nullptr;
 
-    LPVOID pRemoteShellcode = VirtualAllocEx(hProcess, nullptr, shellcodeSize,
-        MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-    if (!pRemoteShellcode) {
-		printf("[!] Hooker: VirtualAllocEx failed for remote shellcode: %lu\n", GetLastError());
-        return handle_cleanup(hProcess, { pTargetBase, pRemoteData }, nullptr);
-    }
-    WriteProcessMemory(hProcess, pRemoteShellcode, scStart, shellcodeSize, nullptr);
-    if (debug)
-		printf("[+] Hooker: Wrote shellcode to remote process memory at %p, size: %zu bytes\n", pRemoteShellcode, shellcodeSize);
+    // https://github.com/guidedhacking/GuidedHacking-Injector/blob/e3c6eab04943b10881a7039dc27ff964c79fcb64/GH%20Injector%20Library/Thread%20Hijacking.cpp#L10
+    if (hijackThread) {
+        if (debug)
+			printf("[*] Hooker: Attempting thread hijacking in target process\n");
 
-    HANDLE hThread = CreateRemoteThread(hProcess, nullptr, 0,
-        (LPTHREAD_START_ROUTINE)pRemoteShellcode, pRemoteData, 0, nullptr);
-    if (!hThread) {
-		printf("[!] Hooker: CreateRemoteThread failed: %lu\n", GetLastError());
-        return handle_cleanup(hProcess, { pTargetBase, pRemoteData, pRemoteShellcode }, nullptr);
+        /*
+        Technical Adjustments Needed:
+
+        Allocate and Write the Main Payload Space:
+        Before running the thread modification sequence, allocate memory in the target process specifically to hold the bootstrap execution code (scStart to scEnd) and write the bytes over. Let's call this pRemoteBootstrap.
+
+        Update the Target Routine Address:
+        Assign the remote destination pointer to your tracking structure rather than the local pointer:
+        C++
+
+        sr_data->pRoutine = pRemoteBootstrap;
+
+        Pass the Correct Configuration Data:
+        Your manual mapping details (pRemoteData containing the import directory, entry point, etc.) need to reach the bootstrap routine. In your current hijacking block, pArg is initialized as a null pointer:
+        C++
+
+        int* pArg = 0; 
+        sr_data->pArg = pArg;
+
+        To allow the bootstrap function to locate your manual-mapped DLL headers, update pArg to point to the remote configuration data block allocated earlier:
+        C++
+
+        sr_data->pArg = pRemoteData;
+        */
+
+        // 1. Identify and target a specific thread ID in the target process
+        // (Target thread identification logic omitted for brevity)DWORD FindTargetThread(DWORD targetProcessId) {
+        DWORD chosenThreadId = FindSafeThread(GetProcessId(hProcess));
+		if (!chosenThreadId) {
+			printf("[!] Hooker: No suitable thread found for hijacking\n");
+			return handle_cleanup(hProcess, { pTargetBase, pRemoteData }, nullptr);
+		}
+
+        HANDLE hThread = OpenThread(THREAD_SET_CONTEXT | THREAD_GET_CONTEXT | THREAD_SUSPEND_RESUME, FALSE, chosenThreadId);
+        if (!hThread) {
+			printf("[!] Hooker: OpenThread failed for thread ID %lu: %lu\n", chosenThreadId, GetLastError());
+			return handle_cleanup(hProcess, { pTargetBase, pRemoteData }, nullptr);
+        }
+		if (debug)
+			printf("[+] Hooker: Opened thread ID %lu for hijacking\n", chosenThreadId);
+
+        // 2. Suspend the target thread to safely modify its state
+        if (SuspendThread(hThread) == (DWORD)-1) {
+            CloseHandle(hThread);
+			printf("[!] Hooker: SuspendThread failed for thread ID %lu: %lu\n", chosenThreadId, GetLastError());
+            return handle_cleanup(hProcess, { pTargetBase, pRemoteData }, nullptr);
+        }
+
+        // 3. Capture the current register state (specifically RIP) of the thread
+        CONTEXT OldContext{ 0 };
+        OldContext.ContextFlags = CONTEXT_CONTROL;
+        if (!GetThreadContext(hThread, &OldContext)) {
+            ResumeThread(hThread);
+            CloseHandle(hThread);
+			printf("[!] Hooker: GetThreadContext failed for thread ID %lu: %lu\n", chosenThreadId, GetLastError());
+            return handle_cleanup(hProcess, { pTargetBase, pRemoteData }, nullptr);
+        }
+
+        // 4. Allocate memory in the target process for the shellcode and data structure
+        void* pMem = VirtualAllocEx(hProcess, nullptr, 0x100, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+        if (!pMem) {
+            ResumeThread(hThread);
+            CloseHandle(hThread);
+			printf("[!] Hooker: VirtualAllocEx failed for shellcode: %lu\n", GetLastError());
+            return handle_cleanup(hProcess, { pTargetBase, pRemoteData }, nullptr);
+        }
+        if (debug)
+			printf("[+] Hooker: Suspended thread, copied context and allocated memory for shellcode at %p in target process\n", pMem);
+
+        // 5. x64 Shellcode stub
+        BYTE Shellcode[] =
+        {
+            // Space reserved at the beginning for SR_REMOTE_DATA
+            0x48, 0x83, 0xEC, 0x08,                                 // sub rsp, 0x08            ; Prepare stack
+            0xC7, 0x04, 0x24, 0x00, 0x00, 0x00, 0x00,               // mov [rsp], RipLo         ; Placeholder for original RIP (Low)
+            0xC7, 0x44, 0x24, 0x04, 0x00, 0x00, 0x00, 0x00,         // mov [rsp+4], RipHi       ; Placeholder for original RIP (High)
+            0x50, 0x51, 0x52, 0x41, 0x50, 0x41, 0x51, 0x41, 0x52, 0x41, 0x53, // push registers ; Save volatile registers
+            0x9C,                                                   // pushfq                   ; Save flags
+            0x53,                                                   // push rbx                 ; Save non-volatile RBX
+            0x48, 0x8D, 0x1D, 0xA9, 0xFF, 0xFF, 0xFF,               // lea rbx, [-0x30]         ; Point RBX to SR_REMOTE_DATA
+            0xC6, 0x03, 0x01,                                       // mov byte ptr [rbx], 1    ; Set state to Executing
+            0x55,                                                   // push rbp
+            0x48, 0x8B, 0xEC,                                       // mov rbp, rsp
+            0x48, 0x83, 0xE4, 0xF0,                                 // and rsp, -0x10           ; Align stack to 16 bytes for x64 calling convention
+            0x48, 0x8B, 0x4B, 0x18,                                 // mov rcx, [rbx + 0x18]    ; Move pArg into RCX (1st argument)
+            0x48, 0x83, 0xEC, 0x20,                                 // sub rsp, 0x20            ; Allocate shadow space
+            0xFF, 0x53, 0x20,                                       // call qword ptr [rbx+0x20]; Invoke target routine
+            0x48, 0x83, 0xC4, 0x20,                                 // add rsp, 0x20
+            0x48, 0x89, 0x43, 0x08,                                 // mov [rbx + 0x08], rax    ; Save return value
+            0x48, 0x8B, 0xE5,                                       // mov rsp, rbp
+            0x5D,                                                   // pop rbp
+            0x65, 0x48, 0x8B, 0x04, 0x25, 0x30, 0x00, 0x00, 0x00,   // mov rax, gs:[0x30]       ; Get TEB
+            0x8B, 0x40, 0x68,                                       // mov eax, [rax + 0x68]    ; Get LastError
+            0x89, 0x43, 0x10,                                       // mov [rbx + 0x10], eax    ; Save LastError
+            0xC6, 0x03, 0x02,                                       // mov byte ptr [rbx], 2    ; Set state to Finished
+            0x5B,                                                   // pop rbx
+            0x9D,                                                   // popfq                    ; Restore flags
+            0x41, 0x5B, 0x41, 0x5A, 0x41, 0x59, 0x41, 0x58, 0x5A, 0x59, 0x58, // pop registers  ; Restore registers
+            0xC3                                                    // ret                      ; Return to original RIP
+        };
+
+        // 6. Patch the original thread execution pointer (RIP) into the shellcode return sequence
+        auto OldRIP = OldContext.Rip;
+        DWORD dwLoRIP = (DWORD)((OldRIP) & 0xFFFFFFFF);
+        DWORD dwHiRIP = (DWORD)((OldRIP >> 0x20) & 0xFFFFFFFF);
+
+        *reinterpret_cast<DWORD*>(Shellcode + 0x07 + sizeof(SR_REMOTE_DATA)) = dwLoRIP;
+        *reinterpret_cast<DWORD*>(Shellcode + 0x0F + sizeof(SR_REMOTE_DATA)) = dwHiRIP;
+
+        // 7. Initialize arguments inside the data block header of the shellcode
+		int* pArg = 0; // Example argument to pass to the target routine
+        auto* sr_data = reinterpret_cast<SR_REMOTE_DATA*>(Shellcode);
+        sr_data->pArg = pArg;
+        sr_data->pRoutine = scStart; // above shellcode from DLLium
+        sr_data->State = 0; // Pending
+
+        // 8. Write the shellcode into the remote process memory space
+        if (!WriteProcessMemory(hProcess, pMem, Shellcode, sizeof(Shellcode), nullptr)) {
+            ResumeThread(hThread);
+            CloseHandle(hThread);
+			printf("[!] Hooker: WriteProcessMemory failed for shellcode: %lu\n", GetLastError());
+            return handle_cleanup(hProcess, { pTargetBase, pRemoteData, pMem }, nullptr);
+        }
+
+        // 9. Redirect the thread's instruction pointer to point to our newly allocated shellcode
+        void* pRemoteFunc = reinterpret_cast<BYTE*>(pMem) + sizeof(SR_REMOTE_DATA);
+        OldContext.Rip = reinterpret_cast<ULONG_PTR>(pRemoteFunc);
+
+        if (!SetThreadContext(hThread, &OldContext)) {
+            ResumeThread(hThread);
+            CloseHandle(hThread);
+			printf("[!] Hooker: SetThreadContext failed for thread ID %lu: %lu\n", chosenThreadId, GetLastError());
+            return handle_cleanup(hProcess, { pTargetBase, pRemoteData, pMem }, nullptr);
+        }
+
+        // 10. Resume the thread to execute the payload
+        ResumeThread(hThread);
+    }
+    else {
+        if (shellcodeSize == 0 || shellcodeSize > 0x8000) {
+            shellcodeSize = 0x1000;
+        }
+
+        LPVOID pRemoteShellcode = VirtualAllocEx(hProcess, nullptr, shellcodeSize,
+            MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+        if (!pRemoteShellcode) {
+            printf("[!] Hooker: VirtualAllocEx failed for remote shellcode: %lu\n", GetLastError());
+            return handle_cleanup(hProcess, { pTargetBase, pRemoteData }, nullptr);
+        }
+        WriteProcessMemory(hProcess, pRemoteShellcode, scStart, shellcodeSize, nullptr);
+        if (debug)
+            printf("[+] Hooker: Wrote shellcode to remote process memory at %p, size: %zu bytes\n", pRemoteShellcode, shellcodeSize);
+        
+        hThread = CreateRemoteThread(hProcess, nullptr, 0,
+            (LPTHREAD_START_ROUTINE)pRemoteShellcode, pRemoteData, 0, nullptr);
+        if (!hThread) {
+            printf("[!] Hooker: CreateRemoteThread failed: %lu\n", GetLastError());
+            return handle_cleanup(hProcess, { pTargetBase, pRemoteData, pRemoteShellcode }, nullptr);
+        }
     }
 
     printf("[+] Hooker: Remote thread created\n");
 
-    WaitForSingleObject(hThread, INFINITE);
-    CloseHandle(hThread);
+    if (hThread) {
+        WaitForSingleObject(hThread, INFINITE);
+        CloseHandle(hThread);
+    }
     CloseHandle(hProcess);
 
     if (debug)
@@ -609,7 +826,7 @@ bool reflective_inject(HANDLE hProcess, const std::string& dllPath, bool debug) 
 }
 
 // Preparation for DLL injection
-bool inject_dll(int pid, const std::string& dllPath, bool debug, Action a, HANDLE hProcess) {
+bool inject_dll(int pid, const std::string& dllPath, bool debug, Action a, HANDLE hProcess, bool hijackThread) {
     if (hProcess == NULL) {
         if (debug) {
             printf("[+] Hooker: Opening pid=%i\n", pid);
@@ -651,7 +868,7 @@ bool inject_dll(int pid, const std::string& dllPath, bool debug, Action a, HANDL
 		if (debug) {
 			std::cout << "[*] Hooker: Using External injection\n";
 		}
-		return external_inject(hProcess, dllPath, debug);
+		return external_inject(hProcess, dllPath, debug, hijackThread);
 	case REFLECTIVE_INJECTION:
 		if (debug) {
 			std::cout << "[*] Hooker: Using Reflective injection\n";
