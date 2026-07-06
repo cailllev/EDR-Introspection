@@ -6,6 +6,7 @@
 #include <tlhelp32.h>
 #include <iostream>
 #include <iomanip>
+#include <sstream>
 
 #pragma comment(lib, "ntdll.lib")
 
@@ -103,6 +104,9 @@ typedef struct my_OBJECT_BASIC_INFORMATION {
     LARGE_INTEGER CreationTime;
 } my_OBJECT_BASIC_INFORMATION, * my_POBJECT_BASIC_INFORMATION;
 
+typedef DWORD(WINAPI* pfnGetProcessId)(HANDLE);
+typedef DWORD(WINAPI* pfnGetThreadId)(HANDLE);
+
 
 // traverses the PEB and prints all loaded DLLs and their base addrs
 void print_bases(HANDLE hProcess) {
@@ -196,6 +200,7 @@ void check_threads(DWORD processId) {
 
                 HANDLE hThread = OpenThread(THREAD_ALL_ACCESS, FALSE, te.th32ThreadID);
                 //HANDLE hThread = OpenThread(THREAD_SET_CONTEXT | THREAD_GET_CONTEXT | THREAD_SUSPEND_RESUME, FALSE, te.th32ThreadID);
+                //HANDLE hThread = OpenThread(THREAD_QUERY_LIMITED_INFORMATION, FALSE, te.th32ThreadID); // minimal info, work when others are denied
 
                 if (hThread != NULL) {
                     my_OBJECT_BASIC_INFORMATION objInfo = { 0 };
@@ -240,7 +245,7 @@ void check_threads(DWORD processId) {
 }
 
 int main() {
-	printf("[*] Process Handle Inspector started\n");
+    printf("[*] Process & Thread Handle Inspector started\n");
 
     HMODULE hNtdll = GetModuleHandleW(L"ntdll.dll");
 	if (hNtdll == 0) {
@@ -283,7 +288,6 @@ int main() {
 		}
         printf("[*] Got %llu handles of all types owned by Process Handle Inspector...\n", localHandles->NumberOfHandles);
 
-        typedef DWORD(WINAPI* pfnGetProcessId)(HANDLE);
         HMODULE hKernel32 = GetModuleHandleW(L"kernel32.dll");
         if (!hKernel32) {
             printf("[-] Failed to get handle to kernel32.dll\n");
@@ -291,13 +295,17 @@ int main() {
             return 1;
 		}
         pfnGetProcessId _GetProcessId = (pfnGetProcessId)GetProcAddress(hKernel32, "GetProcessId");
-        if (!_GetProcessId) {
-            printf("[-] Failed to get address of GetProcessId\n");
+        pfnGetThreadId _GetThreadId = (pfnGetThreadId)GetProcAddress(hKernel32, "GetThreadId");
+        if (!_GetProcessId || !_GetThreadId) {
+            printf("[-] Failed to get address of GetProcessId or GetThreadId\n");
             if (buffer != 0) VirtualFree(buffer, 0, MEM_RELEASE);
             return 1;
 		}
 
-		BOOL procHandleFound = FALSE;
+		BOOL procHandleFound = FALSE, threadHandleFound = FALSE;
+
+        printf("[+] Checking for process handles...\n");
+		// first only check for process handles, then for thread handles, and print their info
         for (ULONG_PTR i = 0; i < localHandles->NumberOfHandles; i++) {
             PROCESS_HANDLE_TABLE_ENTRY_INFO entry = localHandles->Handles[i];
 
@@ -308,12 +316,41 @@ int main() {
                     entry.HandleValue, targetPid, entry.GrantedAccess);
 				procHandleFound = TRUE;
                 print_bases(entry.HandleValue);
-                check_threads(targetPid);
+                // check_threads(targetPid); kinda useless with the code below
             }
         }
+
+		printf("[+] Checking for thread handles...\n");
+        std::stringstream outs;
+        std::string out;
+        for (ULONG_PTR i = 0; i < localHandles->NumberOfHandles; i++) {
+            PROCESS_HANDLE_TABLE_ENTRY_INFO entry = localHandles->Handles[i];
+
+            // Check if the handle is a thread handle
+            DWORD targetTid = _GetThreadId(entry.HandleValue);
+            if (targetTid != 0) {
+                outs << std::left << "0x" << std::hex << std::setw(17) << entry.HandleValue;
+                outs << std::left << "0x" << std::hex << std::setw(13) << entry.GrantedAccess;
+                outs << std::left << std::dec << std::setw(15) << targetTid << "\n";
+                threadHandleFound = TRUE;
+            }
+        }
+		out = outs.str();
+        if (!out.empty()) {
+            std::cout << std::left
+                << std::setw(19) << "Handle ID"
+                << std::setw(15) << "Granted Access"
+                << std::setw(15) << "Thread ID" << "\n";
+            std::cout << std::string(48, '-') << "\n";
+            std::cout << out;
+        }
+
 		if (!procHandleFound) {
 			printf("[+] No process handles found in the current process.\n");
 		}
+        if (!threadHandleFound) {
+            printf("[*] No thread handles found in the current process.\n");
+        }
     }
 
     if (buffer != 0) VirtualFree(buffer, 0, MEM_RELEASE);
