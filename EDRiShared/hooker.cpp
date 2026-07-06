@@ -117,60 +117,129 @@ struct SR_REMOTE_DATA {
     void* pRoutine;
 };
 
-// Single direct function to locate a thread skipping WrQueue states
-DWORD FindSafeThread(DWORD targetProcessId) {
-	HMODULE ntdll = GetModuleHandleA("ntdll.dll");
-	if (!ntdll) return 0;
+#define ProcessHandleInformation 51 // Information class 0x33
 
-    auto NtQuerySystemInformation = (long (WINAPI*)(ULONG, PVOID, ULONG, PULONG))GetProcAddress(ntdll, "NtQuerySystemInformation");
+typedef DWORD(WINAPI* pfnGetProcessId)(HANDLE);
+typedef DWORD(WINAPI* pfnGetThreadId)(HANDLE);
 
-    ULONG size = 1024 * 1024;
-    BYTE* buffer = new BYTE[size];
+// Built-in structure for local handle snapshots
+typedef struct _PROCESS_HANDLE_TABLE_ENTRY_INFO {
+    HANDLE HandleValue;
+    ULONG_PTR HandleCount;
+    ULONG_PTR PointerCount;
+    ULONG GrantedAccess;
+    ULONG ObjectTypeIndex;
+    ULONG HandleAttributes;
+    ULONG Reserved;
+} PROCESS_HANDLE_TABLE_ENTRY_INFO, * PPROCESS_HANDLE_TABLE_ENTRY_INFO;
 
-    // 5 = SystemProcessInformation
-    if (!NtQuerySystemInformation || NtQuerySystemInformation(5, buffer, size, &size) != 0) {
-        delete[] buffer;
-        return 0;
+typedef struct _PROCESS_HANDLE_SNAPSHOT_INFORMATION {
+    ULONG_PTR NumberOfHandles;
+    ULONG_PTR Reserved;
+    PROCESS_HANDLE_TABLE_ENTRY_INFO Handles[1];
+} PROCESS_HANDLE_SNAPSHOT_INFORMATION, * PPROCESS_HANDLE_SNAPSHOT_INFORMATION;
+
+
+HANDLE GetSafeFullAccessThread(DWORD targetProcessId, bool debug) {
+    HMODULE hNtdll = GetModuleHandleW(L"ntdll.dll");
+    if (!hNtdll) return NULL;
+
+	HMODULE hK32 = GetModuleHandleW(L"kernel32.dll");
+	if (!hK32) return NULL;
+
+    auto NtQueryInformationProcess = (long (WINAPI*)(HANDLE, ULONG, PVOID, ULONG, PULONG))
+        GetProcAddress(hNtdll, "NtQueryInformationProcess");
+    auto NtQuerySystemInformation = (long (WINAPI*)(ULONG, PVOID, ULONG, PULONG))
+        GetProcAddress(hNtdll, "NtQuerySystemInformation");
+    auto _GetThreadId = (DWORD(WINAPI*)(HANDLE))
+        GetProcAddress(hK32, "GetThreadId");
+
+    if (!NtQueryInformationProcess || !NtQuerySystemInformation || !_GetThreadId) return NULL;
+
+    // 1. Get the System Process/Thread info buffer first to verify states
+    ULONG sysInfoSize = 1024 * 1024;
+    BYTE* sysInfoBuffer = new BYTE[sysInfoSize];
+    if (NtQuerySystemInformation(5, sysInfoBuffer, sysInfoSize, &sysInfoSize) != 0) {
+        delete[] sysInfoBuffer;
+        return NULL;
     }
 
-    DWORD chosenThreadId = 0;
-    BYTE* current = buffer;
+    // 2. Query our internal process handle table
+    ULONG bufferSize = 0x4000;
+    PVOID buffer = VirtualAlloc(NULL, bufferSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    ULONG returnLength = 0;
 
-    while (true) {
-        // Use the official SDK structure pointer
-        auto* proc = reinterpret_cast<SYSTEM_PROCESS_INFORMATION*>(current);
+    // 20 = ProcessHandleInformation
+    NTSTATUS status = NtQueryInformationProcess(GetCurrentProcess(), 20, buffer, bufferSize, &returnLength);
+    if (status == 0xC0000004) { // Length mismatch
+        VirtualFree(buffer, 0, MEM_RELEASE);
+        bufferSize = returnLength;
+        buffer = VirtualAlloc(NULL, bufferSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+        status = NtQueryInformationProcess(GetCurrentProcess(), 20, buffer, bufferSize, &returnLength);
+    }
 
-        // Explicitly check if this entry matches our target PID
-        if (reinterpret_cast<uintptr_t>(proc->UniqueProcessId) == targetProcessId) {
+    HANDLE preferredHandle = NULL;
 
-            // Threads are positioned exactly after the process header structure
-            auto* threads = reinterpret_cast<SYSTEM_THREAD_INFORMATION*>(
-                current + sizeof(SYSTEM_PROCESS_INFORMATION)
-                );
+    if (status == 0) {
+        auto* localHandles = reinterpret_cast<PPROCESS_HANDLE_SNAPSHOT_INFORMATION>(buffer);
+		if (localHandles == nullptr || localHandles->NumberOfHandles == 0) {
+			if (buffer) VirtualFree(buffer, 0, MEM_RELEASE);
+			delete[] sysInfoBuffer;
+			return NULL;
+		}
 
-            for (ULONG i = 0; i < proc->NumberOfThreads; ++i) {
-                DWORD tid = static_cast<DWORD>(reinterpret_cast<uintptr_t>(threads[i].ClientId.UniqueThread));
+        // 3. Loop through our local handles
+        for (ULONG_PTR i = 0; i < localHandles->NumberOfHandles; i++) {
+            PROCESS_HANDLE_TABLE_ENTRY_INFO entry = localHandles->Handles[i];
+            HANDLE hCurrent = reinterpret_cast<HANDLE>(entry.HandleValue);
 
-                // Skip the injector's own threads (should never happen, targetProcessId != Process Id)
-                if (tid == GetCurrentThreadId()) continue;
+            DWORD targetTid = _GetThreadId(hCurrent);
+            if (targetTid == 0 || entry.GrantedAccess != THREAD_ALL_ACCESS) continue;
 
-                // 5 = Waiting, 8 = WrQueue (Thread Pool worker)
-                if (threads[i].ThreadState == 5 && threads[i].WaitReason == 8) {
-                    continue;
+            // 4. Cross-reference this specific Tid against our system info buffer
+            BYTE* currentProc = sysInfoBuffer;
+            bool isSafe = false;
+
+            while (true) {
+                auto* proc = reinterpret_cast<SYSTEM_PROCESS_INFORMATION*>(currentProc);
+
+                if (reinterpret_cast<uintptr_t>(proc->UniqueProcessId) == targetProcessId) {
+                    auto* threads = reinterpret_cast<SYSTEM_THREAD_INFORMATION*>(
+                        currentProc + sizeof(SYSTEM_PROCESS_INFORMATION)
+                        );
+
+                    for (ULONG j = 0; j < proc->NumberOfThreads; ++j) {
+                        DWORD currentTid = static_cast<DWORD>(reinterpret_cast<uintptr_t>(threads[j].ClientId.UniqueThread));
+
+                        if (currentTid == targetTid) {
+                            // Validate the thread state is safe (Not Waiting + WrQueue)
+                            if (!(threads[j].ThreadState == 5 && threads[j].WaitReason == 8)) {
+                                isSafe = true;
+                            }
+                            break;
+                        }
+                    }
                 }
 
-                chosenThreadId = tid;
+                if (proc->NextEntryOffset == 0 || isSafe) break;
+                currentProc += proc->NextEntryOffset;
+            }
+
+            // If it belongs to our target process and passed the state checks, we take it!
+            if (isSafe) {
+                if (debug) {
+                    printf("[+] Hooker: Verified handle %p (TID %lu) is safe and valid.\n", hCurrent, targetTid);
+                }
+                preferredHandle = hCurrent;
                 break;
             }
         }
-
-        // Jump explicitly to the next process block using the kernel-provided offset
-        if (proc->NextEntryOffset == 0 || chosenThreadId != 0) break;
-        current += proc->NextEntryOffset;
     }
 
-    delete[] buffer;
-    return chosenThreadId;
+    if (buffer) VirtualFree(buffer, 0, MEM_RELEASE);
+    delete[] sysInfoBuffer;
+
+    return preferredHandle;
 }
 
 // my funny code
@@ -590,25 +659,18 @@ bool external_inject(HANDLE hProcess, const std::string& dllPath, bool debug, bo
         */
 
         // 1. Identify and target a specific thread ID in the target process
-        // (Target thread identification logic omitted for brevity)DWORD FindTargetThread(DWORD targetProcessId) {
-        DWORD chosenThreadId = FindSafeThread(GetProcessId(hProcess));
-		if (!chosenThreadId) {
-			printf("[!] Hooker: No suitable thread found for hijacking\n");
-			return handle_cleanup(hProcess, { pTargetBase, pRemoteData }, nullptr);
-		}
-
-        HANDLE hThread = OpenThread(THREAD_SET_CONTEXT | THREAD_GET_CONTEXT | THREAD_SUSPEND_RESUME, FALSE, chosenThreadId);
+		HANDLE hThread = GetSafeFullAccessThread(GetProcessId(hProcess), debug);
         if (!hThread) {
-			printf("[!] Hooker: OpenThread failed for thread ID %lu: %lu\n", chosenThreadId, GetLastError());
+			printf("[!] Hooker: Cannot find a safe and full access thread in hProc %p\n", hProcess);
 			return handle_cleanup(hProcess, { pTargetBase, pRemoteData }, nullptr);
         }
 		if (debug)
-			printf("[+] Hooker: Opened thread ID %lu for hijacking\n", chosenThreadId);
+			printf("[+] Hooker: Opened thread %p for hijacking\n", hThread);
 
         // 2. Suspend the target thread to safely modify its state
         if (SuspendThread(hThread) == (DWORD)-1) {
             CloseHandle(hThread);
-			printf("[!] Hooker: SuspendThread failed for thread ID %lu: %lu\n", chosenThreadId, GetLastError());
+			printf("[!] Hooker: SuspendThread failed for thread %p: %lu\n", hThread, GetLastError());
             return handle_cleanup(hProcess, { pTargetBase, pRemoteData }, nullptr);
         }
 
@@ -618,7 +680,7 @@ bool external_inject(HANDLE hProcess, const std::string& dllPath, bool debug, bo
         if (!GetThreadContext(hThread, &OldContext)) {
             ResumeThread(hThread);
             CloseHandle(hThread);
-			printf("[!] Hooker: GetThreadContext failed for thread ID %lu: %lu\n", chosenThreadId, GetLastError());
+			printf("[!] Hooker: GetThreadContext failed for thread %p: %lu\n", hThread, GetLastError());
             return handle_cleanup(hProcess, { pTargetBase, pRemoteData }, nullptr);
         }
 
@@ -695,7 +757,7 @@ bool external_inject(HANDLE hProcess, const std::string& dllPath, bool debug, bo
         if (!SetThreadContext(hThread, &OldContext)) {
             ResumeThread(hThread);
             CloseHandle(hThread);
-			printf("[!] Hooker: SetThreadContext failed for thread ID %lu: %lu\n", chosenThreadId, GetLastError());
+			printf("[!] Hooker: SetThreadContext failed for thread %p: %lu\n", hThread, GetLastError());
             return handle_cleanup(hProcess, { pTargetBase, pRemoteData, pMem }, nullptr);
         }
 
