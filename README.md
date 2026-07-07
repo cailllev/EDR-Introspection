@@ -65,10 +65,11 @@ see /attacks/
 |------|----------------------------------------------------------------------|-----------------------|-----------------------|------------|-----------|------------------------------------------------|
 | 0    | OpenProcess(MsMpEng, PROCESS_ALL_ACCESS) without KDU                 | error, no access      | nA                    | nA         | enabled   | InjectLoader cannot open MsMpEng from usermode |
 | 1    | OpenProcess(MsMpEng, PROCESS_ALL_ACCESS) with KDU                    | 0x1FF74D              | no                    | 0          | enabled   | InjectLoader cannot AllocVM                    |
-| 2    | OpenProcess(MsMpEng, PROCESS_ALL_ACCESS) with KDU and patch          | 0x1FF74D              | 0x1FFFFF              | 0          | enabled   | InjectLoader cannot CreateRemoteThread         |
-| 3    | OpenProcess(MsMpEng, PROCESS_ALL_ACCESS) with KDU and patch and PPL  | 0x1FF74D              | 0x1FFFFF              | PPL-AM     | enabled   | InjectLoader cannot CreateRemoteThread         |
-| 3    | OpenProcess(MsMpEng, PROCESS_ALL_ACCESS) with KDU and patch and PPL  | 0x1FF74D              | 0x1FFFFF              | PPL-WinTcb | enabled   | InjectLoader cannot CreateRemoteThread         |
-| 4    | OpenProcess(MsMpEng, PROCESS_ALL_ACCESS) with KDU after EDRSandblast | 0x1FFFFF              | not needed            | 0          | disabled  | InjectLoader works                             |
+| 2    | OpenProcess(MsMpEng, PROCESS_ALL_ACCESS) + and patch proc access     | 0x1FF74D              | 0x1FFFFF              | 0          | enabled   | InjectLoader cannot CreateRemoteThread         |
+| 2    | OpenProcess(MsMpEng, PROCESS_ALL_ACCESS) ++ patch thread access      | 0x1FF74D              | 0x1FFFFF              | 0          | enabled   | InjectLoader can hijack thread to load dll     |
+| 3    | OpenProcess(MsMpEng, PROCESS_ALL_ACCESS) ++ PPL                      | 0x1FF74D              | 0x1FFFFF              | PPL-AM     | enabled   | InjectLoader cannot CreateRemoteThread         |
+| 3    | OpenProcess(MsMpEng, PROCESS_ALL_ACCESS) ++ PPL-WinTcb               | 0x1FF74D              | 0x1FFFFF              | PPL-WinTcb | enabled   | InjectLoader cannot CreateRemoteThread         |
+| 4    | OpenProcess(MsMpEng, PROCESS_ALL_ACCESS) + EDRSandblast              | 0x1FFFFF              | not needed            | 0          | disabled  | InjectLoader reflectively load dll             |
 
 #### Example
 <img width="1791" height="864" alt="image" src="https://github.com/user-attachments/assets/69159723-a315-4c87-aab6-551792171d85" />
