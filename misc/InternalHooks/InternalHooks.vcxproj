@@ -24,6 +24,7 @@
     <ProjectGuid>{77d59db4-8466-46ed-b313-3fc72af9d9ca}</ProjectGuid>
     <RootNamespace>InternalHooks</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>InternalHooker</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
