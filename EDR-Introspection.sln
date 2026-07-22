@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
-VisualStudioVersion = 18.7.11919.86 stable
+VisualStudioVersion = 18.7.11919.86
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EDRi", "EDRi\EDRi.vcxproj", "{5148AB9F-922A-48DA-A335-DD6BDDCEF143}"
 EndProject
@@ -23,9 +23,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DefenderBase", "misc\Defend
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Handler", "misc\Handler\Handler.vcxproj", "{BA883A98-8CD7-4DCE-B66C-669E320F9DC3}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ExternalHooker", "misc\ExternalHooker\ExternalHooker.vcxproj", "{8C782F4F-4B38-40BA-AB48-F6357D33CAA5}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "InternalHooks", "misc\InternalHooks\InternalHooks.vcxproj", "{77D59DB4-8466-46ED-B313-3FC72AF9D9CA}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "InternalHooker", "misc\InternalHooks\InternalHooks.vcxproj", "{77D59DB4-8466-46ED-B313-3FC72AF9D9CA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -107,14 +105,6 @@ Global
 		{BA883A98-8CD7-4DCE-B66C-669E320F9DC3}.Release|x64.Build.0 = Release|x64
 		{BA883A98-8CD7-4DCE-B66C-669E320F9DC3}.Release|x86.ActiveCfg = Release|Win32
 		{BA883A98-8CD7-4DCE-B66C-669E320F9DC3}.Release|x86.Build.0 = Release|Win32
-		{8C782F4F-4B38-40BA-AB48-F6357D33CAA5}.Debug|x64.ActiveCfg = Debug|x64
-		{8C782F4F-4B38-40BA-AB48-F6357D33CAA5}.Debug|x64.Build.0 = Debug|x64
-		{8C782F4F-4B38-40BA-AB48-F6357D33CAA5}.Debug|x86.ActiveCfg = Debug|Win32
-		{8C782F4F-4B38-40BA-AB48-F6357D33CAA5}.Debug|x86.Build.0 = Debug|Win32
-		{8C782F4F-4B38-40BA-AB48-F6357D33CAA5}.Release|x64.ActiveCfg = Release|x64
-		{8C782F4F-4B38-40BA-AB48-F6357D33CAA5}.Release|x64.Build.0 = Release|x64
-		{8C782F4F-4B38-40BA-AB48-F6357D33CAA5}.Release|x86.ActiveCfg = Release|Win32
-		{8C782F4F-4B38-40BA-AB48-F6357D33CAA5}.Release|x86.Build.0 = Release|Win32
 		{77D59DB4-8466-46ED-B313-3FC72AF9D9CA}.Debug|x64.ActiveCfg = Debug|x64
 		{77D59DB4-8466-46ED-B313-3FC72AF9D9CA}.Debug|x64.Build.0 = Debug|x64
 		{77D59DB4-8466-46ED-B313-3FC72AF9D9CA}.Debug|x86.ActiveCfg = Debug|Win32
