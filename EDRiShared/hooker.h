@@ -9,4 +9,4 @@ enum Action {
     STOP_INJECTION
 };
 
-bool inject_dll(int, const std::string&, bool, Action, HANDLE, bool);
+bool InjectDll(int, const std::string&, bool, Action, HANDLE, bool);
