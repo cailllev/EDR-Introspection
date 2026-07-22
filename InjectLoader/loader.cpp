@@ -177,56 +177,60 @@ HANDLE findProcHandle(int pid, BOOL debug) {
         status = NtQueryInformationProcess(GetCurrentProcess(), ProcessHandleInformation, buffer, bufferSize, &returnLength);
     }
 
-    if (status == 0) {
-        PPROCESS_HANDLE_SNAPSHOT_INFORMATION localHandles = (PPROCESS_HANDLE_SNAPSHOT_INFORMATION)buffer;
-        if (localHandles == nullptr || localHandles->NumberOfHandles == 0) {
-            printf("[!] InjectLoader: No handles found in the current process.\n");
-            if (buffer != 0) VirtualFree(buffer, 0, MEM_RELEASE);
-            return 0;
-        }
-
-        typedef DWORD(WINAPI* pfnGetProcessId)(HANDLE);
-        HMODULE hKernel32 = GetModuleHandleW(L"kernel32.dll");
-        if (!hKernel32) {
-            printf("[!] InjectLoader: Failed to get handle to kernel32.dll\n");
-            if (buffer != 0) VirtualFree(buffer, 0, MEM_RELEASE);
-            return 0;
-        }
-        pfnGetProcessId _GetProcessId = (pfnGetProcessId)GetProcAddress(hKernel32, "GetProcessId");
-        if (!_GetProcessId) {
-            printf("[!] InjectLoader: Failed to get address of GetProcessId\n");
-            if (buffer != 0) VirtualFree(buffer, 0, MEM_RELEASE);
-            return 0;
-        }
-
-        for (ULONG_PTR i = 0; i < localHandles->NumberOfHandles; i++) {
-            PROCESS_HANDLE_TABLE_ENTRY_INFO entry = localHandles->Handles[i];
-
-            // Check if the handle is a process handle
-            DWORD targetPid = _GetProcessId(entry.HandleValue);
-            if (targetPid == pid) {
-                if (debug) {
-                    printf("[+] InjectLoader: Proc handle found ID=0x%p, PID=%lu, Access=0x%08X\n", entry.HandleValue, targetPid, entry.GrantedAccess);
-                }
-                if (entry.GrantedAccess != PROCESS_ALL_ACCESS) {
-                    printf("[!] InjectLoader: Warning: Handle to pid=%i found but limited access 0x%08X\n", pid, entry.GrantedAccess);
-                    printf("[*] InjectLoader: Continue searching? Y/n");
-                    int c = getchar();
-                    if (c == 'n') {
-                        if (buffer != 0) VirtualFree(buffer, 0, MEM_RELEASE);
-                        return entry.HandleValue;
-                    }
-                    else {
-                        // continue searching
-                    }
-                }
-                if (buffer != 0) VirtualFree(buffer, 0, MEM_RELEASE);
-                return entry.HandleValue;
-            }
-        }
-        printf("[!] InjectLoader: No process handles found in the current process.\n");
+    if (status != 0) {
+        printf("[!] InjectLoader: Unable to query handle information of current process.\n");
+        if (buffer != 0) VirtualFree(buffer, 0, MEM_RELEASE);
+        return 0;
     }
 
+
+    PPROCESS_HANDLE_SNAPSHOT_INFORMATION localHandles = (PPROCESS_HANDLE_SNAPSHOT_INFORMATION)buffer;
+    if (localHandles == nullptr || localHandles->NumberOfHandles == 0) {
+        printf("[!] InjectLoader: No handles found in the current process.\n");
+        if (buffer != 0) VirtualFree(buffer, 0, MEM_RELEASE);
+        return 0;
+    }
+
+    typedef DWORD(WINAPI* pfnGetProcessId)(HANDLE);
+    HMODULE hKernel32 = GetModuleHandleW(L"kernel32.dll");
+    if (!hKernel32) {
+        printf("[!] InjectLoader: Failed to get handle to kernel32.dll\n");
+        if (buffer != 0) VirtualFree(buffer, 0, MEM_RELEASE);
+        return 0;
+    }
+    pfnGetProcessId _GetProcessId = (pfnGetProcessId)GetProcAddress(hKernel32, "GetProcessId");
+    if (!_GetProcessId) {
+        printf("[!] InjectLoader: Failed to get address of GetProcessId\n");
+        if (buffer != 0) VirtualFree(buffer, 0, MEM_RELEASE);
+        return 0;
+    }
+
+    for (ULONG_PTR i = 0; i < localHandles->NumberOfHandles; i++) {
+        PROCESS_HANDLE_TABLE_ENTRY_INFO entry = localHandles->Handles[i];
+
+        // Check if the handle is a process handle
+        DWORD targetPid = _GetProcessId(entry.HandleValue);
+        if (targetPid == pid) {
+            if (debug) {
+                printf("[+] InjectLoader: Proc handle found ID=0x%p, PID=%lu, Access=0x%08X\n", entry.HandleValue, targetPid, entry.GrantedAccess);
+            }
+            if (entry.GrantedAccess != PROCESS_ALL_ACCESS) {
+                printf("[!] InjectLoader: Warning: Handle to pid=%i found but limited access 0x%08X\n", pid, entry.GrantedAccess);
+                printf("[*] InjectLoader: Continue searching? Y/n");
+                int c = getchar();
+                if (c == 'n') {
+                    if (buffer != 0) VirtualFree(buffer, 0, MEM_RELEASE);
+                    return entry.HandleValue;
+                }
+                else {
+                    // continue searching
+                }
+            }
+            if (buffer != 0) VirtualFree(buffer, 0, MEM_RELEASE);
+            return entry.HandleValue;
+        }
+    }
+    printf("[!] InjectLoader: No process handles found in the current process.\n");
     if (buffer != 0) VirtualFree(buffer, 0, MEM_RELEASE);
     return 0;
 }
@@ -238,7 +242,7 @@ int main(int argc, char* argv[]) {
     std::string exePath = argv[0];
     std::string exeName = exePath.substr(exePath.find_last_of("\\/") + 1);
     std::string usage = "";
-    usage += "[*] InjectLoader: Usage: " + exeName + " <DLL Path> <PID> <(L)oadLibrary | (E)xternal | (R)eflective | (S)top> <Debug> <FindHandle> <HijackThread>\n";
+    usage += "[*] InjectLoader: Usage: " + exeName + " <DLL Path> <PID> <(L)oadLibrary | (E)xternal | (R)eflective | (S)top> <Debug> <FindProcHandle> <HijackThread>\n";
     usage += "[*] InjectLoader: Usage: " + exeName + " C:\\path\\to\\dll.dll 1234 LoadLibrary 0 1\n";
 
     if (argc > 1 && strcmp(argv[1], "-h") == 0) {
@@ -328,5 +332,5 @@ int main(int argc, char* argv[]) {
     }
 
     std::cout << "[*] InjectLoader: Attempting to inject DLL '" << dllPath << "' into PID=" << pid << " using " << actionStr << " injection method and " << hijackStr << ".\n";
-    return inject_dll(pid, dllPath, debug, a, hProc, hijackThread);
+    return InjectDll(pid, dllPath, debug, a, hProc, hijackThread);
 }
