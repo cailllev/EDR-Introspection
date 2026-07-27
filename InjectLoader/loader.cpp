@@ -221,7 +221,7 @@ HANDLE findProcHandle(int pid, BOOL debug) {
                 if (c == 'n') {
                     if (buffer != 0) VirtualFree(buffer, 0, MEM_RELEASE);
                     return entry.HandleValue;
-                }
+                } 
                 else {
                     // continue searching
                 }
@@ -274,6 +274,9 @@ int main(int argc, char* argv[]) {
     else if (_stricmp(argv[3], "E") == 0 || _stricmp(argv[3], "external") == 0) {
         a = EXTERNAL_INJECTION;
     }
+    else if (_stricmp(argv[3], "H") == 0 || _stricmp(argv[3], "hijackthreadtest") == 0) {
+        a = HIJACK_THREAD_TEST;
+    }
     else {
         a = LOADLIBRARY_INJECTION;
     }
@@ -324,6 +327,9 @@ int main(int argc, char* argv[]) {
         break;
     case REFLECTIVE_INJECTION:
 		actionStr = "Reflective"; // todo also support thread hijack
+        break;
+    case HIJACK_THREAD_TEST:
+        actionStr = "HijackThread test";
         break;
     case STOP_INJECTION:
         std::cout << "[*] InjectLoader: Unloading DLL in " << pid << "\n";
