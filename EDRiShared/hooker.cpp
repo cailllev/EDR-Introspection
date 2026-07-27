@@ -110,17 +110,49 @@ size_t GetUniversalShellcodeSize() {
 }
 
 static void* ResolveFunction(void* ptr) {
-    unsigned char* b = (unsigned char*)ptr;
-    if (b[0] == 0xE9) {
-        int rel = *(int*)(b + 1);
-        return (void*)(b + 5 + rel);
+    if (!ptr) return nullptr;
+
+    unsigned char* b = static_cast<unsigned char*>(ptr);
+
+    // Loop up to 10 times to resolve chained/nested thunks
+    for (int i = 0; i < 10; ++i) {
+        // 1. Standard 5-byte Relative JMP: E9 xx xx xx xx
+        if (b[0] == 0xE9) {
+            int32_t rel = *reinterpret_cast<int32_t*>(b + 1);
+            b = b + 5 + rel;
+            continue;
+        }
+
+        // 2. Short Relative JMP: EB xx
+        if (b[0] == 0xEB) {
+            int8_t rel = *reinterpret_cast<int8_t*>(b + 1);
+            b = b + 2 + rel;
+            continue;
+        }
+
+        // 3. RIP-Relative Indirect JMP without REX prefix: FF 25 xx xx xx xx (6 bytes)
+        if (b[0] == 0xFF && b[1] == 0x25) {
+            int32_t disp = *reinterpret_cast<int32_t*>(b + 2);
+            void** target = reinterpret_cast<void**>(b + 6 + disp);
+            if (!target || !*target) break;
+            b = static_cast<unsigned char*>(*target);
+            continue;
+        }
+
+        // 4. RIP-Relative Indirect JMP with REX.W prefix: 48 FF 25 xx xx xx xx (7 bytes)
+        if (b[0] == 0x48 && b[1] == 0xFF && b[2] == 0x25) {
+            int32_t disp = *reinterpret_cast<int32_t*>(b + 3);
+            void** target = reinterpret_cast<void**>(b + 7 + disp);
+            if (!target || !*target) break;
+            b = static_cast<unsigned char*>(*target);
+            continue;
+        }
+
+        // No more thunks/jumps detected -> 'b' is the true function entry point!
+        break;
     }
-    if (b[0] == 0xFF && b[1] == 0x25) {
-        int disp = *(int*)(b + 2);
-        void** target = (void**)(b + 6 + disp);
-        return *target;
-    }
-    return ptr;
+
+    return static_cast<void*>(b);
 }
 
 // GuidedHacking stuff
