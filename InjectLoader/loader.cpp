@@ -243,7 +243,16 @@ int main(int argc, char* argv[]) {
     std::string exeName = exePath.substr(exePath.find_last_of("\\/") + 1);
     std::string usage = "";
     usage += "[*] InjectLoader: Usage: " + exeName + " <DLL Path> <PID> <(L)oadLibrary | (E)xternal | (R)eflective | (S)top> <Debug> <FindProcHandle> <HijackThread>\n";
-    usage += "[*] InjectLoader: Usage: " + exeName + " C:\\path\\to\\dll.dll 1234 LoadLibrary 0 1\n";
+    usage += "[*] InjectLoader: Usage: " + exeName + " C:\\path\\to\\dll.dll 1234 LoadLibrary 1 1 1\n";
+    usage += "[*] InjectLoader: Limitations against EDRs: \n";
+    usage += "      - all inject techniques VM_Operation and VM_Write (usually denied via KernelCallbacks)\n";
+    usage += "      - LoadLibrary denied by CodeIntegrity (non signed DLLs)\n";
+    usage += "      - External inject denied by ACG (RW->RX) and CET (shadow stacks)\n";
+    usage += "      - External inject assumes LoadLibraryA, GetProcAddress and RtlAddFunctionTable are at same addr cross-process\n";
+    usage += "      - External inject requires the DLL to be compiled with GS- (Buffer Security Check disabled) and with RTC1 (without Runtime Checks)\n";
+    usage += "      - Reflective inject requires selfLoading() entrypoint in DLL and be self loading\n";
+    usage += "      - injection via non-FindProcHandle needs OpenProcess(PROCESS_ALL_ACCESS) (EDR procs: denied by PPL)\n";
+    usage += "      - injection via non-ThreadHijack needs CreateRemoteThread (EDR procs: denied via KernelCallbacks)\n";
 
     if (argc > 1 && strcmp(argv[1], "-h") == 0) {
         std::cout << usage;

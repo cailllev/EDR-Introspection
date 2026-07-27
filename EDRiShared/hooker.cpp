@@ -30,6 +30,16 @@ struct ShellcodeData {
     uintptr_t TLSDir;
 };
 
+// Define a custom section set to calc shellcodeSize
+#pragma section(".sc$a", read, execute)
+#pragma section(".sc$b", read, execute)
+#pragma section(".sc$c", read, execute)
+
+// Place start marker in .sc$a
+__declspec(allocate(".sc$a")) const unsigned char g_ShellcodeStartMarker = 'A';
+
+// Place the function in .sc$b
+__declspec(code_seg(".sc$b"))
 // DLLium's remote dll loading shellcode (executed in remote proc)
 __declspec(noinline) void __stdcall UniversalDllLoadingShellcode(ShellcodeData* pData) {
     if (!pData || !pData->pDllBase) {
@@ -92,7 +102,11 @@ __declspec(noinline) void __stdcall UniversalDllLoadingShellcode(ShellcodeData* 
     }
 }
 
-__declspec(noinline) void __stdcall UniversalDllLoadingShellcodeEnd() {
+// Place end marker in .sc$c
+__declspec(allocate(".sc$c")) const unsigned char g_ShellcodeEndMarker = 'C';
+
+size_t GetUniversalShellcodeSize() {
+    return (uintptr_t)&g_ShellcodeEndMarker - (uintptr_t)&g_ShellcodeStartMarker;
 }
 
 static void* ResolveFunction(void* ptr) {
@@ -378,7 +392,7 @@ typedef NTSTATUS(NTAPI* pfnNtQueryInformationThread)(
 
 // Check if a thread is safe to hijack
 BOOL CheckIfThreadSafeToHijack(HANDLE hThread, bool debug) {
-    return true; // yolo
+    return true; // yolo, todo: this should search for a fitting thread
 
     HMODULE hNtdll = GetModuleHandleW(L"ntdll.dll");
     if (!hNtdll) return FALSE;
@@ -844,7 +858,7 @@ bool HijackThreadTest(HANDLE hProcess, bool debug) {
         0x48, 0xBA, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x48, 0x8D, 0x8D, 0x01, 0x01, 0x00, 0x00, 0x41, 0xBA, 0x31, 0x8B, 0x6F, 0x87, 0xFF, 0xD5, 0xBB, 0xF0, 0xB5, 0xA2, 
         0x56, 0x41, 0xBA, 0xA6, 0x95, 0xBD, 0x9D, 0xFF, 0xD5, 0x48, 0x83, 0xC4, 0x28, 0x3C, 0x06, 0x7C, 0x0A, 0x80, 0xFB, 0xE0, 0x75, 0x05, 0xBB, 0x47, 0x13, 0x72, 0x6F, 0x6A, 0x00, 
         0x59, 0x41, 0x89, 0xDA, 0xFF, 0xD5, 0x63, 0x61, 0x6C, 0x63, 0x2E, 0x65, 0x78, 0x65, 0x00 
-    };
+    }; // this bricks the remote process when returning, what the heli Rapid7?
     
     LPVOID pRemoteRoutine = VirtualAllocEx(hProcess, nullptr, sizeof(msfvenomExecCalc), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
     if (pRemoteRoutine == NULL) {
@@ -924,36 +938,44 @@ bool ExternalInject(HANDLE hProcess, const std::string& dllPath, bool debug, boo
     auto* rpOpt = &rpNt->OptionalHeader;
 
     uintptr_t delta = (uintptr_t)pRemoteTargetBase - (uintptr_t)rpOpt->ImageBase;
-    if (delta == 0) { printf("[!] Hooker: Invalid delta (0) between local DLL base and remote process base\n"); return false; }
+    if (delta == 0) { printf("[!] Hooker: Delta of 0 between local DLL base and remote process base, no reloc needed\n"); }
 
     auto relocDir = rpOpt->DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC];
-    if (relocDir.Size == 0) { printf("[*] Hooker: Empty relocation dir found\n"); } // return false?
+    if (relocDir.Size == 0) { printf("[-] Hooker: Empty relocation dir found, no reloc needed\n"); }
 
-    auto* pReloc = reinterpret_cast<IMAGE_BASE_RELOCATION*>(pLocalImage + relocDir.VirtualAddress);
-    uintptr_t relocEnd = (uintptr_t)pReloc + relocDir.Size;
+    if (delta != 0 && relocDir.Size > 0) {
+        auto* pReloc = reinterpret_cast<IMAGE_BASE_RELOCATION*>(pLocalImage + relocDir.VirtualAddress);
+        uintptr_t relocEnd = (uintptr_t)pReloc + relocDir.Size;
 
-    // relocate images (known dlls use the same offset over all processes, calculate via local process)
-    while (pReloc && (uintptr_t)pReloc < relocEnd && pReloc->SizeOfBlock > sizeof(IMAGE_BASE_RELOCATION)) {
-        UINT  count = (pReloc->SizeOfBlock - sizeof(IMAGE_BASE_RELOCATION)) / sizeof(WORD);
-        WORD* info = reinterpret_cast<WORD*>(pReloc + 1);
+        // relocate images (known dlls use the same offset over all processes, calculate via local process)
+        while (pReloc && (uintptr_t)pReloc < relocEnd && pReloc->SizeOfBlock > sizeof(IMAGE_BASE_RELOCATION)) {
+            UINT  count = (pReloc->SizeOfBlock - sizeof(IMAGE_BASE_RELOCATION)) / sizeof(WORD);
+            WORD* info = reinterpret_cast<WORD*>(pReloc + 1);
 
-        for (UINT i = 0; i < count; ++i) {
-            WORD type = info[i] >> 12;
-            WORD offset = info[i] & 0xFFF;
+            for (UINT i = 0; i < count; ++i) {
+                WORD type = info[i] >> 12;
+                WORD offset = info[i] & 0xFFF;
 
-            if (type == IMAGE_REL_BASED_DIR64) {
-                uintptr_t* patch = reinterpret_cast<uintptr_t*>(pLocalImage + pReloc->VirtualAddress + offset);
-                *patch += delta;
+                if (type == IMAGE_REL_BASED_DIR64) {
+                    uintptr_t* patch = reinterpret_cast<uintptr_t*>(pLocalImage + pReloc->VirtualAddress + offset);
+                    *patch += delta;
+                }
+                else if (type == IMAGE_REL_BASED_HIGHLOW) {
+                    uint32_t* patch = reinterpret_cast<uint32_t*>(pLocalImage + pReloc->VirtualAddress + offset);
+                    *patch += (uint32_t)delta;
+                }
+                else if (type == IMAGE_REL_BASED_ABSOLUTE) {
+                    continue; // skip padding
+                }
+                else {
+                    printf("[!] Hooker: Unknown relocation type %d\n", type);
+                }
             }
-            else if (type == IMAGE_REL_BASED_HIGHLOW) {
-                uint32_t* patch = reinterpret_cast<uint32_t*>(pLocalImage + pReloc->VirtualAddress + offset);
-                *patch += (uint32_t)delta;
-            }
+
+            if (debug)
+                printf("[+] Hooker: Processed relocation block at %p\n", pReloc);
+            pReloc = reinterpret_cast<IMAGE_BASE_RELOCATION*>(reinterpret_cast<BYTE*>(pReloc) + pReloc->SizeOfBlock);
         }
-
-        pReloc = reinterpret_cast<IMAGE_BASE_RELOCATION*>(reinterpret_cast<BYTE*>(pReloc) + pReloc->SizeOfBlock);
-        if (debug)
-            printf("[+] Hooker: Processed relocation block at %p\n", pReloc);
     }
 
     // write the image to the remote process, same address
@@ -1006,10 +1028,8 @@ bool ExternalInject(HANDLE hProcess, const std::string& dllPath, bool debug, boo
     if (debug)
         printf("[+] Hooker: Wrote required dllLoadingData to remote process memory at %p\n", pRemoteDllLoadingData);
 
-    // hope this gets assembled after each other
-    void* pLocalDllLoadingShellcodeStart = ResolveFunction((void*)UniversalDllLoadingShellcode);
-    void* pLocalDllLoadingShellcodeEnd = ResolveFunction((void*)UniversalDllLoadingShellcodeEnd);
-    size_t dllLoadingShellcodeSize = (uintptr_t)pLocalDllLoadingShellcodeEnd - (uintptr_t)pLocalDllLoadingShellcodeStart;
+    size_t dllLoadingShellcodeSize = GetUniversalShellcodeSize(); // now with fancy code sections
+    const void* pLocalDllLoadingShellcodeStart = ResolveFunction((void*)UniversalDllLoadingShellcode);
 
     // sanity check on the shellcodeSize, just set to 4kB if non-sensical and hope
     if (dllLoadingShellcodeSize == 0 || dllLoadingShellcodeSize > 0x8000) {
