@@ -141,7 +141,7 @@ NTSTATUS NTAPI Hook_NtTerminateProcess(
 ) {
     UINT64 ns = get_ns_time();
     char msg[MSG_LEN] = { 0 };
-
+    
     int tpid = (int)GetProcessId(Handle); // can return garbage for non-process handles
     if (tpid >= 4 && tpid <= 0xFFFFFF) { // ignore closing events of non proc handles
         _snprintf_s(msg, sizeof(msg), _TRUNCATE,
