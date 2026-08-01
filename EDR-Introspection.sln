@@ -1,0 +1,77 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36408.4
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EDRi", "EDRi\EDRi.vcxproj", "{5148AB9F-922A-48DA-A335-DD6BDDCEF143}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EDRiShared", "EDRiShared\EDRiShared.vcxitems", "{5BCD4AEA-DAD1-495A-BD75-50BF069FBEE9}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EDRReflectiveHooker", "EDRReflectiveHooker\EDRReflectiveHooker.vcxproj", "{BFBED5D2-CCF1-49B6-9786-C1BA89171616}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CsLoader", "attacks\CsLoader\CsLoader.vcxproj", "{3FF21867-EA53-463C-9336-E43B13FA2B29}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LsassReader", "attacks\LsassReader\LsassReader.vcxproj", "{3345A30F-84F7-4917-8F05-9B52DA60316B}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ProcInject", "attacks\ProcInject\ProcInject.vcxproj", "{315FDBE5-7B08-489D-94F6-D7A56EDDECB9}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5148AB9F-922A-48DA-A335-DD6BDDCEF143}.Debug|x64.ActiveCfg = Debug|x64
+		{5148AB9F-922A-48DA-A335-DD6BDDCEF143}.Debug|x64.Build.0 = Debug|x64
+		{5148AB9F-922A-48DA-A335-DD6BDDCEF143}.Debug|x86.ActiveCfg = Debug|Win32
+		{5148AB9F-922A-48DA-A335-DD6BDDCEF143}.Debug|x86.Build.0 = Debug|Win32
+		{5148AB9F-922A-48DA-A335-DD6BDDCEF143}.Release|x64.ActiveCfg = Release|x64
+		{5148AB9F-922A-48DA-A335-DD6BDDCEF143}.Release|x64.Build.0 = Release|x64
+		{5148AB9F-922A-48DA-A335-DD6BDDCEF143}.Release|x86.ActiveCfg = Release|Win32
+		{5148AB9F-922A-48DA-A335-DD6BDDCEF143}.Release|x86.Build.0 = Release|Win32
+		{BFBED5D2-CCF1-49B6-9786-C1BA89171616}.Debug|x64.ActiveCfg = Debug|x64
+		{BFBED5D2-CCF1-49B6-9786-C1BA89171616}.Debug|x64.Build.0 = Debug|x64
+		{BFBED5D2-CCF1-49B6-9786-C1BA89171616}.Debug|x86.ActiveCfg = Debug|Win32
+		{BFBED5D2-CCF1-49B6-9786-C1BA89171616}.Debug|x86.Build.0 = Debug|Win32
+		{BFBED5D2-CCF1-49B6-9786-C1BA89171616}.Release|x64.ActiveCfg = Release|x64
+		{BFBED5D2-CCF1-49B6-9786-C1BA89171616}.Release|x64.Build.0 = Release|x64
+		{BFBED5D2-CCF1-49B6-9786-C1BA89171616}.Release|x86.ActiveCfg = Release|Win32
+		{BFBED5D2-CCF1-49B6-9786-C1BA89171616}.Release|x86.Build.0 = Release|Win32
+		{3FF21867-EA53-463C-9336-E43B13FA2B29}.Debug|x64.ActiveCfg = Debug|x64
+		{3FF21867-EA53-463C-9336-E43B13FA2B29}.Debug|x64.Build.0 = Debug|x64
+		{3FF21867-EA53-463C-9336-E43B13FA2B29}.Debug|x86.ActiveCfg = Debug|Win32
+		{3FF21867-EA53-463C-9336-E43B13FA2B29}.Debug|x86.Build.0 = Debug|Win32
+		{3FF21867-EA53-463C-9336-E43B13FA2B29}.Release|x64.ActiveCfg = Release|x64
+		{3FF21867-EA53-463C-9336-E43B13FA2B29}.Release|x64.Build.0 = Release|x64
+		{3FF21867-EA53-463C-9336-E43B13FA2B29}.Release|x86.ActiveCfg = Release|Win32
+		{3FF21867-EA53-463C-9336-E43B13FA2B29}.Release|x86.Build.0 = Release|Win32
+		{3345A30F-84F7-4917-8F05-9B52DA60316B}.Debug|x64.ActiveCfg = Debug|x64
+		{3345A30F-84F7-4917-8F05-9B52DA60316B}.Debug|x64.Build.0 = Debug|x64
+		{3345A30F-84F7-4917-8F05-9B52DA60316B}.Debug|x86.ActiveCfg = Debug|Win32
+		{3345A30F-84F7-4917-8F05-9B52DA60316B}.Debug|x86.Build.0 = Debug|Win32
+		{3345A30F-84F7-4917-8F05-9B52DA60316B}.Release|x64.ActiveCfg = Release|x64
+		{3345A30F-84F7-4917-8F05-9B52DA60316B}.Release|x64.Build.0 = Release|x64
+		{3345A30F-84F7-4917-8F05-9B52DA60316B}.Release|x86.ActiveCfg = Release|Win32
+		{3345A30F-84F7-4917-8F05-9B52DA60316B}.Release|x86.Build.0 = Release|Win32
+		{315FDBE5-7B08-489D-94F6-D7A56EDDECB9}.Debug|x64.ActiveCfg = Debug|x64
+		{315FDBE5-7B08-489D-94F6-D7A56EDDECB9}.Debug|x64.Build.0 = Debug|x64
+		{315FDBE5-7B08-489D-94F6-D7A56EDDECB9}.Debug|x86.ActiveCfg = Debug|Win32
+		{315FDBE5-7B08-489D-94F6-D7A56EDDECB9}.Debug|x86.Build.0 = Debug|Win32
+		{315FDBE5-7B08-489D-94F6-D7A56EDDECB9}.Release|x64.ActiveCfg = Release|x64
+		{315FDBE5-7B08-489D-94F6-D7A56EDDECB9}.Release|x64.Build.0 = Release|x64
+		{315FDBE5-7B08-489D-94F6-D7A56EDDECB9}.Release|x86.ActiveCfg = Release|Win32
+		{315FDBE5-7B08-489D-94F6-D7A56EDDECB9}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {8333B908-1DE5-48A8-A1FE-1FB09D0678FD}
+	EndGlobalSection
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		EDRiShared\EDRiShared.vcxitems*{5148ab9f-922a-48da-a335-dd6bddcef143}*SharedItemsImports = 4
+		EDRiShared\EDRiShared.vcxitems*{5bcd4aea-dad1-495a-bd75-50bf069fbee9}*SharedItemsImports = 9
+	EndGlobalSection
+EndGlobal

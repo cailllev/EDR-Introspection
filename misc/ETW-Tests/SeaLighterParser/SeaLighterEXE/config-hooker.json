@@ -1,0 +1,12 @@
+{
+  "session_properties": {
+    "session_name": "Sealighter-Trace",
+    "output_format": "event_log"
+  },
+  "user_traces": [
+    {
+      "trace_name": "Hooks",
+      "provider_name": "{72248411-7166-4feb-a386-34d8f35bb637}"
+    }
+  ]
+}

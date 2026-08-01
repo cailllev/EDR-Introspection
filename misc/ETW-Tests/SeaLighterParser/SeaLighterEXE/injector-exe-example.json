@@ -1,0 +1,23 @@
+{
+  "session_properties": {
+    "session_name": "Sealighter-Trace",
+    "output_format": "stdout",
+    "buffering_timout_seconds": 10
+  },
+  "user_traces": [
+    {
+      "trace_name": "ProcTrace01",
+      "provider_name": "Microsoft-Antimalware-Engine",
+      "filters": {
+        "all_of": {
+          "process_id_is": 2020,
+          "property_is": {
+            "name": "TargetPID",
+            "value": 11236,
+            "type": "UINT32"
+          }
+        }
+      }
+    }
+  ]
+}

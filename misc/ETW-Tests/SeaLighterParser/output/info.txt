@@ -1,0 +1,7 @@
+[+] 2025-08-20 11:49:31.855 > Injector started with PID 12160
+[+] 2025-08-20 11:49:31.887 > New process started with PID 1304
+[+] 2025-08-20 11:49:32.896 > Memory allocated at address 000001D9375C0000
+[+] 2025-08-20 11:49:32.898 > Shellcode written to address 000001D9375C0000
+[+] 2025-08-20 11:49:32.898 > Memory protection changed to PAGE_EXECUTE_READ
+[+] 2025-08-20 11:49:32.900 > Remote thread created successfully
+

