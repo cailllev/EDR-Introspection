@@ -12,4 +12,10 @@ enum Action {
     STOP_INJECTION
 };
 
-bool InjectDll(int, const std::string&, bool, Action, HANDLE, bool);
+enum Execution {
+	CREATE_REMOTE_THREAD,
+    HIJACK_THREAD,
+    QUEUE_USER_APC2
+};
+
+bool InjectDll(int, const std::string&, bool, Action, HANDLE, Execution);

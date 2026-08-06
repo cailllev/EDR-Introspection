@@ -155,6 +155,10 @@ static void* ResolveFunction(void* ptr) {
     return static_cast<void*>(b);
 }
 
+#ifndef QUEUE_USER_APC_SPECIAL_USER_APC
+#define QUEUE_USER_APC_SPECIAL_USER_APC 0x00000001
+#endif
+
 // GuidedHacking stuff
 enum class BOOTSTRAP_STATE : ULONG_PTR
 {
@@ -424,7 +428,7 @@ typedef NTSTATUS(NTAPI* pfnNtQueryInformationThread)(
 
 // Check if a thread is safe to hijack
 BOOL CheckIfThreadSafeToHijack(HANDLE hThread, bool debug) {
-    return true; // yolo, todo: this should search for a fitting thread
+    //return true; // yolo, todo: this should search for a fitting thread
 
     HMODULE hNtdll = GetModuleHandleW(L"ntdll.dll");
     if (!hNtdll) return FALSE;
@@ -655,6 +659,7 @@ bool HandleCleanup(HANDLE hProcess, std::vector<LPVOID> remoteAddrs, LPVOID loca
 * 5. set the RIP to the new setup shellcode and resume the thread
 * 6. read back the memory to check if the execution was successful
 */
+// https://github.com/guidedhacking/GuidedHacking-Injector/blob/e3c6eab04943b10881a7039dc27ff964c79fcb64/GH%20Injector%20Library/Thread%20Hijacking.cpp#L10
 bool HijackThread(HANDLE hProcess, LPVOID pRemoteRoutine, LPVOID pRemoteArgs, bool debug) {
 
     if (debug)
@@ -854,17 +859,27 @@ bool HijackThread(HANDLE hProcess, LPVOID pRemoteRoutine, LPVOID pRemoteArgs, bo
 
     // Output and cleanup 
     switch (bootstrapVerify.State) {
+
     case BOOTSTRAP_STATE::Pending:
-        printf("[-] Hooker: BootstrapShellcode still not called? NANI?!\n"); // cleanup
+        printf("[-] Hooker: BootstrapShellcode still not called, thread has not yet been executed with the injected shellcode, abort and cleanup\n"); // cleanup
         if (pRemoteRoutine) VirtualFreeEx(hProcess, pRemoteRoutine, 0, MEM_RELEASE);
         if (pRemoteBootstrapShellcode) VirtualFreeEx(hProcess, pRemoteBootstrapShellcode, 0, MEM_RELEASE);
+        threadContext.Rip = OldRIP;
+        if (SetThreadContext(hThread, &threadContext)) {
+            ResumeThread(hThread);
+        }
+        else {
+			printf("[!] Hooker: SetThreadContext failed to restore original RIP: %lu\n", GetLastError());
+        }
         return false;
+
     case BOOTSTRAP_STATE::Executing:
         printf("[+] Hooker: BootstrapShellcode still executing... Let him cook, but I'm out of here.\n"); // no cleanup
         return true;
+
     case BOOTSTRAP_STATE::Finished:
         if (bootstrapVerify.Ret == 0) {
-            printf("[+] Hooker: BootstrapShellcode and supplied routine successfully executed and returned 0. Big Success!\n");
+            printf("[+] Hooker: BootstrapShellcode and supplied routine successfully executed and returned to old state. Big Success!\n");
         }
         else {
             printf("[!] Hooker: BootstrapShellcode and supplied routine successfully executed but returned %lu with LastError %lu\n", bootstrapVerify.Ret, bootstrapVerify.LastWin32Error);
@@ -873,6 +888,7 @@ bool HijackThread(HANDLE hProcess, LPVOID pRemoteRoutine, LPVOID pRemoteArgs, bo
         if (pRemoteRoutine) VirtualFreeEx(hProcess, pRemoteRoutine, 0, MEM_RELEASE);
         if (pRemoteBootstrapShellcode) VirtualFreeEx(hProcess, pRemoteBootstrapShellcode, 0, MEM_RELEASE);
         return true;
+        
     default:
         return false;
     }
@@ -911,7 +927,7 @@ bool HijackThreadTest(HANDLE hProcess, bool debug) {
 
 // write dll to remote proc and handle patching from external -> minimal remote shellcode to setup
 // https://github.com/Paxai/DLLium/blob/de79b82bbeb011778b03022b21c0a9d623f3d813/DLLium/injection.cpp#L161
-bool ExternalInject(HANDLE hProcess, const std::string& dllPath, bool debug, bool hijackThread) {
+bool ExternalInject(HANDLE hProcess, const std::string& dllPath, bool debug, Execution exec) {
 
     std::ifstream File(dllPath, std::ios::binary | std::ios::ate);
     if (File.fail()) { printf("[!] Hooker: Open file failed: %lu\n", GetLastError()); return false; }
@@ -1084,38 +1100,35 @@ bool ExternalInject(HANDLE hProcess, const std::string& dllPath, bool debug, boo
     if (debug)
         printf("[+] Hooker: Wrote dll loading shellcode to remote process memory at %p, size: %zu bytes\n", pRemoteDllLoadingShellcode, dllLoadingShellcodeSize);
 
-    bool ret = false;
+    // execution method
+    if (exec == CREATE_REMOTE_THREAD) {
+		HANDLE hThread = CreateRemoteThread(hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE)pRemoteDllLoadingShellcode, pRemoteDllLoadingData, 0, nullptr);
+		if (!hThread) {
+			printf("[!] Hooker: CreateRemoteThread failed: %lu\n", GetLastError());
+			return HandleCleanup(hProcess, { pRemoteDllLoadingData, pRemoteDllLoadingShellcode }, nullptr);
+		}
 
-    // https://github.com/guidedhacking/GuidedHacking-Injector/blob/e3c6eab04943b10881a7039dc27ff964c79fcb64/GH%20Injector%20Library/Thread%20Hijacking.cpp#L10
-    if (hijackThread) {
+        printf("[+] Hooker: Remote thread created and executed shellcode, wait for return...\n");
+        WaitForSingleObject(hThread, INFINITE);
+        CloseHandle(hThread);
+
+		HandleCleanup(hProcess, { pRemoteDllLoadingData, pRemoteDllLoadingShellcode, pRemoteTargetBase }, pLocalImage);
+		return true;
+	}
+
+    else if (exec == HIJACK_THREAD) {
         bool ret = HijackThread(hProcess, pRemoteDllLoadingShellcode, pRemoteDllLoadingData, debug);
         HandleCleanup(hProcess, { pRemoteDllLoadingData, pRemoteTargetBase }, pLocalImage);
         return ret;
     }
-    else {
-        
-        // and run it
-        HANDLE hThread = CreateRemoteThread(hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE)pRemoteDllLoadingShellcode, pRemoteDllLoadingData, 0, nullptr);
-        if (!hThread) {
-            printf("[!] Hooker: CreateRemoteThread failed: %lu\n", GetLastError());
-            return HandleCleanup(hProcess, { pRemoteDllLoadingData, pRemoteDllLoadingShellcode }, nullptr);
-        }
 
-        printf("[+] Hooker: Remote thread created\n");
-
-        if (hThread) {
-            WaitForSingleObject(hThread, INFINITE);
-            CloseHandle(hThread);
-        }
-        CloseHandle(hProcess);
-
-        if (debug)
-            printf("[+] Hooker: DllMain successfully exited\n");
-
-        ret = true;
+    else if (exec == QUEUE_USER_APC2) {
+		QUEUE_USER_APC_FLAGS flags = (QUEUE_USER_APC_FLAGS)QUEUE_USER_APC_SPECIAL_USER_APC;
+		HANDLE hThread = GetFullAccessThread(GetProcessId(hProcess), debug);
+        DWORD dwResult = QueueUserAPC2((PAPCFUNC)pRemoteDllLoadingShellcode, hThread, (ULONG_PTR)pRemoteDllLoadingData, flags);
     }
 
-    return ret;
+    return false;
 }
 
 // write dll to remote proc and call self-reflective loader (handles image address, system function resol., mem alloc, header copy, section copy, IAT resolution, relocations, and call DllMain)
@@ -1206,7 +1219,7 @@ bool ReflectiveInject(HANDLE hProcess, const std::string& dllPath, bool debug) {
 }
 
 // Preparation for DLL injection
-bool InjectDll(int pid, const std::string& dllPath, bool debug, Action a, HANDLE hProcess, bool hijackThread) {
+bool InjectDll(int pid, const std::string& dllPath, bool debug, Action a, HANDLE hProcess, Execution exec) {
     if (hProcess == NULL) {
         if (debug) {
             printf("[+] Hooker: Opening pid=%i\n", pid);
@@ -1248,7 +1261,7 @@ bool InjectDll(int pid, const std::string& dllPath, bool debug, Action a, HANDLE
         if (debug) {
             std::cout << "[*] Hooker: Using External injection\n";
         }
-        return ExternalInject(hProcess, dllPath, debug, hijackThread);
+        return ExternalInject(hProcess, dllPath, debug, exec);
     case REFLECTIVE_INJECTION:
         if (debug) {
             std::cout << "[*] Hooker: Using Reflective injection\n";
