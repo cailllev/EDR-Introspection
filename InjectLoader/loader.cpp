@@ -242,7 +242,7 @@ int main(int argc, char* argv[]) {
     std::string exePath = argv[0];
     std::string exeName = exePath.substr(exePath.find_last_of("\\/") + 1);
     std::string usage = "";
-    usage += "[*] InjectLoader: Usage: " + exeName + " <DLL Path> <PID> <(L)oadLibrary | (E)xternal | (R)eflective | (S)top> <Debug> <FindProcHandle> <HijackThread>\n";
+    usage += "[*] InjectLoader: Usage: " + exeName + " <DLL Path> <PID> <(L)oadLibrary | (E)xternal | (R)eflective | (S)top> <Debug> <FindProcHandle> <(C)reateRemoteThread | (H)ijackThread | (Q)ueueUserAPC>\n";
     usage += "[*] InjectLoader: Usage: " + exeName + " C:\\path\\to\\dll.dll 1234 LoadLibrary 1 1 1\n";
     usage += "[*] InjectLoader: Limitations against EDRs: \n";
     usage += "      - all inject techniques VM_Operation and VM_Write (usually denied via KernelCallbacks)\n";
@@ -274,20 +274,27 @@ int main(int argc, char* argv[]) {
     }
 
     Action a;
+    std::string actionStr;
     if (_stricmp(argv[3], "S") == 0 || _stricmp(argv[3], "stop") == 0) {
-        a = STOP_INJECTION;
+        std::cout << "[*] InjectLoader: Unloading DLL in " << pid << "\n";
+        std::string dllName = dllPath.substr(dllPath.find_last_of("\\/") + 1);
+        return Unload(pid, dllName);
     }
     else if (_stricmp(argv[3], "R") == 0 || _stricmp(argv[3], "reflective") == 0) {
         a = REFLECTIVE_INJECTION;
+		actionStr = "Reflective injection";
     }
     else if (_stricmp(argv[3], "E") == 0 || _stricmp(argv[3], "external") == 0) {
         a = EXTERNAL_INJECTION;
+		actionStr = "External injection";
     }
     else if (_stricmp(argv[3], "H") == 0 || _stricmp(argv[3], "hijackthreadtest") == 0) {
         a = HIJACK_THREAD_TEST;
+		actionStr = "HijackThread test";
     }
     else {
         a = LOADLIBRARY_INJECTION;
+		actionStr = "LoadLibrary injection";
     }
 
     if (pid <= 0) {
@@ -318,34 +325,21 @@ int main(int argc, char* argv[]) {
 		}
     }
 
-	bool hijackThread = false;
-    std::string hijackStr = "creating remote thread";
-	if (argv[6][0] == '1') {
-		std::cout << "[*] InjectLoader: Thread hijacking enabled.\n";
-		hijackThread = true;
-        hijackStr = "hijacking thread";
+    Execution e;
+    std::string execStr;
+    if (_stricmp(argv[6], "H") == 0 || _stricmp(argv[6], "hijackthread") == 0) {
+		e = HIJACK_THREAD;
+		execStr = "HijackThread";
+	}
+	else if (_stricmp(argv[6], "Q") == 0 || _stricmp(argv[6], "queueuserapc") == 0) {
+		e = QUEUE_USER_APC2;
+		execStr = "QueueUserAPC2";
+	}
+	else {
+		e = CREATE_REMOTE_THREAD;
+		execStr = "CreateRemoteThread";
 	}
 
-    std::string actionStr;
-    switch (a) {
-    case LOADLIBRARY_INJECTION:
-        actionStr = "LoadLibrary"; // todo also support thread hijack
-        break;
-    case EXTERNAL_INJECTION:
-        actionStr = "External and Create Remote Thread";
-        break;
-    case REFLECTIVE_INJECTION:
-		actionStr = "Reflective"; // todo also support thread hijack
-        break;
-    case HIJACK_THREAD_TEST:
-        actionStr = "HijackThread test";
-        break;
-    case STOP_INJECTION:
-        std::cout << "[*] InjectLoader: Unloading DLL in " << pid << "\n";
-        std::string dllName = dllPath.substr(dllPath.find_last_of("\\/") + 1);
-        return Unload(pid, dllName);
-    }
-
-    std::cout << "[*] InjectLoader: Attempting to inject DLL '" << dllPath << "' into PID=" << pid << " using " << actionStr << " injection method and " << hijackStr << ".\n";
-    return InjectDll(pid, dllPath, debug, a, hProc, hijackThread);
+    std::cout << "[*] InjectLoader: Attempting to inject DLL '" << dllPath << "' into PID=" << pid << " using " << actionStr << " injection method and " << execStr << " execution.\n";
+    return InjectDll(pid, dllPath, debug, a, hProc, e);
 }
