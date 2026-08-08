@@ -2,7 +2,9 @@
 
 #include <string>
 
+#ifndef HANDLE
 typedef void* HANDLE;
+#endif
 
 enum Action {
     LOADLIBRARY_INJECTION,
