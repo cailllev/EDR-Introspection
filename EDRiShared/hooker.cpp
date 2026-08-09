@@ -260,7 +260,7 @@ std::string GetProcAccessDetails(DWORD granted) {
     return access + ", not including: " + no_access;
 }
 
-void PrintGrantedAccess(HANDLE h, int pid) {
+void PrintGrantedAccess(HANDLE h, DWORD pid) {
     PUBLIC_OBJECT_BASIC_INFORMATION obi = {};
     ULONG ret = 0;
     NTSTATUS st = NtQueryObject(h, ObjectBasicInformation, &obi, sizeof(obi), &ret);
@@ -298,24 +298,8 @@ bool LoadLibraryInject(HANDLE hProcess, const std::string& dllPath, bool debug) 
         std::cout << "[*] Hooker: Wrote '" << dllPath << "' to target process memory\n";
     }
 
-    // Get LoadLibraryA address
-    HMODULE lpModuleHandle = GetModuleHandleA("kernel32.dll");
-    if (!lpModuleHandle) {
-        std::cerr << "[!] Hooker: GetModuleHandle failed\n";
-        VirtualFreeEx(hProcess, dllPathAddr, 0, MEM_RELEASE);
-        CloseHandle(hProcess);
-        return false;
-    }
-    LPVOID loadLibAddr = (LPVOID)GetProcAddress(lpModuleHandle, "LoadLibraryA");
-    if (!loadLibAddr) {
-        std::cerr << "[!] Hooker: GetProcAddress of LoadLibrary failed\n";
-        VirtualFreeEx(hProcess, dllPathAddr, 0, MEM_RELEASE);
-        CloseHandle(hProcess);
-        return false;
-    }
-
     // Create remote thread (start the DLL)
-    HANDLE hThread = CreateRemoteThread(hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE)loadLibAddr, dllPathAddr, 0, nullptr);
+    HANDLE hThread = CreateRemoteThread(hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE)LoadLibraryA, dllPathAddr, 0, nullptr);
     DWORD err = GetLastError();
     if (!hThread || err != 0) {
         std::cerr << "[!] Hooker: CreateRemoteThread failed. Error: " << err << "\n";
@@ -327,7 +311,7 @@ bool LoadLibraryInject(HANDLE hProcess, const std::string& dllPath, bool debug) 
         std::cout << "[*] Hooker: Created remote thread in target process\n";
     }
 
-    DWORD wait = WaitForSingleObject(hThread, 10000); // 5 sec timeout for hooks to init
+    DWORD wait = WaitForSingleObject(hThread, 5000); // 5 sec timeout for hooks to init
     if (wait == WAIT_TIMEOUT) {
         std::cerr << "[!] Hooker: remote thread did not finish within timeout\n";
         return false;
@@ -1089,13 +1073,13 @@ bool ExternalInject(HANDLE hProcess, const std::string& dllPath, bool debug, Exe
     LPVOID pRemoteDllLoadingShellcode = VirtualAllocEx(hProcess, nullptr, dllLoadingShellcodeSize, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE); // needs Execute
     if (!pRemoteDllLoadingShellcode) {
         printf("[!] Hooker: VirtualAllocEx failed for remote dll loading shellcode: %lu\n", GetLastError());
-        return HandleCleanup(hProcess, { pRemoteDllLoadingData }, nullptr);
+        return HandleCleanup(hProcess, { pRemoteTargetBase, pRemoteDllLoadingData }, nullptr);
     }
 
     // write the DLLium (DLL loading shellcode) to remote proc
     if (!WriteProcessMemory(hProcess, pRemoteDllLoadingShellcode, pLocalDllLoadingShellcodeStart, dllLoadingShellcodeSize, nullptr)) {
         printf("[!] Hooker WriteProcessMemory failed for remote dll loading shellcode: %lu\n", GetLastError());
-        return HandleCleanup(hProcess, { pRemoteDllLoadingData, pRemoteDllLoadingShellcode }, nullptr);
+        return HandleCleanup(hProcess, { pRemoteTargetBase, pRemoteDllLoadingData, pRemoteDllLoadingShellcode }, nullptr);
     }
     if (debug)
         printf("[+] Hooker: Wrote dll loading shellcode to remote process memory at %p, size: %zu bytes\n", pRemoteDllLoadingShellcode, dllLoadingShellcodeSize);
@@ -1105,27 +1089,42 @@ bool ExternalInject(HANDLE hProcess, const std::string& dllPath, bool debug, Exe
 		HANDLE hThread = CreateRemoteThread(hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE)pRemoteDllLoadingShellcode, pRemoteDllLoadingData, 0, nullptr);
 		if (!hThread) {
 			printf("[!] Hooker: CreateRemoteThread failed: %lu\n", GetLastError());
-			return HandleCleanup(hProcess, { pRemoteDllLoadingData, pRemoteDllLoadingShellcode }, nullptr);
+			return HandleCleanup(hProcess, { pRemoteTargetBase, pRemoteDllLoadingData, pRemoteDllLoadingShellcode }, nullptr);
 		}
 
         printf("[+] Hooker: Remote thread created and executed shellcode, wait for return...\n");
         WaitForSingleObject(hThread, INFINITE);
         CloseHandle(hThread);
 
-		HandleCleanup(hProcess, { pRemoteDllLoadingData, pRemoteDllLoadingShellcode, pRemoteTargetBase }, pLocalImage);
+        // do not clean up the remote DLL pTargetBase, it is loaded and possibly active in the target process
+		HandleCleanup(hProcess, { pRemoteDllLoadingData, pRemoteDllLoadingShellcode }, pLocalImage);
 		return true;
 	}
 
     else if (exec == HIJACK_THREAD) {
         bool ret = HijackThread(hProcess, pRemoteDllLoadingShellcode, pRemoteDllLoadingData, debug);
-        HandleCleanup(hProcess, { pRemoteDllLoadingData, pRemoteTargetBase }, pLocalImage);
-        return ret;
+		if (!ret) {
+			printf("[!] Hooker: HijackThread failed\n");
+			return HandleCleanup(hProcess, { pRemoteTargetBase, pRemoteDllLoadingData, pRemoteDllLoadingShellcode }, pLocalImage);
+		}
+
+        // do not clean up the remote DLL pTargetBase, it is loaded and possibly active in the target process
+        HandleCleanup(hProcess, { pRemoteDllLoadingData, pRemoteDllLoadingShellcode }, pLocalImage);
+        return true;
     }
 
     else if (exec == QUEUE_USER_APC2) {
 		QUEUE_USER_APC_FLAGS flags = (QUEUE_USER_APC_FLAGS)QUEUE_USER_APC_SPECIAL_USER_APC;
 		HANDLE hThread = GetFullAccessThread(GetProcessId(hProcess), debug);
-        DWORD dwResult = QueueUserAPC2((PAPCFUNC)pRemoteDllLoadingShellcode, hThread, (ULONG_PTR)pRemoteDllLoadingData, flags);
+        bool ret = QueueUserAPC2((PAPCFUNC)pRemoteDllLoadingShellcode, hThread, (ULONG_PTR)pRemoteDllLoadingData, flags);
+		if (!ret) {
+			printf("[!] Hooker: QueueUserAPC2 failed\n");
+			return HandleCleanup(hProcess, { pRemoteTargetBase, pRemoteDllLoadingData, pRemoteDllLoadingShellcode }, pLocalImage);
+		}
+
+        // do not clean up the remote DLL pTargetBase, it is loaded and possibly active in the target process
+        HandleCleanup(hProcess, { pRemoteDllLoadingData, pRemoteDllLoadingShellcode }, pLocalImage);
+        return true;
     }
 
     return false;
@@ -1219,7 +1218,7 @@ bool ReflectiveInject(HANDLE hProcess, const std::string& dllPath, bool debug) {
 }
 
 // Preparation for DLL injection
-bool InjectDll(int pid, const std::string& dllPath, bool debug, Action a, HANDLE hProcess, Execution exec) {
+bool InjectDll(DWORD pid, const std::string& dllPath, bool debug, Action a, HANDLE hProcess, Execution exec) {
     if (hProcess == NULL) {
         if (debug) {
             printf("[+] Hooker: Opening pid=%i\n", pid);

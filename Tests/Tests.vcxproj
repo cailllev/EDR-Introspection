@@ -141,6 +141,7 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\EDRiShared\hooker.cpp" />
     <ClCompile Include="..\InjectLoader\utils.cpp" />
     <ClCompile Include="test_loader.cpp" />
     <ClCompile Include="test_main.cpp" />

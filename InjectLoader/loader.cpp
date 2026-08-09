@@ -47,7 +47,7 @@ int main(int argc, char* argv[]) {
     if (_stricmp(argv[3], "S") == 0 || _stricmp(argv[3], "stop") == 0) {
         std::cout << "[*] InjectLoader: Unloading DLL in " << pid << "\n";
         std::string dllName = dllPath.substr(dllPath.find_last_of("\\/") + 1);
-        return Unload(pid, dllName);
+        return UnloadViaThread(pid, dllName);
     }
     else if (_stricmp(argv[3], "R") == 0 || _stricmp(argv[3], "reflective") == 0) {
         a = REFLECTIVE_INJECTION;

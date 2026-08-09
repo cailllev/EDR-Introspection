@@ -7,5 +7,8 @@
 #include <Windows.h>
 #include <string>
 
-int Unload(int, const std::string);
-HANDLE findProcHandle(int, BOOL);
+HMODULE GetRemoteManualMappedModule(HANDLE, const std::string&);
+HMODULE GetRemoteModuleHandle(DWORD, const std::wstring&);
+BOOL UnloadViaThread(DWORD, const std::string);
+BOOL UnloadViaEvent(DWORD, const std::string);
+HANDLE findProcHandle(DWORD, BOOL);

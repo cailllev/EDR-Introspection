@@ -20,4 +20,4 @@ enum Execution {
     QUEUE_USER_APC2
 };
 
-bool InjectDll(int, const std::string&, bool, Action, HANDLE, Execution);
+bool InjectDll(DWORD, const std::string&, bool, Action, HANDLE, Execution);

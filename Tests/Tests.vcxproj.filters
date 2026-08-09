@@ -24,5 +24,8 @@
     <ClCompile Include="..\InjectLoader\utils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\EDRiShared\hooker.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
