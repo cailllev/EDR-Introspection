@@ -330,7 +330,7 @@ bool LoadLibraryInject(HANDLE hProcess, const std::string& dllPath, bool debug) 
         return false;
     }
 
-    std::cout << "[*] Hooker: remote routine succeeded, module handle: " << std::hex << hModule << "\n";
+    std::cout << "[*] Hooker: Remote routine succeeded, module handle: " << std::hex << hModule << "\n";
     return true;
 }
 
@@ -916,7 +916,7 @@ bool ExternalInject(HANDLE hProcess, const std::string& dllPath, bool debug, Exe
     std::ifstream File(dllPath, std::ios::binary | std::ios::ate);
     if (File.fail()) { printf("[!] Hooker: Open file failed: %lu\n", GetLastError()); return false; }
     if (debug)
-        printf("[+] Hooker: Injecting DLL '%s' into remote process\n", dllPath.c_str());
+        printf("[+] Hooker: Opened %s\n", dllPath.c_str());
 
     std::streampos fileSize = File.tellg();
     if (fileSize < 0x1000) { File.close(); return false; }
@@ -1136,7 +1136,7 @@ bool ReflectiveInject(HANDLE hProcess, const std::string& dllPath, bool debug) {
     HANDLE file_handle = CreateFileA(dllPath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (file_handle == INVALID_HANDLE_VALUE) { printf("[!] Hooker: CreateFile failed: %lu\n", GetLastError()); return false; }
     if (debug)
-        printf("[+] Hooker: Injecting DLL '%s' into remote process\n", dllPath.c_str());
+        printf("[+] Hooker: Opened %s\n", dllPath.c_str());
 
     // get file size
     LARGE_INTEGER fileSize = { 0 };
