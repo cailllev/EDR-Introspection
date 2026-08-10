@@ -27,5 +27,13 @@
     <ClCompile Include="..\EDRiShared\hooker.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="test_utils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="test_utils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

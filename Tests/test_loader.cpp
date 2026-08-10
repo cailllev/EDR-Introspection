@@ -1,10 +1,16 @@
+#include <krabs.hpp>
 #include "catch.hpp"
+
 #include <Windows.h>
 #include <tlhelp32.h>
 #include <string>
 
 #include "../InjectLoader/utils.h"
 #include "../EDRiShared/hooker.h"
+#include "test_utils.h"
+
+const std::string testDll = "TestDLL.dll";
+
 
 static DWORD GetProcessIdByName(const std::wstring& processName) {
     DWORD pid = 0;
@@ -61,6 +67,18 @@ BOOL StopTestProcess(PROCESS_INFORMATION& pi) {
 	return TRUE;
 }
 
+void CheckStartupEvents(DWORD pid) {
+	REQUIRE(capturedEvents.size() == 1);
+	REQUIRE(capturedEvents[0].message.find("Hooks installed") != std::string::npos);
+	REQUIRE(capturedEvents[0].targetpid == pid);
+}
+
+void CheckTerminationEvents(DWORD pid) {
+	REQUIRE(capturedEvents.size() == 2);
+	REQUIRE(capturedEvents[1].message.find("NtTerminateProcess") != std::string::npos);
+	REQUIRE(capturedEvents[1].targetpid == pid);
+}
+
 TEST_CASE("findProcHandle - Process Handle Table Query", "[utils][handles]") {
 
     SECTION("Returns NULL when no matching handle exists in local process") {
@@ -94,42 +112,52 @@ TEST_CASE("InjectDll - DLL Injection Verification", "[loader][inject]") {
 	PROCESS_INFORMATION pi = { 0 };
 
     bool debug = true;
-	const char* testDllPath = "C:\\Windows\\System32\\version.dll";
 
+    
 	SECTION("Successfully injects a DLL into the current process with LoadLibrary and CreateRemoteThread") {
         // 0. Start test process
         StartTestProcess(L"C:\\Windows\\System32\\notepad.exe", pi, pid, hProcess);
 
-		// 1. Inject a standard Windows DLL into the current process
-		bool injected = InjectDll(pid, testDllPath, debug, LOADLIBRARY_INJECTION, NULL, CREATE_REMOTE_THREAD);
+		// 1. Inject the test DLL into the current process
+		bool injected = InjectDll(pid, testDll, debug, LOADLIBRARY_INJECTION, NULL, CREATE_REMOTE_THREAD);
 		REQUIRE(injected == true);
 
         Sleep(2000); // the loading is threaded
 
 		// 2. Verify it is loaded using native Win32 API
-		HMODULE hLoaded = GetRemoteModuleHandle(pid, L"version.dll");
+		HMODULE hLoaded = GetRemoteModuleHandle(pid, testDll);
 		REQUIRE(hLoaded != NULL);
+		// and verify that the ETW event was captured
+		CheckStartupEvents(pid);
 
 		// 3. Stop test process
 		StopTestProcess(pi);
+        Sleep(1000);
+		// and verify that the NtTerminateProcess hook was triggered and captured
+        CheckTerminationEvents(pid);
 	}
 
     SECTION("Successfully injects a DLL into the current process with External Injection and CreateRemoteThread") {
 		// 0. Start test process
         StartTestProcess(L"C:\\Windows\\System32\\notepad.exe", pi, pid, hProcess);
 
-        // 1. Inject a standard Windows DLL into the current process
-        bool injected = InjectDll(pid, testDllPath, debug, EXTERNAL_INJECTION, NULL, CREATE_REMOTE_THREAD);
+        // 1. Inject the test DLL into the current process
+        bool injected = InjectDll(pid, testDll, debug, EXTERNAL_INJECTION, NULL, CREATE_REMOTE_THREAD);
         REQUIRE(injected == true);
 
         Sleep(2000); // safety wait (might not be needed)
 
         // 2. Verify it is loaded
-        HMODULE hLoaded = GetRemoteManualMappedModule(hProcess, "version.dll");
+        HMODULE hLoaded = GetRemoteManualMappedModule(hProcess, testDll);
         REQUIRE(hLoaded != NULL);
+        // and verify that the ETW event was captured
+        CheckStartupEvents(pid);
 
-		// 3. Stop test process
-		StopTestProcess(pi);
+        // 3. Stop test process
+        StopTestProcess(pi);
+        Sleep(1000);
+        // and verify that the NtTerminateProcess hook was triggered and captured
+        CheckTerminationEvents(pid);
     }
 
 	SECTION("Successfully injects a DLL into the current process with External Injection and HijackThread") {
@@ -137,18 +165,23 @@ TEST_CASE("InjectDll - DLL Injection Verification", "[loader][inject]") {
         StartTestProcess(L"C:\\Windows\\System32\\notepad.exe", pi, pid, hProcess);
 
 		// 1. Inject a standard Windows DLL into the current process
-		bool injected = InjectDll(pid, testDllPath, debug, EXTERNAL_INJECTION, NULL, HIJACK_THREAD);
+		bool injected = InjectDll(pid, testDll, debug, EXTERNAL_INJECTION, NULL, HIJACK_THREAD);
 		REQUIRE(injected == true);
 
         // thread hijacking != immidiate execution, must find a way to trigger execution or poll until successful
         Sleep(2000); // todo
 
 		// 2. Verify it is loaded using snapshot enumeration
-		HMODULE hLoaded = GetRemoteModuleHandle(pid, L"version.dll");
+		HMODULE hLoaded = GetRemoteModuleHandle(pid, testDll);
 		REQUIRE(hLoaded != NULL);
+        // and verify that the ETW event was captured
+        CheckStartupEvents(pid);
 
         // 3. Stop test process
         StopTestProcess(pi);
+        Sleep(1000);
+        // and verify that the NtTerminateProcess hook was triggered and captured
+        CheckTerminationEvents(pid);
 	}
 }
 
