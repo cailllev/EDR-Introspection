@@ -8,7 +8,7 @@
 #include <string>
 
 HMODULE GetRemoteManualMappedModule(HANDLE, const std::string&);
-HMODULE GetRemoteModuleHandle(DWORD, const std::wstring&);
+HMODULE GetRemoteModuleHandle(DWORD, const std::string&);
 BOOL UnloadViaThread(DWORD, const std::string);
 BOOL UnloadViaEvent(DWORD, const std::string);
 HANDLE findProcHandle(DWORD, BOOL);

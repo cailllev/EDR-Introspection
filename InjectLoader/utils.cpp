@@ -38,7 +38,9 @@ PFN_NtOpenEvent g_origNtOpenEvent = nullptr;
 PFN_RtlNtStatusToDosError g_origRtlNtStatusToDosError = nullptr;
 
 // get loaded DLL via snapshot
-HMODULE GetRemoteModuleHandle(DWORD pid, const std::wstring& moduleName) {
+HMODULE GetRemoteModuleHandle(DWORD pid, const std::string& moduleName) {
+
+    std::wstring wModuleName(moduleName.begin(), moduleName.end());
     HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, pid);
     if (snap == INVALID_HANDLE_VALUE)
         return NULL;
@@ -48,7 +50,7 @@ HMODULE GetRemoteModuleHandle(DWORD pid, const std::wstring& moduleName) {
 
     if (Module32FirstW(snap, &me)) {
         do {
-            if (_wcsicmp(me.szModule, moduleName.c_str()) == 0) {
+            if (_wcsicmp(me.szModule, wModuleName.c_str()) == 0) {
                 CloseHandle(snap);
                 return me.hModule;  // remote addr 
             }
@@ -112,7 +114,7 @@ HMODULE GetRemoteManualMappedModule(HANDLE hProcess, const std::string& targetDl
 }
 
 BOOL UnloadViaThread(DWORD pid, std::string dllName) {
-	HMODULE hMod = GetRemoteModuleHandle(pid, std::wstring(dllName.begin(), dllName.end()));
+	HMODULE hMod = GetRemoteModuleHandle(pid, dllName);
 	if (hMod == NULL) {
 		std::wcerr << L"[!] Utils: Failed to get remote module handle.\n";
 		return FALSE;
