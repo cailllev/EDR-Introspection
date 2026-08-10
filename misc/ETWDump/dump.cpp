@@ -1,4 +1,4 @@
-#include <krabs.hpp> // must be before windows.h???
+#include <krabs.hpp> // must be before windows.h
 
 #include <windows.h>
 #include <sddl.h>
