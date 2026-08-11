@@ -1217,8 +1217,27 @@ bool ReflectiveInject(HANDLE hProcess, const std::string& dllPath, bool debug) {
     return true;
 }
 
+std::string GetActionStr(Action a) {
+	switch (a) {
+	case LOADLIBRARY_INJECTION: return "LoadLibrary injection";
+	case EXTERNAL_INJECTION: return "External injection";
+	case REFLECTIVE_INJECTION: return "Reflective injection";
+	case HIJACK_THREAD_TEST: return "Hijack thread test";
+	default: return "Unknown action";
+	}
+}
+
+std::string GetExecutionStr(Execution exec) {
+	switch (exec) {
+	case CREATE_REMOTE_THREAD: return "CreateRemoteThread";
+	case HIJACK_THREAD: return "HijackThread";
+	case QUEUE_USER_APC2: return "QueueUserAPC2";
+	default: return "Unknown execution method";
+	}
+}
+
 // Preparation for DLL injection
-bool InjectDll(DWORD pid, const std::string& dllPath, bool debug, Action a, HANDLE hProcess, Execution exec) {
+bool InjectDll(DWORD pid, const std::string& dllPath, BOOL debug, Action a, HANDLE hProcess, Execution exec) {
     if (hProcess == NULL) {
         if (debug) {
             printf("[+] Hooker: Opening pid=%i\n", pid);
@@ -1252,24 +1271,12 @@ bool InjectDll(DWORD pid, const std::string& dllPath, bool debug, Action a, HAND
 
     switch (a) {
     case LOADLIBRARY_INJECTION:
-        if (debug) {
-            std::cout << "[*] Hooker: Using LoadLibrary injection\n";
-        }
         return LoadLibraryInject(hProcess, dllPath, debug);
     case EXTERNAL_INJECTION:
-        if (debug) {
-            std::cout << "[*] Hooker: Using External injection\n";
-        }
         return ExternalInject(hProcess, dllPath, debug, exec);
     case REFLECTIVE_INJECTION:
-        if (debug) {
-            std::cout << "[*] Hooker: Using Reflective injection\n";
-        }
         return ReflectiveInject(hProcess, dllPath, debug);
     case HIJACK_THREAD_TEST:
-        if (debug) {
-            std::cout << "[*] Hooker: Testing hijackThread()\n";
-        }
         return HijackThreadTest(hProcess, debug);
     default:
         std::cerr << "[!] Hooker: Unknown action\n";
