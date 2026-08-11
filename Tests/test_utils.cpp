@@ -1,18 +1,46 @@
 #include <krabs.hpp>
 
+#include <tlhelp32.h>
 #include <iostream>
-#include <vector>
 #include <thread>
+#include <chrono>
 
 #include "test_utils.h"
 
 
 static const std::wstring etwProvider = L"{72248411-7166-4feb-a386-34d8f35bb637}";
+static const std::wstring etwSessionName = L"CaptureETWMessagesTrace";
 std::unique_ptr<krabs::user_trace> g_trace;
 std::thread g_traceThread;
 
+uint64_t GetTimeNowNs() {
+	return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
+uint64_t timeStartNs = GetTimeNowNs();
+TestETWEvent g_lastEvent = {};
+HANDLE g_hEtwEvent = CreateEventA(NULL, FALSE, FALSE, NULL); // FALSE = auto-reset, FALSE = initially unsignaled
+
+// wait X ms for next ETW event and check if matches the expected values
+bool WaitForEtwEvent(DWORD timeoutMs, DWORD expectedTargetPid, std::string expectedMessage) {
+    DWORD res = WaitForSingleObject(g_hEtwEvent, timeoutMs);
+    return res == WAIT_OBJECT_0 && 
+        g_lastEvent.targetPid == expectedTargetPid && 
+		g_lastEvent.NsSinceEpoch >= timeStartNs &&
+		g_lastEvent.message.find(expectedMessage) != std::string::npos;
+}
+
 // test dll emits etw messages when loaded, check it
 void StartETWCapture() {
+
+	// stop old sessions from previous runs, if any
+    try {
+        krabs::user_trace old_trace(etwSessionName);
+        old_trace.stop();
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[!] Utils: ETW Trace Exception when stopping old trace: " << e.what() << "\n";
+    }
 
     krabs::guid provider_guid(etwProvider);
     krabs::provider<> provider(provider_guid);
@@ -48,15 +76,17 @@ void StartETWCapture() {
                 ptr_field += sizeof(uint64_t);
             }
 
-            capturedEvents.push_back({ std::string(msg, msg_len), ns_since_epoch, targetpid });
+            g_lastEvent = { std::string(msg, msg_len), ns_since_epoch, targetpid };
+            SetEvent(g_hEtwEvent); // wake up the test thread
+			std::cout << "[*] Utils: ETW Event at " << ns_since_epoch << " in " << targetpid << ": " << msg << "\n";
         }
         catch (const std::exception& e) {
-            std::cerr << "Error: " << e.what() << "\n";
+            std::cerr << "[!] Utils: ETW Trace Exception: " << e.what() << "\n";
         }
     });
 
     // Trace session
-    g_trace = std::make_unique<krabs::user_trace>(L"CaptureETWMessagesTrace");
+    g_trace = std::make_unique<krabs::user_trace>(etwSessionName);
     g_trace->enable(provider);
 
     // Launch in background thread so it doesn't block tests
@@ -64,9 +94,11 @@ void StartETWCapture() {
         try {
             g_trace->start();
         }
-        catch (...) {}
+        catch (const std::exception& e) {
+            std::cerr << "[!] Utils: ETW Trace Exception when starting: " << e.what() << "\n";
+        }
     });
-    std::cout << "[*] ETW trace started...\n";
+    std::cout << "[*] Utils: ETW trace started...\n";
 }
 
 void StopETWCapture() {
@@ -76,5 +108,26 @@ void StopETWCapture() {
             g_traceThread.join();
         }
     }
-    std::cout << "[*] ETW trace stopped...\n";
+    std::cout << "[*] Utils: ETW trace stopped...\n";
+}
+
+DWORD GetProcessIdByName(const std::wstring& processName) {
+    DWORD pid = 0;
+    HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (snap == INVALID_HANDLE_VALUE) return 0;
+
+    PROCESSENTRY32W pe;
+    pe.dwSize = sizeof(pe);
+
+    if (Process32FirstW(snap, &pe)) {
+        do {
+            if (_wcsicmp(pe.szExeFile, processName.c_str()) == 0) {
+                pid = pe.th32ProcessID;
+                break;
+            }
+        } while (Process32NextW(snap, &pe));
+    }
+
+    CloseHandle(snap);
+    return pid;
 }

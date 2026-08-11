@@ -2,82 +2,92 @@
 #include "catch.hpp"
 
 #include <Windows.h>
-#include <tlhelp32.h>
 #include <string>
+#include <iostream>
+#include <vector>
 
 #include "../InjectLoader/utils.h"
 #include "../EDRiShared/hooker.h"
 #include "test_utils.h"
 
+
 const std::string testDll = "TestDLL.dll";
+const std::string testExe = "TestEXE.exe";
 
+class TestProcess {
+private:
+    std::string szExplorerPid = std::to_string(GetProcessIdByName(L"explorer.exe"));
+    HANDLE hTriggerEvent = CreateEventA(
+        NULL, FALSE, FALSE, ("Local\\TestEXE_OpenProc_" + szExplorerPid).c_str()
+    );
 
-static DWORD GetProcessIdByName(const std::wstring& processName) {
+public:
+    PROCESS_INFORMATION pi{ 0 };
     DWORD pid = 0;
-    HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-    if (snap == INVALID_HANDLE_VALUE) return 0;
+    HANDLE hProcess = NULL;
 
-    PROCESSENTRY32W pe;
-    pe.dwSize = sizeof(pe);
+    TestProcess() = default;
 
-    if (Process32FirstW(snap, &pe)) {
-        do {
-            if (_wcsicmp(pe.szExeFile, processName.c_str()) == 0) {
-                pid = pe.th32ProcessID;
-                break;
-            }
-        } while (Process32NextW(snap, &pe));
+	// starts the TestEXE process and returns true if exe is running, false if failed
+    bool Start() {
+        if (!hTriggerEvent) {
+            std::cerr << "[!] TestProcess: Failed to create event signals. Error: " << GetLastError() << "\n";
+            return false;
+        }
+
+        STARTUPINFOA si = { 0 };
+        si.cb = sizeof(si);
+		std::string szCmdLine = testExe + " " + szExplorerPid;
+        char* cmdLine = const_cast<char*>(szCmdLine.c_str());
+
+        BOOL result = CreateProcessA(
+            NULL,            // Application name
+            cmdLine,         // Command line (use standard application search order, Tests.exe and TestEXE.exe in same dir)
+            NULL,            // Process security attributes
+            NULL,            // Thread security attributes
+            FALSE,           // Inherit handles
+            0,               // Creation flags
+            NULL,            // Environment
+            NULL,            // Current directory
+            &si,             // Startup info
+            &pi              // Process information (out)
+        );
+        if (result == FALSE) {
+            std::cerr << "[!] TestProcess: Failed to start test process. Error: " << GetLastError() << "\n";
+            return FALSE;
+        }
+
+        pid = pi.dwProcessId;
+        hProcess = pi.hProcess;
+        Sleep(500); // let the new process cook for a while
+
+        return TRUE;
     }
 
-    CloseHandle(snap);
-    return pid;
-}
+    // Signals TestEXE to run OpenProcess and waits for the _done event
+    bool TriggerAction(DWORD timeoutMs = 5000) {
+        if (!hTriggerEvent) return false;
+        SetEvent(hTriggerEvent);
+        return true;
+    }
 
-// starts a process for testing purposes and returns its PROCESS_INFORMATION, PID, and handle
-void StartTestProcess(const std::wstring& exePath, PROCESS_INFORMATION& pi, DWORD& pid, HANDLE& hProcess) {
-	STARTUPINFOW si = { 0 };
-	si.cb = sizeof(si);
-	BOOL result = CreateProcessW(
-		exePath.c_str(), // Application name
-		NULL,            // Command line
-		NULL,            // Process security attributes
-		NULL,            // Thread security attributes
-		FALSE,           // Inherit handles
-		0,               // Creation flags
-		NULL,            // Environment
-		NULL,            // Current directory
-		&si,             // Startup info
-		&pi              // Process information (out)
-	);
-    REQUIRE(result == TRUE);
+    // RAII Destructor: Automatically terminates process on scope exit or REQUIRE failure
+    ~TestProcess() {
+        if (hProcess) {
+            if (!TerminateProcess(hProcess, 0)) {
+                std::cerr << "[!] TestProcess: Failed to stop test process. Error: " << GetLastError() << "\n";
+            }
+            CloseHandle(hProcess);
+        }
+        if (pi.hThread) {
+            CloseHandle(pi.hThread);
+        }
+    }
 
-    pid = pi.dwProcessId;
-	hProcess = pi.hProcess;
-}
-
-// stops a test process
-BOOL StopTestProcess(PROCESS_INFORMATION& pi) {
-	if (pi.hProcess) {
-		TerminateProcess(pi.hProcess, 0);
-		CloseHandle(pi.hProcess);
-	}
-	if (pi.hThread) {
-		CloseHandle(pi.hThread);
-	}
-	return TRUE;
-}
-
-void CheckStartupEvents(DWORD pid) {
-	REQUIRE(capturedEvents.size() == 1);
-	REQUIRE(capturedEvents[0].message.find("Hooks installed") != std::string::npos);
-	REQUIRE(capturedEvents[0].targetpid == pid);
-}
-
-void CheckTerminationEvents(DWORD pid) {
-	REQUIRE(capturedEvents.size() == 2);
-	REQUIRE(capturedEvents[1].message.find("NtTerminateProcess") != std::string::npos);
-	REQUIRE(capturedEvents[1].targetpid == pid);
-}
+    // Prevent accidental copying
+    TestProcess(const TestProcess&) = delete;
+    TestProcess& operator=(const TestProcess&) = delete;
+};
 
 TEST_CASE("findProcHandle - Process Handle Table Query", "[utils][handles]") {
 
@@ -105,84 +115,60 @@ TEST_CASE("findProcHandle - Process Handle Table Query", "[utils][handles]") {
     }
 }
 
+enum DllLoadedVerification {
+    RemoteModuleHandle,
+	RemoteManualMappedModule
+ };
+
+void TestDllInjection(Action injectionType, Execution execType, DllLoadedVerification verificationType, BOOL debug) {
+	std::string injTypeStr = GetActionStr(injectionType);
+	std::string execTypeStr = GetExecutionStr(execType);
+
+    g_lastEvent = { "", 0, 0 };
+    ResetEvent(g_hEtwEvent);
+
+	SECTION("Successfully injects a DLL with " + injTypeStr + " and " + execTypeStr) {
+		// start test process
+		TestProcess p;
+		REQUIRE(p.Start());
+
+		// inject the test DLL into the current process
+		bool injected = InjectDll(p.pid, testDll, debug, injectionType, NULL, execType);
+		Sleep(200); // wait for prints
+		REQUIRE(injected == true);
+
+		// verify that the startup event is caught
+		WaitForEtwEvent(3000, p.pid, "Hooks installed");
+
+		// then verify also that the DLL it is loaded
+        switch (verificationType) {
+        case RemoteModuleHandle: {
+            HMODULE hLoaded = GetRemoteModuleHandle(p.pid, testDll);
+            REQUIRE(hLoaded != NULL);
+            break;
+        }
+        case RemoteManualMappedModule: {
+            HMODULE hLoaded = GetRemoteManualMappedModule(p.hProcess, testDll);
+            REQUIRE(hLoaded != NULL);
+            break;
+        }
+        default:
+            std::cerr << "[!] TestDllInjection: Unknown verification type.\n";
+			REQUIRE(FALSE); // Force test failure for unknown verification type
+            break;
+        }
+
+		// send the OpenProcess signal and verify that the NtOpenProcess hook was triggered and captured
+		p.TriggerAction();
+        WaitForEtwEvent(3000, p.pid, "NtOpenProcess");
+	}
+}
+
 TEST_CASE("InjectDll - DLL Injection Verification", "[loader][inject]") {
-
-    DWORD pid = 0;
-	HANDLE hProcess = NULL;
-	PROCESS_INFORMATION pi = { 0 };
-
-    bool debug = true;
-
-    
-	SECTION("Successfully injects a DLL into the current process with LoadLibrary and CreateRemoteThread") {
-        // 0. Start test process
-        StartTestProcess(L"C:\\Windows\\System32\\notepad.exe", pi, pid, hProcess);
-
-		// 1. Inject the test DLL into the current process
-		bool injected = InjectDll(pid, testDll, debug, LOADLIBRARY_INJECTION, NULL, CREATE_REMOTE_THREAD);
-		REQUIRE(injected == true);
-
-        Sleep(2000); // the loading is threaded
-
-		// 2. Verify it is loaded using native Win32 API
-		HMODULE hLoaded = GetRemoteModuleHandle(pid, testDll);
-		REQUIRE(hLoaded != NULL);
-		// and verify that the ETW event was captured
-		CheckStartupEvents(pid);
-
-		// 3. Stop test process
-		StopTestProcess(pi);
-        Sleep(1000);
-		// and verify that the NtTerminateProcess hook was triggered and captured
-        CheckTerminationEvents(pid);
-	}
-
-    SECTION("Successfully injects a DLL into the current process with External Injection and CreateRemoteThread") {
-		// 0. Start test process
-        StartTestProcess(L"C:\\Windows\\System32\\notepad.exe", pi, pid, hProcess);
-
-        // 1. Inject the test DLL into the current process
-        bool injected = InjectDll(pid, testDll, debug, EXTERNAL_INJECTION, NULL, CREATE_REMOTE_THREAD);
-        REQUIRE(injected == true);
-
-        Sleep(2000); // safety wait (might not be needed)
-
-        // 2. Verify it is loaded
-        HMODULE hLoaded = GetRemoteManualMappedModule(hProcess, testDll);
-        REQUIRE(hLoaded != NULL);
-        // and verify that the ETW event was captured
-        CheckStartupEvents(pid);
-
-        // 3. Stop test process
-        StopTestProcess(pi);
-        Sleep(1000);
-        // and verify that the NtTerminateProcess hook was triggered and captured
-        CheckTerminationEvents(pid);
-    }
-
-	SECTION("Successfully injects a DLL into the current process with External Injection and HijackThread") {
-        // 0. Start test process
-        StartTestProcess(L"C:\\Windows\\System32\\notepad.exe", pi, pid, hProcess);
-
-		// 1. Inject a standard Windows DLL into the current process
-		bool injected = InjectDll(pid, testDll, debug, EXTERNAL_INJECTION, NULL, HIJACK_THREAD);
-		REQUIRE(injected == true);
-
-        // thread hijacking != immidiate execution, must find a way to trigger execution or poll until successful
-        Sleep(2000); // todo
-
-		// 2. Verify it is loaded using snapshot enumeration
-		HMODULE hLoaded = GetRemoteModuleHandle(pid, testDll);
-		REQUIRE(hLoaded != NULL);
-        // and verify that the ETW event was captured
-        CheckStartupEvents(pid);
-
-        // 3. Stop test process
-        StopTestProcess(pi);
-        Sleep(1000);
-        // and verify that the NtTerminateProcess hook was triggered and captured
-        CheckTerminationEvents(pid);
-	}
+    BOOL debug = TRUE;
+	TestDllInjection(LOADLIBRARY_INJECTION, CREATE_REMOTE_THREAD, RemoteModuleHandle, debug);
+	TestDllInjection(EXTERNAL_INJECTION, CREATE_REMOTE_THREAD, RemoteManualMappedModule, debug);
+	TestDllInjection(EXTERNAL_INJECTION, HIJACK_THREAD, RemoteManualMappedModule, debug);
 }
 
 TEST_CASE("Unload - DLL Unload Verification", "[loader][unload]") {
@@ -201,7 +187,7 @@ TEST_CASE("Unload - DLL Unload Verification", "[loader][unload]") {
 
         // 3. Call Unload()
         int result = UnloadViaThread(static_cast<int>(currentPid), testDllName);
-        REQUIRE(result == 0);
+        REQUIRE(result == TRUE);
 
         // 4. Verify the DLL is no longer mapped in memory
         HMODULE hCheckAfter = GetModuleHandleA(testDllName);

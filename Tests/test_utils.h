@@ -1,15 +1,18 @@
 #pragma once
 
 #include <string>
-#include <vector>
 
 struct TestETWEvent {
     std::string message;
-    uint64_t ns_since_epoch;
-    uint64_t targetpid;
+    uint64_t NsSinceEpoch;
+    uint64_t targetPid;
 };
 
-extern std::vector<TestETWEvent> capturedEvents;
+extern TestETWEvent g_lastEvent;
+extern HANDLE g_hEtwEvent;
 
 void StartETWCapture();
 void StopETWCapture();
+DWORD GetProcessIdByName(const std::wstring& processName);
+
+bool WaitForEtwEvent(DWORD timeoutMs, DWORD expectedTargetPid, std::string expectedMessage);
