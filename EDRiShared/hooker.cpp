@@ -914,7 +914,7 @@ bool HijackThreadTest(HANDLE hProcess, bool debug) {
 bool ExternalInject(HANDLE hProcess, const std::string& dllPath, bool debug, Execution exec) {
 
     std::ifstream File(dllPath, std::ios::binary | std::ios::ate);
-    if (File.fail()) { printf("[!] Hooker: Open file failed: %lu\n", GetLastError()); return false; }
+    if (File.fail()) { printf("[!] Hooker: Open file %s failed: %lu\n", dllPath.c_str(), GetLastError()); return false; }
     if (debug)
         printf("[+] Hooker: Opened %s\n", dllPath.c_str());
 

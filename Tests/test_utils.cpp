@@ -32,13 +32,27 @@ BOOL WaitForEtwEvent(DWORD timeoutMs, DWORD expectedTargetPid, std::string expec
 		return FALSE;
 	}
 
-	std::cout << "[+] Utils: Got ETW event: " << g_lastEvent.NsSinceEpoch << " in " << g_lastEvent.targetPid << ": " << g_lastEvent.message << "\n";
-
     REQUIRE(g_lastEvent.NsSinceEpoch >= timeStartNs);
 	REQUIRE(g_lastEvent.targetPid == expectedTargetPid);
 	REQUIRE(g_lastEvent.message == expectedMessage);
 
     return TRUE;
+}
+
+// gets the "\path\to\current\executable\directory\"
+std::string GetCurrentExePath() {
+	char buffer[MAX_PATH];
+	DWORD length = GetModuleFileNameA(NULL, buffer, MAX_PATH);
+	if (length == 0 || length == MAX_PATH) {
+		std::cerr << "[!] Utils: Failed to get current executable path. Error: " << GetLastError() << "\n";
+		return "";
+	}
+	std::string fullPath(buffer, length);
+	size_t lastSlash = fullPath.find_last_of("\\/");
+	if (lastSlash != std::string::npos) {
+		return fullPath.substr(0, lastSlash + 1); // include the slash
+	}
+	return "";
 }
 
 // test dll emits etw messages when loaded, check it
@@ -58,7 +72,6 @@ void StartETWCapture() {
 
     // Callback to dump all event fields
     g_provider->add_on_event_callback([](const EVENT_RECORD& record, const krabs::trace_context& ctx) {
-		std::cout << "[*] Utils: ETW Event " << record.EventHeader.EventDescriptor.Id << " received from : " << record.EventHeader.ProcessId << "\n";
 
         try {
             krabs::schema schema(record, ctx.schema_locator);
@@ -90,7 +103,7 @@ void StartETWCapture() {
 
             g_lastEvent = { std::string(msg, msg_len), ns_since_epoch, targetpid };
             SetEvent(g_hEtwEvent); // wake up the test thread
-			std::cout << "[*] Utils: ETW Event at " << ns_since_epoch << " in " << targetpid << ": " << msg << "\n";
+			std::cout << "[*] Utils: New ETW Event at " << ns_since_epoch << " in " << targetpid << ": " << msg << "\n";
         }
         catch (const std::exception& e) {
             std::cerr << "[!] Utils: ETW Trace Exception: " << e.what() << "\n";

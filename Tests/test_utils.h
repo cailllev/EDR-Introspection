@@ -16,3 +16,4 @@ void StopETWCapture();
 DWORD GetProcessIdByName(const std::wstring& processName);
 
 BOOL WaitForEtwEvent(DWORD timeoutMs, DWORD expectedTargetPid, std::string expectedMessage);
+std::string GetCurrentExePath();

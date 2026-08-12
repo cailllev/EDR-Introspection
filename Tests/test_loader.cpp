@@ -12,6 +12,7 @@
 
 
 const std::string testDll = "TestDLL.dll";
+const std::string testDllPath = GetCurrentExePath() + "TestDLL.dll"; // relative path to the DLL to inject
 const std::string testExe = "TestEXE.exe";
 
 class TestProcess {
@@ -147,7 +148,7 @@ void TestDllInjection(Action injectionType, Execution execType, DllLoadedVerific
         ResetEtwEvent();
 
 		// inject the test DLL into the current process
-		bool injected = InjectDll(p.pid, testDll, debug, injectionType, NULL, execType);
+		bool injected = InjectDll(p.pid, testDllPath, debug, injectionType, NULL, execType);
 		Sleep(100); // wait for prints
 		REQUIRE(injected == true);
 
