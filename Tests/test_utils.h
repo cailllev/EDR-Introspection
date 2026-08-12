@@ -15,4 +15,4 @@ void StartETWCapture();
 void StopETWCapture();
 DWORD GetProcessIdByName(const std::wstring& processName);
 
-bool WaitForEtwEvent(DWORD timeoutMs, DWORD expectedTargetPid, std::string expectedMessage);
+BOOL WaitForEtwEvent(DWORD timeoutMs, DWORD expectedTargetPid, std::string expectedMessage);

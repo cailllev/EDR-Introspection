@@ -11,12 +11,6 @@ struct ETWTestEventListener : Catch::TestEventListenerBase {
 		Sleep(2000); // give time for ETW to start capturing events
     }
 
-	// Called before each test section starts
-    void sectionStarting(Catch::SectionInfo const&) override {
-        g_lastEvent = { "", 0, 0 };
-		ResetEvent(g_hEtwEvent);
-    }
-
     // Called ONCE after all test cases finish
     void testRunEnded(Catch::TestRunStats const& testRunStats) override {
         StopETWCapture();

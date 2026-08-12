@@ -54,6 +54,7 @@ void emit_etw_msg_ns(const char msg[], UINT64 tpid, UINT64 ns) {
         TraceLoggingUInt64(ns, "ns_since_epoch"),
         TraceLoggingUInt64(tpid, "targetpid")
     );
+    std::cout << "[:] Test-Hook-DLL: " << ns << " - " << msg << "\n";
 };
 
 using FnNtOpenProcess = NTSTATUS(NTAPI*)(PHANDLE, ACCESS_MASK, POBJECT_ATTRIBUTES, CLIENT_ID*);

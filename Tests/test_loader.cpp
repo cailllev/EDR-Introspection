@@ -16,7 +16,8 @@ const std::string testExe = "TestEXE.exe";
 
 class TestProcess {
 private:
-    std::string szExplorerPid = std::to_string(GetProcessIdByName(L"explorer.exe"));
+    DWORD explorerPid = GetProcessIdByName(L"explorer.exe");
+	std::string szExplorerPid = std::to_string(explorerPid);
     HANDLE hTriggerEvent = CreateEventA(
         NULL, FALSE, FALSE, ("Local\\TestEXE_OpenProc_" + szExplorerPid).c_str()
     );
@@ -71,6 +72,10 @@ public:
         return true;
     }
 
+    DWORD GetExplorerPid() {
+        return explorerPid;
+    }
+
     // RAII Destructor: Automatically terminates process on scope exit or REQUIRE failure
     ~TestProcess() {
         if (hProcess) {
@@ -92,6 +97,8 @@ public:
 TEST_CASE("findProcHandle - Process Handle Table Query", "[utils][handles]") {
 
     SECTION("Returns NULL when no matching handle exists in local process") {
+		SUCCEED("Starting findProcHandle negative test..."); // forces the section header to print)
+
         // Querying for an invalid/non-existent PID returns NULL
         HANDLE hFound = findProcHandle(3, FALSE);
         REQUIRE(hFound == NULL);
@@ -120,25 +127,32 @@ enum DllLoadedVerification {
 	RemoteManualMappedModule
  };
 
+void ResetEtwEvent() {
+    g_lastEvent = { "", 0, 0 };
+    if (g_hEtwEvent) {
+        ResetEvent(g_hEtwEvent);
+    }
+}
+
 void TestDllInjection(Action injectionType, Execution execType, DllLoadedVerification verificationType, BOOL debug) {
 	std::string injTypeStr = GetActionStr(injectionType);
 	std::string execTypeStr = GetExecutionStr(execType);
 
-    g_lastEvent = { "", 0, 0 };
-    ResetEvent(g_hEtwEvent);
-
 	SECTION("Successfully injects a DLL with " + injTypeStr + " and " + execTypeStr) {
-		// start test process
+        SUCCEED("Starting injection test..."); // forces the section header to print
+
+		// start test process and reset event
 		TestProcess p;
 		REQUIRE(p.Start());
+        ResetEtwEvent();
 
 		// inject the test DLL into the current process
 		bool injected = InjectDll(p.pid, testDll, debug, injectionType, NULL, execType);
-		Sleep(200); // wait for prints
+		Sleep(100); // wait for prints
 		REQUIRE(injected == true);
 
 		// verify that the startup event is caught
-		WaitForEtwEvent(3000, p.pid, "Hooks installed");
+		REQUIRE(WaitForEtwEvent(3000, p.pid, "Hooks installed"));
 
 		// then verify also that the DLL it is loaded
         switch (verificationType) {
@@ -158,9 +172,13 @@ void TestDllInjection(Action injectionType, Execution execType, DllLoadedVerific
             break;
         }
 
+        Sleep(100); // wait a bit for reset
+        ResetEtwEvent();
+        Sleep(100); // wait a bit for reset
+
 		// send the OpenProcess signal and verify that the NtOpenProcess hook was triggered and captured
 		p.TriggerAction();
-        WaitForEtwEvent(3000, p.pid, "NtOpenProcess");
+        REQUIRE(WaitForEtwEvent(3000, p.GetExplorerPid(), "NtOpenProcess with access 0x1fffff"));
 	}
 }
 

@@ -1,4 +1,5 @@
 #include <krabs.hpp>
+#include "catch.hpp"
 
 #include <tlhelp32.h>
 #include <iostream>
@@ -12,6 +13,7 @@ static const std::wstring etwProvider = L"{72248411-7166-4feb-a386-34d8f35bb637}
 static const std::wstring etwSessionName = L"CaptureETWMessagesTrace";
 std::unique_ptr<krabs::user_trace> g_trace;
 std::thread g_traceThread;
+std::unique_ptr<krabs::provider<>> g_provider; // must also be global to avoid being destroyed before the trace is stopped
 
 uint64_t GetTimeNowNs() {
 	return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -22,12 +24,21 @@ TestETWEvent g_lastEvent = {};
 HANDLE g_hEtwEvent = CreateEventA(NULL, FALSE, FALSE, NULL); // FALSE = auto-reset, FALSE = initially unsignaled
 
 // wait X ms for next ETW event and check if matches the expected values
-bool WaitForEtwEvent(DWORD timeoutMs, DWORD expectedTargetPid, std::string expectedMessage) {
+BOOL WaitForEtwEvent(DWORD timeoutMs, DWORD expectedTargetPid, std::string expectedMessage) {
     DWORD res = WaitForSingleObject(g_hEtwEvent, timeoutMs);
-    return res == WAIT_OBJECT_0 && 
-        g_lastEvent.targetPid == expectedTargetPid && 
-		g_lastEvent.NsSinceEpoch >= timeStartNs &&
-		g_lastEvent.message.find(expectedMessage) != std::string::npos;
+	if (res != WAIT_OBJECT_0) {
+		std::cerr << "[!] Utils: WaitForEtwEvent timed out after " << timeoutMs << " ms\n";
+        FAIL("Timed out waiting for ETW event");
+		return FALSE;
+	}
+
+	std::cout << "[+] Utils: Got ETW event: " << g_lastEvent.NsSinceEpoch << " in " << g_lastEvent.targetPid << ": " << g_lastEvent.message << "\n";
+
+    REQUIRE(g_lastEvent.NsSinceEpoch >= timeStartNs);
+	REQUIRE(g_lastEvent.targetPid == expectedTargetPid);
+	REQUIRE(g_lastEvent.message == expectedMessage);
+
+    return TRUE;
 }
 
 // test dll emits etw messages when loaded, check it
@@ -43,10 +54,11 @@ void StartETWCapture() {
     }
 
     krabs::guid provider_guid(etwProvider);
-    krabs::provider<> provider(provider_guid);
+    g_provider = std::make_unique<krabs::provider<>>(provider_guid);
 
     // Callback to dump all event fields
-    provider.add_on_event_callback([](const EVENT_RECORD& record, const krabs::trace_context& ctx) {
+    g_provider->add_on_event_callback([](const EVENT_RECORD& record, const krabs::trace_context& ctx) {
+		std::cout << "[*] Utils: ETW Event " << record.EventHeader.EventDescriptor.Id << " received from : " << record.EventHeader.ProcessId << "\n";
 
         try {
             krabs::schema schema(record, ctx.schema_locator);
@@ -87,7 +99,7 @@ void StartETWCapture() {
 
     // Trace session
     g_trace = std::make_unique<krabs::user_trace>(etwSessionName);
-    g_trace->enable(provider);
+    g_trace->enable(*g_provider);
 
     // Launch in background thread so it doesn't block tests
     g_traceThread = std::thread([]() {
