@@ -60,7 +60,7 @@ see /attacks/
 ### Hooking the EDR
 *needs PPL (see KDU.exe) and kernel callbacks of WdFilter.sys removed (see EDRSandblast.exe -toggle_callback)*
 
-#### Tests
+#### Protection Tests
 | Test | Description                                                          | Access Rights default | Access Rights patched | PPL        | Callbacks | Result                                         |
 |------|----------------------------------------------------------------------|-----------------------|-----------------------|------------|-----------|------------------------------------------------|
 | 0    | OpenProcess(MsMpEng, PROCESS_ALL_ACCESS) without KDU                 | error, no access      | nA                    | nA         | enabled   | InjectLoader cannot open MsMpEng from usermode |
@@ -78,6 +78,7 @@ see /attacks/
 <img width="1484" height="744" alt="image" src="https://github.com/user-attachments/assets/cfb3d3ce-d582-4bf2-bc57-3ff321859055" />
 
 ## How To
+
 ### Run the Framework
 Depends on the EDR, harderning, etc. Generally, loading of vulnerable signed drivers and memory integrity (both in Device Security > Core Isolation) must be disabled for KDU and EDRSandblast to work.
 Without EDRSandblast (without disabling kernel callbacks) the hooks cannot be injected. Without KDU (without PPL) no ETW-TI can be consumed and no hooks can be injected.<br><br>
@@ -95,6 +96,14 @@ It is recomended to **make an exclusion** for the EDR-Introspection folder, and 
 # alternative: first just hook, then do attacks (the hooks persist until restart)
 .\helpers\KDU\kdu.exe -pse "$(pwd)\x64\Release\EDRi.exe --just-hook" -prv 54
 .\helpers\KDU\kdu.exe -pse "$(pwd)\x64\Release\EDRi.exe --edr-profile MDE --attack ProcInject_deconditioning -t -d" -prv 54
+```
+
+### Expand and test the Framework
+Currently the injector is tested with a simple TestEXE.exe and TestDLL.dll. 
+The DLL is injected into the EXE with various techniques and **Tests.exe** verifies everything worked as intended.
+```powershell
+# run as admin
+./x64/Release/Tests.exe -s
 ```
 
 ### Create own attack
