@@ -387,6 +387,10 @@ FodyWeavers.xsd
 !/x64/Release/Handler.exe
 !/x64/Release/ExternalHooker.exe
 !/x64/Release/InternalHooker.dll
+!/x64/Release/TestEXE.exe
+!/x64/Release/TestDLL.dll
+!/x64/Release/Tests.exe
+
 
 # pdb offsets
 helpers/EDRSandblast/offsets/
