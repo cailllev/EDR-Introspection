@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "../InjectLoader/utils.h"
-#include "../EDRiShared/hooker.h"
+#include "../InjectLoader/hooker.h"
 #include "test_utils.h"
 
 
@@ -39,7 +39,7 @@ public:
 
         STARTUPINFOA si = { 0 };
         si.cb = sizeof(si);
-		std::string szCmdLine = testExe + " " + szExplorerPid;
+		std::string szCmdLine = testExe + " " + szExplorerPid + " 1";
         char* cmdLine = const_cast<char*>(szCmdLine.c_str());
 
         BOOL result = CreateProcessA(

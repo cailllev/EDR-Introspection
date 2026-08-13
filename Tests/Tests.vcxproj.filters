@@ -24,10 +24,10 @@
     <ClCompile Include="..\InjectLoader\utils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\EDRiShared\hooker.cpp">
+    <ClCompile Include="test_utils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="test_utils.cpp">
+    <ClCompile Include="..\InjectLoader\hooker.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
