@@ -5,8 +5,6 @@ VisualStudioVersion = 18.7.11919.86
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EDRi", "EDRi\EDRi.vcxproj", "{5148AB9F-922A-48DA-A335-DD6BDDCEF143}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EDRiShared", "EDRiShared\EDRiShared.vcxitems", "{5BCD4AEA-DAD1-495A-BD75-50BF069FBEE9}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EDRReflectiveHooker", "EDRReflectiveHooker\EDRReflectiveHooker.vcxproj", "{BFBED5D2-CCF1-49B6-9786-C1BA89171616}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "InjectLoader", "InjectLoader\InjectLoader.vcxproj", "{377AA798-10D4-47EA-A2BA-406DECE3DCB5}"
@@ -99,10 +97,5 @@ Global
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8333B908-1DE5-48A8-A1FE-1FB09D0678FD}
-	EndGlobalSection
-	GlobalSection(SharedMSBuildProjectFiles) = preSolution
-		EDRiShared\EDRiShared.vcxitems*{377aa798-10d4-47ea-a2ba-406dece3dcb5}*SharedItemsImports = 4
-		EDRiShared\EDRiShared.vcxitems*{5148ab9f-922a-48da-a335-dd6bddcef143}*SharedItemsImports = 4
-		EDRiShared\EDRiShared.vcxitems*{5bcd4aea-dad1-495a-bd75-50bf069fbee9}*SharedItemsImports = 9
 	EndGlobalSection
 EndGlobal
