@@ -124,8 +124,8 @@ TEST_CASE("findProcHandle - Process Handle Table Query", "[utils][handles]") {
 }
 
 enum DllLoadedVerification {
-    RemoteModuleHandle,
-	RemoteManualMappedModule
+    TOOLHELP_MODULE_SNAPSHOT,
+	MEMORY_PARSING
  };
 
 void ResetEtwEvent() {
@@ -135,86 +135,105 @@ void ResetEtwEvent() {
     }
 }
 
-void TestDllInjection(Action injectionType, Execution execType, DllLoadedVerification verificationType, BOOL debug) {
-	std::string injTypeStr = GetActionStr(injectionType);
-	std::string execTypeStr = GetExecutionStr(execType);
+void TestDllInjection(Action injectionType, Execution execType, DllLoadedVerification verificationType, BOOL testUnloading, BOOL debug) {
 
-	SECTION("Successfully injects a DLL with " + injTypeStr + " and " + execTypeStr) {
-        SUCCEED("Starting injection test..."); // forces the section header to print
+	// start test process and reset event
+	TestProcess p;
+	REQUIRE(p.Start());
+    ResetEtwEvent();
 
-		// start test process and reset event
-		TestProcess p;
-		REQUIRE(p.Start());
-        ResetEtwEvent();
+	// inject the test DLL into the current process
+	bool injected = InjectDll(p.pid, testDllPath, debug, injectionType, NULL, execType);
+	Sleep(100); // wait for prints
+	REQUIRE(injected == true);
 
-		// inject the test DLL into the current process
-		bool injected = InjectDll(p.pid, testDllPath, debug, injectionType, NULL, execType);
-		Sleep(100); // wait for prints
-		REQUIRE(injected == true);
+	// verify that the startup event is caught
+	REQUIRE(WaitForEtwEvent(3000, p.pid, "Hooks installed"));
 
-		// verify that the startup event is caught
-		REQUIRE(WaitForEtwEvent(3000, p.pid, "Hooks installed"));
-
-		// then verify also that the DLL it is loaded
-        switch (verificationType) {
-        case RemoteModuleHandle: {
-            HMODULE hLoaded = GetRemoteModuleHandle(p.pid, testDll);
-            REQUIRE(hLoaded != NULL);
-            break;
-        }
-        case RemoteManualMappedModule: {
-            HMODULE hLoaded = GetRemoteManualMappedModule(p.hProcess, testDll);
-            REQUIRE(hLoaded != NULL);
-            break;
-        }
-        default:
-            std::cerr << "[!] TestDllInjection: Unknown verification type.\n";
-			REQUIRE(FALSE); // Force test failure for unknown verification type
-            break;
-        }
-
-        Sleep(100); // wait a bit for reset
-        ResetEtwEvent();
-        Sleep(100); // wait a bit for reset
-
-		// send the OpenProcess signal and verify that the NtOpenProcess hook was triggered and captured
-		p.TriggerAction();
-        REQUIRE(WaitForEtwEvent(3000, p.GetExplorerPid(), "NtOpenProcess with access 0x1fffff"));
-	}
-}
-
-TEST_CASE("InjectDll - DLL Injection Verification", "[loader][inject]") {
-    BOOL debug = TRUE;
-	TestDllInjection(LOADLIBRARY_INJECTION, CREATE_REMOTE_THREAD, RemoteModuleHandle, debug);
-	TestDllInjection(EXTERNAL_INJECTION, CREATE_REMOTE_THREAD, RemoteManualMappedModule, debug);
-	TestDllInjection(EXTERNAL_INJECTION, HIJACK_THREAD, RemoteManualMappedModule, debug);
-}
-
-TEST_CASE("Unload - DLL Unload Verification", "[loader][unload]") {
-    DWORD currentPid = GetCurrentProcessId();
-    const char* testDllName = "version.dll";
-
-    SECTION("Successfully unloads a DLL loaded via LoadLibrary") {
-        // 1. Load a standard Windows DLL into the current process
-        HMODULE hLoaded = LoadLibraryA(testDllName);
-        REQUIRE(hLoaded != NULL);
-
-        // 2. Verify it is loaded using native Win32 API
-        HMODULE hCheckBefore = GetModuleHandleA(testDllName);
-        REQUIRE(hCheckBefore != NULL);
-        REQUIRE(hCheckBefore == hLoaded);
-
-        // 3. Call Unload()
-        int result = UnloadViaThread(static_cast<int>(currentPid), testDllName);
-        REQUIRE(result == TRUE);
-
-        // 4. Verify the DLL is no longer mapped in memory
-        HMODULE hCheckAfter = GetModuleHandleA(testDllName);
-        REQUIRE(hCheckAfter == NULL);
+	// also verify also that the DLL it is loaded
+    switch (verificationType) {
+    case TOOLHELP_MODULE_SNAPSHOT:
+        REQUIRE(GetRemoteModuleHandle(p.pid, testDll) != NULL);
+        break;
+    case MEMORY_PARSING:
+        REQUIRE(GetRemoteManualMappedModule(p.hProcess, testDll) != NULL);
+        break;
+    default:
+        FAIL("Unknown verification type.\n");
+        break;
     }
 
-    SECTION("Successfully unloads a manually loaded DLL") {
-        // 1. Manually load a standard Windows DLL into the current process
-        //HMODULE hLoaded = InjectDll();
+    Sleep(100); // wait a bit for reset
+    ResetEtwEvent();
+    Sleep(100); // wait a bit for reset
+
+	// send the OpenProcess signal and verify that the NtOpenProcess hook was triggered and captured
+	p.TriggerAction();
+    REQUIRE(WaitForEtwEvent(3000, p.GetExplorerPid(), "NtOpenProcess with access 0x1fffff"));
+
+    if (testUnloading) {
+        if (injectionType != LOADLIBRARY_INJECTION) {
+            FAIL("Cannot unload a manually mapped DLL\n");
+        }
+        // else check if unloading works
+        REQUIRE(UnloadViaThread(p.pid, testDll));
+        // and if module is now unloaded
+        REQUIRE(GetRemoteModuleHandle(p.pid, testDll) == NULL);
     }
 }
+
+// main
+BOOL debug = TRUE;
+
+TEST_CASE("DLL Injection: LoadLibrary + CreateRemoteThread", "[loader][inject][loadlibrary]") {
+    TestDllInjection(LOADLIBRARY_INJECTION, CREATE_REMOTE_THREAD, TOOLHELP_MODULE_SNAPSHOT, true, TRUE);
+}
+
+TEST_CASE("DLL Injection: Reflective + CreateRemoteThread", "[loader][inject][reflective]") {
+    TestDllInjection(REFLECTIVE_INJECTION, CREATE_REMOTE_THREAD, MEMORY_PARSING, false, TRUE);
+}
+
+TEST_CASE("DLL Injection: Reflective + HijackThread", "[loader][inject][reflective][hijack]") {
+    TestDllInjection(REFLECTIVE_INJECTION, HIJACK_THREAD, MEMORY_PARSING, false, TRUE);
+}
+
+TEST_CASE("DLL Injection: External + CreateRemoteThread", "[loader][inject][external]") {
+    TestDllInjection(EXTERNAL_INJECTION, CREATE_REMOTE_THREAD, MEMORY_PARSING, false, TRUE);
+}
+
+TEST_CASE("DLL Injection: External + HijackThread", "[loader][inject][external][hijack]") {
+    TestDllInjection(EXTERNAL_INJECTION, HIJACK_THREAD, MEMORY_PARSING, false, TRUE);
+}
+
+/*
+void HijackThreadTest() {
+    BYTE msfvenomExecCalc[] = {
+        0xFC, 0x48, 0x83, 0xE4, 0xF0, 0xE8, 0xC0, 0x00, 0x00, 0x00, 0x41, 0x51, 0x41, 0x50, 0x52, 0x51, 0x56, 0x48, 0x31, 0xD2, 0x65, 0x48, 0x8B, 0x52, 0x60, 0x48, 0x8B, 0x52, 0x18,
+        0x48, 0x8B, 0x52, 0x20, 0x48, 0x8B, 0x72, 0x50, 0x48, 0x0F, 0xB7, 0x4A, 0x4A, 0x4D, 0x31, 0xC9, 0x48, 0x31, 0xC0, 0xAC, 0x3C, 0x61, 0x7C, 0x02, 0x2C, 0x20, 0x41, 0xC1, 0xC9,
+        0x0D, 0x41, 0x01, 0xC1, 0xE2, 0xED, 0x52, 0x41, 0x51, 0x48, 0x8B, 0x52, 0x20, 0x8B, 0x42, 0x3C, 0x48, 0x01, 0xD0, 0x8B, 0x80, 0x88, 0x00, 0x00, 0x00, 0x48, 0x85, 0xC0, 0x74,
+        0x67, 0x48, 0x01, 0xD0, 0x50, 0x8B, 0x48, 0x18, 0x44, 0x8B, 0x40, 0x20, 0x49, 0x01, 0xD0, 0xE3, 0x56, 0x48, 0xFF, 0xC9, 0x41, 0x8B, 0x34, 0x88, 0x48, 0x01, 0xD6, 0x4D, 0x31,
+        0xC9, 0x48, 0x31, 0xC0, 0xAC, 0x41, 0xC1, 0xC9, 0x0D, 0x41, 0x01, 0xC1, 0x38, 0xE0, 0x75, 0xF1, 0x4C, 0x03, 0x4C, 0x24, 0x08, 0x45, 0x39, 0xD1, 0x75, 0xD8, 0x58, 0x44, 0x8B,
+        0x40, 0x24, 0x49, 0x01, 0xD0, 0x66, 0x41, 0x8B, 0x0C, 0x48, 0x44, 0x8B, 0x40, 0x1C, 0x49, 0x01, 0xD0, 0x41, 0x8B, 0x04, 0x88, 0x48, 0x01, 0xD0, 0x41, 0x58, 0x41, 0x58, 0x5E,
+        0x59, 0x5A, 0x41, 0x58, 0x41, 0x59, 0x41, 0x5A, 0x48, 0x83, 0xEC, 0x20, 0x41, 0x52, 0xFF, 0xE0, 0x58, 0x41, 0x59, 0x5A, 0x48, 0x8B, 0x12, 0xE9, 0x57, 0xFF, 0xFF, 0xFF, 0x5D,
+        0x48, 0xBA, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x48, 0x8D, 0x8D, 0x01, 0x01, 0x00, 0x00, 0x41, 0xBA, 0x31, 0x8B, 0x6F, 0x87, 0xFF, 0xD5, 0xBB, 0xF0, 0xB5, 0xA2,
+        0x56, 0x41, 0xBA, 0xA6, 0x95, 0xBD, 0x9D, 0xFF, 0xD5, 0x48, 0x83, 0xC4, 0x28, 0x3C, 0x06, 0x7C, 0x0A, 0x80, 0xFB, 0xE0, 0x75, 0x05, 0xBB, 0x47, 0x13, 0x72, 0x6F, 0x6A, 0x00,
+        0x59, 0x41, 0x89, 0xDA, 0xFF, 0xD5, 0x63, 0x61, 0x6C, 0x63, 0x2E, 0x65, 0x78, 0x65, 0x00
+    }; // this bricks the remote process when returning, what the heli Rapid7?
+
+    LPVOID pRemoteRoutine = VirtualAllocEx(hProcess, nullptr, sizeof(msfvenomExecCalc), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+    if (pRemoteRoutine == NULL) {
+        return false;
+    }
+
+    if (!WriteProcessMemory(hProcess, pRemoteRoutine, msfvenomExecCalc, sizeof(msfvenomExecCalc), nullptr)) {
+        VirtualFreeEx(hProcess, pRemoteRoutine, 0, MEM_RELEASE); return false;
+    }
+
+    LPVOID pRemoteArg = VirtualAllocEx(hProcess, nullptr, sizeof(void*), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+    if (!pRemoteArg) {
+        VirtualFreeEx(hProcess, pRemoteRoutine, 0, MEM_RELEASE); return false;
+    }
+
+    return HijackThread(hProcess, pRemoteRoutine, pRemoteArg, debug);
+}
+*/
