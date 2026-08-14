@@ -188,21 +188,31 @@ BOOL debug = TRUE;
 TEST_CASE("DLL Injection: LoadLibrary + CreateRemoteThread", "[loader][inject][loadlibrary]") {
     TestDllInjection(LOADLIBRARY_INJECTION, CREATE_REMOTE_THREAD, TOOLHELP_MODULE_SNAPSHOT, true, TRUE);
 }
+TEST_CASE("DLL Injection: LoadLibrary + HijackThread", "[loader][inject][loadlibrary]") {
+    TestDllInjection(LOADLIBRARY_INJECTION, HIJACK_THREAD, TOOLHELP_MODULE_SNAPSHOT, true, TRUE);
+}
+TEST_CASE("DLL Injection: LoadLibrary + QueueUserAPC2", "[loader][inject][loadlibrary]") {
+    TestDllInjection(LOADLIBRARY_INJECTION, QUEUE_USER_APC2, TOOLHELP_MODULE_SNAPSHOT, true, TRUE);
+}
 
 TEST_CASE("DLL Injection: Reflective + CreateRemoteThread", "[loader][inject][reflective]") {
     TestDllInjection(REFLECTIVE_INJECTION, CREATE_REMOTE_THREAD, MEMORY_PARSING, false, TRUE);
 }
-
 TEST_CASE("DLL Injection: Reflective + HijackThread", "[loader][inject][reflective][hijack]") {
     TestDllInjection(REFLECTIVE_INJECTION, HIJACK_THREAD, MEMORY_PARSING, false, TRUE);
+}
+TEST_CASE("DLL Injection: Reflective + QueueUserAPC2", "[loader][inject][loadlibrary]") {
+    TestDllInjection(REFLECTIVE_INJECTION, QUEUE_USER_APC2, MEMORY_PARSING, true, TRUE);
 }
 
 TEST_CASE("DLL Injection: External + CreateRemoteThread", "[loader][inject][external]") {
     TestDllInjection(EXTERNAL_INJECTION, CREATE_REMOTE_THREAD, MEMORY_PARSING, false, TRUE);
 }
-
 TEST_CASE("DLL Injection: External + HijackThread", "[loader][inject][external][hijack]") {
     TestDllInjection(EXTERNAL_INJECTION, HIJACK_THREAD, MEMORY_PARSING, false, TRUE);
+}
+TEST_CASE("DLL Injection: External + QueueUserAPC2", "[loader][inject][loadlibrary]") {
+    TestDllInjection(EXTERNAL_INJECTION, QUEUE_USER_APC2, MEMORY_PARSING, true, TRUE);
 }
 
 /*
