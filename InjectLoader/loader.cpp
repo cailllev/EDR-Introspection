@@ -54,9 +54,6 @@ int main(int argc, char* argv[]) {
     else if (_stricmp(argv[3], "E") == 0 || _stricmp(argv[3], "external") == 0) {
         a = EXTERNAL_INJECTION;
     }
-    else if (_stricmp(argv[3], "H") == 0 || _stricmp(argv[3], "hijackthreadtest") == 0) {
-        a = HIJACK_THREAD_TEST;
-    }
     else {
         a = LOADLIBRARY_INJECTION;
     }
