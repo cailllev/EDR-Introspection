@@ -24,23 +24,26 @@ int WaitForOpenProcessTrigger(HANDLE hTrigger, DWORD targetPid) {
 
 // dedicated worker thread to be hijacked
 DWORD WINAPI HijackableWorkerThread(LPVOID lpParam) {
-    std::cout << "[+] TestEXE: Worker thread (tid=" << GetCurrentThreadId() << ") started...\n";
+    std::cout << "[+] TestEXE: Hijackable worker thread (tid=" << GetCurrentThreadId() << ") started...\n";
     while (true) { Sleep(1000); } // results in KWAIT_REASON::DelayExecution -> safe to hijack
+    return 0;
+}
+
+// dedicated worker thread designed to receive and execute queued APCs immediately
+DWORD WINAPI QueueableWorkerThread(LPVOID lpParam) {
+    std::cout << "[+] TestEXE: APC-queueable worker thread (tid=" << GetCurrentThreadId() << ") started...\n";
+    while (true) { SleepEx(INFINITE, TRUE); } // TRUE == aleartable wait state
     return 0;
 }
 
 int main(int argc, char* argv[]) {
     std::cout << "[+] TestEXE: Started with PID: " << GetCurrentProcessId() << std::endl;
 
+    HANDLE hHijackableWorker = NULL;
+    HANDLE hQueueableWorker = NULL;
     if (argc >= 3) {
-        HANDLE hWorker = CreateThread(NULL, 0, HijackableWorkerThread, NULL, 0, NULL);
-        if (hWorker) {
-            std::cout << "[+] TestEXE: Spawned a hijackable worker thread\n";
-            CloseHandle(hWorker);
-        }
-        else {
-            std::cerr << "[!] TestEXE: Failed to create worker thread. Error: " << GetLastError() << "\n";
-        }
+        hHijackableWorker = CreateThread(NULL, 0, HijackableWorkerThread, NULL, 0, NULL);
+        hQueueableWorker = CreateThread(NULL, 0, QueueableWorkerThread, NULL, 0, NULL);
     }
 
     if (argc >= 2) {
@@ -60,6 +63,9 @@ int main(int argc, char* argv[]) {
             }
         }
     }
+
+    if (hHijackableWorker) CloseHandle(hHijackableWorker);
+    if (hQueueableWorker) CloseHandle(hQueueableWorker);
 
     std::cout << "[+] TestEXE: Keep running until terminated...\n";
     while (true) { Sleep(1000); }
