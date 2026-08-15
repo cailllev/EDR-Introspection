@@ -135,7 +135,8 @@ void ResetEtwEvent() {
     }
 }
 
-void TestDllInjection(Action injectionType, Execution execType, DllLoadedVerification verificationType, BOOL testUnloading, BOOL debug) {
+void TestDllInjection(Injection injectionType, Executor execType, DllLoadedVerification verificationType, BOOL testUnloading, BOOL debug) {
+    SUCCEED("Starting TestEXE..."); // force print of test headers
 
 	// start test process and reset event
 	TestProcess p;
@@ -143,7 +144,7 @@ void TestDllInjection(Action injectionType, Execution execType, DllLoadedVerific
     ResetEtwEvent();
 
 	// inject the test DLL into the current process
-	bool injected = InjectDll(p.pid, testDllPath, debug, injectionType, NULL, execType);
+	bool injected = InjectDll(p.pid, testDllPath, NULL, injectionType, execType, debug);
 	Sleep(100); // wait for prints
 	REQUIRE(injected == true);
 
@@ -185,32 +186,32 @@ void TestDllInjection(Action injectionType, Execution execType, DllLoadedVerific
 // main
 BOOL debug = TRUE;
 
-TEST_CASE("DLL Injection: LoadLibrary + CreateRemoteThread", "[loader][inject][loadlibrary]") {
+TEST_CASE("DLL Injection: LoadLibrary + CreateRemoteThread", "[loader][loadlibrary][createremotethread]") {
     TestDllInjection(LOADLIBRARY_INJECTION, CREATE_REMOTE_THREAD, TOOLHELP_MODULE_SNAPSHOT, true, TRUE);
 }
-TEST_CASE("DLL Injection: LoadLibrary + HijackThread", "[loader][inject][loadlibrary]") {
+TEST_CASE("DLL Injection: LoadLibrary + HijackThread", "[loader][loadlibrary][hijackthread]") {
     TestDllInjection(LOADLIBRARY_INJECTION, HIJACK_THREAD, TOOLHELP_MODULE_SNAPSHOT, true, TRUE);
 }
-TEST_CASE("DLL Injection: LoadLibrary + QueueUserAPC2", "[loader][inject][loadlibrary]") {
+TEST_CASE("DLL Injection: LoadLibrary + QueueUserAPC2", "[loader][loadlibrary][queueuserapc2]") {
     TestDllInjection(LOADLIBRARY_INJECTION, QUEUE_USER_APC2, TOOLHELP_MODULE_SNAPSHOT, true, TRUE);
 }
 
-TEST_CASE("DLL Injection: Reflective + CreateRemoteThread", "[loader][inject][reflective]") {
+TEST_CASE("DLL Injection: Reflective + CreateRemoteThread", "[loader][reflective][createremotethread]") {
     TestDllInjection(REFLECTIVE_INJECTION, CREATE_REMOTE_THREAD, MEMORY_PARSING, false, TRUE);
 }
-TEST_CASE("DLL Injection: Reflective + HijackThread", "[loader][inject][reflective][hijack]") {
+TEST_CASE("DLL Injection: Reflective + HijackThread", "[loader][inject][reflective][hijackthread]") {
     TestDllInjection(REFLECTIVE_INJECTION, HIJACK_THREAD, MEMORY_PARSING, false, TRUE);
 }
-TEST_CASE("DLL Injection: Reflective + QueueUserAPC2", "[loader][inject][loadlibrary]") {
-    TestDllInjection(REFLECTIVE_INJECTION, QUEUE_USER_APC2, MEMORY_PARSING, true, TRUE);
+TEST_CASE("DLL Injection: Reflective + QueueUserAPC2", "[loader][reflective][queueuserapc2]") {
+    TestDllInjection(REFLECTIVE_INJECTION, QUEUE_USER_APC2, MEMORY_PARSING, false, TRUE);
 }
 
-TEST_CASE("DLL Injection: External + CreateRemoteThread", "[loader][inject][external]") {
-    TestDllInjection(EXTERNAL_INJECTION, CREATE_REMOTE_THREAD, MEMORY_PARSING, false, TRUE);
+TEST_CASE("DLL Injection: MappedAndShellcode + CreateRemoteThread", "[loader][hostmapped][createremotethread]") {
+    TestDllInjection(HOSTMAPPED_INJECTION, CREATE_REMOTE_THREAD, MEMORY_PARSING, false, TRUE);
 }
-TEST_CASE("DLL Injection: External + HijackThread", "[loader][inject][external][hijack]") {
-    TestDllInjection(EXTERNAL_INJECTION, HIJACK_THREAD, MEMORY_PARSING, false, TRUE);
+TEST_CASE("DLL Injection: MappedAndShellcode + HijackThread", "[loader][hostmapped][hijackthread]") {
+    TestDllInjection(HOSTMAPPED_INJECTION, HIJACK_THREAD, MEMORY_PARSING, false, TRUE);
 }
-TEST_CASE("DLL Injection: External + QueueUserAPC2", "[loader][inject][loadlibrary]") {
-    TestDllInjection(EXTERNAL_INJECTION, QUEUE_USER_APC2, MEMORY_PARSING, true, TRUE);
+TEST_CASE("DLL Injection: MappedAndShellcode + QueueUserAPC2", "[loader][hostmapped][queueuserapc2]") {
+    TestDllInjection(HOSTMAPPED_INJECTION, QUEUE_USER_APC2, MEMORY_PARSING, false, TRUE);
 }
