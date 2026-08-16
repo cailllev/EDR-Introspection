@@ -15,6 +15,8 @@ const std::string testDll = "TestDLL.dll";
 const std::string testDllPath = GetCurrentExePath() + "TestDLL.dll"; // relative path to the DLL to inject
 const std::string testExe = "TestEXE.exe";
 
+BOOL debug = TRUE;
+
 class TestProcess {
 private:
     DWORD explorerPid = GetProcessIdByName(L"explorer.exe");
@@ -31,7 +33,7 @@ public:
     TestProcess() = default;
 
 	// starts the TestEXE process and returns true if exe is running, false if failed
-    bool Start() {
+    bool Start(bool withSignal, bool withWorkers) {
         if (!hTriggerEvent) {
             std::cerr << "[!] TestProcess: Failed to create event signals. Error: " << GetLastError() << "\n";
             return false;
@@ -39,7 +41,9 @@ public:
 
         STARTUPINFOA si = { 0 };
         si.cb = sizeof(si);
-		std::string szCmdLine = testExe + " " + szExplorerPid + " 1";
+        std::string szCmdLine = testExe;
+        if (withSignal) szCmdLine += " " + szExplorerPid; else szCmdLine += " 0";
+        if (withWorkers) szCmdLine += " 1";
         char* cmdLine = const_cast<char*>(szCmdLine.c_str());
 
         BOOL result = CreateProcessA(
@@ -95,13 +99,13 @@ public:
     TestProcess& operator=(const TestProcess&) = delete;
 };
 
-TEST_CASE("findProcHandle - Process Handle Table Query", "[utils][handles]") {
+TEST_CASE("FindProcHandle: Query Process Handle Table", "[utils][handles]") {
 
     SECTION("Returns NULL when no matching handle exists in local process") {
-		SUCCEED("Starting findProcHandle negative test..."); // forces the section header to print)
+		SUCCEED("Starting FindProcHandle negative test..."); // forces the section header to print)
 
         // Querying for an invalid/non-existent PID returns NULL
-        HANDLE hFound = findProcHandle(3, FALSE);
+        HANDLE hFound = FindProcHandle(3, FALSE);
         REQUIRE(hFound == NULL);
     }
 
@@ -114,13 +118,37 @@ TEST_CASE("findProcHandle - Process Handle Table Query", "[utils][handles]") {
         HANDLE hExplorer = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, explorerPid);
         REQUIRE(hExplorer != NULL);
 
-        // 3. Verify findProcHandle locates the handle pointing to explorer.exe
-        HANDLE hFound = findProcHandle(static_cast<int>(explorerPid), FALSE);
+        // 3. Verify FindProcHandle locates the handle pointing to explorer.exe
+        HANDLE hFound = FindProcHandle(static_cast<int>(explorerPid), FALSE);
 		REQUIRE(hFound == hExplorer);
 
         // Clean up
         CloseHandle(hExplorer);
     }
+}
+
+TEST_CASE("GetThreadForExecutor: Get best thread for Hijacking", "[hooker][getthread]") {
+    SUCCEED("Starting TestEXE..."); // force print of test headers
+
+    // start test process
+    TestProcess p;
+    REQUIRE(p.Start(false, true));
+
+    OPTIMAL_THREAD optThread = GetThreadForExecutor(p.pid, HIJACK_THREAD, debug);
+    REQUIRE(optThread.hThread != NULL);
+    REQUIRE(optThread.score == 100);
+}
+
+TEST_CASE("GetThreadForExecutor: Get best thread for QueueAPC2", "[hooker][getthread]") {
+    SUCCEED("Starting TestEXE..."); // force print of test headers
+
+    // start test process
+    TestProcess p;
+    REQUIRE(p.Start(false, true));
+
+    OPTIMAL_THREAD optThread = GetThreadForExecutor(p.pid, QUEUE_USER_APC2, debug);
+    REQUIRE(optThread.hThread != NULL);
+    REQUIRE(optThread.score == 100); // this can vary, higher CPU frequency -> less time in busy work and thus smaller chance to be actually running
 }
 
 enum DllLoadedVerification {
@@ -140,7 +168,7 @@ void TestDllInjection(Injection injectionType, Executor execType, DllLoadedVerif
 
 	// start test process and reset event
 	TestProcess p;
-	REQUIRE(p.Start());
+	REQUIRE(p.Start(true, true));
     ResetEtwEvent();
 
 	// inject the test DLL into the current process
@@ -183,35 +211,32 @@ void TestDllInjection(Injection injectionType, Executor execType, DllLoadedVerif
     }
 }
 
-// main
-BOOL debug = TRUE;
-
-TEST_CASE("DLL Injection: LoadLibrary + CreateRemoteThread", "[loader][loadlibrary][createremotethread]") {
+TEST_CASE("DLL Injection: LoadLibrary + CreateRemoteThread", "[hooker][loadlibrary][createremotethread]") {
     TestDllInjection(LOADLIBRARY_INJECTION, CREATE_REMOTE_THREAD, TOOLHELP_MODULE_SNAPSHOT, true, TRUE);
 }
-TEST_CASE("DLL Injection: LoadLibrary + HijackThread", "[loader][loadlibrary][hijackthread]") {
+TEST_CASE("DLL Injection: LoadLibrary + HijackThread", "[hooker][loadlibrary][hijackthread]") {
     TestDllInjection(LOADLIBRARY_INJECTION, HIJACK_THREAD, TOOLHELP_MODULE_SNAPSHOT, true, TRUE);
 }
-TEST_CASE("DLL Injection: LoadLibrary + QueueUserAPC2", "[loader][loadlibrary][queueuserapc2]") {
+TEST_CASE("DLL Injection: LoadLibrary + QueueUserAPC2", "[hooker][loadlibrary][queueuserapc2]") {
     TestDllInjection(LOADLIBRARY_INJECTION, QUEUE_USER_APC2, TOOLHELP_MODULE_SNAPSHOT, true, TRUE);
 }
 
-TEST_CASE("DLL Injection: Reflective + CreateRemoteThread", "[loader][reflective][createremotethread]") {
+TEST_CASE("DLL Injection: Reflective + CreateRemoteThread", "[hooker][reflective][createremotethread]") {
     TestDllInjection(REFLECTIVE_INJECTION, CREATE_REMOTE_THREAD, MEMORY_PARSING, false, TRUE);
 }
-TEST_CASE("DLL Injection: Reflective + HijackThread", "[loader][inject][reflective][hijackthread]") {
+TEST_CASE("DLL Injection: Reflective + HijackThread", "[hooker][inject][reflective][hijackthread]") {
     TestDllInjection(REFLECTIVE_INJECTION, HIJACK_THREAD, MEMORY_PARSING, false, TRUE);
 }
-TEST_CASE("DLL Injection: Reflective + QueueUserAPC2", "[loader][reflective][queueuserapc2]") {
+TEST_CASE("DLL Injection: Reflective + QueueUserAPC2", "[hooker][reflective][queueuserapc2]") {
     TestDllInjection(REFLECTIVE_INJECTION, QUEUE_USER_APC2, MEMORY_PARSING, false, TRUE);
 }
 
-TEST_CASE("DLL Injection: MappedAndShellcode + CreateRemoteThread", "[loader][hostmapped][createremotethread]") {
+TEST_CASE("DLL Injection: HostMappedAndShellcode + CreateRemoteThread", "[hooker][hostmapped][createremotethread]") {
     TestDllInjection(HOSTMAPPED_INJECTION, CREATE_REMOTE_THREAD, MEMORY_PARSING, false, TRUE);
 }
-TEST_CASE("DLL Injection: MappedAndShellcode + HijackThread", "[loader][hostmapped][hijackthread]") {
+TEST_CASE("DLL Injection: HostMappedAndShellcode + HijackThread", "[hooker][hostmapped][hijackthread]") {
     TestDllInjection(HOSTMAPPED_INJECTION, HIJACK_THREAD, MEMORY_PARSING, false, TRUE);
 }
-TEST_CASE("DLL Injection: MappedAndShellcode + QueueUserAPC2", "[loader][hostmapped][queueuserapc2]") {
+TEST_CASE("DLL Injection: HostMappedAndShellcode + QueueUserAPC2", "[hooker][hostmapped][queueuserapc2]") {
     TestDllInjection(HOSTMAPPED_INJECTION, QUEUE_USER_APC2, MEMORY_PARSING, false, TRUE);
 }
