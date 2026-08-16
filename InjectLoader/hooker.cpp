@@ -852,6 +852,8 @@ bool HijackThread(HANDLE hProcess, HANDLE hThread, LPVOID pRemoteRoutine, LPVOID
 
     DWORD timer = (DWORD)GetTickCount64();
 
+    // todo, maybe print here that i am waiting?
+
     while (GetTickCount64() - timer < msMaxWaitForExecutor) {
         Sleep(msSleepBetweenPolls);
         if (!ReadProcessMemory(hProcess, pRemoteBootstrapShellcode, &bootstrapVerify, sizeof(bootstrapVerify), nullptr)) {
@@ -917,18 +919,27 @@ bool HandleCleanup(HANDLE hProcess, std::vector<LPVOID> remoteAddrs, LPVOID loca
 
 // execute lpStartAddress(lpParameter) with the given executor type in remote hProcess
 bool ExecuteDllLoader(HANDLE hProcess, Executor exec, LPVOID lpStartAddress, LPVOID lpParameter, bool debug) {
+
+    if (debug) {
+        printf("[+] Hooker: Will call %s on %p", GetExecutorTypeStr(exec).c_str(), lpStartAddress);
+        if (lpParameter != NULL) {
+            printf("with args at % p", lpParameter);
+        }
+        printf("\n");
+    }
     
     if (exec == CREATE_REMOTE_THREAD) {
+
         HANDLE hThread = CreateRemoteThread(hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE)lpStartAddress, lpParameter, 0, nullptr);
         if (hThread == NULL) {
-            printf("[!] Hooker: CreateRemoteThread with %p(%p) failed\n", lpStartAddress, lpParameter);
+            printf("[!] Hooker: %s on %p failed\n", GetExecutorTypeStr(exec).c_str(), lpStartAddress);
             return false;
         }
 
-        printf("[+] Hooker: Remote thread created and executed shellcode, wait for return...\n");
+        printf("[+] Hooker: Remote thread created on %p, waiting for return...\n", lpStartAddress);
         DWORD wait = WaitForSingleObject(hThread, msMaxWaitForExecutor);
         if (wait == WAIT_TIMEOUT) {
-            printf("[!] Hooker: remote thread did not finish within timeout\n");
+            printf("[!] Hooker: Remote thread did not finish within timeout\n");
             return false;
         }
 
@@ -936,15 +947,12 @@ bool ExecuteDllLoader(HANDLE hProcess, Executor exec, LPVOID lpStartAddress, LPV
         return true;
     }
 
-    // others need an existing, optimal thread -> get it
+    // non-CreateRemoteThread executors need an existing thread -> get the optimal one for the execType
     HANDLE hThread = (GetThreadForExecutor(GetProcessId(hProcess), QUEUE_USER_APC2, debug)).hThread;
     if (hThread == NULL) {
         printf("[!] Hooker: Failed to get any thread for %s\n", GetExecutorTypeStr(QUEUE_USER_APC2).c_str());
         return false;
     }
-
-    if (debug)
-        printf("[+] Hooker: Calling %s on %p(%p)\n", GetExecutorTypeStr(exec).c_str(), lpStartAddress, lpParameter);
     bool ret = false;
     
     if (exec == HIJACK_THREAD) {
@@ -953,12 +961,14 @@ bool ExecuteDllLoader(HANDLE hProcess, Executor exec, LPVOID lpStartAddress, LPV
     
     else if (exec == QUEUE_USER_APC2) {
         QUEUE_USER_APC_FLAGS flags = (QUEUE_USER_APC_FLAGS)QUEUE_USER_APC_SPECIAL_USER_APC;
+        if (debug)
+            printf("[+] Hooker: About to queue %p with QUEUE_USER_APC_SPECIAL_USER_APC\n", lpStartAddress);
         ret = QueueUserAPC2((PAPCFUNC)lpStartAddress, hThread, (ULONG_PTR)lpParameter, flags);
     }
 
     CloseHandle(hThread);
     if (!ret) {
-        printf("[!] Hooker: %s with %p(%p) failed\n", GetExecutorTypeStr(exec).c_str(), lpStartAddress, lpParameter);
+        printf("[!] Hooker: %s on %p failed\n", GetExecutorTypeStr(exec).c_str(), lpStartAddress);
         return false;
     }
 
@@ -1184,6 +1194,8 @@ bool HostMappedAndShellcodeLoaderInject(HANDLE hProcess, const std::string& dllP
         printf("[!] Hooker: Executor %s failed to execute in remote process %i\n", GetExecutorTypeStr(exec).c_str(), GetProcessId(hProcess));
         return HandleCleanup(hProcess, { pRemoteTargetBase, pRemoteDllLoadingData, pRemoteDllLoadingShellcode }, NULL);
     }
+
+    // todo, maybe print here that i am waiting?
     
     // get result of shellcode loader
     uintptr_t timer = GetTickCount64();
@@ -1233,7 +1245,7 @@ bool ReflectiveSelfLoaderInject(HANDLE hProcess, const std::string& dllPath, Exe
     HANDLE fileHandle = CreateFileA(dllPath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (fileHandle == INVALID_HANDLE_VALUE) { printf("[!] Hooker: CreateFile failed: %lu\n", GetLastError()); return false; }
     if (debug)
-        printf("[+] Hooker: Opened %s\n", dllPath.c_str());
+        printf("[+] Hooker: Opened '%s'\n", dllPath.c_str());
 
     // get file size
     LARGE_INTEGER liFileSize = { 0 };
