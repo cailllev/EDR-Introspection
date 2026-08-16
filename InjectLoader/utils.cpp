@@ -177,7 +177,7 @@ BOOL UnloadViaEvent(DWORD pid, std::string dllName) { // or just use a stopReque
     return TRUE;
 }
 
-HANDLE findProcHandle(DWORD pid, BOOL debug) {
+HANDLE FindProcHandle(DWORD pid, BOOL debug) {
     HMODULE hNtdll = GetModuleHandleW(L"ntdll.dll");
     if (hNtdll == 0) {
         printf("[!] InjectLoader: Failed to get handle to ntdll.dll\n");

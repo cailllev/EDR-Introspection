@@ -78,7 +78,7 @@ int main(int argc, char* argv[]) {
     HANDLE hProc = NULL;
     if (argv[5][0] == '1') {
         std::cout << "[*] InjectLoader: Process handle already opened, searching for it...\n";
-        hProc = findProcHandle(pid, debug);
+        hProc = FindProcHandle(pid, debug);
 		if (hProc == NULL) {
 			std::cerr << "[!] InjectLoader: Failed to find process handle for PID " << pid << ".\n";
 			return 1;

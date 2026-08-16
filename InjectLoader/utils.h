@@ -11,4 +11,4 @@ HMODULE GetRemoteManualMappedModule(HANDLE hProcess, const std::string& targetDl
 HMODULE GetRemoteModuleHandle(DWORD pid, const std::string& moduleName);
 BOOL UnloadViaThread(DWORD pid, const std::string dllName);
 BOOL UnloadViaEvent(DWORD pid, const std::string dllName);
-HANDLE findProcHandle(DWORD pid, BOOL debug);
+HANDLE FindProcHandle(DWORD pid, BOOL debug);

@@ -15,6 +15,13 @@ typedef FARPROC(WINAPI* f_GetProcAddress)(HMODULE hModule, const char* lpProcNam
 typedef BOOL(WINAPI* f_DLL_ENTRY_POINT)(void* hDll, DWORD dwReason, void* pReserved);
 typedef BOOLEAN(WINAPI* f_RtlAddFunctionTable)(PRUNTIME_FUNCTION FunctionTable, DWORD EntryCount, DWORD64 BaseAddress);
 
+enum ShellcodeResult : uintptr_t {
+    scPending = 0,
+    scExecuting = 1,
+    scFailed = 2,
+    // anything more than 2 is an addr to the loaded DLL :)
+};
+
 struct ShellcodeData {
     f_LoadLibraryA pLoadLibraryA;
     f_GetProcAddress pGetProcAddress;
@@ -28,6 +35,8 @@ struct ShellcodeData {
     uintptr_t ExceptionDir;
     uintptr_t ExceptionSize;
     uintptr_t TLSDir;
+
+    uintptr_t Result;
 };
 
 // Define a custom section set to calc shellcodeSize
@@ -41,11 +50,12 @@ __declspec(allocate(".sc$a")) const unsigned char g_ShellcodeStartMarker = 'A';
 // Place the function in .sc$b
 __declspec(code_seg(".sc$b"))
 // DLLium's remote dll loading shellcode (executed in remote proc)
-__declspec(noinline) void __stdcall UniversalDllLoadingShellcode(ShellcodeData* pData) {
+__declspec(noinline) void __stdcall UniversalDllLoadingShellcode(ShellcodeData* pData) { // should be ABI compatible with PAPCFUNC (QueueAPC)
     if (!pData || !pData->pDllBase) {
         return;
     }
 
+    pData->Result = ShellcodeResult::scExecuting;
     uintptr_t pBase = pData->pDllBase;
 
     if (pData->ImportDir) {
@@ -98,8 +108,16 @@ __declspec(noinline) void __stdcall UniversalDllLoadingShellcode(ShellcodeData* 
 
     if (pData->EntryPoint) {
         auto fEntryPoint = reinterpret_cast<f_DLL_ENTRY_POINT>(pBase + pData->EntryPoint);
-        fEntryPoint(reinterpret_cast<void*>(pBase), DLL_PROCESS_ATTACH, nullptr);
+        if (fEntryPoint(reinterpret_cast<void*>(pBase), DLL_PROCESS_ATTACH, nullptr)) {
+            pData->Result = pData->pDllBase; // success, like LoadLibrary return handle (address) of loaded DLL
+            return;
+        }
+        pData->Result = ShellcodeResult::scFailed;
+        return;
     }
+    
+    pData->Result = pData->pDllBase; // no EntryPoint, just mapped and ready, still return "handle" of "loaded" DLL
+    return;
 }
 
 // Place end marker in .sc$c
@@ -107,6 +125,10 @@ __declspec(allocate(".sc$c")) const unsigned char g_ShellcodeEndMarker = 'C';
 
 size_t GetUniversalShellcodeSize() {
     return (uintptr_t)&g_ShellcodeEndMarker - (uintptr_t)&g_ShellcodeStartMarker;
+}
+
+void CALLBACK test() {
+
 }
 
 static void* ResolveFunction(void* ptr) {
@@ -161,9 +183,9 @@ static void* ResolveFunction(void* ptr) {
 #endif
 
 enum class BOOTSTRAP_STATE : ULONG_PTR {
-    Pending = 0,
-    Executing = 1,
-    Finished = 2
+    BS_PENDING = 0,
+    BS_EXECUTING = 1,
+    BS_FINISHED = 2
 };
 
 using f_Routine = DWORD(__fastcall*)(void* pArg);
@@ -171,7 +193,7 @@ using f_Routine = DWORD(__fastcall*)(void* pArg);
 #define ALIGN __declspec(align(8))
 
 ALIGN struct BootstrapData {
-    ALIGN BOOTSTRAP_STATE    State = BOOTSTRAP_STATE::Pending;
+    ALIGN BOOTSTRAP_STATE    State = BOOTSTRAP_STATE::BS_PENDING;
     ALIGN DWORD              Ret = 0;
     ALIGN DWORD              LastWin32Error = 0;
     ALIGN void*              pArg = nullptr;
@@ -253,6 +275,9 @@ DWORD64 GetReflectiveLoaderOffset(DWORD64 base_address, LPCSTR ReflectiveLoader_
 }
 
 // ------------------------ my helpers ------------------------ //
+int msMaxWaitForExecutor = 60000; // 1min
+int msSleepBetweenPolls = 500;
+
 std::string GetProcAccessDetails(DWORD granted) {
     struct { DWORD mask; const char* name; } flags[] = {
         {0x0001, "PROCESS_TERMINATE"},
@@ -311,12 +336,12 @@ void PrintGrantedAccess(HANDLE h, DWORD pid) {
     }
 }
 
-std::string GetInjectTypeStr(Injection actionType) {
-    switch (actionType) {
+std::string GetInjectTypeStr(Injection injectType) {
+    switch (injectType) {
     case LOADLIBRARY_INJECTION: return "LoadLibrary injection";
     case HOSTMAPPED_INJECTION: return "HostMapped+Shellcode injection";
     case REFLECTIVE_INJECTION: return "ReflectiveSelfLoader injection";
-    default: return "Unknown action";
+    default: return "Unknown inject type";
     }
 }
 
@@ -325,7 +350,7 @@ std::string GetExecutorTypeStr(Executor execType) {
     case CREATE_REMOTE_THREAD: return "CreateRemoteThread";
     case HIJACK_THREAD: return "HijackThread";
     case QUEUE_USER_APC2: return "QueueUserAPC2";
-    default: return "Unknown execution method";
+    default: return "unknown execute type";
     }
 }
 
@@ -424,6 +449,7 @@ int EvaluateThreadScoreForQueueAPC2(ULONG threadState, KWAIT_REASON waitReason) 
         case DelayExecution:
         case WrDelayExecution:
             return 30; // Risky: May sit in a long non-alertable Sleep()
+            // TODO, this should return 90 for SleepEx (interruptable)
 
         case UserRequest:
         case Executive:
@@ -439,7 +465,7 @@ int EvaluateThreadScoreForQueueAPC2(ULONG threadState, KWAIT_REASON waitReason) 
 }
 
 // Unified thread selection function
-HANDLE FindOptimalThread(const std::vector<HANDLE>& hThreads, Executor execType, bool debug) {
+OPTIMAL_THREAD FindOptimalThread(const std::vector<HANDLE>& hThreads, Executor execType, bool debug) {
 
     // make sure this exec type makes sense
     ThreadScoreEvaluator EvaluateScore = nullptr;
@@ -452,7 +478,7 @@ HANDLE FindOptimalThread(const std::vector<HANDLE>& hThreads, Executor execType,
         break;
     default:
         printf("[!] Hooker: FindOptimalThread not implemented for %s\n", GetExecutorTypeStr(execType).c_str());
-        return NULL;
+        return { NULL, 0 };
     }
 
     HANDLE hBestThread = NULL;
@@ -490,10 +516,10 @@ HANDLE FindOptimalThread(const std::vector<HANDLE>& hThreads, Executor execType,
     }
 
     if (debug && hBestThread) {
-        printf("[+] Hooker: Best thread for %s is (tid=%lu) with score %d\n", GetExecutorTypeStr(execType).c_str(), GetThreadId(hBestThread), bestThreadScore);
+        printf("[+] Hooker: Best thread for %s is tid=%i with score %d\n", GetExecutorTypeStr(execType).c_str(), GetThreadId(hBestThread), bestThreadScore);
     }
 
-    return hBestThread;
+    return { hBestThread, bestThreadScore };
 }
 
 BOOL CheckThreadHandleAccess(HANDLE hThread) {
@@ -518,72 +544,57 @@ BOOL CheckThreadHandleAccess(HANDLE hThread) {
 }
 
 // get McFullAccess mit Hendle
-HANDLE GetThreadForExecutor(DWORD targetProcessId, Executor exec, bool debug) {
-    HMODULE hNtdll = GetModuleHandleW(L"ntdll.dll");
-    if (!hNtdll) {
-        printf("[!] Hooker: Cannot find ntdll.dll handle\n");
-        return NULL;
-    }
+OPTIMAL_THREAD GetThreadForExecutor(DWORD targetProcessId, Executor exec, bool debug) {
 
-    HMODULE hK32 = GetModuleHandleW(L"kernel32.dll");
-    if (!hK32) {
-        printf("[!] Hooker: Cannot find kernel32.dll handle\n");
-        return NULL;
-    }
-
-    auto NtQueryInformationProcess = (long (WINAPI*)(HANDLE, ULONG, PVOID, ULONG, PULONG))GetProcAddress(hNtdll, "NtQueryInformationProcess");
-    auto NtQuerySystemInformation = (long (WINAPI*)(ULONG, PVOID, ULONG, PULONG))GetProcAddress(hNtdll, "NtQuerySystemInformation");
-
-    if (!NtQueryInformationProcess || !NtQuerySystemInformation) {
-        printf("[!] Hooker: Cannot find required functions\n");
-        return NULL;
-    }
+    if (debug)
+        printf("[*] Hooker: Trying to get optimal thread handle to the remote process pid=%i for %s\n", targetProcessId, GetExecutorTypeStr(exec).c_str());
 
     ULONG bufferSize = 0x4000;
     ULONG returnLength = 0;
     NTSTATUS status = NULL;
+    OPTIMAL_THREAD nullThread = { NULL, 0 };
 
     PVOID sysInfoBuffer = VirtualAlloc(NULL, bufferSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     if (sysInfoBuffer == 0) {
         printf("[!] Hooker: Cannot allocate mem for query information buffer\n");
-        return NULL;
+        return nullThread;
     }
 
     PVOID procBuffer = VirtualAlloc(NULL, bufferSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     if (procBuffer == 0) {
         printf("[!] Hooker: Cannot allocate mem for query information buffers\n");
         VirtualFree(sysInfoBuffer, 0, MEM_RELEASE);
-        return NULL;
+        return nullThread;
     }
 
     // 1. Get the System Process/Thread info buffer first to verify states
-    status = NtQuerySystemInformation(SystemProcessInformation, sysInfoBuffer, bufferSize, &returnLength);
+    status = NtQuerySystemInformation((SYSTEM_INFORMATION_CLASS)SystemProcessInformation, sysInfoBuffer, bufferSize, &returnLength);
     if (status == 0xC0000004) { // Length mismatch
         VirtualFree(sysInfoBuffer, 0, MEM_RELEASE);
         bufferSize = returnLength;
         sysInfoBuffer = VirtualAlloc(NULL, bufferSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-        status = NtQuerySystemInformation(SystemProcessInformation, sysInfoBuffer, bufferSize, &returnLength);
+        status = NtQuerySystemInformation((SYSTEM_INFORMATION_CLASS)SystemProcessInformation, sysInfoBuffer, bufferSize, &returnLength);
     }
     if (status != 0) {
         printf("[!] Hooker: Cannot read SystemProcessInformation to find threads\n");
         VirtualFree(sysInfoBuffer, 0, MEM_RELEASE);
         VirtualFree(procBuffer, 0, MEM_RELEASE);
-        return NULL;
+        return nullThread;
     }
 
     // 2. Query our internal process handle table
-    status = NtQueryInformationProcess(GetCurrentProcess(), ProcessHandleInformation, procBuffer, bufferSize, &returnLength);
+    status = NtQueryInformationProcess(GetCurrentProcess(), (PROCESSINFOCLASS)ProcessHandleInformation, procBuffer, bufferSize, &returnLength);
     if (status == 0xC0000004) { // Length mismatch
         VirtualFree(procBuffer, 0, MEM_RELEASE);
         bufferSize = returnLength;
         procBuffer = VirtualAlloc(NULL, bufferSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-        status = NtQueryInformationProcess(GetCurrentProcess(), 20, procBuffer, bufferSize, &returnLength);
+        status = NtQueryInformationProcess(GetCurrentProcess(), (PROCESSINFOCLASS)ProcessHandleInformation, procBuffer, bufferSize, &returnLength);
     }
     if (status != 0) {
         printf("[!] Hooker: Cannot read ProcessHandleInformation to find threads\n");
         VirtualFree(sysInfoBuffer, 0, MEM_RELEASE);
         VirtualFree(procBuffer, 0, MEM_RELEASE);
-        return NULL;
+        return nullThread;
     }
 
     auto* localHandles = reinterpret_cast<PPROCESS_HANDLE_SNAPSHOT_INFORMATION>(procBuffer);
@@ -591,7 +602,7 @@ HANDLE GetThreadForExecutor(DWORD targetProcessId, Executor exec, bool debug) {
         printf("[!] Hooker: No handles found in current process\n");
         VirtualFree(sysInfoBuffer, 0, MEM_RELEASE);
         VirtualFree(procBuffer, 0, MEM_RELEASE);
-        return NULL;
+        return nullThread;
     }
 
     std::vector<HANDLE> hThreads; // contains open thread handles to remote threads with full access
@@ -624,22 +635,22 @@ HANDLE GetThreadForExecutor(DWORD targetProcessId, Executor exec, bool debug) {
                     if (remoteTID == localTID) {
                         hThreads.push_back(hThreadLocal);
                         if (debug)
-                            printf("[+] Hooker: Found thread handle (tid=%i) of remote process (pid=%i) in current process with full access\n", localTID, targetProcessId);
+                            printf("[+] Hooker: Found a handle of thread tid=%i of remote process pid=%i in current process with full access\n", localTID, targetProcessId);
                     }
                 }
 
                 if (debug && hThreads.empty())
-                    printf("[-] Hooker: Found no existing thread handles of remote process (pid=%i) in current process, now trying with OpenThread...\n", targetProcessId);
+                    printf("[-] Hooker: Found no existing thread handles of remote process pid=%i in current process, now trying with OpenThread...\n", targetProcessId);
 
                 // fallback: check if the local proc can open any remote thread with full access
                 HANDLE hThread = OpenThread(THREAD_ALL_ACCESS, false, remoteTID);
                 if (hThread && 
-                    (std::find(hThreads.begin(), hThreads.end(), hThread) != hThreads.end()) && // do not re-add existing handles
+                    (std::find(hThreads.begin(), hThreads.end(), hThread) == hThreads.end()) && // do not re-add existing handles
                     CheckThreadHandleAccess(hThread) // and make sure handle has sufficient access
                 ) {
                     hThreads.push_back(hThread);
                     if (debug)
-                        printf("[+] Hooker: Remote thread (tid=%i) can be opened from the current proc with full access\n", remoteTID);
+                        printf("[+] Hooker: Remote thread tid=%i can be opened from the current proc with full access\n", remoteTID);
                 }
             }
             break; // found target pid, but no thread handles
@@ -654,8 +665,8 @@ HANDLE GetThreadForExecutor(DWORD targetProcessId, Executor exec, bool debug) {
 
     if (hThreads.empty()) {
         if (debug)
-            printf("[!] Hooker: No thread handles of remote process (pid=%i) could be found or opened with full access\n", targetProcessId);
-        return NULL;
+            printf("[!] Hooker: No thread handles of remote process pid=%i could be found or opened with full access\n", targetProcessId);
+        return nullThread;
     }
 
     return FindOptimalThread(hThreads, exec, debug);
@@ -671,34 +682,22 @@ HANDLE GetThreadForExecutor(DWORD targetProcessId, Executor exec, bool debug) {
 * 6. read back the memory to check if the execution was successful
 */
 // https://github.com/guidedhacking/GuidedHacking-Injector/blob/e3c6eab04943b10881a7039dc27ff964c79fcb64/GH%20Injector%20Library/Thread%20Hijacking.cpp#L10
-bool HijackThread(HANDLE hProcess, LPVOID pRemoteRoutine, LPVOID pRemoteArgs, bool debug) {
-
-    if (debug)
-        printf("[*] Hooker: Attempting thread hijacking in target process\n");
-
-    // Identify and target a specific thread ID in the target process, or own process if already inherited
-    if (debug)
-        printf("[*] Hooker: Trying to get injectType thread handle to the remote process pid=%i\n", GetProcessId(hProcess));
-    HANDLE hThread = GetThreadForExecutor(GetProcessId(hProcess), HIJACK_THREAD, debug);
-    if (hThread == NULL) {
-        printf("[!] Hooker: Failed to get injectType thread handle with full access to the remote process\n");
-        return false;
-    }
+bool HijackThread(HANDLE hProcess, HANDLE hThread, LPVOID pRemoteRoutine, LPVOID pRemoteArgs, bool debug) {
 
     // Suspend the target thread to safely modify its state
     if (SuspendThread(hThread) == (DWORD)-1) {
-        printf("[!] Hooker: SuspendThread failed for thread (tid=%i): %lu\n", GetThreadId(hThread), GetLastError());
+        printf("[!] Hooker: SuspendThread failed for thread tid=%i: %lu\n", GetThreadId(hThread), GetLastError());
         CloseHandle(hThread);
         return false;
     }
     if (debug)
-        printf("[+] Hooker: Suspended thread (tid=%i)\n", GetThreadId(hThread));
+        printf("[+] Hooker: Suspended thread tid=%i\n", GetThreadId(hThread));
 
     // Capture the current register state (specifically RIP) of the thread
     CONTEXT threadContext{ 0 };
     threadContext.ContextFlags = CONTEXT_CONTROL;
     if (!GetThreadContext(hThread, &threadContext)) {
-        printf("[!] Hooker: GetThreadContext failed for thread (tid=%i): %lu\n", GetThreadId(hThread), GetLastError());
+        printf("[!] Hooker: GetThreadContext failed for thread tid=%i: %lu\n", GetThreadId(hThread), GetLastError());
         ResumeThread(hThread);
         CloseHandle(hThread);
         return false;
@@ -728,10 +727,10 @@ bool HijackThread(HANDLE hProcess, LPVOID pRemoteRoutine, LPVOID pRemoteArgs, bo
 
         // =========================================================================
         // PHASE 3: Data Structure Resolution & Execution Status Update
-        // Calculates RIP-relative pointer to BootstrapData and updates state to "Executing".
+        // Calculates RIP-relative pointer to BootstrapData and updates state to "EXECUTING".
         // =========================================================================
         0x48, 0x8D, 0x1D, 0x00, 0x00, 0x00, 0x00,                               // [0x18] lea rbx, [BootstrapData] (Patched dynamically)
-        0xC6, 0x03, 0x01,                                                       // [0x1F] mov byte ptr [rbx], 1 (BOOTSTRAP_STATE = Executing)
+        0xC6, 0x03, 0x01,                                                       // [0x1F] mov byte ptr [rbx], 1 (BOOTSTRAP_STATE = EXECUTING)
 
         // =========================================================================
         // PHASE 4: Win64 ABI Stack Alignment & Argument Setup
@@ -843,35 +842,43 @@ bool HijackThread(HANDLE hProcess, LPVOID pRemoteRoutine, LPVOID pRemoteArgs, bo
     // Resume the thread to execute the payload
     ResumeThread(hThread);
     if (debug)
-        printf("[+] Hooker: Resumed thread (tid=%i)\n", GetThreadId(hThread));
+        printf("[+] Hooker: Resumed thread tid=%i\n", GetThreadId(hThread));
 
     // Check the execution state with memread into local bootstrapVerify
     BootstrapData bootstrapVerify{ };
-    bootstrapVerify.State = BOOTSTRAP_STATE::Pending;
+    bootstrapVerify.State = BOOTSTRAP_STATE::BS_PENDING;
     bootstrapVerify.Ret = ERROR_SUCCESS;
     bootstrapVerify.LastWin32Error = ERROR_SUCCESS;
 
     DWORD timer = (DWORD)GetTickCount64();
-    DWORD timeout = 60'000; // ms
-    DWORD sleepTime = 100; // ms
 
-    while (GetTickCount64() - timer < timeout) {
-        Sleep(sleepTime);
+    while (GetTickCount64() - timer < msMaxWaitForExecutor) {
+        Sleep(msSleepBetweenPolls);
         if (!ReadProcessMemory(hProcess, pRemoteBootstrapShellcode, &bootstrapVerify, sizeof(bootstrapVerify), nullptr)) {
-            // How dare you?!
-            printf("[!] Hooker: Cannot read back memory of injected proc which should never happen but happened, just return\n");
-            return true;
+            printf("[!] Hooker: Cannot read back memory of injected proc, wait for next read\n");
         }
-        if (bootstrapVerify.State == BOOTSTRAP_STATE::Finished) {
-            break;
+
+        if (bootstrapVerify.State == BOOTSTRAP_STATE::BS_PENDING || bootstrapVerify.State == BOOTSTRAP_STATE::BS_EXECUTING) {
+            continue; // wait
+        }
+
+        if (bootstrapVerify.State == BOOTSTRAP_STATE::BS_FINISHED) {
+            if (bootstrapVerify.Ret == 0) {
+                printf("[+] Hooker: BootstrapShellcode and supplied routine successfully executed and returned to old state. Big Success!\n");
+            }
+            else {
+                printf("[!] Hooker: BootstrapShellcode and supplied routine successfully executed but returned %lu with LastError %lu\n", bootstrapVerify.Ret, bootstrapVerify.LastWin32Error);
+            }
+            // when finished, do cleanup
+            if (pRemoteRoutine) VirtualFreeEx(hProcess, pRemoteRoutine, 0, MEM_RELEASE);
+            if (pRemoteBootstrapShellcode) VirtualFreeEx(hProcess, pRemoteBootstrapShellcode, 0, MEM_RELEASE);
+            return true;
         }
         // else loop until timeout
     }
 
-    // Output and cleanup 
-    switch (bootstrapVerify.State) {
-
-    case BOOTSTRAP_STATE::Pending:
+    // reaching here means pending or executing
+    if (bootstrapVerify.State == BOOTSTRAP_STATE::BS_PENDING) {
         printf("[-] Hooker: BootstrapShellcode still not called, thread has not yet been executed with the injected shellcode, abort and cleanup\n"); // cleanup
         if (pRemoteRoutine) VirtualFreeEx(hProcess, pRemoteRoutine, 0, MEM_RELEASE);
         if (pRemoteBootstrapShellcode) VirtualFreeEx(hProcess, pRemoteBootstrapShellcode, 0, MEM_RELEASE);
@@ -883,26 +890,14 @@ bool HijackThread(HANDLE hProcess, LPVOID pRemoteRoutine, LPVOID pRemoteArgs, bo
             printf("[!] Hooker: SetThreadContext failed to restore original RIP: %lu\n", GetLastError());
         }
         return false;
+    }
 
-    case BOOTSTRAP_STATE::Executing:
+    if (bootstrapVerify.State == BOOTSTRAP_STATE::BS_EXECUTING) {
         printf("[+] Hooker: BootstrapShellcode still executing... Let him cook, but I'm out of here.\n"); // no cleanup
         return true;
-
-    case BOOTSTRAP_STATE::Finished:
-        if (bootstrapVerify.Ret == 0) {
-            printf("[+] Hooker: BootstrapShellcode and supplied routine successfully executed and returned to old state. Big Success!\n");
-        }
-        else {
-            printf("[!] Hooker: BootstrapShellcode and supplied routine successfully executed but returned %lu with LastError %lu\n", bootstrapVerify.Ret, bootstrapVerify.LastWin32Error);
-        }
-        // when finished, do cleanup
-        if (pRemoteRoutine) VirtualFreeEx(hProcess, pRemoteRoutine, 0, MEM_RELEASE);
-        if (pRemoteBootstrapShellcode) VirtualFreeEx(hProcess, pRemoteBootstrapShellcode, 0, MEM_RELEASE);
-        return true;
-
-    default:
-        return false;
     }
+
+    return false; // unknown state
 }
 
 bool HandleCleanup(HANDLE hProcess, std::vector<LPVOID> remoteAddrs, LPVOID localAddr) {
@@ -922,55 +917,52 @@ bool HandleCleanup(HANDLE hProcess, std::vector<LPVOID> remoteAddrs, LPVOID loca
 
 // execute lpStartAddress(lpParameter) with the given executor type in remote hProcess
 bool ExecuteDllLoader(HANDLE hProcess, Executor exec, LPVOID lpStartAddress, LPVOID lpParameter, bool debug) {
+    
     if (exec == CREATE_REMOTE_THREAD) {
         HANDLE hThread = CreateRemoteThread(hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE)lpStartAddress, lpParameter, 0, nullptr);
-        if (!hThread) {
-            printf("[!] Hooker: CreateRemoteThread failed: %lu\n", GetLastError());
+        if (hThread == NULL) {
+            printf("[!] Hooker: CreateRemoteThread with %p(%p) failed\n", lpStartAddress, lpParameter);
             return false;
         }
 
         printf("[+] Hooker: Remote thread created and executed shellcode, wait for return...\n");
-        DWORD wait = WaitForSingleObject(hThread, 5000); // 5 sec timeout for hooks to init
+        DWORD wait = WaitForSingleObject(hThread, msMaxWaitForExecutor);
         if (wait == WAIT_TIMEOUT) {
             printf("[!] Hooker: remote thread did not finish within timeout\n");
             return false;
         }
 
-        // get exit code (for LoadLibrary, exit code == hModule handle)
-        DWORD hModule = 0;
-        if (!GetExitCodeThread(hThread, &hModule)) {
-            printf("[!] Hooker: GetExitCodeThread() failed. Error: %i\n", GetLastError());
-            CloseHandle(hThread);
-            return false;
-        }
         CloseHandle(hThread);
-        if (hModule == 0) {
-            printf("[!] Hooker: LoadLibrary() failed: %i\n", GetLastError());
-            return false;
-        }
-        printf("[+] Hooker: DLL successfully loaded at %lu\n", hModule);
         return true;
     }
 
-    else if (exec == HIJACK_THREAD) {
-        bool ret = HijackThread(hProcess, lpStartAddress, lpParameter, debug);
-        if (!ret) {
-            printf("[!] Hooker: HijackThread failed\n");
-        }
-        return true;
+    // others need an existing, optimal thread -> get it
+    HANDLE hThread = (GetThreadForExecutor(GetProcessId(hProcess), QUEUE_USER_APC2, debug)).hThread;
+    if (hThread == NULL) {
+        printf("[!] Hooker: Failed to get any thread for %s\n", GetExecutorTypeStr(QUEUE_USER_APC2).c_str());
+        return false;
     }
 
+    if (debug)
+        printf("[+] Hooker: Calling %s on %p(%p)\n", GetExecutorTypeStr(exec).c_str(), lpStartAddress, lpParameter);
+    bool ret = false;
+    
+    if (exec == HIJACK_THREAD) {
+        ret = HijackThread(hProcess, hThread, lpStartAddress, lpParameter, debug);
+    }
+    
     else if (exec == QUEUE_USER_APC2) {
         QUEUE_USER_APC_FLAGS flags = (QUEUE_USER_APC_FLAGS)QUEUE_USER_APC_SPECIAL_USER_APC;
-        HANDLE hThread = GetThreadForExecutor(GetProcessId(hProcess), QUEUE_USER_APC2, debug);
-        bool ret = QueueUserAPC2((PAPCFUNC)lpStartAddress, hThread, (ULONG_PTR)lpParameter, flags);
-        if (!ret) {
-            printf("[!] Hooker: QueueUserAPC2 failed\n");
-        }
-        return true;
+        ret = QueueUserAPC2((PAPCFUNC)lpStartAddress, hThread, (ULONG_PTR)lpParameter, flags);
     }
 
-    return false;
+    CloseHandle(hThread);
+    if (!ret) {
+        printf("[!] Hooker: %s with %p(%p) failed\n", GetExecutorTypeStr(exec).c_str(), lpStartAddress, lpParameter);
+        return false;
+    }
+
+    return true;
 }
 
 // ------------------------ actual injectors ------------------------ //
@@ -1002,10 +994,10 @@ bool LoadLibraryInject(HANDLE hProcess, const std::string& dllPath, Executor exe
     // finally execute the dll loader with the given executor
     bool ret = ExecuteDllLoader(hProcess, exec, (LPVOID)LoadLibraryA, pDllPath, debug);
     if (!ret) {
-        printf("[!] Hooker: Failed to load '%s' into remote process %i\n", dllPath.c_str(), GetProcessId(hProcess));
+        printf("[!] Hooker: %s failed to load '%s' into remote process %i\n", GetExecutorTypeStr(exec).c_str(), dllPath.c_str(), GetProcessId(hProcess));
         return HandleCleanup(hProcess, { pDllPath }, NULL);
     }
-    printf("[*] Hooker: HijackThread loaded '%s' into remote process %i\n", dllPath.c_str(), GetProcessId(hProcess));
+    printf("[*] Hooker: %s loaded '%s' into remote process %i\n", GetExecutorTypeStr(exec).c_str(), dllPath.c_str(), GetProcessId(hProcess));
     HandleCleanup(hProcess, { pDllPath }, NULL);
     return true;
 }
@@ -1150,6 +1142,7 @@ bool HostMappedAndShellcodeLoaderInject(HANDLE hProcess, const std::string& dllP
     dllLoadingData.pLoadLibraryA = pLoadLibraryALocal;
     dllLoadingData.pGetProcAddress = pGetProcAddressLocal;
     dllLoadingData.pRtlAddFunctionTable = pRtlAddFuncTableLocal;
+    dllLoadingData.Result = ShellcodeResult::scPending;
 
     // allocate memory for shellcode data in remote process
     LPVOID pRemoteDllLoadingData = VirtualAllocEx(hProcess, nullptr, sizeof(ShellcodeData), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
@@ -1188,12 +1181,50 @@ bool HostMappedAndShellcodeLoaderInject(HANDLE hProcess, const std::string& dllP
     // finally execute the dll loader with the given executor
     bool ret = ExecuteDllLoader(hProcess, exec, pRemoteDllLoadingShellcode, pRemoteDllLoadingData, debug);
     if (!ret) {
-        printf("[!] Hooker: Failed to load '%s' into remote process %i\n", dllPath.c_str(), GetProcessId(hProcess));
+        printf("[!] Hooker: Executor %s failed to execute in remote process %i\n", GetExecutorTypeStr(exec).c_str(), GetProcessId(hProcess));
         return HandleCleanup(hProcess, { pRemoteTargetBase, pRemoteDllLoadingData, pRemoteDllLoadingShellcode }, NULL);
     }
-    printf("[*] Hooker: HijackThread loaded '%s' into remote process %i\n", dllPath.c_str(), GetProcessId(hProcess));
-    HandleCleanup(hProcess, { pRemoteDllLoadingData, pRemoteDllLoadingShellcode }, pLocalImage); // do not free the dll mem if successful
-    return true;
+    
+    // get result of shellcode loader
+    uintptr_t timer = GetTickCount64();
+    while (GetTickCount64() - timer < msMaxWaitForExecutor) {
+        Sleep(msSleepBetweenPolls);
+        if (!ReadProcessMemory(hProcess, pRemoteDllLoadingData, &dllLoadingData, sizeof(ShellcodeData), NULL)) {
+            printf("[-] Hooker: Failed to read back ShellcodeResult with executor %s, wait a bit\n", GetExecutorTypeStr(exec).c_str());
+            continue;
+        }
+
+        if (dllLoadingData.Result == ShellcodeResult::scPending ||
+            dllLoadingData.Result == ShellcodeResult::scExecuting) {
+            continue; // not yet started or started but didn't finish
+        }
+
+        if (dllLoadingData.Result == static_cast<uintptr_t>(ShellcodeResult::scFailed)) {
+            printf("[!] Hooker: Executor %s failed with DllLoadingShellcode in remote process %i\n", GetExecutorTypeStr(exec).c_str(), GetProcessId(hProcess));
+            return HandleCleanup(hProcess, { pRemoteTargetBase, pRemoteDllLoadingData, pRemoteDllLoadingShellcode }, NULL); // return fail
+        }
+
+        // successful result: DLL base address (valid addrs are way bigger than 2)
+        if (dllLoadingData.Result > ShellcodeResult::scFailed) {
+            printf("[*] Hooker: %s loaded '%s' in remote process %i at %llu\n", GetExecutorTypeStr(exec).c_str(), dllPath.c_str(), GetProcessId(hProcess), dllLoadingData.Result);
+            HandleCleanup(hProcess, { pRemoteDllLoadingData, pRemoteDllLoadingShellcode }, pLocalImage); // do not free the dll mem if successful
+            return true;
+        }
+    }
+
+    // reaching here means pending or executing
+    if (dllLoadingData.Result == ShellcodeResult::scPending) {
+        printf("[-] Hooker: Shellcode to load DLL still not called, thread has not yet been executed with the injected shellcode, abort and cleanup\n"); // cleanup
+        return HandleCleanup(hProcess, { pRemoteTargetBase, pRemoteDllLoadingData, pRemoteDllLoadingShellcode }, NULL); // return fail
+    }
+
+    if (dllLoadingData.Result == ShellcodeResult::scExecuting) {
+        printf("[+] Hooker: Shellcode to load DLL still executing... Let him cook, but I'm out of here.\n"); // no cleanup
+        HandleCleanup(hProcess, { pRemoteDllLoadingData, pRemoteDllLoadingShellcode }, pLocalImage); // do not free the dll mem if potentioally successful
+        return true;
+    }
+
+    return false; // should never be reached
 }
 
 // write dll to remote proc and call self-reflective loader (handles image address, system function resol., mem alloc, header copy, section copy, IAT resolution, relocations, and call DllMain)
@@ -1269,10 +1300,10 @@ bool ReflectiveSelfLoaderInject(HANDLE hProcess, const std::string& dllPath, Exe
     // finally execute the dll loader with the given executor
     bool ret = ExecuteDllLoader(hProcess, exec, lpRemoteLoaderEntry, NULL, debug);
     if (!ret) {
-        printf("[!] Hooker: Failed to load '%s' into remote process %i\n", dllPath.c_str(), GetProcessId(hProcess));
+        printf("[!] Hooker: %s failed to load '%s' into remote process %i\n", GetExecutorTypeStr(exec).c_str(), dllPath.c_str(), GetProcessId(hProcess));
         return HandleCleanup(hProcess, { pRemoteTargetBase }, fileBuffer);
     }
-    printf("[*] Hooker: HijackThread loaded '%s' into remote process %i\n", dllPath.c_str(), GetProcessId(hProcess));
+    printf("[*] Hooker: %s loaded '%s' into remote process %i\n", GetExecutorTypeStr(exec).c_str(), dllPath.c_str(), GetProcessId(hProcess));
     HandleCleanup(hProcess, { }, fileBuffer); // do not free the dll mem if successful
     return true;
 }
