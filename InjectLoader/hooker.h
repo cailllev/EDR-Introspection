@@ -28,7 +28,7 @@ typedef struct _OPTIMAL_THREAD {
     int score;
 } OPTIMAL_THREAD, *POPTIMAL_THREAD;
 
-bool InjectDll(DWORD pid, const std::string& dllPath, HANDLE hProcess, Injection injectionType, Executor execType, bool debug);
+bool InjectDll(DWORD pid, const std::string& dllPath, HANDLE hProcess, Injection injectionType, Executor execType, bool riskInstability, bool debug);
 std::string GetInjectTypeStr(Injection injectType);
 std::string GetExecutorTypeStr(Executor execType);
-OPTIMAL_THREAD GetThreadForExecutor(DWORD targetProcessId, Executor exec, bool debug);
+OPTIMAL_THREAD GetThreadForExecutor(DWORD targetProcessId, Executor exec, bool riskInstability, bool debug);

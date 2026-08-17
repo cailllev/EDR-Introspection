@@ -2,12 +2,12 @@
 #include <winternl.h>
 #include <tlhelp32.h>
 #include <string>
-#include <iostream>
 #include <fstream>
 #include <cctype>
 #include <vector>
 
 #include "hooker.h"
+#include "utils.h"
 
 // ------------------------ Paxai/DLLium ------------------------ //
 typedef HMODULE(WINAPI* f_LoadLibraryA)(const char* lpLibFileName);
@@ -15,11 +15,18 @@ typedef FARPROC(WINAPI* f_GetProcAddress)(HMODULE hModule, const char* lpProcNam
 typedef BOOL(WINAPI* f_DLL_ENTRY_POINT)(void* hDll, DWORD dwReason, void* pReserved);
 typedef BOOLEAN(WINAPI* f_RtlAddFunctionTable)(PRUNTIME_FUNCTION FunctionTable, DWORD EntryCount, DWORD64 BaseAddress);
 
-enum ShellcodeResult : uintptr_t {
-    scPending = 0,
-    scExecuting = 1,
-    scFailed = 2,
-    // anything more than 2 is an addr to the loaded DLL :)
+// uint32t bc shared memory standard ABI something somthing
+enum ShellcodeResult : uint32_t { 
+    scPending,
+    scInvalidDllBase,
+    scRtlFailed,
+    scLoadLibraryError, // unable to LoadLibrary a dependent DLL
+    scGetProcAddrOrdinalError, // unable to GetProcessAddress of an ordinal IAT entry
+    scGetProcAddrNameError, // unable to GetProcessAddress of an named IAT entry
+    scExecuting, // this means the shellcode loader is executing, not the DLL yet
+    scNoEntrypointFound,
+    scDllMainFailed,
+    scDllMainSuccessful
 };
 
 struct ShellcodeData {
@@ -36,7 +43,13 @@ struct ShellcodeData {
     uintptr_t ExceptionSize;
     uintptr_t TLSDir;
 
-    uintptr_t Result;
+    uint32_t Result;
+    uintptr_t DllFailed;
+    uintptr_t IATNameFailed;
+    uint32_t IATOrdinalFailed;
+    uint32_t RtlFailed;
+
+    BOOL YoloMode;
 };
 
 // Define a custom section set to calc shellcodeSize
@@ -51,8 +64,13 @@ __declspec(allocate(".sc$a")) const unsigned char g_ShellcodeStartMarker = 'A';
 __declspec(code_seg(".sc$b"))
 // DLLium's remote dll loading shellcode (executed in remote proc)
 __declspec(noinline) void __stdcall UniversalDllLoadingShellcode(ShellcodeData* pData) { // should be ABI compatible with PAPCFUNC (QueueAPC)
-    if (!pData || !pData->pDllBase) {
-        return;
+    if (!pData) { 
+        return; // well I tried
+    }
+
+    if (!pData->pDllBase) {
+        pData->Result = ShellcodeResult::scInvalidDllBase;
+        return; // only now we can set an actual error
     }
 
     pData->Result = ShellcodeResult::scExecuting;
@@ -64,7 +82,15 @@ __declspec(noinline) void __stdcall UniversalDllLoadingShellcode(ShellcodeData* 
             char* szMod = reinterpret_cast<char*>(pBase + pImportDescr->Name);
             HMODULE hMod = pData->pLoadLibraryA(szMod);
             if (!hMod) {
-                return;
+                pData->DllFailed = (uintptr_t)szMod;
+                if (!pData->YoloMode) {
+                    pData->Result = ShellcodeResult::scLoadLibraryError;
+                    return; // no risk
+                }
+                else {
+                    pImportDescr++;
+                    continue; // try loading the next dll, skip this one
+                }
             }
 
             auto* pIAT = reinterpret_cast<PIMAGE_THUNK_DATA>(pBase + pImportDescr->FirstThunk);
@@ -77,10 +103,26 @@ __declspec(noinline) void __stdcall UniversalDllLoadingShellcode(ShellcodeData* 
             while (pThunk->u1.AddressOfData) {
                 if (IMAGE_SNAP_BY_ORDINAL(pThunk->u1.Ordinal)) {
                     pIAT->u1.Function = (uintptr_t)pData->pGetProcAddress(hMod, (LPCSTR)(pThunk->u1.Ordinal & 0xFFFF));
+                    if (!pIAT->u1.Function) {
+                        pData->DllFailed = reinterpret_cast<uintptr_t>(szMod);
+                        pData->IATOrdinalFailed = (uint32_t)(pThunk->u1.Ordinal & 0xFFFF);
+                        if (!pData->YoloMode) {
+                            pData->Result = ShellcodeResult::scGetProcAddrOrdinalError;
+                            return; // no risk
+                        }
+                    } // elso ignore errors in yolo mode
                 }
                 else {
                     auto* pImportByName = reinterpret_cast<IMAGE_IMPORT_BY_NAME*>(pBase + pThunk->u1.AddressOfData);
                     pIAT->u1.Function = (uintptr_t)pData->pGetProcAddress(hMod, pImportByName->Name);
+                    if (!pIAT->u1.Function) {
+                        pData->DllFailed = reinterpret_cast<uintptr_t>(szMod);
+                        pData->IATNameFailed = (uintptr_t)pImportByName->Name;
+                        if (!pData->YoloMode) {
+                            pData->Result = ShellcodeResult::scGetProcAddrNameError;
+                            return; // no risk
+                        }
+                    } // elso ignore errors in yolo mode
                 }
                 pThunk++;
                 pIAT++;
@@ -103,20 +145,29 @@ __declspec(noinline) void __stdcall UniversalDllLoadingShellcode(ShellcodeData* 
     if (pData->pRtlAddFunctionTable && pData->ExceptionDir && pData->ExceptionSize) {
         auto* pFuncTable = reinterpret_cast<PRUNTIME_FUNCTION>(pBase + pData->ExceptionDir);
         DWORD count = (DWORD)(pData->ExceptionSize / sizeof(RUNTIME_FUNCTION));
-        pData->pRtlAddFunctionTable(pFuncTable, count, (DWORD64)pBase);
+        if (!pData->pRtlAddFunctionTable(pFuncTable, count, (DWORD64)pBase)) {
+            pData->RtlFailed = 1;
+            if (!pData->YoloMode) {
+                pData->Result = ShellcodeResult::scRtlFailed;
+                return; // no risk
+            } // elso ignore errors in yolo mode
+        }
     }
 
     if (pData->EntryPoint) {
-        auto fEntryPoint = reinterpret_cast<f_DLL_ENTRY_POINT>(pBase + pData->EntryPoint);
-        if (fEntryPoint(reinterpret_cast<void*>(pBase), DLL_PROCESS_ATTACH, nullptr)) {
-            pData->Result = pData->pDllBase; // success, like LoadLibrary return handle (address) of loaded DLL
+        auto fEntrypoint = reinterpret_cast<f_DLL_ENTRY_POINT>(pBase + pData->EntryPoint);
+        if (fEntrypoint(reinterpret_cast<void*>(pBase), DLL_PROCESS_ATTACH, nullptr)) {
+            // success, pData->pDllBase points to the loaded DLL
+            pData->Result = ShellcodeResult::scDllMainSuccessful;
             return;
         }
-        pData->Result = ShellcodeResult::scFailed;
+        // entrypoint returned false
+        pData->Result = ShellcodeResult::scDllMainFailed;
         return;
     }
-    
-    pData->Result = pData->pDllBase; // no EntryPoint, just mapped and ready, still return "handle" of "loaded" DLL
+
+    // no Entrypoint found and called, just mapped and ready
+    pData->Result = ShellcodeResult::scNoEntrypointFound;
     return;
 }
 
@@ -277,64 +328,8 @@ DWORD64 GetReflectiveLoaderOffset(DWORD64 base_address, LPCSTR ReflectiveLoader_
 // ------------------------ my helpers ------------------------ //
 int msMaxWaitForExecutor = 60000; // 1min
 int msSleepBetweenPolls = 500;
-
-std::string GetProcAccessDetails(DWORD granted) {
-    struct { DWORD mask; const char* name; } flags[] = {
-        {0x0001, "PROCESS_TERMINATE"},
-        {0x0002, "PROCESS_CREATE_THREAD"},
-        {0x0004, "PROCESS_SET_SESSIONID"},
-        {0x0008, "PROCESS_VM_OPERATION"},
-        {0x0010, "PROCESS_VM_READ"},
-        {0x0020, "PROCESS_VM_WRITE"},
-        {0x0040, "PROCESS_DUP_HANDLE"},
-        {0x0080, "PROCESS_CREATE_PROCESS"},
-        {0x0100, "PROCESS_SET_QUOTA"},
-        {0x0200, "PROCESS_SET_INFORMATION"},
-        {0x0400, "PROCESS_QUERY_INFORMATION"},
-        {0x0800, "PROCESS_SUSPEND_RESUME"},
-        {0x1000, "PROCESS_QUERY_LIMITED_INFORMATION"},
-        {0x2000, "PROCESS_SET_LIMITED_INFORMATION"}
-    };
-
-    std::string access = "";
-    for (auto& f : flags) {
-        if (granted & f.mask) {
-            access += std::string(f.name) + " | ";
-        }
-    }
-    if (!access.empty()) {
-        access = access.substr(0, access.size() - 3); // remove last " | "
-    }
-    else {
-        return "no access";
-    }
-    std::string no_access = "";
-    for (auto& f : flags) {
-        if (!(granted & f.mask)) {
-            no_access += std::string(f.name) + " | ";
-        }
-    }
-    if (!no_access.empty()) {
-        no_access = no_access.substr(0, no_access.size() - 3); // remove last " | "
-    }
-    else {
-        return "full access";
-    }
-    return access + ", not including: " + no_access;
-}
-
-void PrintGrantedAccess(HANDLE h, DWORD pid) {
-    PUBLIC_OBJECT_BASIC_INFORMATION obi = {};
-    ULONG ret = 0;
-    NTSTATUS st = NtQueryObject(h, ObjectBasicInformation, &obi, sizeof(obi), &ret);
-    if (st < 0) {
-        std::cerr << "[!] Hooker: NtQueryObject failed at pid " << pid << ": 0x" << std::hex << st << "\n";
-    }
-    else {
-        std::string details = GetProcAccessDetails(obi.GrantedAccess);
-        std::cout << "[+] Hooker: GrantedAccess to pid " << pid << ": 0x" << std::hex << obi.GrantedAccess << std::dec << " -> " << details << "\n";
-    }
-}
+int msBetweenStatusUpdates = 5000; // 5sec
+int loopsBetweenStatusUpdates = msBetweenStatusUpdates / msSleepBetweenPolls;
 
 std::string GetInjectTypeStr(Injection injectType) {
     switch (injectType) {
@@ -449,7 +444,6 @@ int EvaluateThreadScoreForQueueAPC2(ULONG threadState, KWAIT_REASON waitReason) 
         case DelayExecution:
         case WrDelayExecution:
             return 30; // Risky: May sit in a long non-alertable Sleep()
-            // TODO, this should return 90 for SleepEx (interruptable)
 
         case UserRequest:
         case Executive:
@@ -465,7 +459,7 @@ int EvaluateThreadScoreForQueueAPC2(ULONG threadState, KWAIT_REASON waitReason) 
 }
 
 // Unified thread selection function
-OPTIMAL_THREAD FindOptimalThread(const std::vector<HANDLE>& hThreads, Executor execType, bool debug) {
+OPTIMAL_THREAD FindOptimalThread(const std::vector<HANDLE>& hThreads, Executor execType, bool yoloMode, bool debug) {
 
     // make sure this exec type makes sense
     ThreadScoreEvaluator EvaluateScore = nullptr;
@@ -515,8 +509,19 @@ OPTIMAL_THREAD FindOptimalThread(const std::vector<HANDLE>& hThreads, Executor e
         }
     }
 
-    if (debug && hBestThread) {
+    if (debug && hBestThread != NULL) {
         printf("[+] Hooker: Best thread for %s is tid=%i with score %d\n", GetExecutorTypeStr(execType).c_str(), GetThreadId(hBestThread), bestThreadScore);
+    }
+    if (hBestThread != NULL && bestThreadScore < 50) {
+        printf("[-] Hooker: Warning, no perfectly suitable thread found.");
+        if (yoloMode) {
+            printf(" Still continuing with the risk of a crash!\n");
+            return { hBestThread, bestThreadScore };
+        }
+        else {
+            printf(" Not continuing the injection!\n");
+            return { NULL, 0 };
+        }
     }
 
     return { hBestThread, bestThreadScore };
@@ -544,10 +549,10 @@ BOOL CheckThreadHandleAccess(HANDLE hThread) {
 }
 
 // get McFullAccess mit Hendle
-OPTIMAL_THREAD GetThreadForExecutor(DWORD targetProcessId, Executor exec, bool debug) {
+OPTIMAL_THREAD GetThreadForExecutor(DWORD targetProcessId, Executor exec, bool yoloMode, bool debug) {
 
     if (debug)
-        printf("[*] Hooker: Trying to get optimal thread handle to the remote process pid=%i for %s\n", targetProcessId, GetExecutorTypeStr(exec).c_str());
+        printf("[+] Hooker: Trying to get optimal thread handle to the remote process pid=%i for %s\n", targetProcessId, GetExecutorTypeStr(exec).c_str());
 
     ULONG bufferSize = 0x4000;
     ULONG returnLength = 0;
@@ -669,7 +674,7 @@ OPTIMAL_THREAD GetThreadForExecutor(DWORD targetProcessId, Executor exec, bool d
         return nullThread;
     }
 
-    return FindOptimalThread(hThreads, exec, debug);
+    return FindOptimalThread(hThreads, exec, yoloMode, debug);
 }
 
 /*
@@ -810,7 +815,7 @@ bool HijackThread(HANDLE hProcess, HANDLE hThread, LPVOID pRemoteRoutine, LPVOID
         return false;
     }
     if (debug)
-        printf("[+] Hooker: Allocated memory for BootstrapShellcode at %p in remote process\n", pRemoteBootstrapShellcode);
+        printf("[+] Hooker: Allocated memory for BootstrapShellcode at 0x%p in remote process\n", pRemoteBootstrapShellcode);
 
     // now write the finished BootstrapShellcode to the remote proc
     if (!WriteProcessMemory(hProcess, pRemoteBootstrapShellcode, BootstrapShellcode, sizeof(BootstrapShellcode), nullptr)) {
@@ -837,7 +842,7 @@ bool HijackThread(HANDLE hProcess, HANDLE hThread, LPVOID pRemoteRoutine, LPVOID
         return false;
     }
     if (debug)
-        printf("[+] Hooker: SetThreadContext to RemoteStartOfBootstrapShellcodeFunc at %p\n", pRemoteStartOfBootstrapShellcodeFunc);
+        printf("[+] Hooker: SetThreadContext to RemoteStartOfBootstrapShellcodeFunc at 0x%p\n", pRemoteStartOfBootstrapShellcodeFunc);
 
     // Resume the thread to execute the payload
     ResumeThread(hThread);
@@ -850,23 +855,41 @@ bool HijackThread(HANDLE hProcess, HANDLE hThread, LPVOID pRemoteRoutine, LPVOID
     bootstrapVerify.Ret = ERROR_SUCCESS;
     bootstrapVerify.LastWin32Error = ERROR_SUCCESS;
 
-    DWORD timer = (DWORD)GetTickCount64();
+    if (debug)
+        printf("[+] Hooker: Checking for execution status of BootstrapShellcode...\n");
 
-    // todo, maybe print here that i am waiting?
-
+    std::string waitingFor = "execution"; // Still waiting for x of BootstrapShellcode
+    bool alreadyExecuting = false;
+    uintptr_t timer = GetTickCount64();
+    int loopCount = 0;
     while (GetTickCount64() - timer < msMaxWaitForExecutor) {
+        loopCount++;
         Sleep(msSleepBetweenPolls);
+
         if (!ReadProcessMemory(hProcess, pRemoteBootstrapShellcode, &bootstrapVerify, sizeof(bootstrapVerify), nullptr)) {
-            printf("[!] Hooker: Cannot read back memory of injected proc, wait for next read\n");
+            // check if terminated
+            if (WaitForSingleObject(hProcess, 0) == WAIT_OBJECT_0) {
+                printf("[!] Hooker: Target process was terminated -> no more injection :(\n");
+                return false; // at least I don't have to clean-up
+            }
+            if (debug)
+                printf("[-] Hooker: Cannot read back BootstapShellcode state in injected proc, wait for next read\n");
+            continue;
+        }
+
+        if (debug && loopCount % loopsBetweenStatusUpdates == 0) {
+            const char* waitingFor = bootstrapVerify.State == BOOTSTRAP_STATE::BS_PENDING ? "execution" : "completion";
+            int secondsPassed = (msSleepBetweenPolls * loopCount) / 1000;
+            printf("[:] Hooker: Still waiting for %s of BootstrapShellcode after %i seconds\n", waitingFor, secondsPassed);
         }
 
         if (bootstrapVerify.State == BOOTSTRAP_STATE::BS_PENDING || bootstrapVerify.State == BOOTSTRAP_STATE::BS_EXECUTING) {
-            continue; // wait
+            continue; // just wait
         }
 
         if (bootstrapVerify.State == BOOTSTRAP_STATE::BS_FINISHED) {
             if (bootstrapVerify.Ret == 0) {
-                printf("[+] Hooker: BootstrapShellcode and supplied routine successfully executed and returned to old state. Big Success!\n");
+                printf("[*] Hooker: BootstrapShellcode and supplied routine successfully executed and returned to old state\n");
             }
             else {
                 printf("[!] Hooker: BootstrapShellcode and supplied routine successfully executed but returned %lu with LastError %lu\n", bootstrapVerify.Ret, bootstrapVerify.LastWin32Error);
@@ -881,7 +904,7 @@ bool HijackThread(HANDLE hProcess, HANDLE hThread, LPVOID pRemoteRoutine, LPVOID
 
     // reaching here means pending or executing
     if (bootstrapVerify.State == BOOTSTRAP_STATE::BS_PENDING) {
-        printf("[-] Hooker: BootstrapShellcode still not called, thread has not yet been executed with the injected shellcode, abort and cleanup\n"); // cleanup
+        printf("[!] Hooker: BootstrapShellcode still not called (thread has not yet been executed with the injected shellcode) -> abort and cleanup!\n");
         if (pRemoteRoutine) VirtualFreeEx(hProcess, pRemoteRoutine, 0, MEM_RELEASE);
         if (pRemoteBootstrapShellcode) VirtualFreeEx(hProcess, pRemoteBootstrapShellcode, 0, MEM_RELEASE);
         threadContext.Rip = OldRIP;
@@ -895,7 +918,7 @@ bool HijackThread(HANDLE hProcess, HANDLE hThread, LPVOID pRemoteRoutine, LPVOID
     }
 
     if (bootstrapVerify.State == BOOTSTRAP_STATE::BS_EXECUTING) {
-        printf("[+] Hooker: BootstrapShellcode still executing... Let him cook, but I'm out of here.\n"); // no cleanup
+        printf("[*] Hooker: BootstrapShellcode still executing... assuming it will eventually work\n"); // no cleanup
         return true;
     }
 
@@ -918,12 +941,12 @@ bool HandleCleanup(HANDLE hProcess, std::vector<LPVOID> remoteAddrs, LPVOID loca
 }
 
 // execute lpStartAddress(lpParameter) with the given executor type in remote hProcess
-bool ExecuteDllLoader(HANDLE hProcess, Executor exec, LPVOID lpStartAddress, LPVOID lpParameter, bool debug) {
+bool ExecuteDllLoader(HANDLE hProcess, Executor exec, LPVOID lpStartAddress, LPVOID lpParameter, bool yoloMode, bool debug) {
 
     if (debug) {
-        printf("[+] Hooker: Will call %s on %p", GetExecutorTypeStr(exec).c_str(), lpStartAddress);
+        printf("[*] Hooker: Will call %s on 0x%p", GetExecutorTypeStr(exec).c_str(), lpStartAddress);
         if (lpParameter != NULL) {
-            printf("with args at % p", lpParameter);
+            printf(" with args at 0x%p", lpParameter);
         }
         printf("\n");
     }
@@ -932,11 +955,11 @@ bool ExecuteDllLoader(HANDLE hProcess, Executor exec, LPVOID lpStartAddress, LPV
 
         HANDLE hThread = CreateRemoteThread(hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE)lpStartAddress, lpParameter, 0, nullptr);
         if (hThread == NULL) {
-            printf("[!] Hooker: %s on %p failed\n", GetExecutorTypeStr(exec).c_str(), lpStartAddress);
+            printf("[!] Hooker: %s on 0x%p failed\n", GetExecutorTypeStr(exec).c_str(), lpStartAddress);
             return false;
         }
 
-        printf("[+] Hooker: Remote thread created on %p, waiting for return...\n", lpStartAddress);
+        printf("[*] Hooker: Remote thread created on 0x%p now waiting for return...\n", lpStartAddress);
         DWORD wait = WaitForSingleObject(hThread, msMaxWaitForExecutor);
         if (wait == WAIT_TIMEOUT) {
             printf("[!] Hooker: Remote thread did not finish within timeout\n");
@@ -948,7 +971,7 @@ bool ExecuteDllLoader(HANDLE hProcess, Executor exec, LPVOID lpStartAddress, LPV
     }
 
     // non-CreateRemoteThread executors need an existing thread -> get the optimal one for the execType
-    HANDLE hThread = (GetThreadForExecutor(GetProcessId(hProcess), QUEUE_USER_APC2, debug)).hThread;
+    HANDLE hThread = (GetThreadForExecutor(GetProcessId(hProcess), exec, yoloMode, debug)).hThread;
     if (hThread == NULL) {
         printf("[!] Hooker: Failed to get any thread for %s\n", GetExecutorTypeStr(QUEUE_USER_APC2).c_str());
         return false;
@@ -962,13 +985,13 @@ bool ExecuteDllLoader(HANDLE hProcess, Executor exec, LPVOID lpStartAddress, LPV
     else if (exec == QUEUE_USER_APC2) {
         QUEUE_USER_APC_FLAGS flags = (QUEUE_USER_APC_FLAGS)QUEUE_USER_APC_SPECIAL_USER_APC;
         if (debug)
-            printf("[+] Hooker: About to queue %p with QUEUE_USER_APC_SPECIAL_USER_APC\n", lpStartAddress);
+            printf("[+] Hooker: About to queue 0x%p with QUEUE_USER_APC_SPECIAL_USER_APC\n", lpStartAddress);
         ret = QueueUserAPC2((PAPCFUNC)lpStartAddress, hThread, (ULONG_PTR)lpParameter, flags);
     }
 
     CloseHandle(hThread);
     if (!ret) {
-        printf("[!] Hooker: %s on %p failed\n", GetExecutorTypeStr(exec).c_str(), lpStartAddress);
+        printf("[!] Hooker: %s on 0x%p failed\n", GetExecutorTypeStr(exec).c_str(), lpStartAddress);
         return false;
     }
 
@@ -977,44 +1000,42 @@ bool ExecuteDllLoader(HANDLE hProcess, Executor exec, LPVOID lpStartAddress, LPV
 
 // ------------------------ actual injectors ------------------------ //
 // Inject DLL into target process via CreateRemoteThread + LoadLibrary onto DLL path
-bool LoadLibraryInject(HANDLE hProcess, const std::string& dllPath, Executor exec, bool debug) {
+bool LoadLibraryInject(HANDLE hProcess, const std::string& dllPath, Executor exec, bool yoloMode, bool debug) {
     // Allocate memory for DLL path in target
     size_t size = dllPath.length() + 1;
     LPVOID pDllPath = VirtualAllocEx(hProcess, nullptr, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     if (!pDllPath) {
-        std::cerr << "[!] Hooker: VirtualAllocEx failed. Error: " << GetLastError() << "\n";
+        printf("[!] Hooker: VirtualAllocEx failed. Error: %lx", GetLastError());
         CloseHandle(hProcess);
         return false;
     }
-    if (debug) {
-        std::cout << "[*] Hooker: Allocated memory in target process at " << pDllPath << "\n";
-    }
+    if (debug)
+        printf("[+] Hooker: Allocated memory in target process at 0x%p", pDllPath);
 
     // Write DLL path into target
     if (!WriteProcessMemory(hProcess, pDllPath, dllPath.c_str(), size, nullptr)) {
-        std::cerr << "[!] Hooker: WriteProcessMemory failed. Error: " << GetLastError() << "\n";
+        printf("[!] Hooker: WriteProcessMemory failed. Error: %lx", GetLastError());
         VirtualFreeEx(hProcess, pDllPath, 0, MEM_RELEASE);
         CloseHandle(hProcess);
         return false;
     }
-    if (debug) {
-        std::cout << "[*] Hooker: Wrote '" << dllPath << "' to target process memory\n";
-    }
+    if (debug)
+        printf("[+] Hooker: Wrote '%s' to target process memory\n", dllPath.c_str());
 
     // finally execute the dll loader with the given executor
-    bool ret = ExecuteDllLoader(hProcess, exec, (LPVOID)LoadLibraryA, pDllPath, debug);
+    bool ret = ExecuteDllLoader(hProcess, exec, (LPVOID)LoadLibraryA, pDllPath, yoloMode, debug);
     if (!ret) {
         printf("[!] Hooker: %s failed to load '%s' into remote process %i\n", GetExecutorTypeStr(exec).c_str(), dllPath.c_str(), GetProcessId(hProcess));
         return HandleCleanup(hProcess, { pDllPath }, NULL);
     }
-    printf("[*] Hooker: %s loaded '%s' into remote process %i\n", GetExecutorTypeStr(exec).c_str(), dllPath.c_str(), GetProcessId(hProcess));
+    printf("[+] Hooker: %s loaded '%s' into remote process %i\n", GetExecutorTypeStr(exec).c_str(), dllPath.c_str(), GetProcessId(hProcess));
     HandleCleanup(hProcess, { pDllPath }, NULL);
     return true;
 }
 
 // write dll to remote proc and handle patching from external -> minimal remote shellcode to setup
 // https://github.com/Paxai/DLLium/blob/de79b82bbeb011778b03022b21c0a9d623f3d813/DLLium/injection.cpp#L161
-bool HostMappedAndShellcodeLoaderInject(HANDLE hProcess, const std::string& dllPath, Executor exec, bool debug) {
+bool HostMappedAndShellcodeLoaderInject(HANDLE hProcess, const std::string& dllPath, Executor exec, bool yoloMode, bool debug) {
 
     std::ifstream File(dllPath, std::ios::binary | std::ios::ate);
     if (File.fail()) { printf("[!] Hooker: Open file %s failed: %lu\n", dllPath.c_str(), GetLastError()); return false; }
@@ -1052,7 +1073,7 @@ bool HostMappedAndShellcodeLoaderInject(HANDLE hProcess, const std::string& dllP
         return HandleCleanup(hProcess, {pRemoteTargetBase}, NULL);
     }
     if (debug)
-        printf("[+] Hooker: Allocated DLL into local %p and remote memory %p\n", pLocalImage, pRemoteTargetBase);
+        printf("[+] Hooker: Allocated DLL into local 0x%p and remote memory 0x%p\n", pLocalImage, pRemoteTargetBase);
 
     memcpy(pLocalImage, pSrcDllData.data(), pOpt->SizeOfHeaders);
 
@@ -1108,7 +1129,7 @@ bool HostMappedAndShellcodeLoaderInject(HANDLE hProcess, const std::string& dllP
             }
 
             if (debug)
-                printf("[+] Hooker: Processed relocation block at %p\n", pReloc);
+                printf("[+] Hooker: Processed relocation block at 0x%p\n", pReloc);
             pReloc = reinterpret_cast<IMAGE_BASE_RELOCATION*>(reinterpret_cast<BYTE*>(pReloc) + pReloc->SizeOfBlock);
         }
     }
@@ -1121,7 +1142,7 @@ bool HostMappedAndShellcodeLoaderInject(HANDLE hProcess, const std::string& dllP
     VirtualFree(pLocalImage, 0, MEM_RELEASE);
     pLocalImage = nullptr;
     if (debug)
-        printf("[+] Hooker: Wrote DLL to remote process memory at %p\n", pRemoteTargetBase);
+        printf("[+] Hooker: Wrote DLL to remote process memory at 0x%p\n", pRemoteTargetBase);
 
     HMODULE hK32Local = GetModuleHandleA("kernel32.dll");
     if (!hK32Local) {
@@ -1153,6 +1174,11 @@ bool HostMappedAndShellcodeLoaderInject(HANDLE hProcess, const std::string& dllP
     dllLoadingData.pGetProcAddress = pGetProcAddressLocal;
     dllLoadingData.pRtlAddFunctionTable = pRtlAddFuncTableLocal;
     dllLoadingData.Result = ShellcodeResult::scPending;
+    dllLoadingData.DllFailed = (uintptr_t)nullptr;
+    dllLoadingData.IATOrdinalFailed = (uintptr_t)nullptr;
+    dllLoadingData.IATNameFailed = (uintptr_t)nullptr;
+    dllLoadingData.RtlFailed = 0;
+    dllLoadingData.YoloMode = yoloMode;
 
     // allocate memory for shellcode data in remote process
     LPVOID pRemoteDllLoadingData = VirtualAllocEx(hProcess, nullptr, sizeof(ShellcodeData), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
@@ -1162,7 +1188,7 @@ bool HostMappedAndShellcodeLoaderInject(HANDLE hProcess, const std::string& dllP
     }
     WriteProcessMemory(hProcess, pRemoteDllLoadingData, &dllLoadingData, sizeof(ShellcodeData), nullptr);
     if (debug)
-        printf("[+] Hooker: Wrote required dllLoadingData to remote process memory at %p\n", pRemoteDllLoadingData);
+        printf("[+] Hooker: Wrote required dllLoadingData to remote process memory at 0x%p\n", pRemoteDllLoadingData);
 
     size_t dllLoadingShellcodeSize = GetUniversalShellcodeSize(); // now with fancy code sections
     const void* pLocalDllLoadingShellcodeStart = ResolveFunction((void*)UniversalDllLoadingShellcode);
@@ -1186,39 +1212,133 @@ bool HostMappedAndShellcodeLoaderInject(HANDLE hProcess, const std::string& dllP
         return HandleCleanup(hProcess, { pRemoteTargetBase, pRemoteDllLoadingData, pRemoteDllLoadingShellcode }, NULL);
     }
     if (debug)
-        printf("[+] Hooker: Wrote dll loading shellcode to remote process memory at %p, size: %zu bytes\n", pRemoteDllLoadingShellcode, dllLoadingShellcodeSize);
+        printf("[+] Hooker: Wrote all %zu bytes of dll loading shellcode to remote process at 0x%p\n", dllLoadingShellcodeSize, pRemoteDllLoadingShellcode);
 
     // finally execute the dll loader with the given executor
-    bool ret = ExecuteDllLoader(hProcess, exec, pRemoteDllLoadingShellcode, pRemoteDllLoadingData, debug);
+    bool ret = ExecuteDllLoader(hProcess, exec, pRemoteDllLoadingShellcode, pRemoteDllLoadingData, yoloMode, debug);
     if (!ret) {
         printf("[!] Hooker: Executor %s failed to execute in remote process %i\n", GetExecutorTypeStr(exec).c_str(), GetProcessId(hProcess));
         return HandleCleanup(hProcess, { pRemoteTargetBase, pRemoteDllLoadingData, pRemoteDllLoadingShellcode }, NULL);
     }
 
-    // todo, maybe print here that i am waiting?
+    if (debug)
+        printf("[+] Hooker: Checking for execution status of DllLoadingShellcode...\n");
     
     // get result of shellcode loader
     uintptr_t timer = GetTickCount64();
+    int loopCount = 0;
     while (GetTickCount64() - timer < msMaxWaitForExecutor) {
+        loopCount++;
         Sleep(msSleepBetweenPolls);
+
         if (!ReadProcessMemory(hProcess, pRemoteDllLoadingData, &dllLoadingData, sizeof(ShellcodeData), NULL)) {
-            printf("[-] Hooker: Failed to read back ShellcodeResult with executor %s, wait a bit\n", GetExecutorTypeStr(exec).c_str());
+            // check if terminated
+            if (WaitForSingleObject(hProcess, 0) == WAIT_OBJECT_0) {
+                printf("[!] Hooker: Target process was terminated -> no more injection :(\n");
+                return false; // at least I don't have to clean-up
+            }
+            if (debug)
+                printf("[-] Hooker: Cannot read back DllLoadingShellcode state with executor %s\n", GetExecutorTypeStr(exec).c_str());
             continue;
         }
 
-        if (dllLoadingData.Result == ShellcodeResult::scPending ||
-            dllLoadingData.Result == ShellcodeResult::scExecuting) {
-            continue; // not yet started or started but didn't finish
+        if (debug && loopCount % loopsBetweenStatusUpdates == 0) {
+            const char* waitingFor = dllLoadingData.Result == ShellcodeResult::scPending ? "execution" : "completion";
+            int secondsPassed = (msSleepBetweenPolls * loopCount) / 1000;
+            printf("[:] Hooker: Still waiting for %s of DllLoadingShellcode after %i seconds\n", waitingFor, secondsPassed);
         }
 
-        if (dllLoadingData.Result == static_cast<uintptr_t>(ShellcodeResult::scFailed)) {
+        if (dllLoadingData.Result == ShellcodeResult::scPending || dllLoadingData.Result == ShellcodeResult::scExecuting) {
+            continue; // just wait
+        }
+
+        if (dllLoadingData.Result == ShellcodeResult::scInvalidDllBase) {
+            printf("[!] Hooker: Invalid DllBase. '%s' not loaded!\n", dllPath.c_str());
+            return HandleCleanup(hProcess, { pRemoteTargetBase, pRemoteDllLoadingData, pRemoteDllLoadingShellcode }, NULL); // return fail
+        }
+
+        // if in yoloMode: there might've been some ignored errors, try to print them
+        if (yoloMode) {
+
+            if (dllLoadingData.DllFailed != (uintptr_t)nullptr) {
+                char failingDll[MAX_PATH]{};
+                if (!ReadProcessMemory(hProcess, (LPCVOID)dllLoadingData.DllFailed, failingDll, sizeof(failingDll) - 1, nullptr)) {
+                    strncpy_s(failingDll, "<error reading dll name>", _TRUNCATE);
+                }
+                printf("[$] Hooker: LoadLibrary failed when importing the last dependent library '%s', but yolo!\n", failingDll);
+            }
+
+            if (dllLoadingData.IATOrdinalFailed != 0 || dllLoadingData.IATNameFailed != (uintptr_t)nullptr) {
+                char failingDll[MAX_PATH]{};
+                if (dllLoadingData.DllFailed == (uintptr_t)nullptr || !ReadProcessMemory(hProcess, (LPCVOID)dllLoadingData.DllFailed, failingDll, sizeof(failingDll) - 1, nullptr)) {
+                    strncpy_s(failingDll, "<error reading dll name>", _TRUNCATE);
+                }
+                char failingIATEntry[MAX_PATH]{};
+                if (dllLoadingData.Result == ShellcodeResult::scGetProcAddrNameError) {
+                    if (!ReadProcessMemory(hProcess, (LPCVOID)dllLoadingData.IATNameFailed, failingIATEntry, sizeof(failingIATEntry) - 1, nullptr)) {
+                        strncpy_s(failingIATEntry, "<error reading func name>", _TRUNCATE);
+                    }
+                }
+                else {
+                    snprintf(failingIATEntry, sizeof(failingDll) - 1, "ordinal=%i", dllLoadingData.IATOrdinalFailed);
+                }
+                printf("[!] Hooker: GetProcAddress failed for IAT entry '%s' in '%s', but yolo!\n", failingIATEntry, failingDll);
+            }
+
+            if (dllLoadingData.RtlFailed != 0) {
+                printf("[!] Hooker: Failed to add items to Rtl, but yolo!\n");
+            }
+
+        }
+        else { // else check if there were some errors and early exits
+
+            if (dllLoadingData.Result == ShellcodeResult::scLoadLibraryError) {
+                char failingDll[MAX_PATH]{};
+                if (dllLoadingData.DllFailed == (uintptr_t)nullptr || !ReadProcessMemory(hProcess, (LPCVOID)dllLoadingData.DllFailed, failingDll, sizeof(failingDll) - 1, nullptr)) {
+                    strncpy_s(failingDll, "<error reading dll name>", _TRUNCATE);
+                }
+                printf("[!] Hooker: LoadLibrary failed when importing the dependent library '%s'. '%s' not loaded!\n", failingDll, dllPath.c_str());
+                return HandleCleanup(hProcess, { pRemoteTargetBase, pRemoteDllLoadingData, pRemoteDllLoadingShellcode }, NULL); // return fail
+            }
+
+            if (dllLoadingData.Result == ShellcodeResult::scGetProcAddrOrdinalError || dllLoadingData.Result == ShellcodeResult::scGetProcAddrNameError) {
+                char failingDll[MAX_PATH]{};
+
+                if (dllLoadingData.DllFailed == (uintptr_t)nullptr || !ReadProcessMemory(hProcess, (LPCVOID)dllLoadingData.DllFailed, failingDll, sizeof(failingDll) - 1, nullptr)) {
+                    strncpy_s(failingDll, "<error reading dll name>", _TRUNCATE);
+                }
+                char failingIATEntry[MAX_PATH]{};
+                if (dllLoadingData.IATNameFailed != (uintptr_t)nullptr && dllLoadingData.Result == ShellcodeResult::scGetProcAddrNameError) {
+                    if (!ReadProcessMemory(hProcess, (LPCVOID)dllLoadingData.IATNameFailed, failingIATEntry, sizeof(failingIATEntry) - 1, nullptr)) {
+                        strncpy_s(failingIATEntry, "<error reading func name>", _TRUNCATE);
+                    }
+                }
+                else {
+                    snprintf(failingIATEntry, sizeof(failingDll) - 1, "ordinal=%i", dllLoadingData.IATOrdinalFailed);
+                }
+                printf("[!] Hooker: GetProcAddress failed for IAT entry '%s' in '%s'. '%s' not loaded!\n", failingIATEntry, failingDll, dllPath.c_str());
+                return HandleCleanup(hProcess, { pRemoteTargetBase, pRemoteDllLoadingData, pRemoteDllLoadingShellcode }, NULL); // return fail
+            }
+        
+            if (dllLoadingData.RtlFailed != (uintptr_t)nullptr && dllLoadingData.Result == ShellcodeResult::scRtlFailed) {
+                printf("[!] Hooker: Failed to add items to Rtl. '%s' not loaded!\n", dllPath.c_str());
+                return HandleCleanup(hProcess, { pRemoteTargetBase, pRemoteDllLoadingData, pRemoteDllLoadingShellcode }, NULL); // return fail
+            }
+        }
+
+        if (dllLoadingData.Result == ShellcodeResult::scNoEntrypointFound) {
+            printf("[-] Hooker: %s mapped '%s' in remote process %i at 0x%p but no entrypoint found and called!\n", GetExecutorTypeStr(exec).c_str(), dllPath.c_str(), GetProcessId(hProcess), (LPVOID)dllLoadingData.pDllBase);
+            HandleCleanup(hProcess, { pRemoteDllLoadingData, pRemoteDllLoadingShellcode }, pLocalImage); // do not free the dll mem if successful
+            return true;
+        }
+
+        if (dllLoadingData.Result == ShellcodeResult::scDllMainFailed) {
             printf("[!] Hooker: Executor %s failed with DllLoadingShellcode in remote process %i\n", GetExecutorTypeStr(exec).c_str(), GetProcessId(hProcess));
             return HandleCleanup(hProcess, { pRemoteTargetBase, pRemoteDllLoadingData, pRemoteDllLoadingShellcode }, NULL); // return fail
         }
 
-        // successful result: DLL base address (valid addrs are way bigger than 2)
-        if (dllLoadingData.Result > ShellcodeResult::scFailed) {
-            printf("[*] Hooker: %s loaded '%s' in remote process %i at %llu\n", GetExecutorTypeStr(exec).c_str(), dllPath.c_str(), GetProcessId(hProcess), dllLoadingData.Result);
+        if (dllLoadingData.Result == ShellcodeResult::scDllMainSuccessful) {
+            printf("[*] Hooker: %s loaded '%s' in remote process %i at 0x%p\n", GetExecutorTypeStr(exec).c_str(), dllPath.c_str(), GetProcessId(hProcess), (LPVOID)dllLoadingData.pDllBase);
             HandleCleanup(hProcess, { pRemoteDllLoadingData, pRemoteDllLoadingShellcode }, pLocalImage); // do not free the dll mem if successful
             return true;
         }
@@ -1240,7 +1360,7 @@ bool HostMappedAndShellcodeLoaderInject(HANDLE hProcess, const std::string& dllP
 }
 
 // write dll to remote proc and call self-reflective loader (handles image address, system function resol., mem alloc, header copy, section copy, IAT resolution, relocations, and call DllMain)
-bool ReflectiveSelfLoaderInject(HANDLE hProcess, const std::string& dllPath, Executor exec, bool debug) {
+bool ReflectiveSelfLoaderInject(HANDLE hProcess, const std::string& dllPath, Executor exec, bool yoloMode, bool debug) {
     // open dll file
     HANDLE fileHandle = CreateFileA(dllPath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (fileHandle == INVALID_HANDLE_VALUE) { printf("[!] Hooker: CreateFile failed: %lu\n", GetLastError()); return false; }
@@ -1310,7 +1430,7 @@ bool ReflectiveSelfLoaderInject(HANDLE hProcess, const std::string& dllPath, Exe
     LPTHREAD_START_ROUTINE lpRemoteLoaderEntry = (LPTHREAD_START_ROUTINE)((ULONG_PTR)pRemoteTargetBase + (ULONG_PTR)loaderOffset);
 
     // finally execute the dll loader with the given executor
-    bool ret = ExecuteDllLoader(hProcess, exec, lpRemoteLoaderEntry, NULL, debug);
+    bool ret = ExecuteDllLoader(hProcess, exec, lpRemoteLoaderEntry, NULL, yoloMode, debug);
     if (!ret) {
         printf("[!] Hooker: %s failed to load '%s' into remote process %i\n", GetExecutorTypeStr(exec).c_str(), dllPath.c_str(), GetProcessId(hProcess));
         return HandleCleanup(hProcess, { pRemoteTargetBase }, fileBuffer);
@@ -1321,7 +1441,7 @@ bool ReflectiveSelfLoaderInject(HANDLE hProcess, const std::string& dllPath, Exe
 }
 
 // Preparation for DLL injection
-bool InjectDll(DWORD pid, const std::string& dllPath, HANDLE hProcess, Injection injectType, Executor execType, bool debug) {
+bool InjectDll(DWORD pid, const std::string& dllPath, HANDLE hProcess, Injection injectType, Executor execType, bool yoloMode, bool debug) {
     if (hProcess == NULL) {
         if (debug) {
             printf("[+] Hooker: Opening pid=%i\n", pid);
@@ -1330,24 +1450,24 @@ bool InjectDll(DWORD pid, const std::string& dllPath, HANDLE hProcess, Injection
     }
     else {
         if (debug) {
-            printf("[+] Hooker: Using existing handle=%p\n", hProcess);
+            printf("[+] Hooker: Using existing handle=0x%p\n", hProcess);
         }
     }
 
     if (!hProcess) {
-        std::cerr << "[!] Hooker: Failed to open target process. Error: " << GetLastError() << "\n";
+        printf("[!] Hooker: Failed to open target process. Error: %lx\n", GetLastError());
         return false;
     }
     BOOL isWow = FALSE;
     if (IsWow64Process(hProcess, &isWow)) {
         if (isWow) {
-            std::cerr << "[!] Hooker: Target process is 32-bit, but this injector is 64-bit. Cannot inject.\n";
+            printf("[!] Hooker: Target process is 32-bit but this injector is 64-bit. Abort.\n");
             CloseHandle(hProcess);
             return false;
         }
     }
     else {
-        std::cerr << "[!] Hooker: IsWow64Process failed. Error: " << GetLastError() << "\n";
+        printf("[!] Hooker: IsWow64Process failed. Error: %lx\n", GetLastError());
         CloseHandle(hProcess);
         return false;
     }
@@ -1355,13 +1475,13 @@ bool InjectDll(DWORD pid, const std::string& dllPath, HANDLE hProcess, Injection
 
     switch (injectType) {
     case LOADLIBRARY_INJECTION:
-        return LoadLibraryInject(hProcess, dllPath, execType, debug);
+        return LoadLibraryInject(hProcess, dllPath, execType, yoloMode, debug);
     case HOSTMAPPED_INJECTION:
-        return HostMappedAndShellcodeLoaderInject(hProcess, dllPath, execType, debug);
+        return HostMappedAndShellcodeLoaderInject(hProcess, dllPath, execType, yoloMode, debug);
     case REFLECTIVE_INJECTION:
-        return ReflectiveSelfLoaderInject(hProcess, dllPath, execType, debug);
+        return ReflectiveSelfLoaderInject(hProcess, dllPath, execType, yoloMode, debug);
     default:
-        std::cerr << "[!] Hooker: Unknown action\n";
+        printf("[!] Hooker: Unknown action\n");
         CloseHandle(hProcess);
         return false;
     }
