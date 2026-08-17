@@ -134,7 +134,7 @@ TEST_CASE("GetThreadForExecutor: Get best thread for Hijacking", "[hooker][getth
     TestProcess p;
     REQUIRE(p.Start(false, true));
 
-    OPTIMAL_THREAD optThread = GetThreadForExecutor(p.pid, HIJACK_THREAD, debug);
+    OPTIMAL_THREAD optThread = GetThreadForExecutor(p.pid, HIJACK_THREAD, false, debug);
     REQUIRE(optThread.hThread != NULL);
     REQUIRE(optThread.score == 100);
 }
@@ -146,7 +146,7 @@ TEST_CASE("GetThreadForExecutor: Get best thread for QueueAPC2", "[hooker][getth
     TestProcess p;
     REQUIRE(p.Start(false, true));
 
-    OPTIMAL_THREAD optThread = GetThreadForExecutor(p.pid, QUEUE_USER_APC2, debug);
+    OPTIMAL_THREAD optThread = GetThreadForExecutor(p.pid, QUEUE_USER_APC2, false, debug);
     REQUIRE(optThread.hThread != NULL);
     REQUIRE(optThread.score == 100); // this can vary, higher CPU frequency -> less time in busy work and thus smaller chance to be actually running
 }
