@@ -433,7 +433,7 @@ int main(int argc, char* argv[]) {
             if (g_debug) {
                 std::cout << "[+] EDRi: Injecting into " << exe << ":" << pid << " ...\n";
             }
-            if (!InjectDll(pid, get_hook_dll_path(edr_profile.needs_minimal_hooks), NULL, REFLECTIVE_INJECTION, HIJACK_THREAD, g_debug)) {
+            if (!InjectDll(pid, get_hook_dll_path(edr_profile.needs_minimal_hooks), NULL, REFLECTIVE_INJECTION, HIJACK_THREAD, false, g_debug)) {
                 std::cerr << "[!] EDRi: Failed to inject the hooker dll into " << exe << "\n";
 				Sleep(1000); // small wait to ensure the hooker dll released the hooks.txt file
                 save_hooked_procs(g_newly_hooked_procs); // save newly hooked procs for next round
