@@ -172,7 +172,7 @@ void TestDllInjection(Injection injectionType, Executor execType, DllLoadedVerif
     ResetEtwEvent();
 
 	// inject the test DLL into the current process
-	bool injected = InjectDll(p.pid, testDllPath, NULL, injectionType, execType, debug);
+	bool injected = InjectDll(p.pid, testDllPath, NULL, injectionType, execType, false, debug);
 	Sleep(100); // wait for prints
 	REQUIRE(injected == true);
 
