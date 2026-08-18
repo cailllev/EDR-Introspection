@@ -52,6 +52,8 @@ struct ShellcodeData {
     BOOL YoloMode;
 };
 
+uint64_t yoloBusyWait = 5'000'000'000; // for _ in wait; this is placed in PIC
+
 // Define a custom section set to calc shellcodeSize
 #pragma section(".sc$a", read, execute)
 #pragma section(".sc$b", read, execute)
@@ -81,15 +83,24 @@ __declspec(noinline) void __stdcall UniversalDllLoadingShellcode(ShellcodeData* 
         while (pImportDescr->Name) {
             char* szMod = reinterpret_cast<char*>(pBase + pImportDescr->Name);
             HMODULE hMod = pData->pLoadLibraryA(szMod);
-            if (!hMod) {
-                pData->DllFailed = (uintptr_t)szMod;
+            if (!hMod) { // failed to load a module, report error
+                if (szMod) {
+                    pData->DllFailed = (uintptr_t)szMod;
+                }
+                else if ((uintptr_t)pImportDescr->Name) {
+                    pData->DllFailed = (uintptr_t)pImportDescr->Name;
+                }
+                else {
+                    pData->DllFailed = (uintptr_t)"<invalid dll import dir - fix your dll>";
+                }
                 if (!pData->YoloMode) {
                     pData->Result = ShellcodeResult::scLoadLibraryError;
                     return; // no risk
                 }
-                else {
+                else { // ignore error but busy wait for at least one read
                     pImportDescr++;
-                    continue; // try loading the next dll, skip this one
+                    volatile uint64_t x = 0; for (uint64_t i = 0; i < yoloBusyWait; i++) { x += i; }
+                    continue; // and try loading the next dll, skip this one
                 }
             }
 
@@ -110,7 +121,10 @@ __declspec(noinline) void __stdcall UniversalDllLoadingShellcode(ShellcodeData* 
                             pData->Result = ShellcodeResult::scGetProcAddrOrdinalError;
                             return; // no risk
                         }
-                    } // elso ignore errors in yolo mode
+                        else { // ignore error but busy wait for at least one read
+                            volatile uint64_t x = 0; for (uint64_t i = 0; i < yoloBusyWait; i++) { x += i; }
+                        }
+                    }
                 }
                 else {
                     auto* pImportByName = reinterpret_cast<IMAGE_IMPORT_BY_NAME*>(pBase + pThunk->u1.AddressOfData);
@@ -122,7 +136,10 @@ __declspec(noinline) void __stdcall UniversalDllLoadingShellcode(ShellcodeData* 
                             pData->Result = ShellcodeResult::scGetProcAddrNameError;
                             return; // no risk
                         }
-                    } // elso ignore errors in yolo mode
+                        else { // ignore error but busy wait for at least one read
+                            volatile uint64_t x = 0; for (uint64_t i = 0; i < yoloBusyWait; i++) { x += i; }
+                        }
+                    }
                 }
                 pThunk++;
                 pIAT++;
@@ -150,7 +167,10 @@ __declspec(noinline) void __stdcall UniversalDllLoadingShellcode(ShellcodeData* 
             if (!pData->YoloMode) {
                 pData->Result = ShellcodeResult::scRtlFailed;
                 return; // no risk
-            } // elso ignore errors in yolo mode
+            }
+            else { // ignore error but busy wait for at least one read
+                volatile uint64_t x = 0; for (uint64_t i = 0; i < yoloBusyWait; i++) { x += i; }
+            }
         }
     }
 
@@ -1248,8 +1268,9 @@ bool HostMappedAndShellcodeLoaderInject(HANDLE hProcess, const std::string& dllP
             printf("[:] Hooker: Still waiting for %s of DllLoadingShellcode after %i seconds\n", waitingFor, secondsPassed);
         }
 
-        if (dllLoadingData.Result == ShellcodeResult::scPending || dllLoadingData.Result == ShellcodeResult::scExecuting) {
-            continue; // just wait
+        // wait for result (except when in yolo, then print pending/about to crash states too)
+        if (dllLoadingData.Result == ShellcodeResult::scPending || (dllLoadingData.Result == ShellcodeResult::scExecuting && !yoloMode)) {
+            continue;
         }
 
         if (dllLoadingData.Result == ShellcodeResult::scInvalidDllBase) {
@@ -1260,33 +1281,52 @@ bool HostMappedAndShellcodeLoaderInject(HANDLE hProcess, const std::string& dllP
         // if in yoloMode: there might've been some ignored errors, try to print them
         if (yoloMode) {
 
-            if (dllLoadingData.DllFailed != (uintptr_t)nullptr) {
+            // offsets to relevant information
+            LPVOID pRemoteDllFailed = (LPBYTE)pRemoteDllLoadingData + offsetof(ShellcodeData, DllFailed);
+            LPVOID pRemoteIATNameFailed = (LPBYTE)pRemoteDllLoadingData + offsetof(ShellcodeData, IATNameFailed);
+            LPVOID pRemoteIATOrdinalFailed = (LPBYTE)pRemoteDllLoadingData + offsetof(ShellcodeData, IATOrdinalFailed);
+            uintptr_t nullPtr = 0;
+            uint32_t zeroOrdinal = 0;
+
+            if (dllLoadingData.IATOrdinalFailed != 0 || dllLoadingData.IATNameFailed != nullPtr) {
+                char failingDll[MAX_PATH]{};
+                if (dllLoadingData.DllFailed != nullPtr) {
+                    if (!ReadProcessMemory(hProcess, (LPCVOID)dllLoadingData.DllFailed, failingDll, sizeof(failingDll) - 1, nullptr)) {
+                        strncpy_s(failingDll, "<error reading dll name>", _TRUNCATE);
+                    }
+
+                    // Clear DllFailed in the struct offset
+                    WriteProcessMemory(hProcess, pRemoteDllFailed, &nullPtr, sizeof(nullPtr), NULL);
+                }
+
+                if (dllLoadingData.IATNameFailed != nullPtr) {
+                    char failingIATName[MAX_PATH]{};
+                    if (!ReadProcessMemory(hProcess, (LPCVOID)dllLoadingData.IATNameFailed, failingIATName, sizeof(failingIATName) - 1, nullptr)) {
+                        strncpy_s(failingIATName, "<error reading func name>", _TRUNCATE);
+                    }
+                    printf("[!] Hooker: GetProcAddress failed for IAT '%s' in '%s', but yolo!\n", failingIATName, failingDll);
+
+                    // Clear IATNameFailed in the struct offset
+                    WriteProcessMemory(hProcess, pRemoteIATNameFailed, &nullPtr, sizeof(nullPtr), NULL);
+                }
+                else {
+                    printf("[!] Hooker: GetProcAddress failed for IAT ordinal=%i in '%s', but yolo!\n", dllLoadingData.IATOrdinalFailed, failingDll);
+
+                    // Clear IATOrdinalFailed in the struct offset
+                    WriteProcessMemory(hProcess, pRemoteIATOrdinalFailed, &zeroOrdinal, sizeof(zeroOrdinal), NULL);
+                }
+            }
+
+            // Check remaining LoadLibrary errors
+            if (dllLoadingData.DllFailed != nullPtr) {
                 char failingDll[MAX_PATH]{};
                 if (!ReadProcessMemory(hProcess, (LPCVOID)dllLoadingData.DllFailed, failingDll, sizeof(failingDll) - 1, nullptr)) {
                     strncpy_s(failingDll, "<error reading dll name>", _TRUNCATE);
                 }
                 printf("[$] Hooker: LoadLibrary failed when importing the last dependent library '%s', but yolo!\n", failingDll);
-            }
 
-            if (dllLoadingData.IATOrdinalFailed != 0 || dllLoadingData.IATNameFailed != (uintptr_t)nullptr) {
-                char failingDll[MAX_PATH]{};
-                if (dllLoadingData.DllFailed == (uintptr_t)nullptr || !ReadProcessMemory(hProcess, (LPCVOID)dllLoadingData.DllFailed, failingDll, sizeof(failingDll) - 1, nullptr)) {
-                    strncpy_s(failingDll, "<error reading dll name>", _TRUNCATE);
-                }
-                char failingIATEntry[MAX_PATH]{};
-                if (dllLoadingData.Result == ShellcodeResult::scGetProcAddrNameError) {
-                    if (!ReadProcessMemory(hProcess, (LPCVOID)dllLoadingData.IATNameFailed, failingIATEntry, sizeof(failingIATEntry) - 1, nullptr)) {
-                        strncpy_s(failingIATEntry, "<error reading func name>", _TRUNCATE);
-                    }
-                }
-                else {
-                    snprintf(failingIATEntry, sizeof(failingDll) - 1, "ordinal=%i", dllLoadingData.IATOrdinalFailed);
-                }
-                printf("[!] Hooker: GetProcAddress failed for IAT entry '%s' in '%s', but yolo!\n", failingIATEntry, failingDll);
-            }
-
-            if (dllLoadingData.RtlFailed != 0) {
-                printf("[!] Hooker: Failed to add items to Rtl, but yolo!\n");
+                // Clear DllFailed in the struct offset
+                WriteProcessMemory(hProcess, pRemoteDllFailed, &nullPtr, sizeof(nullPtr), NULL);
             }
 
         }
