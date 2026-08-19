@@ -50,9 +50,11 @@ struct ShellcodeData {
     uint32_t RtlFailed;
 
     BOOL YoloMode;
+    uint64_t YoloWait;
 };
 
-uint64_t yoloBusyWait = 5'000'000'000; // for _ in wait; this is placed in PIC
+// this should result in a wait that's a bit longer than msSleepBetweenPolls
+uint64_t yoloBusyWait = 300'000'000; // for _ in wait; this is placed in PIC
 
 // Define a custom section set to calc shellcodeSize
 #pragma section(".sc$a", read, execute)
@@ -99,7 +101,7 @@ __declspec(noinline) void __stdcall UniversalDllLoadingShellcode(ShellcodeData* 
                 }
                 else { // ignore error but busy wait for at least one read
                     pImportDescr++;
-                    volatile uint64_t x = 0; for (uint64_t i = 0; i < yoloBusyWait; i++) { x += i; }
+                    volatile uint64_t x = 0; for (uint64_t i = 0; i < pData->YoloWait; i++) { x += i; }
                     continue; // and try loading the next dll, skip this one
                 }
             }
@@ -122,7 +124,7 @@ __declspec(noinline) void __stdcall UniversalDllLoadingShellcode(ShellcodeData* 
                             return; // no risk
                         }
                         else { // ignore error but busy wait for at least one read
-                            volatile uint64_t x = 0; for (uint64_t i = 0; i < yoloBusyWait; i++) { x += i; }
+                            volatile uint64_t x = 0; for (uint64_t i = 0; i < pData->YoloWait; i++) { x += i; }
                         }
                     }
                 }
@@ -137,7 +139,7 @@ __declspec(noinline) void __stdcall UniversalDllLoadingShellcode(ShellcodeData* 
                             return; // no risk
                         }
                         else { // ignore error but busy wait for at least one read
-                            volatile uint64_t x = 0; for (uint64_t i = 0; i < yoloBusyWait; i++) { x += i; }
+                            volatile uint64_t x = 0; for (uint64_t i = 0; i < pData->YoloWait; i++) { x += i; }
                         }
                     }
                 }
@@ -169,7 +171,7 @@ __declspec(noinline) void __stdcall UniversalDllLoadingShellcode(ShellcodeData* 
                 return; // no risk
             }
             else { // ignore error but busy wait for at least one read
-                volatile uint64_t x = 0; for (uint64_t i = 0; i < yoloBusyWait; i++) { x += i; }
+                volatile uint64_t x = 0; for (uint64_t i = 0; i < pData->YoloWait; i++) { x += i; }
             }
         }
     }
@@ -347,7 +349,7 @@ DWORD64 GetReflectiveLoaderOffset(DWORD64 base_address, LPCSTR ReflectiveLoader_
 
 // ------------------------ my helpers ------------------------ //
 int msMaxWaitForExecutor = 60000; // 1min
-int msSleepBetweenPolls = 500;
+int msSleepBetweenPolls = 50;
 int msBetweenStatusUpdates = 5000; // 5sec
 int loopsBetweenStatusUpdates = msBetweenStatusUpdates / msSleepBetweenPolls;
 
@@ -1199,6 +1201,7 @@ bool HostMappedAndShellcodeLoaderInject(HANDLE hProcess, const std::string& dllP
     dllLoadingData.IATNameFailed = (uintptr_t)nullptr;
     dllLoadingData.RtlFailed = 0;
     dllLoadingData.YoloMode = yoloMode;
+    dllLoadingData.YoloWait = yoloBusyWait;
 
     // allocate memory for shellcode data in remote process
     LPVOID pRemoteDllLoadingData = VirtualAllocEx(hProcess, nullptr, sizeof(ShellcodeData), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
