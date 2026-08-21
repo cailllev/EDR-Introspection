@@ -6,19 +6,29 @@
 typedef void* HANDLE;
 #endif
 
-enum Action {
+#ifndef DWORD
+typedef unsigned long DWORD;
+#endif
+
+enum Injection {
     LOADLIBRARY_INJECTION,
-    EXTERNAL_INJECTION,
+    HOSTMAPPED_INJECTION,
     REFLECTIVE_INJECTION,
     STOP_INJECTION
 };
 
-enum Execution {
+enum Executor {
 	CREATE_REMOTE_THREAD,
     HIJACK_THREAD,
     QUEUE_USER_APC2
 };
 
-bool InjectDll(DWORD pid, const std::string& dllPath, BOOL debug, Action injectionType, HANDLE hProcess, Execution execType);
-std::string GetActionStr(Action a);
-std::string GetExecutionStr(Execution e);
+typedef struct _OPTIMAL_THREAD {
+    HANDLE hThread;
+    int score;
+} OPTIMAL_THREAD, *POPTIMAL_THREAD;
+
+bool InjectDll(DWORD pid, const std::string& dllPath, HANDLE hProcess, Injection injectionType, Executor execType, bool riskInstability, bool debug);
+std::string GetInjectTypeStr(Injection injectType);
+std::string GetExecutorTypeStr(Executor execType);
+OPTIMAL_THREAD GetThreadForExecutor(DWORD targetProcessId, Executor exec, bool riskInstability, bool debug);

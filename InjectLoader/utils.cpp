@@ -1,7 +1,8 @@
-#include "utils.h"
+#include <windows.h>
 #include <winternl.h>
 #include <tlhelp32.h>
-#include <iostream>
+
+#include "utils.h"
 
 #pragma comment(lib, "ntdll.lib")
 
@@ -116,7 +117,7 @@ HMODULE GetRemoteManualMappedModule(HANDLE hProcess, const std::string& targetDl
 BOOL UnloadViaThread(DWORD pid, std::string dllName) {
 	HMODULE hMod = GetRemoteModuleHandle(pid, dllName);
 	if (hMod == NULL) {
-		std::wcerr << L"[!] Utils: Failed to get remote module handle.\n";
+		printf("[!] Utils: Failed to get remote module handle.\n");
 		return FALSE;
 	}
 
@@ -138,14 +139,14 @@ BOOL UnloadViaThread(DWORD pid, std::string dllName) {
 BOOL UnloadViaEvent(DWORD pid, std::string dllName) { // or just use a stopRequest.txt
     HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
     if (!ntdll) {
-        std::wcerr << L"[!] Utils: Failed to get ntdll handle.\n";
+        printf("[!] Utils: Failed to get ntdll handle.\n");
         return FALSE;
     }
 
     g_origNtOpenEvent = (PFN_NtOpenEvent)GetProcAddress(ntdll, "NtOpenEvent");
     g_origRtlNtStatusToDosError = (PFN_RtlNtStatusToDosError)GetProcAddress(ntdll, "RtlNtStatusToDosError");
     if (g_origNtOpenEvent == nullptr || g_origRtlNtStatusToDosError == nullptr) {
-        std::wcerr << L"[!] Utils: Failed to get NtOpenEvent or RtlNtStatusToDosError address.\n";
+        printf("[!] Utils: Failed to get NtOpenEvent or RtlNtStatusToDosError address.\n");
         return FALSE;
     }
 
@@ -164,12 +165,12 @@ BOOL UnloadViaEvent(DWORD pid, std::string dllName) { // or just use a stopReque
     NTSTATUS st = g_origNtOpenEvent(&hEvent, EVENT_MODIFY_STATE | SYNCHRONIZE, &oa);
 
     if (!NT_SUCCESS(st)) {
-        DWORD winerr = g_origRtlNtStatusToDosError(st);
-        std::wcerr << "[!] Utils: Failed to NtOpenEvent " << eventName << ", WinErr = " << winerr << L"\n";
+        DWORD err = g_origRtlNtStatusToDosError(st);
+        printf("[!] Utils: Failed to NtOpenEvent %ls with error %lx\n", eventName, err);
         return FALSE;
     }
 
-    std::wcout << "[-] Utils: NtOpenEvent " << eventName << " ok, sending stop signal\n";
+    printf("[-] Utils: Received NtOpenEvent %ls -> sending stop signal\n", eventName);
     SetEvent(hEvent);
     CloseHandle(hEvent);
 
@@ -177,7 +178,7 @@ BOOL UnloadViaEvent(DWORD pid, std::string dllName) { // or just use a stopReque
     return TRUE;
 }
 
-HANDLE findProcHandle(DWORD pid, BOOL debug) {
+HANDLE FindProcHandle(DWORD pid, BOOL debug) {
     HMODULE hNtdll = GetModuleHandleW(L"ntdll.dll");
     if (hNtdll == 0) {
         printf("[!] InjectLoader: Failed to get handle to ntdll.dll\n");
@@ -266,4 +267,62 @@ HANDLE findProcHandle(DWORD pid, BOOL debug) {
     printf("[!] InjectLoader: No process handles found in the current process.\n");
     if (buffer != 0) VirtualFree(buffer, 0, MEM_RELEASE);
     return 0;
+}
+
+std::string GetProcAccessDetails(DWORD granted) {
+    struct { DWORD mask; const char* name; } flags[] = {
+        {0x0001, "PROCESS_TERMINATE"},
+        {0x0002, "PROCESS_CREATE_THREAD"},
+        {0x0004, "PROCESS_SET_SESSIONID"},
+        {0x0008, "PROCESS_VM_OPERATION"},
+        {0x0010, "PROCESS_VM_READ"},
+        {0x0020, "PROCESS_VM_WRITE"},
+        {0x0040, "PROCESS_DUP_HANDLE"},
+        {0x0080, "PROCESS_CREATE_PROCESS"},
+        {0x0100, "PROCESS_SET_QUOTA"},
+        {0x0200, "PROCESS_SET_INFORMATION"},
+        {0x0400, "PROCESS_QUERY_INFORMATION"},
+        {0x0800, "PROCESS_SUSPEND_RESUME"},
+        {0x1000, "PROCESS_QUERY_LIMITED_INFORMATION"},
+        {0x2000, "PROCESS_SET_LIMITED_INFORMATION"}
+    };
+
+    std::string access = "";
+    for (auto& f : flags) {
+        if (granted & f.mask) {
+            access += std::string(f.name) + " | ";
+        }
+    }
+    if (!access.empty()) {
+        access = access.substr(0, access.size() - 3); // remove last " | "
+    }
+    else {
+        return "no access";
+    }
+    std::string no_access = "";
+    for (auto& f : flags) {
+        if (!(granted & f.mask)) {
+            no_access += std::string(f.name) + " | ";
+        }
+    }
+    if (!no_access.empty()) {
+        no_access = no_access.substr(0, no_access.size() - 3); // remove last " | "
+    }
+    else {
+        return "full access";
+    }
+    return access + ", not including: " + no_access;
+}
+
+void PrintGrantedAccess(HANDLE h, DWORD pid) {
+    PUBLIC_OBJECT_BASIC_INFORMATION obi = {};
+    ULONG ret = 0;
+    NTSTATUS st = NtQueryObject(h, ObjectBasicInformation, &obi, sizeof(obi), &ret);
+    if (st < 0) {
+        printf("[!] Hooker: NtQueryObject failed at pid=%i with status 0x%lx", pid, st);
+    }
+    else {
+        std::string details = GetProcAccessDetails(obi.GrantedAccess);
+        printf("[*] Hooker: GrantedAccess to pid=%i: 0x%lx %s\n", pid, obi.GrantedAccess, details.c_str());
+    }
 }

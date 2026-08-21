@@ -4,17 +4,13 @@
 #include <Windows.h>
 #include <winternl.h>
 #include <tlhelp32.h>
-#include <iostream>
-#include <iomanip>
-#include <sstream>
 
 #pragma comment(lib, "ntdll.lib")
 
-#define ProcessHandleInformation 51 // Information class 0x33
-#define ThreadQuerySetWin32StartAddress 9
-#define ObjectBasicInformation 0
 
-// Built-in structure for local handle snapshots
+#define ProcessHandleInformation 51
+
+// generic handle information
 typedef struct _PROCESS_HANDLE_TABLE_ENTRY_INFO {
     HANDLE HandleValue;
     ULONG_PTR HandleCount;
@@ -31,66 +27,8 @@ typedef struct _PROCESS_HANDLE_SNAPSHOT_INFORMATION {
     PROCESS_HANDLE_TABLE_ENTRY_INFO Handles[1];
 } PROCESS_HANDLE_SNAPSHOT_INFORMATION, * PPROCESS_HANDLE_SNAPSHOT_INFORMATION;
 
-typedef NTSTATUS(NTAPI* pfnNtQueryInformationProcess)(
-    HANDLE ProcessHandle,
-    ULONG ProcessInformationClass,
-    PVOID ProcessInformation,
-    ULONG ProcessInformationLength,
-    PULONG ReturnLength
-    );
-
-typedef struct my_LDR_DATA_TABLE_ENTRY {
-    PVOID Reserved1[2];
-    LIST_ENTRY InMemoryOrderLinks;
-    PVOID Reserved2[2];
-    PVOID DllBase;
-    PVOID Reserved3[2];
-    UNICODE_STRING FullDllName;
-    BYTE Reserved4[8];
-    PVOID Reserved5[3];
-    union
-    {
-        ULONG CheckSum;
-        PVOID Reserved6;
-    };
-    ULONG TimeDateStamp;
-} my_LDR_DATA_TABLE_ENTRY, * my_PLDR_DATA_TABLE_ENTRY;
-
-typedef struct my_PEB_LDR_DATA {
-    ULONG Length;
-    BOOLEAN Initialized;
-    HANDLE SsHandle;
-    LIST_ENTRY InLoadOrderModuleList;
-    LIST_ENTRY InMemoryOrderModuleList;
-    LIST_ENTRY InInitializationOrderModuleList;
-    PVOID EntryInProgress;
-    BOOLEAN ShutdownInProgress;
-    HANDLE ShutdownThreadId;
-} my_PEB_LDR_DATA, * my_PPEB_LDR_DATA;
-
-typedef struct my_PEB {
-    BYTE Reserved1[16];
-    PVOID ImageBaseAddress;
-    my_PPEB_LDR_DATA Ldr;
-} my_PEB, * my_PPEB;
-
-typedef NTSTATUS(NTAPI* fnNtQueryInformationThread)(
-    HANDLE ThreadHandle,
-    ULONG ThreadInformationClass,
-    PVOID ThreadInformation,
-    ULONG ThreadInformationLength,
-    PULONG ReturnLength
-    );
-
-typedef NTSTATUS(NTAPI* fnNtQueryObject)(
-    HANDLE Handle,
-    ULONG ObjectInformationClass,
-    PVOID ObjectInformation,
-    ULONG ObjectInformationLength,
-    PULONG ReturnLength
-    );
-
-typedef struct my_OBJECT_BASIC_INFORMATION {
+// generic objects
+typedef struct _OBJECT_BASIC_INFORMATION {
     ULONG Attributes;
     ACCESS_MASK GrantedAccess;
     ULONG HandleCount;
@@ -102,60 +40,68 @@ typedef struct my_OBJECT_BASIC_INFORMATION {
     ULONG TypeInformationLength;
     ULONG SecurityDescriptorLength;
     LARGE_INTEGER CreationTime;
-} my_OBJECT_BASIC_INFORMATION, * my_POBJECT_BASIC_INFORMATION;
+} OBJECT_BASIC_INFORMATION, * POBJECT_BASIC_INFORMATION;
 
-typedef DWORD(WINAPI* pfnGetProcessId)(HANDLE);
-typedef DWORD(WINAPI* pfnGetThreadId)(HANDLE);
+// file handles
+#define ObjectNameInformation 1
+#define ObjectTypeInformation 2
+
+typedef struct _OBJECT_NAME_INFORMATION {
+    UNICODE_STRING Name;
+} OBJECT_NAME_INFORMATION, * POBJECT_NAME_INFORMATION;
+
+typedef struct _OBJECT_TYPE_INFORMATION {
+    UNICODE_STRING TypeName;
+    ULONG Reserved[22]; // enough padding
+} OBJECT_TYPE_INFORMATION, * POBJECT_TYPE_INFORMATION;
 
 
 // traverses the PEB and prints all loaded DLLs and their base addrs
-void print_bases(HANDLE hProcess) {
-	printf("[*] Traversing PEB for loaded DLLs...\n");
+void printBases(HANDLE hProcess) {
+    printf("[*] Traversing PEB for loaded DLLs...\n");
 
     PROCESS_BASIC_INFORMATION pbi;
     NtQueryInformationProcess(hProcess, ProcessBasicInformation, &pbi, sizeof(pbi), nullptr);
 
-    my_PEB peb;
+    PEB peb;
     if (!ReadProcessMemory(hProcess, pbi.PebBaseAddress, &peb, sizeof(peb), nullptr)) {
         printf("[!] Cannot read PEB base addr\n");
         CloseHandle(hProcess);
         return;
     }
 
-    my_PEB_LDR_DATA ldr{};
+    PEB_LDR_DATA ldr{};
     if (!ReadProcessMemory(hProcess, peb.Ldr, &ldr, sizeof(ldr), nullptr)) {
         printf("[-] Failed to read PEB_LDR_DATA. Error: %lu", GetLastError());
         CloseHandle(hProcess);
         return;
     }
 
-    PVOID headAddr = (PBYTE)peb.Ldr + offsetof(my_PEB_LDR_DATA, InMemoryOrderModuleList);
+    PVOID headAddr = (PBYTE)peb.Ldr + offsetof(PEB_LDR_DATA, InMemoryOrderModuleList);
 
     LIST_ENTRY head{};
     ReadProcessMemory(hProcess, headAddr, &head, sizeof(head), nullptr);
     PVOID current = head.Flink;
 
-    std::cout << std::left
-        << std::setw(19) << "Base Address"
-        << std::setw(100) << "DLL Name" << "\n";
-    std::cout << std::string(48, '-') << "\n";
+    printf("%-19s %-100s\n", "Base Address", "DLL Name");
+    printf("------------------------------------------------\n");
 
     while (current && current != headAddr) {
-        my_LDR_DATA_TABLE_ENTRY entry{};
-        if (!ReadProcessMemory(hProcess, CONTAINING_RECORD(current, my_LDR_DATA_TABLE_ENTRY, InMemoryOrderLinks), &entry, sizeof(entry), nullptr)) {
+        LDR_DATA_TABLE_ENTRY entry{};
+        if (!ReadProcessMemory(hProcess, CONTAINING_RECORD(current, LDR_DATA_TABLE_ENTRY, InMemoryOrderLinks), &entry, sizeof(entry), nullptr)) {
             printf("[-] Failed to read LDR_DATA_TABLE_ENTRY. Error: %lu", GetLastError());
             CloseHandle(hProcess);
             return;
         }
         if (entry.FullDllName.Buffer) {
             wchar_t dll_name[MAX_PATH];
-            std::cout << "0x" << std::hex << std::setw(17) << entry.DllBase;
+            printf(L"0x%016llX ", (unsigned long long)entry.DllBase);
             if (ReadProcessMemory(hProcess, entry.FullDllName.Buffer, dll_name, entry.FullDllName.Length, nullptr)) {
                 dll_name[entry.FullDllName.Length / sizeof(wchar_t)] = L'\0'; // null-terminate
-				std::wcout << std::left << std::setw(100) << dll_name << "\n";
+                wprintf("%-100ls\n", dll_name);
             }
             else {
-				std::cout << std::setw(100) << "FAILED to read module name: " << GetLastError() << "\n";
+                printf("<Failed to read dll name. Error: %lu>\n", GetLastError());
             }
         }
         current = entry.InMemoryOrderLinks.Flink;
@@ -164,196 +110,141 @@ void print_bases(HANDLE hProcess) {
     CloseHandle(hProcess);
 }
 
-// opens all threads with all access by a given pid, checks the actual acess rights and prints them plus threadID and base address of the thread
-void check_threads(DWORD processId) {
-	printf("[*] Checking threads for given process\n");
+int checkProcHandles(PPROCESS_HANDLE_SNAPSHOT_INFORMATION localHandles) {
+    printf("[+] Checking for process handles...\n");
+    int found = 0;
 
-    HMODULE hNtdll = GetModuleHandleA("ntdll.dll");
-    if (!hNtdll) return;
+    for (ULONG_PTR i = 0; i < localHandles->NumberOfHandles; i++) {
+        PROCESS_HANDLE_TABLE_ENTRY_INFO entry = localHandles->Handles[i];
 
-    auto NtQueryInformationThread = (fnNtQueryInformationThread)GetProcAddress(hNtdll, "NtQueryInformationThread");
-    auto NtQueryObject = (fnNtQueryObject)GetProcAddress(hNtdll, "NtQueryObject");
-
-    if (!NtQueryInformationThread || !NtQueryObject) {
-        std::cerr << "[-] Failed to resolve Native APIs.\n";
-        return;
+        // Check if the handle is a process handle
+        DWORD targetPid = GetProcessId(entry.HandleValue);
+        if (targetPid != 0) {
+            printf("[+] Proc handle found: ID=0x%p, PID=%lu, Access=0x%08X\n",
+                entry.HandleValue, targetPid, entry.GrantedAccess);
+            found++;
+            printBases(entry.HandleValue);
+        }
     }
 
-    HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
-    if (hSnapshot == INVALID_HANDLE_VALUE) {
-        std::cerr << "[-] Failed to create thread snapshot.\n";
-        return;
-    }
-
-    THREADENTRY32 te;
-    te.dwSize = sizeof(THREADENTRY32);
-
-    std::cout << std::left
-        << std::setw(10) << "Thread ID"
-        << std::setw(18) << "Granted Access"
-        << std::setw(18) << "Base Address" << "\n";
-    std::cout << std::string(48, '-') << "\n";
-
-    if (Thread32First(hSnapshot, &te)) {
-        do {
-            if (te.th32OwnerProcessID == processId) {
-
-                HANDLE hThread = OpenThread(THREAD_ALL_ACCESS, FALSE, te.th32ThreadID);
-                //HANDLE hThread = OpenThread(THREAD_SET_CONTEXT | THREAD_GET_CONTEXT | THREAD_SUSPEND_RESUME, FALSE, te.th32ThreadID);
-                //HANDLE hThread = OpenThread(THREAD_QUERY_LIMITED_INFORMATION, FALSE, te.th32ThreadID); // minimal info, work when others are denied
-
-                if (hThread != NULL) {
-                    my_OBJECT_BASIC_INFORMATION objInfo = { 0 };
-                    PVOID pStartAddress = nullptr;
-                    ULONG returnLength = 0;
-
-					// query actual granted access rights for the thread handle
-                    NTSTATUS statusObj = NtQueryObject(hThread, ObjectBasicInformation, &objInfo, sizeof(objInfo), &returnLength);
-
-					// get the base address of the thread (start address)
-                    NTSTATUS statusThread = NtQueryInformationThread(hThread, ThreadQuerySetWin32StartAddress, &pStartAddress, sizeof(pStartAddress), NULL);
-
-                    std::cout << std::left << std::setw(10) << te.th32ThreadID;
-
-                    if (statusObj == 0) { // STATUS_SUCCESS
-                        std::cout << "0x" << std::hex << std::setw(16) << objInfo.GrantedAccess;
-                    }
-                    else {
-                        std::cout << std::setw(18) << "Access Unknown";
-                    }
-
-                    if (statusThread == 0) { // STATUS_SUCCESS
-                        std::cout << "0x" << std::hex << pStartAddress << "\n";
-                    }
-                    else {
-                        std::cout << "Address Unknown\n";
-                    }
-
-                    CloseHandle(hThread);
-                }
-                else {
-                    // Handled if OpenThread fails entirely (e.g., Access Denied)
-                    std::cout << std::left << std::setw(10) << te.th32ThreadID
-                        << std::setw(18) << "OPEN_FAILED"
-                        << "N/A\n";
-                }
-            }
-        } while (Thread32Next(hSnapshot, &te));
-    }
-
-    CloseHandle(hSnapshot);
+    return found;
 }
 
-int main() {
-    printf("[*] Process & Thread Handle Inspector started\n");
+int checkThreadHandles(PPROCESS_HANDLE_SNAPSHOT_INFORMATION localHandles) {
+    printf("[+] Checking for thread handles...\n");
+    int found = 0;
 
-    HMODULE hNtdll = GetModuleHandleW(L"ntdll.dll");
-	if (hNtdll == 0) {
-		printf("[-] Failed to get handle to ntdll.dll\n");
-		return 1;
+    printf("%-19s%-15s%-15s\n", "Handle ID", "Granted Access", "Thread ID");
+    printf("------------------------------------------------\n");
+
+    for (ULONG_PTR i = 0; i < localHandles->NumberOfHandles; i++) {
+        PROCESS_HANDLE_TABLE_ENTRY_INFO entry = localHandles->Handles[i];
+
+        // Check if the handle is a thread handle
+        DWORD targetTid = GetThreadId(entry.HandleValue);
+        if (targetTid != 0) {
+            printf("0x%016llX 0x%08X %-15lu\n",
+                (unsigned long long)entry.HandleValue, entry.GrantedAccess, targetTid);
+            found++;
+        }
     }
-    pfnNtQueryInformationProcess NtQueryInformationProcess = (pfnNtQueryInformationProcess)GetProcAddress(hNtdll, "NtQueryInformationProcess");
-	if (NtQueryInformationProcess == 0) {
-		printf("[-] Failed to get address of NtQueryInformationProcess\n");
-		return 1;
-	}
 
-    ULONG bufferSize = 0x4000; // Start with 16KB (plenty for a single local process)
+    return found;
+}
+
+int checkFileHandles(PPROCESS_HANDLE_SNAPSHOT_INFORMATION localHandles) {
+    printf("[+] Checking for file handles...\n");
+    int found = 0;
+
+    for (ULONG_PTR i = 0; i < localHandles->NumberOfHandles; i++) {
+        auto& entry = localHandles->Handles[i];
+
+        BYTE typeBuf[1024];
+        ULONG retLen = 0;
+
+        if (!NtQueryObject(entry.HandleValue, (OBJECT_INFORMATION_CLASS)ObjectTypeInformation, typeBuf, sizeof(typeBuf), &retLen)) {
+            printf("[!] Error querring object for type info %p\n", entry.HandleValue);
+            continue;
+        }
+
+        auto typeInfo = (POBJECT_TYPE_INFORMATION)typeBuf;
+
+        if (!typeInfo->TypeName.Buffer) {
+            printf("[!] Empty type buffer for %p\n", entry.HandleValue);
+            continue;
+        }
+
+        if (_wcsicmp(typeInfo->TypeName.Buffer, L"File") != 0)
+            continue; // silently ignore non files
+
+        found++;
+        const ULONG namesBufLen = 1024;
+        BYTE namesBuf[namesBufLen];
+
+        if (!NtQueryObject(entry.HandleValue, (OBJECT_INFORMATION_CLASS)ObjectNameInformation, &namesBuf, namesBufLen, &retLen)) {
+            printf("[!] Error querring object for name info %p\n", entry.HandleValue);
+            continue;
+        }
+
+        auto nameInfo = (POBJECT_NAME_INFORMATION)namesBuf;
+        if (!nameInfo->Name.Buffer) {
+            printf("[!] Empty name buffer for %p\n", entry.HandleValue);
+            continue;
+        }
+
+        wprintf(L"Handle=%p Access=0x%08X File=%.*s\n", entry.HandleValue,
+            entry.GrantedAccess, nameInfo->Name.Length / sizeof(WCHAR), nameInfo->Name.Buffer);
+    }
+    return found;
+}
+
+// gets all open handles in current process
+bool getLocalHandles(_Out_ PPROCESS_HANDLE_SNAPSHOT_INFORMATION* localHandles) {
+
+    ULONG bufferSize = 0x4000; // start with 16KB (just a single local process)
     PVOID buffer = VirtualAlloc(NULL, bufferSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     ULONG returnLength = 0;
 
-    // Query only OUR process handle table
-    NTSTATUS status = NtQueryInformationProcess(
-        GetCurrentProcess(),
-        ProcessHandleInformation,
-        buffer,
-        bufferSize,
-        &returnLength
-    );
+    // Query only current process handle table
+    NTSTATUS status = NtQueryInformationProcess(GetCurrentProcess(), (PROCESSINFOCLASS)ProcessHandleInformation,
+        buffer, bufferSize, &returnLength);
 
     // Resize if needed
     if (status == 0xC0000004) { // STATUS_INFO_LENGTH_MISMATCH
         VirtualFree(buffer, 0, MEM_RELEASE);
         bufferSize = returnLength;
         buffer = VirtualAlloc(NULL, bufferSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-        status = NtQueryInformationProcess(GetCurrentProcess(), ProcessHandleInformation, buffer, bufferSize, &returnLength);
+        status = NtQueryInformationProcess(GetCurrentProcess(), (PROCESSINFOCLASS)ProcessHandleInformation, buffer, bufferSize, &returnLength);
     }
 
-    if (status == 0) {
-        PPROCESS_HANDLE_SNAPSHOT_INFORMATION localHandles = (PPROCESS_HANDLE_SNAPSHOT_INFORMATION)buffer;
-        if (localHandles == nullptr || localHandles->NumberOfHandles == 0) {
-            printf("[*] No handles found in the current process.\n");
-            if (buffer != 0) VirtualFree(buffer, 0, MEM_RELEASE);
-            return 0;
-		}
-        printf("[*] Got %llu handles of all types owned by Process Handle Inspector...\n", localHandles->NumberOfHandles);
+    *localHandles = (PPROCESS_HANDLE_SNAPSHOT_INFORMATION)buffer;
+    return status;
+}
 
-        HMODULE hKernel32 = GetModuleHandleW(L"kernel32.dll");
-        if (!hKernel32) {
-            printf("[-] Failed to get handle to kernel32.dll\n");
-            if (buffer != 0) VirtualFree(buffer, 0, MEM_RELEASE);
-            return 1;
-		}
-        pfnGetProcessId _GetProcessId = (pfnGetProcessId)GetProcAddress(hKernel32, "GetProcessId");
-        pfnGetThreadId _GetThreadId = (pfnGetThreadId)GetProcAddress(hKernel32, "GetThreadId");
-        if (!_GetProcessId || !_GetThreadId) {
-            printf("[-] Failed to get address of GetProcessId or GetThreadId\n");
-            if (buffer != 0) VirtualFree(buffer, 0, MEM_RELEASE);
-            return 1;
-		}
+int main() {
+    printf("[*] Handle Inspector started\n");
 
-		BOOL procHandleFound = FALSE, threadHandleFound = FALSE;
-
-        printf("[+] Checking for process handles...\n");
-		// first only check for process handles, then for thread handles, and print their info
-        for (ULONG_PTR i = 0; i < localHandles->NumberOfHandles; i++) {
-            PROCESS_HANDLE_TABLE_ENTRY_INFO entry = localHandles->Handles[i];
-
-            // Check if the handle is a process handle
-            DWORD targetPid = _GetProcessId(entry.HandleValue);
-            if (targetPid != 0) {
-                printf("[+] Proc handle found: ID=0x%p, PID=%lu, Access=0x%08X\n",
-                    entry.HandleValue, targetPid, entry.GrantedAccess);
-				procHandleFound = TRUE;
-                print_bases(entry.HandleValue);
-                // check_threads(targetPid); kinda useless with the code below
-            }
-        }
-
-		printf("[+] Checking for thread handles...\n");
-        std::stringstream outs;
-        std::string out;
-        for (ULONG_PTR i = 0; i < localHandles->NumberOfHandles; i++) {
-            PROCESS_HANDLE_TABLE_ENTRY_INFO entry = localHandles->Handles[i];
-
-            // Check if the handle is a thread handle
-            DWORD targetTid = _GetThreadId(entry.HandleValue);
-            if (targetTid != 0) {
-                outs << std::left << "0x" << std::hex << std::setw(17) << entry.HandleValue;
-                outs << std::left << "0x" << std::hex << std::setw(13) << entry.GrantedAccess;
-                outs << std::left << std::dec << std::setw(15) << targetTid << "\n";
-                threadHandleFound = TRUE;
-            }
-        }
-		out = outs.str();
-        if (!out.empty()) {
-            std::cout << std::left
-                << std::setw(19) << "Handle ID"
-                << std::setw(15) << "Granted Access"
-                << std::setw(15) << "Thread ID" << "\n";
-            std::cout << std::string(48, '-') << "\n";
-            std::cout << out;
-        }
-
-		if (!procHandleFound) {
-			printf("[+] No process handles found in the current process.\n");
-		}
-        if (!threadHandleFound) {
-            printf("[*] No thread handles found in the current process.\n");
-        }
+    PPROCESS_HANDLE_SNAPSHOT_INFORMATION localHandles;
+    if (!getLocalHandles(&localHandles)) {
+        printf("[!] Unable to query local process for handles\n");
+        return 1;
     }
 
-    if (buffer != 0) VirtualFree(buffer, 0, MEM_RELEASE);
+    if (localHandles == nullptr || localHandles->NumberOfHandles == 0) {
+        printf("[*] No handles found in the current process.\n");
+        if (localHandles != 0) VirtualFree(localHandles, 0, MEM_RELEASE);
+        return 0;
+    }
+    printf("[*] Got %llu handles of all types owned by Process Handle Inspector...\n", localHandles->NumberOfHandles);
+
+    int procHandles = checkProcHandles(localHandles);
+    int threadHandles = checkThreadHandles(localHandles);
+    int fileHandles = checkFileHandles(localHandles);
+
+    printf("[*] Found %i process handle(s), %i thread handle(s) and %i file handle(s) in current process.\n",
+        procHandles, threadHandles, fileHandles);
+
+    if (localHandles != 0) VirtualFree(localHandles, 0, MEM_RELEASE);
 
     printf("[*] Print ENTER to exit...\n");
     (void)getchar();

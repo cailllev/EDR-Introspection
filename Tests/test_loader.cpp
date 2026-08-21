@@ -15,6 +15,8 @@ const std::string testDll = "TestDLL.dll";
 const std::string testDllPath = GetCurrentExePath() + "TestDLL.dll"; // relative path to the DLL to inject
 const std::string testExe = "TestEXE.exe";
 
+BOOL debug = TRUE;
+
 class TestProcess {
 private:
     DWORD explorerPid = GetProcessIdByName(L"explorer.exe");
@@ -31,7 +33,7 @@ public:
     TestProcess() = default;
 
 	// starts the TestEXE process and returns true if exe is running, false if failed
-    bool Start() {
+    bool Start(bool withSignal, bool withWorkers) {
         if (!hTriggerEvent) {
             std::cerr << "[!] TestProcess: Failed to create event signals. Error: " << GetLastError() << "\n";
             return false;
@@ -39,7 +41,9 @@ public:
 
         STARTUPINFOA si = { 0 };
         si.cb = sizeof(si);
-		std::string szCmdLine = testExe + " " + szExplorerPid + " 1";
+        std::string szCmdLine = testExe;
+        if (withSignal) szCmdLine += " " + szExplorerPid; else szCmdLine += " 0";
+        if (withWorkers) szCmdLine += " 1";
         char* cmdLine = const_cast<char*>(szCmdLine.c_str());
 
         BOOL result = CreateProcessA(
@@ -95,13 +99,13 @@ public:
     TestProcess& operator=(const TestProcess&) = delete;
 };
 
-TEST_CASE("findProcHandle - Process Handle Table Query", "[utils][handles]") {
+TEST_CASE("FindProcHandle: Query Process Handle Table", "[utils][handles]") {
 
     SECTION("Returns NULL when no matching handle exists in local process") {
-		SUCCEED("Starting findProcHandle negative test..."); // forces the section header to print)
+		SUCCEED("Starting FindProcHandle negative test..."); // forces the section header to print)
 
         // Querying for an invalid/non-existent PID returns NULL
-        HANDLE hFound = findProcHandle(3, FALSE);
+        HANDLE hFound = FindProcHandle(3, FALSE);
         REQUIRE(hFound == NULL);
     }
 
@@ -114,13 +118,37 @@ TEST_CASE("findProcHandle - Process Handle Table Query", "[utils][handles]") {
         HANDLE hExplorer = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, explorerPid);
         REQUIRE(hExplorer != NULL);
 
-        // 3. Verify findProcHandle locates the handle pointing to explorer.exe
-        HANDLE hFound = findProcHandle(static_cast<int>(explorerPid), FALSE);
+        // 3. Verify FindProcHandle locates the handle pointing to explorer.exe
+        HANDLE hFound = FindProcHandle(static_cast<int>(explorerPid), FALSE);
 		REQUIRE(hFound == hExplorer);
 
         // Clean up
         CloseHandle(hExplorer);
     }
+}
+
+TEST_CASE("GetThreadForExecutor: Get best thread for Hijacking", "[hooker][getthread]") {
+    SUCCEED("Starting TestEXE..."); // force print of test headers
+
+    // start test process
+    TestProcess p;
+    REQUIRE(p.Start(false, true));
+
+    OPTIMAL_THREAD optThread = GetThreadForExecutor(p.pid, HIJACK_THREAD, false, debug);
+    REQUIRE(optThread.hThread != NULL);
+    REQUIRE(optThread.score == 100);
+}
+
+TEST_CASE("GetThreadForExecutor: Get best thread for QueueAPC2", "[hooker][getthread]") {
+    SUCCEED("Starting TestEXE..."); // force print of test headers
+
+    // start test process
+    TestProcess p;
+    REQUIRE(p.Start(false, true));
+
+    OPTIMAL_THREAD optThread = GetThreadForExecutor(p.pid, QUEUE_USER_APC2, false, debug);
+    REQUIRE(optThread.hThread != NULL);
+    REQUIRE(optThread.score == 100); // this can vary, higher CPU frequency -> less time in busy work and thus smaller chance to be actually running
 }
 
 enum DllLoadedVerification {
@@ -135,15 +163,16 @@ void ResetEtwEvent() {
     }
 }
 
-void TestDllInjection(Action injectionType, Execution execType, DllLoadedVerification verificationType, BOOL testUnloading, BOOL debug) {
+void TestDllInjection(Injection injectionType, Executor execType, DllLoadedVerification verificationType, BOOL testUnloading, BOOL debug) {
+    SUCCEED("Starting TestEXE..."); // force print of test headers
 
 	// start test process and reset event
 	TestProcess p;
-	REQUIRE(p.Start());
+	REQUIRE(p.Start(true, true));
     ResetEtwEvent();
 
 	// inject the test DLL into the current process
-	bool injected = InjectDll(p.pid, testDllPath, debug, injectionType, NULL, execType);
+	bool injected = InjectDll(p.pid, testDllPath, NULL, injectionType, execType, false, debug);
 	Sleep(100); // wait for prints
 	REQUIRE(injected == true);
 
@@ -182,68 +211,32 @@ void TestDllInjection(Action injectionType, Execution execType, DllLoadedVerific
     }
 }
 
-// main
-BOOL debug = TRUE;
-
-TEST_CASE("DLL Injection: LoadLibrary + CreateRemoteThread", "[loader][inject][loadlibrary]") {
+TEST_CASE("DLL Injection: LoadLibrary + CreateRemoteThread", "[hooker][loadlibrary][createremotethread]") {
     TestDllInjection(LOADLIBRARY_INJECTION, CREATE_REMOTE_THREAD, TOOLHELP_MODULE_SNAPSHOT, true, TRUE);
 }
-TEST_CASE("DLL Injection: LoadLibrary + HijackThread", "[loader][inject][loadlibrary]") {
+TEST_CASE("DLL Injection: LoadLibrary + HijackThread", "[hooker][loadlibrary][hijackthread]") {
     TestDllInjection(LOADLIBRARY_INJECTION, HIJACK_THREAD, TOOLHELP_MODULE_SNAPSHOT, true, TRUE);
 }
-TEST_CASE("DLL Injection: LoadLibrary + QueueUserAPC2", "[loader][inject][loadlibrary]") {
+TEST_CASE("DLL Injection: LoadLibrary + QueueUserAPC2", "[hooker][loadlibrary][queueuserapc2]") {
     TestDllInjection(LOADLIBRARY_INJECTION, QUEUE_USER_APC2, TOOLHELP_MODULE_SNAPSHOT, true, TRUE);
 }
 
-TEST_CASE("DLL Injection: Reflective + CreateRemoteThread", "[loader][inject][reflective]") {
+TEST_CASE("DLL Injection: HostMappedAndShellcode + CreateRemoteThread", "[hooker][hostmapped][createremotethread]") {
+    TestDllInjection(HOSTMAPPED_INJECTION, CREATE_REMOTE_THREAD, MEMORY_PARSING, false, TRUE);
+}
+TEST_CASE("DLL Injection: HostMappedAndShellcode + HijackThread", "[hooker][hostmapped][hijackthread]") {
+    TestDllInjection(HOSTMAPPED_INJECTION, HIJACK_THREAD, MEMORY_PARSING, false, TRUE);
+}
+TEST_CASE("DLL Injection: HostMappedAndShellcode + QueueUserAPC2", "[hooker][hostmapped][queueuserapc2]") {
+    TestDllInjection(HOSTMAPPED_INJECTION, QUEUE_USER_APC2, MEMORY_PARSING, false, TRUE);
+}
+
+TEST_CASE("DLL Injection: Reflective + CreateRemoteThread", "[hooker][reflective][createremotethread]") {
     TestDllInjection(REFLECTIVE_INJECTION, CREATE_REMOTE_THREAD, MEMORY_PARSING, false, TRUE);
 }
-TEST_CASE("DLL Injection: Reflective + HijackThread", "[loader][inject][reflective][hijack]") {
+TEST_CASE("DLL Injection: Reflective + HijackThread", "[hooker][inject][reflective][hijackthread]") {
     TestDllInjection(REFLECTIVE_INJECTION, HIJACK_THREAD, MEMORY_PARSING, false, TRUE);
 }
-TEST_CASE("DLL Injection: Reflective + QueueUserAPC2", "[loader][inject][loadlibrary]") {
-    TestDllInjection(REFLECTIVE_INJECTION, QUEUE_USER_APC2, MEMORY_PARSING, true, TRUE);
+TEST_CASE("DLL Injection: Reflective + QueueUserAPC2", "[hooker][reflective][queueuserapc2]") {
+    TestDllInjection(REFLECTIVE_INJECTION, QUEUE_USER_APC2, MEMORY_PARSING, false, TRUE);
 }
-
-TEST_CASE("DLL Injection: External + CreateRemoteThread", "[loader][inject][external]") {
-    TestDllInjection(EXTERNAL_INJECTION, CREATE_REMOTE_THREAD, MEMORY_PARSING, false, TRUE);
-}
-TEST_CASE("DLL Injection: External + HijackThread", "[loader][inject][external][hijack]") {
-    TestDllInjection(EXTERNAL_INJECTION, HIJACK_THREAD, MEMORY_PARSING, false, TRUE);
-}
-TEST_CASE("DLL Injection: External + QueueUserAPC2", "[loader][inject][loadlibrary]") {
-    TestDllInjection(EXTERNAL_INJECTION, QUEUE_USER_APC2, MEMORY_PARSING, true, TRUE);
-}
-
-/*
-void HijackThreadTest() {
-    BYTE msfvenomExecCalc[] = {
-        0xFC, 0x48, 0x83, 0xE4, 0xF0, 0xE8, 0xC0, 0x00, 0x00, 0x00, 0x41, 0x51, 0x41, 0x50, 0x52, 0x51, 0x56, 0x48, 0x31, 0xD2, 0x65, 0x48, 0x8B, 0x52, 0x60, 0x48, 0x8B, 0x52, 0x18,
-        0x48, 0x8B, 0x52, 0x20, 0x48, 0x8B, 0x72, 0x50, 0x48, 0x0F, 0xB7, 0x4A, 0x4A, 0x4D, 0x31, 0xC9, 0x48, 0x31, 0xC0, 0xAC, 0x3C, 0x61, 0x7C, 0x02, 0x2C, 0x20, 0x41, 0xC1, 0xC9,
-        0x0D, 0x41, 0x01, 0xC1, 0xE2, 0xED, 0x52, 0x41, 0x51, 0x48, 0x8B, 0x52, 0x20, 0x8B, 0x42, 0x3C, 0x48, 0x01, 0xD0, 0x8B, 0x80, 0x88, 0x00, 0x00, 0x00, 0x48, 0x85, 0xC0, 0x74,
-        0x67, 0x48, 0x01, 0xD0, 0x50, 0x8B, 0x48, 0x18, 0x44, 0x8B, 0x40, 0x20, 0x49, 0x01, 0xD0, 0xE3, 0x56, 0x48, 0xFF, 0xC9, 0x41, 0x8B, 0x34, 0x88, 0x48, 0x01, 0xD6, 0x4D, 0x31,
-        0xC9, 0x48, 0x31, 0xC0, 0xAC, 0x41, 0xC1, 0xC9, 0x0D, 0x41, 0x01, 0xC1, 0x38, 0xE0, 0x75, 0xF1, 0x4C, 0x03, 0x4C, 0x24, 0x08, 0x45, 0x39, 0xD1, 0x75, 0xD8, 0x58, 0x44, 0x8B,
-        0x40, 0x24, 0x49, 0x01, 0xD0, 0x66, 0x41, 0x8B, 0x0C, 0x48, 0x44, 0x8B, 0x40, 0x1C, 0x49, 0x01, 0xD0, 0x41, 0x8B, 0x04, 0x88, 0x48, 0x01, 0xD0, 0x41, 0x58, 0x41, 0x58, 0x5E,
-        0x59, 0x5A, 0x41, 0x58, 0x41, 0x59, 0x41, 0x5A, 0x48, 0x83, 0xEC, 0x20, 0x41, 0x52, 0xFF, 0xE0, 0x58, 0x41, 0x59, 0x5A, 0x48, 0x8B, 0x12, 0xE9, 0x57, 0xFF, 0xFF, 0xFF, 0x5D,
-        0x48, 0xBA, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x48, 0x8D, 0x8D, 0x01, 0x01, 0x00, 0x00, 0x41, 0xBA, 0x31, 0x8B, 0x6F, 0x87, 0xFF, 0xD5, 0xBB, 0xF0, 0xB5, 0xA2,
-        0x56, 0x41, 0xBA, 0xA6, 0x95, 0xBD, 0x9D, 0xFF, 0xD5, 0x48, 0x83, 0xC4, 0x28, 0x3C, 0x06, 0x7C, 0x0A, 0x80, 0xFB, 0xE0, 0x75, 0x05, 0xBB, 0x47, 0x13, 0x72, 0x6F, 0x6A, 0x00,
-        0x59, 0x41, 0x89, 0xDA, 0xFF, 0xD5, 0x63, 0x61, 0x6C, 0x63, 0x2E, 0x65, 0x78, 0x65, 0x00
-    }; // this bricks the remote process when returning, what the heli Rapid7?
-
-    LPVOID pRemoteRoutine = VirtualAllocEx(hProcess, nullptr, sizeof(msfvenomExecCalc), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-    if (pRemoteRoutine == NULL) {
-        return false;
-    }
-
-    if (!WriteProcessMemory(hProcess, pRemoteRoutine, msfvenomExecCalc, sizeof(msfvenomExecCalc), nullptr)) {
-        VirtualFreeEx(hProcess, pRemoteRoutine, 0, MEM_RELEASE); return false;
-    }
-
-    LPVOID pRemoteArg = VirtualAllocEx(hProcess, nullptr, sizeof(void*), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-    if (!pRemoteArg) {
-        VirtualFreeEx(hProcess, pRemoteRoutine, 0, MEM_RELEASE); return false;
-    }
-
-    return HijackThread(hProcess, pRemoteRoutine, pRemoteArg, debug);
-}
-*/
