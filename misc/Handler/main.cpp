@@ -66,14 +66,12 @@ void printBases(HANDLE hProcess) {
     PEB peb;
     if (!ReadProcessMemory(hProcess, pbi.PebBaseAddress, &peb, sizeof(peb), nullptr)) {
         printf("[!] Cannot read PEB base addr\n");
-        CloseHandle(hProcess);
         return;
     }
 
     PEB_LDR_DATA ldr{};
     if (!ReadProcessMemory(hProcess, peb.Ldr, &ldr, sizeof(ldr), nullptr)) {
         printf("[-] Failed to read PEB_LDR_DATA. Error: %lu", GetLastError());
-        CloseHandle(hProcess);
         return;
     }
 
@@ -90,7 +88,6 @@ void printBases(HANDLE hProcess) {
         LDR_DATA_TABLE_ENTRY entry{};
         if (!ReadProcessMemory(hProcess, CONTAINING_RECORD(current, LDR_DATA_TABLE_ENTRY, InMemoryOrderLinks), &entry, sizeof(entry), nullptr)) {
             printf("[-] Failed to read LDR_DATA_TABLE_ENTRY. Error: %lu", GetLastError());
-            CloseHandle(hProcess);
             return;
         }
         if (entry.FullDllName.Buffer) {
@@ -106,8 +103,6 @@ void printBases(HANDLE hProcess) {
         }
         current = entry.InMemoryOrderLinks.Flink;
     }
-
-    CloseHandle(hProcess);
 }
 
 int checkProcHandles(PPROCESS_HANDLE_SNAPSHOT_INFORMATION localHandles) {
@@ -218,7 +213,7 @@ bool getLocalHandles(_Out_ PPROCESS_HANDLE_SNAPSHOT_INFORMATION* localHandles) {
     }
 
     *localHandles = (PPROCESS_HANDLE_SNAPSHOT_INFORMATION)buffer;
-    return status;
+    return NT_SUCCESS(status);
 }
 
 int main() {
