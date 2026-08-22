@@ -237,6 +237,8 @@ int main() {
     }
     printf("[*] Got %llu handles of all types owned by Process Handle Inspector...\n", localHandles->NumberOfHandles);
 
+    // this traverses all localHandles 3 times and filters for the given type
+    // todo optimization: prefilter once and traverse only the correct types
     int procHandles = checkProcHandles(localHandles);
     int threadHandles = checkThreadHandles(localHandles);
     int fileHandles = checkFileHandles(localHandles);
