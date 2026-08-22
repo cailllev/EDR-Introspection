@@ -1032,7 +1032,7 @@ bool LoadLibraryInject(HANDLE hProcess, const std::string& dllPath, Executor exe
         return false;
     }
     if (debug)
-        printf("[+] Hooker: Allocated memory in target process at 0x%p", pDllPath);
+        printf("[+] Hooker: Allocated memory in target process at 0x%p\n", pDllPath);
 
     // Write DLL path into target
     if (!WriteProcessMemory(hProcess, pDllPath, dllPath.c_str(), size, nullptr)) {

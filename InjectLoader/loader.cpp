@@ -12,7 +12,7 @@ int main(int argc, char* argv[]) {
     std::string exeName = exePath.substr(exePath.find_last_of("\\/") + 1);
     std::string usage = "";
     usage += "[*] InjectLoader: Usage: " + exeName + " <Target PID> <DLL Path> <(L)oadLibrary | (H)ostMapped | (R)eflective | (S)top> <(C)reateRemoteThread | (H)ijackThread | (Q)ueueUserAPC> [RiskInstability] [Debug]\n";
-    usage += "[*] InjectLoader: Usage: " + exeName + " C:\\path\\to\\dll.dll 1234 LoadLibrary 1 1 1\n";
+    usage += "[*] InjectLoader: Usage: " + exeName + " 1234 C:\\path\\to\\dll.dll L C 0 1\n";
     usage += "[*] InjectLoader: Limitations against EDRs: \n";
     usage += "      - all inject techniques VM_Operation and VM_Write (usually denied via KernelCallbacks)\n";
     usage += "      - LoadLibrary denied by CodeIntegrity (non signed DLLs)\n";
