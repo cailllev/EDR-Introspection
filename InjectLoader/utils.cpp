@@ -136,7 +136,7 @@ BOOL UnloadViaThread(DWORD pid, std::string dllName) {
 }
 
 // unload via a global stop signal
-BOOL UnloadViaEvent(DWORD pid, std::string dllName) { // or just use a stopRequest.txt
+BOOL UnloadViaSignal(DWORD pid, std::string dllName) { // or just use a stopRequest.txt
     HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
     if (!ntdll) {
         printf("[!] Utils: Failed to get ntdll handle.\n");

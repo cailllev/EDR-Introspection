@@ -11,17 +11,23 @@ int main(int argc, char* argv[]) {
     std::string exePath = argv[0];
     std::string exeName = exePath.substr(exePath.find_last_of("\\/") + 1);
     std::string usage = "";
-    usage += "[*] InjectLoader: Usage: " + exeName + " <Target PID> <DLL Path> <(L)oadLibrary | (H)ostMapped | (R)eflective | (S)top> <(C)reateRemoteThread | (H)ijackThread | (Q)ueueUserAPC> [RiskInstability] [Debug]\n";
-    usage += "[*] InjectLoader: Usage: " + exeName + " 1234 C:\\path\\to\\dll.dll L C 0 1\n";
-    usage += "[*] InjectLoader: Limitations against EDRs: \n";
-    usage += "      - all inject techniques VM_Operation and VM_Write (usually denied via KernelCallbacks)\n";
+    usage += "[*] Usage: " + exeName + "\n";
+    usage += "           <Target PID>\n";
+    usage += "           <DLL Path>\n"; 
+    usage += "           <(L)oadLibrary | (H)ostMapped | (R)eflective | StopVia(T)hread | StopVia(S)ignal>\n";
+    usage += "           <(C)reateRemoteThread | (H)ijackThread | (Q)ueueUserAPC>\n";
+    usage += "           [RiskInstability]\n";
+    usage += "           [Debug]\n";
+    usage += "[*] Example: " + exeName + " 1234 C:\\path\\to\\dll.dll L C 0 1\n";
+    usage += "[*] Limitations against EDRs: \n";
+    usage += "      - all inject techniques need VM_Operation and VM_Write (usually denied via KernelCallbacks)\n";
     usage += "      - LoadLibrary denied by CodeIntegrity (non signed DLLs)\n";
-    usage += "      - External inject denied by ACG (RW->RX) and CET (shadow stacks)\n";
-    usage += "      - External inject assumes LoadLibraryA, GetProcAddress and RtlAddFunctionTable are at same addr cross-process\n";
-    usage += "      - External inject requires the DLL to be compiled with GS- (Buffer Security Check disabled) and with RTC1 (without Runtime Checks)\n";
+    usage += "      - HostMapped, Reflective and HijackThread denied by ACG (RW->RX)\n";
+    usage += "      - HostMapped assumes LoadLibraryA, GetProcAddress and RtlAddFunctionTable are at same addr cross-process\n";
+    usage += "      - HostMapped requires the DLL to be compiled with GS- (Buffer Security Check disabled) and with RTC1 (without Runtime Checks)\n";
     usage += "      - Reflective inject requires selfLoading() entrypoint in DLL and be self loading\n";
-    usage += "      - injection needs OpenProcess(PROCESS_ALL_ACCESS) (EDR procs: denied by PPL) or existing handles to the remote proc\n";
-    usage += "      - injection via non-ThreadHijack needs CreateRemoteThread (EDR procs: denied via KernelCallbacks)\n";
+    usage += "      - CreateRemoteThread denied via KernelCallbacks in EDR procs\n";
+    usage += "      - HijackThread denied by CET (shadow stacks)\n";
 
     if (argc > 1 && strcmp(argv[1], "-h") == 0) {
         std::cout << usage;
@@ -40,7 +46,7 @@ int main(int argc, char* argv[]) {
         }
     }
     catch (const std::exception&) {
-        std::cerr << "[!] InjectLoader: Invalid PID: " << argv[2] << "\n";
+        std::cerr << "[!] InjectLoader: Invalid PID: " << argv[1] << "\n";
         return 1;
     }
 
@@ -50,10 +56,16 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    if (_stricmp(argv[3], "S") == 0 || _stricmp(argv[3], "stop") == 0) {
-        std::cout << "[*] InjectLoader: Unloading DLL in " << pid << "\n";
+    if (_stricmp(argv[3], "T") == 0 || _stricmp(argv[3], "stopviathread") == 0) {
+        std::cout << "[*] InjectLoader: Unloading DLL via thread in " << pid << "\n";
         std::string dllName = dllPath.substr(dllPath.find_last_of("\\/") + 1);
         return UnloadViaThread(pid, dllName);
+    }
+
+    if (_stricmp(argv[3], "S") == 0 || _stricmp(argv[3], "stopviasignal") == 0) {
+        std::cout << "[*] InjectLoader: Unloading DLL via custom Signal in " << pid << "\n";
+        std::string dllName = dllPath.substr(dllPath.find_last_of("\\/") + 1);
+        return UnloadViaSignal(pid, dllName);
     }
 
     Injection injectType;
