@@ -51,6 +51,7 @@ see /attacks/
 	- filter the ETW events
 	- decrypt and run predefined attacks
 	- hook ntdll of EDR procs
+- custom [InjectLoader](https://github.com/evilele/EDR-Introspection/tree/master/InjectLoader) to load arbitrary DLLs in any process
 - [kdu.exe](https://github.com/hfiref0x/KDU) to run procs as PPL-AntiMalware and inherit relevant process and thread handles
 
 ### More Supporting Tools
