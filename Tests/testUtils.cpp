@@ -6,7 +6,7 @@
 #include <thread>
 #include <chrono>
 
-#include "test_utils.h"
+#include "testUtils.h"
 
 
 static const std::wstring etwProvider = L"{72248411-7166-4feb-a386-34d8f35bb637}";

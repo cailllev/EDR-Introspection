@@ -2,7 +2,7 @@
 #include <winternl.h>
 #include <tlhelp32.h>
 
-#include "utils.h"
+#include "loaderUtils.h"
 
 #pragma comment(lib, "ntdll.lib")
 

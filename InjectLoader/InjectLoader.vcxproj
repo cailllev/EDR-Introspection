@@ -131,11 +131,11 @@
   <ItemGroup>
     <ClCompile Include="hooker.cpp" />
     <ClCompile Include="loader.cpp" />
-    <ClCompile Include="utils.cpp" />
+    <ClCompile Include="loaderUtils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="hooker.h" />
-    <ClInclude Include="utils.h" />
+    <ClInclude Include="loaderUtils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

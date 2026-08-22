@@ -30,13 +30,16 @@
     <ClCompile Include="etwparser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="sandblast.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="filter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="output.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\InjectLoader\hooker.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\InjectLoader\loaderUtils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -66,9 +69,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="helpers\json.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="sandblast.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="output.h">

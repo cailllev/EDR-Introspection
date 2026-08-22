@@ -145,13 +145,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\InjectLoader\hooker.cpp" />
-    <ClCompile Include="..\InjectLoader\utils.cpp" />
-    <ClCompile Include="test_loader.cpp" />
-    <ClCompile Include="test_main.cpp" />
-    <ClCompile Include="test_utils.cpp" />
+    <ClCompile Include="..\InjectLoader\loaderUtils.cpp" />
+    <ClCompile Include="loaderTest.cpp" />
+    <ClCompile Include="mainTest.cpp" />
+    <ClCompile Include="testUtils.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="test_utils.h" />
+    <ClInclude Include="testUtils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

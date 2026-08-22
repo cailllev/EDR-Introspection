@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "hooker.h"
-#include "utils.h"
+#include "loaderUtils.h"
 
 // ------------------------ Paxai/DLLium ------------------------ //
 typedef HMODULE(WINAPI* f_LoadLibraryA)(const char* lpLibFileName);

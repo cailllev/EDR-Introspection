@@ -6,7 +6,6 @@
 
 
 struct EDR_Profile {
-    bool needs_kernel_callbacks_disabling;
     bool needs_minimal_hooks;
     std::vector<std::string> main_exes;
     std::vector<std::string> other_exes;

@@ -6,8 +6,8 @@
 #include <vector>
 
 #include "../InjectLoader/hooker.h"
+#include "../InjectLoader/loaderUtils.h"
 #include "globals.h"
-#include "sandblast.h"
 #include "utils.h"
 #include "filter.h"
 #include "profile.h"
@@ -58,7 +58,6 @@ static const int wait_between_events_ms = 1000;
 static const int wait_after_termination_ms = 5000;
 static const int wait_attack_not_found_threshold_ms = 20000;
 static const int wait_time_between_start_markers_ms = 1000;
-static const int wait_callbacks_reenable_ms = 21000;
 static const int timeout_for_hooker_init = 30;
 
 // etw print prefixes
@@ -150,7 +149,6 @@ int main(int argc, char* argv[]) {
         ("i,trace-etw-ti", "Trace ETW-TI (default no) (needs PPL)")
         ("n,hook-ntdll", "Hook ntdll.dll (default no) (needs PPL)")
         ("t,track-all", "Trace misc ETW, ETW-TI and hooks ntdll.dll (default no)")
-        ("k,no-disable-krnl-callb", "Do not disable kernel callbacks (only applicable if hook-ntdll)")
         ("d,debug", "Print debug info")
         ("v,verbose-debug", "Print very verbose debug info")
         ("c,colored", "Add color formatting information");
@@ -203,7 +201,7 @@ int main(int argc, char* argv[]) {
 
     // main variables
     std::string attack_name, attack_exe_enc_path, output_name, output_events, output_signatures;
-    bool trace_etw_misc, trace_etw_ti, hook_ntdll, disable_kernel_callbacks_needed, dump_sig, run_as_child, colored;
+    bool trace_etw_misc, trace_etw_ti, hook_ntdll, dump_sig, run_as_child, colored;
     std::vector<HANDLE> threads;
     int waited_for_traces_ms;
 
@@ -275,11 +273,6 @@ int main(int argc, char* argv[]) {
         << ", Hook-ntdll: " << (hook_ntdll ? "Yes" : "No") << "\n";
     dump_sig = trace_etw_misc; // can only dump signatures if antimalware provider is traced
 
-    disable_kernel_callbacks_needed = hook_ntdll && edr_profile.needs_kernel_callbacks_disabling; // normally needed when hooking ntdll
-    if (result.count("no-disable-krnl-callb") > 0) {
-        disable_kernel_callbacks_needed = false; // may be not needed when manually disabled / EDR not protecting
-    }
-
     // check output path
     if (!just_hook) {
         if (result.count("output-path-custom") == 0) {
@@ -305,11 +298,14 @@ int main(int argc, char* argv[]) {
     // debug
     if (result.count("debug") > 0) {
         g_debug = true;
+        std::cout << "[+] EDRi: Enabled debug\n";
     }
     if (result.count("verbose-debug") > 0) {
         g_debug = true;
         g_super_debug = true;
+        std::cout << "[+] EDRi: Enabled verbose debug\n";
     }
+
     colored = false;
     if (result.count("color") > 0) {
         colored = true;
@@ -416,16 +412,6 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        // only disable callbacks if not overridden and there are new procs to hook
-        bool disable = disable_kernel_callbacks_needed && !procs_to_be_hooked.empty();
-        if (disable) {
-            if (!disable_kernel_callbacks_ok()) {
-                std::cerr << "[!] EDRi: Failed to disable kernel callbacks!\n";
-                stop_all_etw_traces();
-                return 1;
-            }
-        }
-
         // now hook into all found processes
         for (auto& proc : procs_to_be_hooked) {
             int pid = proc.first;
@@ -433,7 +419,12 @@ int main(int argc, char* argv[]) {
             if (g_debug) {
                 std::cout << "[+] EDRi: Injecting into " << exe << ":" << pid << " ...\n";
             }
-            if (!InjectDll(pid, get_hook_dll_path(edr_profile.needs_minimal_hooks), NULL, REFLECTIVE_INJECTION, HIJACK_THREAD, false, g_debug)) {
+            HANDLE hProc = FindProcHandle(pid, g_debug);
+            if (hProc == NULL) {
+                std::cout << "[-] EDRi: Warning, cannot find handle to EDR proc pid=" << pid << ", OpenProcess from current proc might fail\n";
+            }
+
+            if (!InjectDll(pid, get_hook_dll_path(edr_profile.needs_minimal_hooks), hProc, HOSTMAPPED_INJECTION, HIJACK_THREAD, false, g_debug)) {
                 std::cerr << "[!] EDRi: Failed to inject the hooker dll into " << exe << "\n";
 				Sleep(1000); // small wait to ensure the hooker dll released the hooks.txt file
                 save_hooked_procs(g_newly_hooked_procs); // save newly hooked procs for next round
@@ -465,11 +456,7 @@ int main(int argc, char* argv[]) {
                     return 1;
                 }
             }
-            std::cout << "[*] EDRi: Hooker initialization detected on all relevant processes, wait for re-enabling of kernel callbacks by EDRSandblast...\n";
-        }
-
-        if (disable) { // only wait when EDRSandblast was invoked in the first place
-            Sleep(wait_callbacks_reenable_ms); // wait until callbacks are reenabled, at least as long as EDRSandblast waits
+            std::cout << "[*] EDRi: Hooker initialization detected on all relevant processes\n";
         }
     }
     if (just_hook) {
