@@ -32,7 +32,7 @@ see /attacks/
 | Lsass Read  |        1526 |            8 |     53 |         169 |  1780 |
 
 ### Captured Events
-*color legend see [Visibility Overview](https://github.com/cailllev/EDR-Introspection/blob/master/README.md#visibility-overview) below*
+*color legend see [Visibility Overview](https://github.com/evilele/EDR-Introspection/blob/master/README.md#visibility-overview) below*
 
 #### Events at Malware Store-Time
 <img width="1977" height="646" alt="image" src="https://github.com/user-attachments/assets/d3c6b9d4-87a5-49fd-ab5b-467314b57edd" />
@@ -51,8 +51,10 @@ see /attacks/
 	- filter the ETW events
 	- decrypt and run predefined attacks
 	- hook ntdll of EDR procs
-- [kdu.exe](https://github.com/hfiref0x/KDU) to run procs as PPL-AntiMalware
-- [EDRSandblast](https://github.com/cailllev/EDRSandblast) to disable kernel callbacks
+- [kdu.exe](https://github.com/hfiref0x/KDU) to run procs as PPL-AntiMalware and inherit relevant process and thread handles
+
+### More Supporting Tools
+see [misc](https://github.com/evilele/EDR-Introspection/tree/master/misc)
 
 ### Architecture
 <img width="2619" height="1311" alt="image" src="https://github.com/user-attachments/assets/c236dc0b-a0b7-4683-8954-672bd1bfc81b" />
@@ -164,7 +166,7 @@ Cortex EDR example:
 # VirtualAlloc fails:
 # 0x101400 -> PROCESS_QUERY_INFORMATION | PROCESS_QUERY_LIMITED_INFORMATION, not including: PROCESS_SET_SESSIONID | PROCESS_VM_READ | PROCESS_DUP_HANDLE | PROCESS_CREATE_PROCESS | PROCESS_SET_QUOTA | PROCESS_SET_INFORMATION | PROCESS_SET_LIMITED_INFORMATION | PROCESS_TERMINATE | PROCESS_CREATE_THREAD | PROCESS_VM_OPERATION | PROCESS_VM_WRITE | PROCESS_SUSPEND_RESUME
 ```
-Therefore the callbacks must be removed, this can be done with (my fork of) [EDRSandblast](https://github.com/cailllev/EDRSandblast):
+Therefore the callbacks must be removed, this can be done with (my fork of) [EDRSandblast](https://github.com/evilele/EDRSandblast):
 ```powershell
 .\x64\Release\tools\EDRSandblast.exe toggle_callbacks 0e1 --kernelmode -i
 # ...
