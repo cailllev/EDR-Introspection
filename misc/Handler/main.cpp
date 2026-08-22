@@ -4,6 +4,8 @@
 #include <Windows.h>
 #include <winternl.h>
 #include <tlhelp32.h>
+#include <stdio.h>
+#include <stddef.h>
 
 #pragma comment(lib, "ntdll.lib")
 
@@ -95,10 +97,10 @@ void printBases(HANDLE hProcess) {
         }
         if (entry.FullDllName.Buffer) {
             wchar_t dll_name[MAX_PATH];
-            printf(L"0x%016llX ", (unsigned long long)entry.DllBase);
+            printf("0x%016llX ", (unsigned long long)entry.DllBase);
             if (ReadProcessMemory(hProcess, entry.FullDllName.Buffer, dll_name, entry.FullDllName.Length, nullptr)) {
                 dll_name[entry.FullDllName.Length / sizeof(wchar_t)] = L'\0'; // null-terminate
-                wprintf("%-100ls\n", dll_name);
+                wprintf(L"%-100ls\n", dll_name);
             }
             else {
                 printf("<Failed to read dll name. Error: %lu>\n", GetLastError());
@@ -126,7 +128,9 @@ int checkProcHandles(PPROCESS_HANDLE_SNAPSHOT_INFORMATION localHandles) {
             printBases(entry.HandleValue);
         }
     }
-
+    if (found == 0) {
+        printf("[-] No process handles found.\n");
+    }
     return found;
 }
 
@@ -134,21 +138,23 @@ int checkThreadHandles(PPROCESS_HANDLE_SNAPSHOT_INFORMATION localHandles) {
     printf("[+] Checking for thread handles...\n");
     int found = 0;
 
-    printf("%-19s%-15s%-15s\n", "Handle ID", "Granted Access", "Thread ID");
-    printf("------------------------------------------------\n");
-
     for (ULONG_PTR i = 0; i < localHandles->NumberOfHandles; i++) {
         PROCESS_HANDLE_TABLE_ENTRY_INFO entry = localHandles->Handles[i];
 
         // Check if the handle is a thread handle
         DWORD targetTid = GetThreadId(entry.HandleValue);
         if (targetTid != 0) {
-            printf("0x%016llX 0x%08X %-15lu\n",
-                (unsigned long long)entry.HandleValue, entry.GrantedAccess, targetTid);
+            if (found == 0) { // print header when threads found
+                printf("Handle ID  Access     Thread ID\n");
+                printf("------------------------------------------------\n");
+            }
+            printf("0x%08X 0x%08X %lu\n", (UINT32)(ULONG_PTR)entry.HandleValue, entry.GrantedAccess, targetTid);
             found++;
         }
     }
-
+    if (found == 0) {
+        printf("[-] No thread handles found.\n");
+    }
     return found;
 }
 
@@ -162,7 +168,7 @@ int checkFileHandles(PPROCESS_HANDLE_SNAPSHOT_INFORMATION localHandles) {
         BYTE typeBuf[1024];
         ULONG retLen = 0;
 
-        if (!NtQueryObject(entry.HandleValue, (OBJECT_INFORMATION_CLASS)ObjectTypeInformation, typeBuf, sizeof(typeBuf), &retLen)) {
+        if (!NT_SUCCESS(NtQueryObject(entry.HandleValue, (OBJECT_INFORMATION_CLASS)ObjectTypeInformation, typeBuf, sizeof(typeBuf), &retLen))) {
             printf("[!] Error querring object for type info %p\n", entry.HandleValue);
             continue;
         }
@@ -174,14 +180,21 @@ int checkFileHandles(PPROCESS_HANDLE_SNAPSHOT_INFORMATION localHandles) {
             continue;
         }
 
-        if (_wcsicmp(typeInfo->TypeName.Buffer, L"File") != 0)
+        if (_wcsicmp(typeInfo->TypeName.Buffer, L"File") != 0) {
             continue; // silently ignore non files
+        }
 
+        // print header before first file entry
+        if (found == 0) {
+            printf("Handle ID  Access     Name\n");
+            printf("------------------------------------------------\n");
+        }
         found++;
+
         const ULONG namesBufLen = 1024;
         BYTE namesBuf[namesBufLen];
 
-        if (!NtQueryObject(entry.HandleValue, (OBJECT_INFORMATION_CLASS)ObjectNameInformation, &namesBuf, namesBufLen, &retLen)) {
+        if (!NT_SUCCESS(NtQueryObject(entry.HandleValue, (OBJECT_INFORMATION_CLASS)ObjectNameInformation, &namesBuf, namesBufLen, &retLen))) {
             printf("[!] Error querring object for name info %p\n", entry.HandleValue);
             continue;
         }
@@ -191,9 +204,11 @@ int checkFileHandles(PPROCESS_HANDLE_SNAPSHOT_INFORMATION localHandles) {
             printf("[!] Empty name buffer for %p\n", entry.HandleValue);
             continue;
         }
-
-        wprintf(L"Handle=%p Access=0x%08X File=%.*s\n", entry.HandleValue,
-            entry.GrantedAccess, nameInfo->Name.Length / sizeof(WCHAR), nameInfo->Name.Buffer);
+        wprintf(L"0x%08X 0x%08X %.*s\n", (UINT32)(ULONG_PTR)entry.HandleValue, entry.GrantedAccess,
+            static_cast<int>(nameInfo->Name.Length / sizeof(WCHAR)), nameInfo->Name.Buffer);
+    }
+    if (found == 0) {
+        printf("[-] No file handles found.\n");
     }
     return found;
 }
@@ -201,7 +216,7 @@ int checkFileHandles(PPROCESS_HANDLE_SNAPSHOT_INFORMATION localHandles) {
 // gets all open handles in current process
 bool getLocalHandles(_Out_ PPROCESS_HANDLE_SNAPSHOT_INFORMATION* localHandles) {
 
-    ULONG bufferSize = 0x4000; // start with 16KB (just a single local process)
+    ULONG bufferSize = 0x1000; // just a single local process
     PVOID buffer = VirtualAlloc(NULL, bufferSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     ULONG returnLength = 0;
 
@@ -225,7 +240,7 @@ int main() {
     printf("[*] Handle Inspector started\n");
 
     PPROCESS_HANDLE_SNAPSHOT_INFORMATION localHandles;
-    if (!getLocalHandles(&localHandles)) {
+    if (!NT_SUCCESS(getLocalHandles(&localHandles))) {
         printf("[!] Unable to query local process for handles\n");
         return 1;
     }
