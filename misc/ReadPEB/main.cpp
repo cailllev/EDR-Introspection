@@ -1,32 +1,13 @@
-#include <Windows.h>
+#include <windows.h>
 #include <winternl.h>
 #include <cstdlib>
 #include <iostream>
 #include <string>
 
-
-// NtQueryInformationProcess definition (only in ntdll.dll defined)
-typedef NTSTATUS(NTAPI* PFN_NtQueryInformationProcess)(
-    HANDLE           ProcessHandle,
-    PROCESSINFOCLASS ProcessInformationClass,
-    PVOID            ProcessInformation,
-    ULONG            ProcessInformationLength,
-    PULONG           ReturnLength);
-PFN_NtQueryInformationProcess pNtQueryInfoProcess = nullptr;
-
-// NtReadVirtualMemory definition (only in ntdll.dll defined)
-typedef NTSTATUS(NTAPI* PFN_NtReadVirtualMemory)(
-    HANDLE  ProcessHandle,
-    PVOID   BaseAddress,
-    PVOID   Buffer,
-    SIZE_T  NumberOfBytesToRead,
-    PSIZE_T NumberOfBytesRead
-    );
-PFN_NtReadVirtualMemory pNtReadVirtualMemory = nullptr;
+#pragma comment(lib, "ntdll.lib")
 
 
-int print_usage(std::string path, int ret)
-{
+int print_usage(std::string path, int ret) {
     size_t pos = path.find_last_of("\\");
     std::string exe = (pos == std::string::npos) ? path : path.substr(pos + 1);
     printf("Usage:\n    %s       : read current proc PEB\n    %s <pid> : read remote proc PEB", exe.c_str(), exe.c_str());
@@ -34,8 +15,7 @@ int print_usage(std::string path, int ret)
 }
 
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     int pid = 0;
     if (argc < 2) {
         pid = GetCurrentProcessId();
@@ -54,24 +34,6 @@ int main(int argc, char *argv[])
         printf("[*] Reading PEB from process pid=%i\n", pid);
     }
 
-    HMODULE hNtdll = GetModuleHandleW(L"ntdll.dll");
-    if (!hNtdll) {
-        printf("[!] ntdll not loaded in current process\n");
-        return 1;
-    }
-
-    // helper functions to resolve in ntdll.dll
-    pNtQueryInfoProcess = (PFN_NtQueryInformationProcess)GetProcAddress(hNtdll, "NtQueryInformationProcess");
-    if (pNtQueryInfoProcess == nullptr) {
-        printf("[!] NtQueryInformationProcess not found in ntdll\n");
-        return 1;
-    }
-    pNtReadVirtualMemory = (PFN_NtReadVirtualMemory)GetProcAddress(hNtdll, "NtReadVirtualMemory");
-    if (pNtReadVirtualMemory == nullptr) {
-        printf("[!] NtQueryInformationProcess not found in ntdll\n");
-        return 1;
-    }
-
     PROCESS_BASIC_INFORMATION pbi = {};
     ULONG returnLength;
 
@@ -83,7 +45,7 @@ int main(int argc, char *argv[])
     NTSTATUS status;
 
     // PBI
-    status = pNtQueryInfoProcess(hProcess, ProcessBasicInformation, &pbi, sizeof(pbi), &returnLength);
+    status = NtQueryInformationProcess(hProcess, ProcessBasicInformation, &pbi, sizeof(pbi), &returnLength);
     if (status != 0) {
         printf("Could not NtQueryInformationProcess for %i, status=%lu error: %lu\n", pid, static_cast<unsigned long>(status), GetLastError());
         return 1;
@@ -97,8 +59,8 @@ int main(int argc, char *argv[])
     // PEB, read into local PEB
     SIZE_T bytesRead = 0;
     PEB peb = { 0 };
-    status = pNtReadVirtualMemory(hProcess, pbi.PebBaseAddress, &peb, sizeof(peb), &bytesRead);
-    if (status != 0) {
+    status = ReadProcessMemory(hProcess, pbi.PebBaseAddress, &peb, sizeof(peb), &bytesRead);
+    if (!NT_SUCCESS(status)) {
         printf("[!] Could not ReadProcessMemory(PEB), status=%lu error: %lu\n", status, GetLastError());
         return 1;
     }
@@ -113,8 +75,8 @@ int main(int argc, char *argv[])
 
     // read remote PEB_LDR_DATA into local ldr
     PEB_LDR_DATA ldr = { 0 };
-    status = pNtReadVirtualMemory(hProcess, remoteLdrAddr, &ldr, sizeof(ldr), &bytesRead);
-    if (status != 0) {
+    status = ReadProcessMemory(hProcess, remoteLdrAddr, &ldr, sizeof(ldr), &bytesRead);
+    if (!NT_SUCCESS(status)) {
         printf("[!] ReadProcessMemory failed for PEB_LDR_DATA, status=%lu error: %lu\n", status, GetLastError());
         return 1;
     }
@@ -143,8 +105,8 @@ int main(int argc, char *argv[])
 
         _LDR_DATA_TABLE_ENTRY entry;
         ZeroMemory(&entry, sizeof(entry));
-        status = pNtReadVirtualMemory(hProcess, remoteEntryAddr, &entry, sizeof(entry), &bytesRead);
-        if (status != 0) {
+        status = ReadProcessMemory(hProcess, remoteEntryAddr, &entry, sizeof(entry), &bytesRead);
+        if (!NT_SUCCESS(status)) {
             printf("[!] ReadVirtualMemory failed for LDR entry at 0x%p. Error: %lu\n", remoteEntryAddr, GetLastError());
             break;
         }
@@ -170,8 +132,8 @@ int main(int argc, char *argv[])
         // Read the remote FullDllName.Buffer into a local wchar buffer
         size_t wcharCount = (nameLen / sizeof(WCHAR));
         ZeroMemory(localNameW, (wcharCount + 1)*sizeof(WCHAR));
-        status = pNtReadVirtualMemory(hProcess, entry.FullDllName.Buffer, localNameW, nameLen, &bytesRead);
-        if (status != 0) {
+        status = ReadProcessMemory(hProcess, entry.FullDllName.Buffer, localNameW, nameLen, &bytesRead);
+        if (!NT_SUCCESS(status)) {
             printf("[!] Could not read remote name buffer at %p (len=%u) from entry 0x%p. Error: %lu\n", entry.FullDllName.Buffer, nameLen, current, GetLastError());
         }
         else {

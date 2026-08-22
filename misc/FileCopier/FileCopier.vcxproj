@@ -21,7 +21,7 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>18.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{0456c204-325a-4111-9522-9073acbcb8e7}</ProjectGuid>
+    <ProjectGuid>{C65BF948-FFC8-4777-ABAA-5E5810F743C8}</ProjectGuid>
     <RootNamespace>FileCopier</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
