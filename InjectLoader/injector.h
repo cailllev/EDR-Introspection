@@ -18,14 +18,17 @@ enum Injection {
 };
 
 enum Executor {
+	NULL_EXECUTOR,
 	CREATE_REMOTE_THREAD,
     HIJACK_THREAD,
-    QUEUE_USER_APC2
+    QUEUE_USER_APC2,
+    USE_THE_BETTER_ONE
 };
 
 typedef struct _OPTIMAL_THREAD {
     HANDLE hThread;
     int score;
+	Executor execType;
 } OPTIMAL_THREAD, *POPTIMAL_THREAD;
 
 bool InjectDll(DWORD pid, const std::string& dllPath, HANDLE hProcess, Injection injectionType, Executor execType, bool riskInstability, bool debug);

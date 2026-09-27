@@ -15,13 +15,13 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="loader.cpp">
+    <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="loaderUtils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="hooker.cpp">
+    <ClCompile Include="injector.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -29,7 +29,7 @@
     <ClInclude Include="loaderUtils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="hooker.h">
+    <ClInclude Include="injector.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

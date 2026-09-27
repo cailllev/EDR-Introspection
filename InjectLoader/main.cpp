@@ -2,7 +2,7 @@
 #include <string>
 
 #include "loaderUtils.h"
-#include "hooker.h"
+#include "injector.h"
 
 int main(int argc, char* argv[]) {
     int pid = 0;
@@ -15,7 +15,7 @@ int main(int argc, char* argv[]) {
     usage += "           <Target PID>\n";
     usage += "           <DLL Path>\n"; 
     usage += "           <(L)oadLibrary | (H)ostMapped | (R)eflective | StopVia(T)hread | StopVia(S)ignal>\n";
-    usage += "           <(C)reateRemoteThread | (H)ijackThread | (Q)ueueUserAPC>\n";
+    usage += "           <(C)reateRemoteThread | (H)ijackThread | (Q)ueueUserAPC | UseThe(B)etterOne>\n";
     usage += "           [RiskInstability]\n";
     usage += "           [Debug]\n";
     usage += "[*] Example: " + exeName + " 1234 C:\\path\\to\\dll.dll L C 0 1\n";
@@ -88,11 +88,14 @@ int main(int argc, char* argv[]) {
         execType = CREATE_REMOTE_THREAD;
     }
     else if (_stricmp(argv[4], "H") == 0 || _stricmp(argv[4], "hijackthread") == 0) {
-		execType = HIJACK_THREAD;
-	}
-	else if (_stricmp(argv[4], "Q") == 0 || _stricmp(argv[4], "queueuserapc") == 0) {
-		execType = QUEUE_USER_APC2;
-	}
+        execType = HIJACK_THREAD;
+    }
+    else if (_stricmp(argv[4], "Q") == 0 || _stricmp(argv[4], "queueuserapc") == 0) {
+        execType = QUEUE_USER_APC2;
+    }
+    else if (_stricmp(argv[4], "B") == 0 || _stricmp(argv[4], "usethebetterone") == 0) {
+        execType = USE_THE_BETTER_ONE;
+    }
     else {
         std::cerr << "[!] InjectLoader: ExecType '" << argv[5] << " 'not defined.\n";
         return 1;

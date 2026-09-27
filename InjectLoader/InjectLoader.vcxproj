@@ -129,12 +129,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="hooker.cpp" />
-    <ClCompile Include="loader.cpp" />
+    <ClCompile Include="injector.cpp" />
+    <ClCompile Include="main.cpp" />
     <ClCompile Include="loaderUtils.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="hooker.h" />
+    <ClInclude Include="injector.h" />
     <ClInclude Include="loaderUtils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

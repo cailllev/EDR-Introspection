@@ -6,7 +6,7 @@
 #include <cctype>
 #include <vector>
 
-#include "hooker.h"
+#include "injector.h"
 #include "loaderUtils.h"
 
 // ------------------------ Paxai/DLLium ------------------------ //
@@ -367,6 +367,7 @@ std::string GetExecutorTypeStr(Executor execType) {
     case CREATE_REMOTE_THREAD: return "CreateRemoteThread";
     case HIJACK_THREAD: return "HijackThread";
     case QUEUE_USER_APC2: return "QueueUserAPC2";
+    case USE_THE_BETTER_ONE: return "UseTheBetterOne";
     default: return "unknown execute type";
     }
 }
@@ -480,6 +481,9 @@ int EvaluateThreadScoreForQueueAPC2(ULONG threadState, KWAIT_REASON waitReason) 
     return 0;
 }
 
+
+OPTIMAL_THREAD nullOptThread = { NULL, 0, NULL_EXECUTOR };
+
 // Unified thread selection function
 OPTIMAL_THREAD FindOptimalThread(const std::vector<HANDLE>& hThreads, Executor execType, bool yoloMode, bool debug) {
 
@@ -494,7 +498,7 @@ OPTIMAL_THREAD FindOptimalThread(const std::vector<HANDLE>& hThreads, Executor e
         break;
     default:
         printf("[!] Hooker: FindOptimalThread not implemented for %s\n", GetExecutorTypeStr(execType).c_str());
-        return { NULL, 0 };
+        return nullOptThread;
     }
 
     HANDLE hBestThread = NULL;
@@ -538,15 +542,15 @@ OPTIMAL_THREAD FindOptimalThread(const std::vector<HANDLE>& hThreads, Executor e
         printf("[-] Hooker: Warning, no perfectly suitable thread found.");
         if (yoloMode) {
             printf(" Still continuing with the risk of a crash!\n");
-            return { hBestThread, bestThreadScore };
+            return { hBestThread, bestThreadScore, execType };
         }
         else {
-            printf(" Not continuing the injection!\n");
-            return { NULL, 0 };
+            printf(" Not continuing the injection, use RiskInstability to override!\n");
+            return nullOptThread;
         }
     }
 
-    return { hBestThread, bestThreadScore };
+    return { hBestThread, bestThreadScore, execType };
 }
 
 BOOL CheckThreadHandleAccess(HANDLE hThread) {
@@ -579,19 +583,18 @@ OPTIMAL_THREAD GetThreadForExecutor(DWORD targetProcessId, Executor exec, bool y
     ULONG bufferSize = 0x4000;
     ULONG returnLength = 0;
     NTSTATUS status = NULL;
-    OPTIMAL_THREAD nullThread = { NULL, 0 };
 
     PVOID sysInfoBuffer = VirtualAlloc(NULL, bufferSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     if (sysInfoBuffer == 0) {
         printf("[!] Hooker: Cannot allocate mem for query information buffer\n");
-        return nullThread;
+        return nullOptThread;
     }
 
     PVOID procBuffer = VirtualAlloc(NULL, bufferSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     if (procBuffer == 0) {
         printf("[!] Hooker: Cannot allocate mem for query information buffers\n");
         VirtualFree(sysInfoBuffer, 0, MEM_RELEASE);
-        return nullThread;
+        return nullOptThread;
     }
 
     // 1. Get the System Process/Thread info buffer first to verify states
@@ -606,7 +609,7 @@ OPTIMAL_THREAD GetThreadForExecutor(DWORD targetProcessId, Executor exec, bool y
         printf("[!] Hooker: Cannot read SystemProcessInformation to find threads\n");
         VirtualFree(sysInfoBuffer, 0, MEM_RELEASE);
         VirtualFree(procBuffer, 0, MEM_RELEASE);
-        return nullThread;
+        return nullOptThread;
     }
 
     // 2. Query our internal process handle table
@@ -621,7 +624,7 @@ OPTIMAL_THREAD GetThreadForExecutor(DWORD targetProcessId, Executor exec, bool y
         printf("[!] Hooker: Cannot read ProcessHandleInformation to find threads\n");
         VirtualFree(sysInfoBuffer, 0, MEM_RELEASE);
         VirtualFree(procBuffer, 0, MEM_RELEASE);
-        return nullThread;
+        return nullOptThread;
     }
 
     auto* localHandles = reinterpret_cast<PPROCESS_HANDLE_SNAPSHOT_INFORMATION>(procBuffer);
@@ -629,7 +632,7 @@ OPTIMAL_THREAD GetThreadForExecutor(DWORD targetProcessId, Executor exec, bool y
         printf("[!] Hooker: No handles found in current process\n");
         VirtualFree(sysInfoBuffer, 0, MEM_RELEASE);
         VirtualFree(procBuffer, 0, MEM_RELEASE);
-        return nullThread;
+        return nullOptThread;
     }
 
     std::vector<HANDLE> hThreads; // contains open thread handles to remote threads with full access
@@ -693,9 +696,22 @@ OPTIMAL_THREAD GetThreadForExecutor(DWORD targetProcessId, Executor exec, bool y
     if (hThreads.empty()) {
         if (debug)
             printf("[!] Hooker: No thread handles of remote process pid=%i could be found or opened with full access\n", targetProcessId);
-        return nullThread;
+        return nullOptThread;
     }
 
+    // check if the better one should be searched (prefers QueueAPC over Hijack if same score)
+    // this could be made more modular, however, keep it simple
+    if (exec == Executor::USE_THE_BETTER_ONE) {
+        OPTIMAL_THREAD hijackOpt = FindOptimalThread(hThreads, Executor::HIJACK_THREAD, yoloMode, debug);
+        OPTIMAL_THREAD apcOpt = FindOptimalThread(hThreads, Executor::QUEUE_USER_APC2, yoloMode, debug);
+		OPTIMAL_THREAD betterOpt = (hijackOpt.score > apcOpt.score) ? hijackOpt : apcOpt;
+
+		if (debug)
+			printf("[+] Hooker: HijackThread is the better executor with score=%i for thread tid=%i for remote process pid=%i\n", hijackOpt.score, GetThreadId(hijackOpt.hThread), targetProcessId);
+        return betterOpt;
+    }
+
+    // else return the optimal for the given exec
     return FindOptimalThread(hThreads, exec, yoloMode, debug);
 }
 
@@ -993,18 +1009,21 @@ bool ExecuteDllLoader(HANDLE hProcess, Executor exec, LPVOID lpStartAddress, LPV
     }
 
     // non-CreateRemoteThread executors need an existing thread -> get the optimal one for the execType
-    HANDLE hThread = (GetThreadForExecutor(GetProcessId(hProcess), exec, yoloMode, debug)).hThread;
-    if (hThread == NULL) {
-        printf("[!] Hooker: Failed to get any thread for %s\n", GetExecutorTypeStr(QUEUE_USER_APC2).c_str());
+    OPTIMAL_THREAD optThread = GetThreadForExecutor(GetProcessId(hProcess), exec, yoloMode, debug);
+	HANDLE hThread = optThread.hThread;
+    Executor execUpdated = optThread.execType;
+
+    if (optThread.hThread == NULL) {
+        printf("[!] Hooker: Failed to get any thread for %s\n", GetExecutorTypeStr(exec).c_str());
         return false;
     }
     bool ret = false;
     
-    if (exec == HIJACK_THREAD) {
+    if (execUpdated == HIJACK_THREAD) {
         ret = HijackThread(hProcess, hThread, lpStartAddress, lpParameter, debug);
     }
     
-    else if (exec == QUEUE_USER_APC2) {
+    else if (execUpdated == QUEUE_USER_APC2) {
         QUEUE_USER_APC_FLAGS flags = (QUEUE_USER_APC_FLAGS)QUEUE_USER_APC_SPECIAL_USER_APC;
         if (debug)
             printf("[+] Hooker: About to queue 0x%p with QUEUE_USER_APC_SPECIAL_USER_APC\n", lpStartAddress);
