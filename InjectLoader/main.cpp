@@ -15,14 +15,14 @@ int main(int argc, char* argv[]) {
     usage += "           <Target PID>\n";
     usage += "           <DLL Path>\n"; 
     usage += "           <(L)oadLibrary | (H)ostMapped | (R)eflective | StopVia(T)hread | StopVia(S)ignal>\n";
-    usage += "           <(C)reateRemoteThread | (H)ijackThread | (Q)ueueUserAPC | UseThe(B)etterOne>\n";
+    usage += "           <(C)reateRemoteThread | (H)ijackThread | (Q)ueueUserAPC | (T)readless>\n";
     usage += "           [RiskInstability]\n";
     usage += "           [Debug]\n";
     usage += "[*] Example: " + exeName + " 1234 C:\\path\\to\\dll.dll L C 0 1\n";
     usage += "[*] Limitations against EDRs: \n";
     usage += "      - all inject techniques need VM_Operation and VM_Write (usually denied via KernelCallbacks)\n";
     usage += "      - LoadLibrary denied by CodeIntegrity (non signed DLLs)\n";
-    usage += "      - HostMapped, Reflective and HijackThread denied by ACG (RW->RX)\n";
+    usage += "      - HostMapped, Reflective, HijackThread and Threadless denied by ACG (RW->RX)\n";
     usage += "      - HostMapped assumes LoadLibraryA, GetProcAddress and RtlAddFunctionTable are at same addr cross-process\n";
     usage += "      - HostMapped requires the DLL to be compiled with GS- (Buffer Security Check disabled) and with RTC1 (without Runtime Checks)\n";
     usage += "      - Reflective inject requires selfLoading() entrypoint in DLL and be self loading\n";
@@ -93,8 +93,8 @@ int main(int argc, char* argv[]) {
     else if (_stricmp(argv[4], "Q") == 0 || _stricmp(argv[4], "queueuserapc") == 0) {
         execType = QUEUE_USER_APC2;
     }
-    else if (_stricmp(argv[4], "B") == 0 || _stricmp(argv[4], "usethebetterone") == 0) {
-        execType = USE_THE_BETTER_ONE;
+    else if (_stricmp(argv[4], "T") == 0 || _stricmp(argv[4], "threadless") == 0) {
+        execType = THREADLESS_INJECTION;
     }
     else {
         std::cerr << "[!] InjectLoader: ExecType '" << argv[5] << " 'not defined.\n";
