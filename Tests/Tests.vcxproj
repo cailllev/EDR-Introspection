@@ -132,7 +132,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>C:\Users\hacker\source\repos\evilele\EDR-Introspection\EDRiShared;C:\Users\hacker\source\repos\evilele\EDR-Introspection\InjectLoader;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)vcpkg_installed\x64-windows-static\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -144,7 +144,7 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\InjectLoader\hooker.cpp" />
+    <ClCompile Include="..\InjectLoader\injector.cpp" />
     <ClCompile Include="..\InjectLoader\loaderUtils.cpp" />
     <ClCompile Include="loaderTest.cpp" />
     <ClCompile Include="mainTest.cpp" />

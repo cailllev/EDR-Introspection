@@ -1,6 +1,6 @@
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
-#include "test_utils.h"
+#include "testUtils.h"
 
 struct ETWTestEventListener : Catch::TestEventListenerBase {
     using TestEventListenerBase::TestEventListenerBase;

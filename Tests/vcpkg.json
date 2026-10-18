@@ -1,0 +1,7 @@
+{
+  "name": "edr-introspection",
+  "version-string": "1.0.0",
+  "dependencies": [
+    "krabsetw"
+  ]
+}

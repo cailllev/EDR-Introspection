@@ -24,10 +24,10 @@
     <ClCompile Include="testUtils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\InjectLoader\hooker.cpp">
+    <ClCompile Include="..\InjectLoader\loaderUtils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\InjectLoader\loaderUtils.cpp">
+    <ClCompile Include="..\InjectLoader\injector.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

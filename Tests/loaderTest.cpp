@@ -6,9 +6,9 @@
 #include <iostream>
 #include <vector>
 
-#include "../InjectLoader/utils.h"
-#include "../InjectLoader/hooker.h"
-#include "test_utils.h"
+#include "../InjectLoader/loaderUtils.h"
+#include "../InjectLoader/injector.h"
+#include "testUtils.h"
 
 
 const std::string testDll = "TestDLL.dll";
@@ -220,6 +220,9 @@ TEST_CASE("DLL Injection: LoadLibrary + HijackThread", "[hooker][loadlibrary][hi
 TEST_CASE("DLL Injection: LoadLibrary + QueueUserAPC2", "[hooker][loadlibrary][queueuserapc2]") {
     TestDllInjection(LOADLIBRARY_INJECTION, QUEUE_USER_APC2, TOOLHELP_MODULE_SNAPSHOT, true, TRUE);
 }
+TEST_CASE("DLL Injection: LoadLibrary + Threadless", "[hooker][loadlibrary][threadless]") {
+    TestDllInjection(LOADLIBRARY_INJECTION, THREADLESS_INJECTION, TOOLHELP_MODULE_SNAPSHOT, true, TRUE);
+}
 
 TEST_CASE("DLL Injection: HostMappedAndShellcode + CreateRemoteThread", "[hooker][hostmapped][createremotethread]") {
     TestDllInjection(HOSTMAPPED_INJECTION, CREATE_REMOTE_THREAD, MEMORY_PARSING, false, TRUE);
@@ -230,6 +233,9 @@ TEST_CASE("DLL Injection: HostMappedAndShellcode + HijackThread", "[hooker][host
 TEST_CASE("DLL Injection: HostMappedAndShellcode + QueueUserAPC2", "[hooker][hostmapped][queueuserapc2]") {
     TestDllInjection(HOSTMAPPED_INJECTION, QUEUE_USER_APC2, MEMORY_PARSING, false, TRUE);
 }
+TEST_CASE("DLL Injection: HostMappedAndShellcode + Threadless", "[hooker][hostmapped][threadless]") {
+    TestDllInjection(HOSTMAPPED_INJECTION, THREADLESS_INJECTION, TOOLHELP_MODULE_SNAPSHOT, true, TRUE);
+}
 
 TEST_CASE("DLL Injection: Reflective + CreateRemoteThread", "[hooker][reflective][createremotethread]") {
     TestDllInjection(REFLECTIVE_INJECTION, CREATE_REMOTE_THREAD, MEMORY_PARSING, false, TRUE);
@@ -239,4 +245,7 @@ TEST_CASE("DLL Injection: Reflective + HijackThread", "[hooker][inject][reflecti
 }
 TEST_CASE("DLL Injection: Reflective + QueueUserAPC2", "[hooker][reflective][queueuserapc2]") {
     TestDllInjection(REFLECTIVE_INJECTION, QUEUE_USER_APC2, MEMORY_PARSING, false, TRUE);
+}
+TEST_CASE("DLL Injection: Reflective + Threadless", "[hooker][reflective][threadless]") {
+    TestDllInjection(REFLECTIVE_INJECTION, THREADLESS_INJECTION, TOOLHELP_MODULE_SNAPSHOT, true, TRUE);
 }
