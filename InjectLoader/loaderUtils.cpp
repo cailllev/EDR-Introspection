@@ -181,7 +181,7 @@ BOOL UnloadViaSignal(DWORD pid, std::string dllName) { // or just use a stopRequ
 HANDLE FindProcHandle(DWORD pid, BOOL debug) {
     HMODULE hNtdll = GetModuleHandleW(L"ntdll.dll");
     if (hNtdll == 0) {
-        printf("[!] InjectLoader: Failed to get handle to ntdll.dll\n");
+        printf("[!] Utils: Failed to get handle to ntdll.dll\n");
         return 0;
     }
 
@@ -207,14 +207,14 @@ HANDLE FindProcHandle(DWORD pid, BOOL debug) {
     }
 
     if (status != 0) {
-        printf("[!] InjectLoader: Unable to query handle information of current process.\n");
+        printf("[!] Utils: Unable to query handle information of current process.\n");
         if (buffer != 0) VirtualFree(buffer, 0, MEM_RELEASE);
         return 0;
     }
 
     PPROCESS_HANDLE_SNAPSHOT_INFORMATION localHandles = (PPROCESS_HANDLE_SNAPSHOT_INFORMATION)buffer;
     if (localHandles == nullptr || localHandles->NumberOfHandles == 0) {
-        printf("[!] InjectLoader: No handles found in the current process.\n");
+        printf("[!] Utils: No handles found in the current process.\n");
         if (buffer != 0) VirtualFree(buffer, 0, MEM_RELEASE);
         return 0;
     }
@@ -222,13 +222,13 @@ HANDLE FindProcHandle(DWORD pid, BOOL debug) {
     typedef DWORD(WINAPI* pfnGetProcessId)(HANDLE);
     HMODULE hKernel32 = GetModuleHandleW(L"kernel32.dll");
     if (!hKernel32) {
-        printf("[!] InjectLoader: Failed to get handle to kernel32.dll\n");
+        printf("[!] Utils: Failed to get handle to kernel32.dll\n");
         if (buffer != 0) VirtualFree(buffer, 0, MEM_RELEASE);
         return 0;
     }
     pfnGetProcessId _GetProcessId = (pfnGetProcessId)GetProcAddress(hKernel32, "GetProcessId");
     if (!_GetProcessId) {
-        printf("[!] InjectLoader: Failed to get address of GetProcessId\n");
+        printf("[!] Utils: Failed to get address of GetProcessId\n");
         if (buffer != 0) VirtualFree(buffer, 0, MEM_RELEASE);
         return 0;
     }
@@ -241,7 +241,7 @@ HANDLE FindProcHandle(DWORD pid, BOOL debug) {
         DWORD targetPid = _GetProcessId(entry.HandleValue);
         if (targetPid == pid) {
             if (debug) {
-                printf("[+] InjectLoader: Proc handle found ID=0x%p, PID=%lu, Access=0x%08X\n", entry.HandleValue, targetPid, entry.GrantedAccess);
+                printf("[+] Utils: Proc handle found ID=0x%p, PID=%lu, Access=0x%08X\n", entry.HandleValue, targetPid, entry.GrantedAccess);
             }
             if (entry.GrantedAccess != PROCESS_ALL_ACCESS) {
 				potEntry = entry; // safe as potential candidate, but not full access
@@ -252,8 +252,8 @@ HANDLE FindProcHandle(DWORD pid, BOOL debug) {
 
         // check potential candidates
         if (potEntry.GrantedAccess != 0) {
-            printf("[!] InjectLoader: Warning: Handle to pid=%i found but limited access 0x%08X\n", pid, entry.GrantedAccess);
-            printf("[*] InjectLoader: Continue searching? Y/n");
+            printf("[!] Utils: Warning: Handle to pid=%i found but limited access 0x%08X\n", pid, entry.GrantedAccess);
+            printf("[+] Utils: Continue searching? Y/n");
             int c = getchar();
             if (c == 'n') {
                 if (buffer != 0) VirtualFree(buffer, 0, MEM_RELEASE);
@@ -264,7 +264,7 @@ HANDLE FindProcHandle(DWORD pid, BOOL debug) {
             }
         }
     }
-    printf("[!] InjectLoader: No process handles found in the current process.\n");
+    printf("[!] Utils: No process handles found in the current process.\n");
     if (buffer != 0) VirtualFree(buffer, 0, MEM_RELEASE);
     return 0;
 }
@@ -319,10 +319,10 @@ void PrintGrantedAccess(HANDLE h, DWORD pid) {
     ULONG ret = 0;
     NTSTATUS st = NtQueryObject(h, ObjectBasicInformation, &obi, sizeof(obi), &ret);
     if (st < 0) {
-        printf("[!] Hooker: NtQueryObject failed at pid=%i with status 0x%lx", pid, st);
+        printf("[!] Utils: NtQueryObject failed at pid=%i with status 0x%lx", pid, st);
     }
     else {
         std::string details = GetProcAccessDetails(obi.GrantedAccess);
-        printf("[*] Hooker: GrantedAccess to pid=%i: 0x%lx %s\n", pid, obi.GrantedAccess, details.c_str());
+        printf("[+] Utils: GrantedAccess to pid=%i: 0x%lx %s\n", pid, obi.GrantedAccess, details.c_str());
     }
 }
