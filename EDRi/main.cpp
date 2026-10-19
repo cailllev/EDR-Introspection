@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "../InjectLoader/hooker.h"
+#include "../InjectLoader/injector.h"
 #include "../InjectLoader/loaderUtils.h"
 #include "globals.h"
 #include "utils.h"
