@@ -25,6 +25,9 @@ enum Executor {
     THREADLESS_INJECTION
 };
 
+extern std::string g_libThreadlessHook;
+extern std::string g_funcThreadlessHook;
+
 typedef struct _OPTIMAL_THREAD {
     HANDLE hThread;
     int score;

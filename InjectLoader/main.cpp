@@ -4,6 +4,10 @@
 #include "loaderUtils.h"
 #include "injector.h"
 
+// extra args for Threadless hooking
+std::string g_libThreadlessHook = "";
+std::string g_funcThreadlessHook = "";
+
 int main(int argc, char* argv[]) {
     int pid = 0;
     std::string dllPath;
@@ -15,7 +19,7 @@ int main(int argc, char* argv[]) {
     usage += "           <Target PID>\n";
     usage += "           <DLL Path>\n"; 
     usage += "           <(L)oadLibrary | (H)ostMapped | (R)eflective | StopVia(T)hread | StopVia(S)ignal>\n";
-    usage += "           <(C)reateRemoteThread | (H)ijackThread | (Q)ueueUserAPC | (T)readless>\n";
+    usage += "           <(C)reateRemoteThread | (H)ijackThread | (Q)ueueUserAPC | (T)hreadless@<lib>!<func>>\n";
     usage += "           [RiskInstability]\n";
     usage += "           [Debug]\n";
     usage += "[*] Example: " + exeName + " 1234 C:\\path\\to\\dll.dll L C 0 1\n";
@@ -93,11 +97,25 @@ int main(int argc, char* argv[]) {
     else if (_stricmp(argv[4], "Q") == 0 || _stricmp(argv[4], "queueuserapc") == 0) {
         execType = QUEUE_USER_APC2;
     }
-    else if (_stricmp(argv[4], "T") == 0 || _stricmp(argv[4], "threadless") == 0) {
+    else if (toupper(argv[4][0]) == 'T' || _strnicmp(argv[4], "threadless", 10) == 0) {
         execType = THREADLESS_INJECTION;
+        std::string arg4 = argv[4]; // threadless extra dynamic args
+        size_t atPos = arg4.find('@');
+        if (atPos == std::string::npos) {
+            std::cerr << "[!] InjectLoader: Threadless argument '" << arg4 << " ' is not well formed, good example: Threadless@ntdll!NtOpenFile\n";
+            return 1;
+        }
+        std::string toHook = arg4.substr(atPos + 1);
+        size_t exclamPos = toHook.find('!');
+        if (exclamPos == 0 || exclamPos == toHook.size()) {
+            std::cerr << "[!] InjectLoader: Function to hook '" << toHook << " ' is not well formed, good example: ntdll!NtOpenFile\n";
+            return 1;
+        }
+        g_libThreadlessHook = toHook.substr(0, exclamPos);
+        g_funcThreadlessHook = toHook.substr(exclamPos + 1);
     }
     else {
-        std::cerr << "[!] InjectLoader: ExecType '" << argv[5] << " 'not defined.\n";
+        std::cerr << "[!] InjectLoader: ExecType '" << argv[4] << " 'not defined.\n";
         return 1;
     }
 
