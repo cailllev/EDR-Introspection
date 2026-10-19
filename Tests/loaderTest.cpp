@@ -17,6 +17,10 @@ const std::string testExe = "TestEXE.exe";
 
 BOOL debug = TRUE;
 
+// used by the threadless injection technique
+std::string g_libThreadlessHook = "ntdll";
+std::string g_funcThreadlessHook = "NtDelayExecution";
+
 class TestProcess {
 private:
     DWORD explorerPid = GetProcessIdByName(L"explorer.exe");
