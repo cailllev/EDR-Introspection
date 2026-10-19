@@ -1,0 +1,32 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2012, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Module Name="avicap32.dll" CallingConvention="STDCALL" ErrorFunc="GetLastError" OnlineHelp="MSDN">
+        <!-- Video Capture -->
+        <Category Name="Audio and Video/Legacy Audio and Video/Windows Multimedia/Video for Windows/Video Capture" />
+        <Api Name="capCreateCaptureWindow" BothCharset="True">
+            <Param Type="LPCTSTR" Name="lpszWindowName" />
+            <Param Type="DWORD" Name="dwStyle" />
+            <Param Type="int" Name="x" />
+            <Param Type="int" Name="y" />
+            <Param Type="int" Name="nWidth" />
+            <Param Type="int" Name="nHeight" />
+            <Param Type="HWND" Name="hWnd" />
+            <Param Type="int" Name="nID" />
+            <Return Type="HWND" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="capGetDriverDescription" BothCharset="True">
+            <Param Type="WORD" Name="wDriverIndex" />
+            <Param Type="LPTSTR" Name="lpszName" OutputOnly="True" />
+            <Param Type="INT" Name="cbName" />
+            <Param Type="LPTSTR" Name="lpszVer" OutputOnly="True" />
+            <Param Type="INT" Name="cbVer" />
+            <Return Type="BOOL" />
+        </Api>
+    </Module>
+</ApiMonitor>

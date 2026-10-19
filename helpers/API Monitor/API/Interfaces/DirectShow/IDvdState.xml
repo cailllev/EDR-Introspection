@@ -1,0 +1,20 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IDvdState" Id="{86303d6d-1c4a-4087-ab42-f711167048ef}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/DirectShow">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="GetDiscID">
+            <Param Type="ULONGLONG*" Name="pullUniqueID" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetParentalLevel">
+            <Param Type="ULONG*" Name="pulParentalLevel" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

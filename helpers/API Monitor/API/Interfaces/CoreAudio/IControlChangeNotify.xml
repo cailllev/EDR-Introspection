@@ -1,0 +1,16 @@
+<!--
+    API Monitor Definitions
+    (c) 2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Include Filename="Interfaces\CoreAudio\coreaudio.h.xml" />
+    <Interface Name="IControlChangeNotify" Id="{A09513ED-C709-4d21-BD7B-5F34C47F3947}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/Core Audio/Device Topology">
+        <Api Name="OnNotify">
+            <Param Type="DWORD" Name="dwSenderProcessId" />
+            <Param Type="LPCGUID" Name="pguidEventContext" />
+            <Return Type="[AUDCLNT_HRESULT]" />
+        </Api>
+    </Interface>
+</ApiMonitor>

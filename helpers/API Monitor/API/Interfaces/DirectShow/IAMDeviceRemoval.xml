@@ -1,0 +1,23 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IAMDeviceRemoval" Id="{f90a6130-b658-11d2-ae49-0000f8754b99}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/DirectShow">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="DeviceInfo">
+            <Param Type="CLSID*" Name="pclsidInterfaceClass" />
+            <Param Type="LPWSTR*" Name="pwszSymbolicLink" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Reassociate">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Disassociate">
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

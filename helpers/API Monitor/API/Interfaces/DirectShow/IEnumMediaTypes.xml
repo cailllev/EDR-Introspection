@@ -1,0 +1,29 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IEnumMediaTypes" Id="{89c31040-846b-11ce-97d3-00aa0055595a}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/DirectShow">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="Next">
+            <Param Type="ULONG" Name="cMediaTypes" />
+            <Param Type="AM_MEDIA_TYPE**" Name="ppMediaTypes" PostCount="pcFetched" />
+            <Param Type="ULONG*" Name="pcFetched" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Skip">
+            <Param Type="ULONG" Name="cMediaTypes" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Reset">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Clone">
+            <Param Type="IEnumMediaTypes**" Name="ppEnum" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

@@ -1,0 +1,210 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Module Name="Traffic.dll" CallingConvention="STDCALL" ErrorFunc="GetLastError" OnlineHelp="MSDN">
+        <!-- Variables -->
+        <Variable Name="TCI_NOTIFY_HANDLER"             Type="Alias" Base="LPVOID" />
+        <Variable Name="TCI_ADD_FLOW_COMPLETE_HANDLER"  Type="Alias" Base="LPVOID" />
+        <Variable Name="TCI_MOD_FLOW_COMPLETE_HANDLER"  Type="Alias" Base="LPVOID" />
+        <Variable Name="TCI_DEL_FLOW_COMPLETE_HANDLER"  Type="Alias" Base="LPVOID" />
+        <Variable Name="WCHAR [MAX_STRING_LENGTH]"      Type="Array" Base="WCHAR" Count="256" />
+
+        <!-- TC_GEN_FILTER -->
+        <Variable Name="TC_GEN_FILTER" Type="Struct">
+            <Field Type="USHORT"  	Name="AddressType" />
+            <Field Type="ULONG"   	Name="PatternSize" />
+            <Field Type="PVOID"   	Name="Pattern" Length="PatternSize" />
+            <Field Type="PVOID"   	Name="Mask" Length="PatternSize" />
+        </Variable>
+        <Variable Name="PTC_GEN_FILTER"     Type="Pointer"  Base="TC_GEN_FILTER" />
+        <Variable Name="TC_GEN_FILTER [1]"  Type="Array"    Base="TC_GEN_FILTER" Count="1" />
+
+        <!-- NETWORK_ADDRESS -->
+        <Variable Name="NETWORK_ADDRESS" Type="Struct">
+            <Field Type="USHORT"        Name="AddressLength" />
+            <Field Type="USHORT"        Name="AddressType" />
+            <Field Type="UCHAR [1]"     Name="Address" />
+        </Variable>
+        <Variable Name="NETWORK_ADDRESS [1]" Type="Array" Base="NETWORK_ADDRESS" Count="1" />
+
+        <!-- NETWORK_ADDRESS_LIST -->
+        <Variable Name="NETWORK_ADDRESS_LIST" Type="Struct">
+            <Field Type="LONG"                  Name="AddressCount" />
+            <Field Type="USHORT"                Name="AddressType" />
+            <Field Type="NETWORK_ADDRESS [1]"   Name="Address" />
+        </Variable>
+
+        <!-- ADDRESS_LIST_DESCRIPTOR -->
+        <Variable Name="ADDRESS_LIST_DESCRIPTOR" Type="Struct">
+            <Field Type="ULONG"                     Name="MediaType" />
+            <Field Type="NETWORK_ADDRESS_LIST"      Name="AddressList" />
+        </Variable>
+
+        <!-- TC_IFC_DESCRIPTOR -->
+        <Variable Name="TC_IFC_DESCRIPTOR" Type="Struct">
+            <Field Type="ULONG"                     Name="Length" />
+            <Field Type="LPWSTR"                    Name="pInterfaceName" />
+            <Field Type="LPWSTR"                    Name="pInterfaceID" />
+            <Field Type="ADDRESS_LIST_DESCRIPTOR"   Name="AddressListDesc" />
+        </Variable>
+        <Variable Name="PTC_IFC_DESCRIPTOR" Type="Pointer" Base="TC_IFC_DESCRIPTOR" />
+
+        <!-- [QOS_OBJECT_HDR_TYPE] -->
+        <Variable Name="[QOS_OBJECT_HDR_TYPE]" Type="Alias" Base="ULONG">
+            <Display Name="ULONG" />
+            <Enum>
+                <Set Name="QOS_OBJECT_END_OF_LIST"          Value="2001" />
+                <Set Name="QOS_OBJECT_SD_MODE"              Value="2002" />
+                <Set Name="QOS_OBJECT_SHAPING_RATE"         Value="2003" />
+                <Set Name="QOS_OBJECT_DESTADDR"             Value="2004" />
+                <Set Name="RSVP_OBJECT_STATUS_INFO"         Value="1000" />
+                <Set Name="RSVP_OBJECT_RESERVE_INFO"        Value="1001" />
+                <Set Name="RSVP_OBJECT_ADSPEC"              Value="1002" />
+                <Set Name="RSVP_OBJECT_POLICY_INFO"         Value="1003" />
+                <Set Name="RSVP_OBJECT_FILTERSPEC_LIST"     Value="1004" />
+            </Enum>
+        </Variable>
+
+        <!-- QOS_OBJECT_HDR -->
+        <Variable Name="QOS_OBJECT_HDR" Type="Struct">
+            <Field Type="[QOS_OBJECT_HDR_TYPE]"     Name="ObjectType" />
+            <Field Type="ULONG"                     Name="ObjectLength" />
+        </Variable>
+        <Variable Name="QOS_OBJECT_HDR [1]" Type="Array" Base="QOS_OBJECT_HDR" Count="1" />
+
+        <!-- TC_GEN_FLOW -->
+        <Variable Name="TC_GEN_FLOW" Type="Struct">
+            <Field Type="FLOWSPEC"              Name="SendingFlowspec" />
+            <Field Type="FLOWSPEC"              Name="ReceivingFlowspec" />
+            <Field Type="ULONG"                 Name="TcObjectsLength" />
+            <Field Type="QOS_OBJECT_HDR [1]"    Name="TcObjects" />
+        </Variable>
+        <Variable Name="PTC_GEN_FLOW" Type="Pointer" Base="TC_GEN_FLOW" />
+
+        <!-- ENUMERATION_BUFFER -->
+        <Variable Name="ENUMERATION_BUFFER" Type="Struct">
+            <Field Type="ULONG"                         Name="Length" />
+            <Field Type="ULONG"                         Name="OwnerProcessId" />
+            <Field Type="USHORT"                        Name="FlowNameLength" />
+            <Field Type="WCHAR [MAX_STRING_LENGTH]"     Name="FlowName" />
+            <Field Type="PTC_GEN_FLOW"                  Name="pFlow" />
+            <Field Type="ULONG"                         Name="NumberOfFilters" />
+            <Field Type="TC_GEN_FILTER [1]"             Name="GenericFilter" Count="NumberOfFilters" />
+        </Variable>
+        <Variable Name="PENUMERATION_BUFFER" Type="Pointer" Base="ENUMERATION_BUFFER" />
+
+        <!-- TCI_CLIENT_FUNC_LIST -->
+        <Variable Name="TCI_CLIENT_FUNC_LIST" Type="Struct">
+            <Field Type="TCI_NOTIFY_HANDLER"              	Name="ClNotifyHandler" />
+            <Field Type="TCI_ADD_FLOW_COMPLETE_HANDLER"   	Name="ClAddFlowCompleteHandler" />
+            <Field Type="TCI_MOD_FLOW_COMPLETE_HANDLER"   	Name="ClModifyFlowCompleteHandler" />
+            <Field Type="TCI_DEL_FLOW_COMPLETE_HANDLER"   	Name="ClDeleteFlowCompleteHandler" />
+        </Variable>
+        <Variable Name="PTCI_CLIENT_FUNC_LIST" Type="Pointer" Base="TCI_CLIENT_FUNC_LIST" />
+
+        <!-- Traffic Control -->
+        <Category Name="Networking/Quality of Service (QOS)/Traffic Control" />
+        <Api Name="TcAddFilter">
+            <Param Type="HANDLE" Name="FlowHandle" />
+            <Param Type="PTC_GEN_FILTER" Name="pGenericFilter" />
+            <Param Type="PHANDLE" Name="pFilterHandle" />
+            <Return Type="[ERROR_CODE_ULONG]" />
+        </Api>
+        <Api Name="TcAddFlow">
+            <Param Type="HANDLE" Name="IfcHandle" />
+            <Param Type="HANDLE" Name="ClFlowCtx" />
+            <Param Type="ULONG" Name="Flags" />
+            <Param Type="PTC_GEN_FLOW" Name="pGenericFlow" />
+            <Param Type="PHANDLE" Name="pFlowHandle" />
+            <Return Type="[ERROR_CODE_ULONG]" />
+        </Api>
+        <Api Name="TcCloseInterface">
+            <Param Type="HANDLE" Name="IfcHandle" />
+            <Return Type="[ERROR_CODE_ULONG]" />
+        </Api>
+        <Api Name="TcDeleteFilter">
+            <Param Type="HANDLE" Name="FilterHandle" />
+            <Return Type="[ERROR_CODE_ULONG]" />
+        </Api>
+        <Api Name="TcDeleteFlow">
+            <Param Type="HANDLE" Name="FlowHandle" />
+            <Return Type="[ERROR_CODE_ULONG]" />
+        </Api>
+        <Api Name="TcDeregisterClient">
+            <Param Type="HANDLE" Name="ClientHandle" />
+            <Return Type="[ERROR_CODE_ULONG]" />
+        </Api>
+        <Api Name="TcEnumerateFlows">
+            <Param Type="HANDLE" Name="IfcHandle" />
+            <Param Type="PHANDLE" Name="pEnumToken" />
+            <Param Type="PULONG" Name="pFlowCount" />
+            <Param Type="PULONG" Name="pBufSize" />
+            <Param Type="PENUMERATION_BUFFER" Name="Buffer" />
+            <Return Type="[ERROR_CODE_ULONG]" />
+        </Api>
+        <Api Name="TcEnumerateInterfaces">
+            <Param Type="HANDLE" Name="ClientHandle" />
+            <Param Type="PULONG" Name="pBufferSize" />
+            <Param Type="PTC_IFC_DESCRIPTOR" Name="InterfaceBuffer" />
+            <Return Type="[ERROR_CODE_ULONG]" />
+        </Api>
+        <Api Name="TcGetFlowName" BothCharset="True">
+            <Param Type="HANDLE" Name="FlowHandle" />
+            <Param Type="ULONG" Name="StrSize" />
+            <Param Type="LPTSTR" Name="pFlowName" />
+            <Return Type="[ERROR_CODE_ULONG]" />
+        </Api>
+        <Api Name="TcModifyFlow">
+            <Param Type="HANDLE" Name="FlowHandle" />
+            <Param Type="PTC_GEN_FLOW" Name="pGenericFlow" />
+            <Return Type="[ERROR_CODE_ULONG]" />
+        </Api>
+        <Api Name="TcOpenInterface" BothCharset="True">
+            <Param Type="LPTSTR" Name="pInterfaceName" />
+            <Param Type="HANDLE" Name="ClientHandle" />
+            <Param Type="HANDLE" Name="ClIfcCtx" />
+            <Param Type="PHANDLE" Name="pIfcHandle" />
+            <Return Type="[ERROR_CODE_ULONG]" />
+        </Api>
+        <Api Name="TcQueryFlow" BothCharset="True">
+            <Param Type="LPTSTR" Name="FlowName" />
+            <Param Type="LPGUID" Name="pGuidParam" />
+            <Param Type="PULONG" Name="pBufferSize" />
+            <Param Type="PVOID" Name="Buffer" />
+            <Return Type="[ERROR_CODE_ULONG]" />
+        </Api>
+        <Api Name="TcQueryInterface">
+            <Param Type="HANDLE" Name="IfcHandle" />
+            <Param Type="LPGUID" Name="pGuidParam" />
+            <Param Type="BOOLEAN" Name="NotifyChange" />
+            <Param Type="PULONG" Name="BufferSize" />
+            <Param Type="PVOID" Name="Buffer" />
+            <Return Type="[ERROR_CODE_ULONG]" />
+        </Api>
+        <Api Name="TcRegisterClient">
+            <Param Type="ULONG" Name="TciVersion" />
+            <Param Type="HANDLE" Name="ClRegCtx" />
+            <Param Type="PTCI_CLIENT_FUNC_LIST" Name="pClientHandlerList" />
+            <Param Type="PHANDLE" Name="pClientHandle" />
+            <Return Type="[ERROR_CODE_ULONG]" />
+        </Api>
+        <Api Name="TcSetFlow" BothCharset="True">
+            <Param Type="LPTSTR" Name="pFlowName" />
+            <Param Type="LPGUID" Name="pGuidParam" />
+            <Param Type="ULONG" Name="BufferSize" />
+            <Param Type="PVOID" Name="Buffer" />
+            <Return Type="[ERROR_CODE_ULONG]" />
+        </Api>
+        <Api Name="TcSetInterface">
+            <Param Type="HANDLE" Name="IfcHandle" />
+            <Param Type="LPGUID" Name="pGuidParam" />
+            <Param Type="ULONG" Name="BufferSize" />
+            <Param Type="PVOID" Name="Buffer" />
+            <Return Type="[ERROR_CODE_ULONG]" />
+        </Api>
+    </Module>
+</ApiMonitor>

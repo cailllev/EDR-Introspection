@@ -1,0 +1,35 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IBackgroundCopyError" Id="{19c613a0-fcb8-4f28-81ae-897c3d078f81}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Data Access and Storage/Background Intelligent Transfer Service (BITS)">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="GetError">
+            <Param Type="BG_ERROR_CONTEXT*" Name="pContext" />
+            <Param Type="HRESULT*" Name="pCode" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetFile">
+            <Param Type="IBackgroundCopyFile**" Name="pVal" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetErrorDescription">
+            <Param Type="DWORD" Name="LanguageId" />
+            <Param Type="LPWSTR*" Name="pErrorDescription" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetErrorContextDescription">
+            <Param Type="DWORD" Name="LanguageId" />
+            <Param Type="LPWSTR*" Name="pContextDescription" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetProtocol">
+            <Param Type="LPWSTR*" Name="pProtocol" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

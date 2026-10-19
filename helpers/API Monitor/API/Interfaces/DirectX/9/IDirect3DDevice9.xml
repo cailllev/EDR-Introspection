@@ -1,0 +1,643 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Include Filename="Interfaces\DirectX\9\IDirect3D9.xml" />
+    <Include Filename="Headers\directx.h.xml" />
+
+    <Interface Name="IDirect3DDevice9" Id="{D0223B96-BF7A-43fd-92BD-A43B0D82B9EB}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Graphics and Gaming/DirectX Graphics and Gaming/Direct3D/9">
+        <!-- Methods -->
+        <Api Name="TestCooperativeLevel">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetAvailableTextureMem">
+            <Return Type="UINT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="EvictManagedResources">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetDirect3D">
+            <Param Type="IDirect3D9**" Name="ppD3D9" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetDeviceCaps">
+            <Param Type="D3DCAPS9*" Name="pCaps" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetDisplayMode">
+            <Param Type="UINT" Name="iSwapChain" />
+            <Param Type="D3DDISPLAYMODE*" Name="pMode" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetCreationParameters">
+            <Param Type="D3DDEVICE_CREATION_PARAMETERS*" Name="pParameters" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetCursorProperties">
+            <Param Type="UINT" Name="XHotSpot" />
+            <Param Type="UINT" Name="YHotSpot" />
+            <Param Type="IDirect3DSurface9*" Name="pCursorBitmap" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetCursorPosition">
+            <Param Type="int" Name="X" />
+            <Param Type="int" Name="Y" />
+            <Param Type="DWORD" Name="Flags" />
+            <Return Type="void" />
+        </Api>
+        <Api Name="ShowCursor">
+            <Param Type="BOOL" Name="bShow" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CreateAdditionalSwapChain">
+            <Param Type="D3DPRESENT_PARAMETERS*" Name="pPresentationParameters" />
+            <Param Type="IDirect3DSwapChain9**" Name="pSwapChain" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetSwapChain">
+            <Param Type="UINT" Name="iSwapChain" />
+            <Param Type="IDirect3DSwapChain9**" Name="pSwapChain" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetNumberOfSwapChains">
+            <Return Type="UINT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="Reset">
+            <Param Type="D3DPRESENT_PARAMETERS*" Name="pPresentationParameters" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Present">
+            <Param Type="CONST RECT*" Name="pSourceRect" />
+            <Param Type="CONST RECT*" Name="pDestRect" />
+            <Param Type="HWND" Name="hDestWindowOverride" />
+            <Param Type="CONST RGNDATA*" Name="pDirtyRegion" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetBackBuffer">
+            <Param Type="UINT" Name="iSwapChain" />
+            <Param Type="UINT" Name="iBackBuffer" />
+            <Param Type="D3DBACKBUFFER_TYPE" Name="Type" />
+            <Param Type="IDirect3DSurface9**" Name="ppBackBuffer" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetRasterStatus">
+            <Param Type="UINT" Name="iSwapChain" />
+            <Param Type="D3DRASTER_STATUS*" Name="pRasterStatus" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetDialogBoxMode">
+            <Param Type="BOOL" Name="bEnableDialogs" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetGammaRamp">
+            <Param Type="UINT" Name="iSwapChain" />
+            <Param Type="DWORD" Name="Flags" />
+            <Param Type="CONST D3DGAMMARAMP*" Name="pRamp" />
+            <Return Type="void" />
+        </Api>
+        <Api Name="GetGammaRamp">
+            <Param Type="UINT" Name="iSwapChain" />
+            <Param Type="D3DGAMMARAMP*" Name="pRamp" />
+            <Return Type="void" />
+        </Api>
+        <Api Name="CreateTexture">
+            <Param Type="UINT" Name="Width" />
+            <Param Type="UINT" Name="Height" />
+            <Param Type="UINT" Name="Levels" />
+            <Param Type="[D3DUSAGE]" Name="Usage" />
+            <Param Type="D3DFORMAT" Name="Format" />
+            <Param Type="D3DPOOL" Name="Pool" />
+            <Param Type="IDirect3DTexture9**" Name="ppTexture" />
+            <Param Type="HANDLE*" Name="pSharedHandle" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CreateVolumeTexture">
+            <Param Type="UINT" Name="Width" />
+            <Param Type="UINT" Name="Height" />
+            <Param Type="UINT" Name="Depth" />
+            <Param Type="UINT" Name="Levels" />
+            <Param Type="[D3DUSAGE]" Name="Usage" />
+            <Param Type="D3DFORMAT" Name="Format" />
+            <Param Type="D3DPOOL" Name="Pool" />
+            <Param Type="IDirect3DVolumeTexture9**" Name="ppVolumeTexture" />
+            <Param Type="HANDLE*" Name="pSharedHandle" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CreateCubeTexture">
+            <Param Type="UINT" Name="EdgeLength" />
+            <Param Type="UINT" Name="Levels" />
+            <Param Type="[D3DUSAGE]" Name="Usage" />
+            <Param Type="D3DFORMAT" Name="Format" />
+            <Param Type="D3DPOOL" Name="Pool" />
+            <Param Type="IDirect3DCubeTexture9**" Name="ppCubeTexture" />
+            <Param Type="HANDLE*" Name="pSharedHandle" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CreateVertexBuffer">
+            <Param Type="UINT" Name="Length" />
+            <Param Type="[D3DUSAGE]" Name="Usage" />
+            <Param Type="DWORD" Name="FVF" />
+            <Param Type="D3DPOOL" Name="Pool" />
+            <Param Type="IDirect3DVertexBuffer9**" Name="ppVertexBuffer" />
+            <Param Type="HANDLE*" Name="pSharedHandle" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CreateIndexBuffer">
+            <Param Type="UINT" Name="Length" />
+            <Param Type="[D3DUSAGE]" Name="Usage" />
+            <Param Type="D3DFORMAT" Name="Format" />
+            <Param Type="D3DPOOL" Name="Pool" />
+            <Param Type="IDirect3DIndexBuffer9**" Name="ppIndexBuffer" />
+            <Param Type="HANDLE*" Name="pSharedHandle" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CreateRenderTarget">
+            <Param Type="UINT" Name="Width" />
+            <Param Type="UINT" Name="Height" />
+            <Param Type="D3DFORMAT" Name="Format" />
+            <Param Type="D3DMULTISAMPLE_TYPE" Name="MultiSample" />
+            <Param Type="DWORD" Name="MultisampleQuality" />
+            <Param Type="BOOL" Name="Lockable" />
+            <Param Type="IDirect3DSurface9**" Name="ppSurface" />
+            <Param Type="HANDLE*" Name="pSharedHandle" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CreateDepthStencilSurface">
+            <Param Type="UINT" Name="Width" />
+            <Param Type="UINT" Name="Height" />
+            <Param Type="D3DFORMAT" Name="Format" />
+            <Param Type="D3DMULTISAMPLE_TYPE" Name="MultiSample" />
+            <Param Type="DWORD" Name="MultisampleQuality" />
+            <Param Type="BOOL" Name="Discard" />
+            <Param Type="IDirect3DSurface9**" Name="ppSurface" />
+            <Param Type="HANDLE*" Name="pSharedHandle" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="UpdateSurface">
+            <Param Type="IDirect3DSurface9*" Name="pSourceSurface" />
+            <Param Type="CONST RECT*" Name="pSourceRect" />
+            <Param Type="IDirect3DSurface9*" Name="pDestinationSurface" />
+            <Param Type="CONST POINT*" Name="pDestPoint" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="UpdateTexture">
+            <Param Type="IDirect3DBaseTexture9*" Name="pSourceTexture" />
+            <Param Type="IDirect3DBaseTexture9*" Name="pDestinationTexture" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetRenderTargetData">
+            <Param Type="IDirect3DSurface9*" Name="pRenderTarget" />
+            <Param Type="IDirect3DSurface9*" Name="pDestSurface" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetFrontBufferData">
+            <Param Type="UINT" Name="iSwapChain" />
+            <Param Type="IDirect3DSurface9*" Name="pDestSurface" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="StretchRect">
+            <Param Type="IDirect3DSurface9*" Name="pSourceSurface" />
+            <Param Type="CONST RECT*" Name="pSourceRect" />
+            <Param Type="IDirect3DSurface9*" Name="pDestSurface" />
+            <Param Type="CONST RECT*" Name="pDestRect" />
+            <Param Type="D3DTEXTUREFILTERTYPE" Name="Filter" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ColorFill">
+            <Param Type="IDirect3DSurface9*" Name="pSurface" />
+            <Param Type="CONST RECT*" Name="pRect" />
+            <Param Type="D3DCOLOR" Name="color" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CreateOffscreenPlainSurface">
+            <Param Type="UINT" Name="Width" />
+            <Param Type="UINT" Name="Height" />
+            <Param Type="D3DFORMAT" Name="Format" />
+            <Param Type="D3DPOOL" Name="Pool" />
+            <Param Type="IDirect3DSurface9**" Name="ppSurface" />
+            <Param Type="HANDLE*" Name="pSharedHandle" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetRenderTarget">
+            <Param Type="DWORD" Name="RenderTargetIndex" />
+            <Param Type="IDirect3DSurface9*" Name="pRenderTarget" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetRenderTarget">
+            <Param Type="DWORD" Name="RenderTargetIndex" />
+            <Param Type="IDirect3DSurface9**" Name="ppRenderTarget" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetDepthStencilSurface">
+            <Param Type="IDirect3DSurface9*" Name="pNewZStencil" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetDepthStencilSurface">
+            <Param Type="IDirect3DSurface9**" Name="ppZStencilSurface" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="BeginScene">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="EndScene">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Clear">
+            <Param Type="DWORD" Name="Count" />
+            <Param Type="CONST D3DRECT*" Name="pRects" Count="Count" />
+            <Param Type="[D3DCLEAR_FLAGS]" Name="Flags" />
+            <Param Type="D3DCOLOR" Name="Color" />
+            <Param Type="float" Name="Z" />
+            <Param Type="DWORD" Name="Stencil" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetTransform">
+            <Param Type="D3DTRANSFORMSTATETYPE" Name="State" />
+            <Param Type="CONST D3DMATRIX*" Name="pMatrix" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetTransform">
+            <Param Type="D3DTRANSFORMSTATETYPE" Name="State" />
+            <Param Type="D3DMATRIX*" Name="pMatrix" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MultiplyTransform">
+            <Param Type="D3DTRANSFORMSTATETYPE" Name="State" />
+            <Param Type="CONST D3DMATRIX*" Name="pMatrix" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetViewport">
+            <Param Type="CONST D3DVIEWPORT9*" Name="pViewport" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetViewport">
+            <Param Type="D3DVIEWPORT9*" Name="pViewport" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetMaterial">
+            <Param Type="CONST D3DMATERIAL9*" Name="pMaterial" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetMaterial">
+            <Param Type="D3DMATERIAL9*" Name="pMaterial" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetLight">
+            <Param Type="DWORD" Name="Index" />
+            <Param Type="CONST D3DLIGHT9*" Name="pLight" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetLight">
+            <Param Type="DWORD" Name="Index" />
+            <Param Type="D3DLIGHT9*" Name="pLight" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="LightEnable">
+            <Param Type="DWORD" Name="Index" />
+            <Param Type="BOOL" Name="Enable" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetLightEnable">
+            <Param Type="DWORD" Name="Index" />
+            <Param Type="BOOL*" Name="pEnable" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetClipPlane">
+            <Param Type="DWORD" Name="Index" />
+            <Param Type="CONST float*" Name="pPlane" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetClipPlane">
+            <Param Type="DWORD" Name="Index" />
+            <Param Type="float*" Name="pPlane" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetRenderState">
+            <Param Type="D3DRENDERSTATETYPE" Name="State" />
+            <Param Type="DWORD" Name="Value" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetRenderState">
+            <Param Type="D3DRENDERSTATETYPE" Name="State" />
+            <Param Type="DWORD*" Name="pValue" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CreateStateBlock">
+            <Param Type="D3DSTATEBLOCKTYPE" Name="Type" />
+            <Param Type="IDirect3DStateBlock9**" Name="ppSB" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="BeginStateBlock">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="EndStateBlock">
+            <Param Type="IDirect3DStateBlock9**" Name="ppSB" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetClipStatus">
+            <Param Type="CONST D3DCLIPSTATUS9*" Name="pClipStatus" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetClipStatus">
+            <Param Type="D3DCLIPSTATUS9*" Name="pClipStatus" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetTexture">
+            <Param Type="DWORD" Name="Stage" />
+            <Param Type="IDirect3DBaseTexture9**" Name="ppTexture" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetTexture">
+            <Param Type="DWORD" Name="Stage" />
+            <Param Type="IDirect3DBaseTexture9*" Name="pTexture" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetTextureStageState">
+            <Param Type="DWORD" Name="Stage" />
+            <Param Type="D3DTEXTURESTAGESTATETYPE" Name="Type" />
+            <Param Type="DWORD*" Name="pValue" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetTextureStageState">
+            <Param Type="DWORD" Name="Stage" />
+            <Param Type="D3DTEXTURESTAGESTATETYPE" Name="Type" />
+            <Param Type="DWORD" Name="Value" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetSamplerState">
+            <Param Type="DWORD" Name="Sampler" />
+            <Param Type="D3DSAMPLERSTATETYPE" Name="Type" />
+            <Param Type="DWORD*" Name="pValue" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetSamplerState">
+            <Param Type="DWORD" Name="Sampler" />
+            <Param Type="D3DSAMPLERSTATETYPE" Name="Type" />
+            <Param Type="DWORD" Name="Value" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ValidateDevice">
+            <Param Type="DWORD*" Name="pNumPasses" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetPaletteEntries">
+            <Param Type="UINT" Name="PaletteNumber" />
+            <Param Type="CONST PALETTEENTRY*" Name="pEntries" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetPaletteEntries">
+            <Param Type="UINT" Name="PaletteNumber" />
+            <Param Type="PALETTEENTRY*" Name="pEntries" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetCurrentTexturePalette">
+            <Param Type="UINT" Name="PaletteNumber" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetCurrentTexturePalette">
+            <Param Type="UINT*" Name="PaletteNumber" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetScissorRect">
+            <Param Type="CONST RECT*" Name="pRect" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetScissorRect">
+            <Param Type="RECT*" Name="pRect" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetSoftwareVertexProcessing">
+            <Param Type="BOOL" Name="bSoftware" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetSoftwareVertexProcessing">
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="SetNPatchMode">
+            <Param Type="float" Name="nSegments" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetNPatchMode">
+            <Return Type="float" />
+        </Api>
+        <Api Name="DrawPrimitive">
+            <Param Type="D3DPRIMITIVETYPE" Name="PrimitiveType" />
+            <Param Type="UINT" Name="StartVertex" />
+            <Param Type="UINT" Name="PrimitiveCount" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DrawIndexedPrimitive">
+            <Param Type="D3DPRIMITIVETYPE" Name="Type" />
+            <Param Type="INT" Name="BaseVertexIndex" />
+            <Param Type="UINT" Name="MinVertexIndex" />
+            <Param Type="UINT" Name="NumVertices" />
+            <Param Type="UINT" Name="startIndex" />
+            <Param Type="UINT" Name="primCount" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DrawPrimitiveUP">
+            <Param Type="D3DPRIMITIVETYPE" Name="PrimitiveType" />
+            <Param Type="UINT" Name="PrimitiveCount" />
+            <Param Type="CONST void*" Name="pVertexStreamZeroData" />
+            <Param Type="UINT" Name="VertexStreamZeroStride" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DrawIndexedPrimitiveUP">
+            <Param Type="D3DPRIMITIVETYPE" Name="PrimitiveType" />
+            <Param Type="UINT" Name="MinVertexIndex" />
+            <Param Type="UINT" Name="NumVertices" />
+            <Param Type="UINT" Name="PrimitiveCount" />
+            <Param Type="CONST void*" Name="pIndexData" />
+            <Param Type="D3DFORMAT" Name="IndexDataFormat" />
+            <Param Type="CONST void*" Name="pVertexStreamZeroData" />
+            <Param Type="UINT" Name="VertexStreamZeroStride" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ProcessVertices">
+            <Param Type="UINT" Name="SrcStartIndex" />
+            <Param Type="UINT" Name="DestIndex" />
+            <Param Type="UINT" Name="VertexCount" />
+            <Param Type="IDirect3DVertexBuffer9*" Name="pDestBuffer" />
+            <Param Type="IDirect3DVertexDeclaration9*" Name="pVertexDecl" />
+            <Param Type="DWORD" Name="Flags" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CreateVertexDeclaration">
+            <Param Type="CONST D3DVERTEXELEMENT9*" Name="pVertexElements" />
+            <Param Type="IDirect3DVertexDeclaration9**" Name="ppDecl" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetVertexDeclaration">
+            <Param Type="IDirect3DVertexDeclaration9*" Name="pDecl" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetVertexDeclaration">
+            <Param Type="IDirect3DVertexDeclaration9**" Name="ppDecl" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetFVF">
+            <Param Type="DWORD" Name="FVF" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetFVF">
+            <Param Type="DWORD*" Name="pFVF" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CreateVertexShader">
+            <Param Type="CONST DWORD*" Name="pFunction" />
+            <Param Type="IDirect3DVertexShader9**" Name="ppShader" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetVertexShader">
+            <Param Type="IDirect3DVertexShader9*" Name="pShader" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetVertexShader">
+            <Param Type="IDirect3DVertexShader9**" Name="ppShader" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetVertexShaderConstantF">
+            <Param Type="UINT" Name="StartRegister" />
+            <Param Type="CONST float*" Name="pConstantData" Count="Vector4fCount" />
+            <Param Type="UINT" Name="Vector4fCount" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetVertexShaderConstantF">
+            <Param Type="UINT" Name="StartRegister" />
+            <Param Type="float*" Name="pConstantData" PostCount="Vector4fCount" />
+            <Param Type="UINT" Name="Vector4fCount" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetVertexShaderConstantI">
+            <Param Type="UINT" Name="StartRegister" />
+            <Param Type="CONST int*" Name="pConstantData" Count="Vector4iCount" />
+            <Param Type="UINT" Name="Vector4iCount" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetVertexShaderConstantI">
+            <Param Type="UINT" Name="StartRegister" />
+            <Param Type="int*" Name="pConstantData" PostCount="Vector4iCount" />
+            <Param Type="UINT" Name="Vector4iCount" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetVertexShaderConstantB">
+            <Param Type="UINT" Name="StartRegister" />
+            <Param Type="CONST BOOL*" Name="pConstantData" Count="BoolCount" />
+            <Param Type="UINT" Name="BoolCount" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetVertexShaderConstantB">
+            <Param Type="UINT" Name="StartRegister" />
+            <Param Type="BOOL*" Name="pConstantData" PostCount="BoolCount" />
+            <Param Type="UINT" Name="BoolCount" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetStreamSource">
+            <Param Type="UINT" Name="StreamNumber" />
+            <Param Type="IDirect3DVertexBuffer9*" Name="pStreamData" />
+            <Param Type="UINT" Name="OffsetInBytes" />
+            <Param Type="UINT" Name="Stride" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetStreamSource">
+            <Param Type="UINT" Name="StreamNumber" />
+            <Param Type="IDirect3DVertexBuffer9**" Name="ppStreamData" />
+            <Param Type="UINT*" Name="pOffsetInBytes" />
+            <Param Type="UINT*" Name="pStride" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetStreamSourceFreq">
+            <Param Type="UINT" Name="StreamNumber" />
+            <Param Type="UINT" Name="Setting" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetStreamSourceFreq">
+            <Param Type="UINT" Name="StreamNumber" />
+            <Param Type="UINT*" Name="pSetting" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetIndices">
+            <Param Type="IDirect3DIndexBuffer9*" Name="pIndexData" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetIndices">
+            <Param Type="IDirect3DIndexBuffer9**" Name="ppIndexData" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CreatePixelShader">
+            <Param Type="CONST DWORD*" Name="pFunction" />
+            <Param Type="IDirect3DPixelShader9**" Name="ppShader" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetPixelShader">
+            <Param Type="IDirect3DPixelShader9*" Name="pShader" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetPixelShader">
+            <Param Type="IDirect3DPixelShader9**" Name="ppShader" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetPixelShaderConstantF">
+            <Param Type="UINT" Name="StartRegister" />
+            <Param Type="CONST float*" Name="pConstantData" Count="Vector4fCount" />
+            <Param Type="UINT" Name="Vector4fCount" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetPixelShaderConstantF">
+            <Param Type="UINT" Name="StartRegister" />
+            <Param Type="float*" Name="pConstantData" PostCount="Vector4fCount" />
+            <Param Type="UINT" Name="Vector4fCount" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetPixelShaderConstantI">
+            <Param Type="UINT" Name="StartRegister" />
+            <Param Type="CONST int*" Name="pConstantData" Count="Vector4iCount" />
+            <Param Type="UINT" Name="Vector4iCount" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetPixelShaderConstantI">
+            <Param Type="UINT" Name="StartRegister" />
+            <Param Type="int*" Name="pConstantData" PostCount="Vector4iCount" />
+            <Param Type="UINT" Name="Vector4iCount" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetPixelShaderConstantB">
+            <Param Type="UINT" Name="StartRegister" />
+            <Param Type="CONST BOOL*" Name="pConstantData" Count="BoolCount" />
+            <Param Type="UINT" Name="BoolCount" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetPixelShaderConstantB">
+            <Param Type="UINT" Name="StartRegister" />
+            <Param Type="BOOL*" Name="pConstantData" PostCount="BoolCount" />
+            <Param Type="UINT" Name="BoolCount" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DrawRectPatch">
+            <Param Type="UINT" Name="Handle" />
+            <Param Type="CONST float*" Name="pNumSegs" />
+            <Param Type="CONST D3DRECTPATCH_INFO*" Name="pRectPatchInfo" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DrawTriPatch">
+            <Param Type="UINT" Name="Handle" />
+            <Param Type="CONST float*" Name="pNumSegs" />
+            <Param Type="CONST D3DTRIPATCH_INFO*" Name="pTriPatchInfo" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DeletePatch">
+            <Param Type="UINT" Name="Handle" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CreateQuery">
+            <Param Type="D3DQUERYTYPE" Name="Type" />
+            <Param Type="IDirect3DQuery9**" Name="ppQuery" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

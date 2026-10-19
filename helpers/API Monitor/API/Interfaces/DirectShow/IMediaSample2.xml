@@ -1,0 +1,22 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\DirectShow\IMediaSample.xml" />
+    <Interface Name="IMediaSample2" Id="{36b73884-c2c8-11cf-8b46-00805f6cef60}" BaseInterface="IMediaSample" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/DirectShow">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="GetProperties">
+            <Param Type="DWORD" Name="cbProperties" />
+            <Param Type="BYTE*" Name="pbProperties" Length="cbProperties" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetProperties">
+            <Param Type="DWORD" Name="cbProperties" />
+            <Param Type="const BYTE*" Name="pbProperties" Length="cbProperties" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

@@ -1,0 +1,27 @@
+<!--
+    API Monitor Definitions
+    (c) 2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\WIC\WindowsCodecs.xml" />
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IWICStreamProvider" Id="{449494BC-B468-4927-96D7-BA90D31AB505}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Graphics and Gaming/Windows Imaging Component (WIC)">
+        <!-- Methods -->
+        <Api Name="GetStream">
+            <Param Type="IStream**" Name="ppIStream" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="GetPersistOptions">
+            <Param Type="DWORD*" Name="pdwPersistOptions" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="GetPreferredVendorGUID">
+            <Param Type="GUID*" Name="pguidPreferredVendor" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="RefreshStream">
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+    </Interface>
+</ApiMonitor>

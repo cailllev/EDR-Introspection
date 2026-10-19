@@ -1,0 +1,30 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IErrorInfo" Id="{1CF2B120-547D-101B-8E65-08002B2BD119}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Component Object Model (COM)/Automation/Error-Handling">
+        <Api Name="GetGUID">
+            <Param Type="GUID*" Name="pGUID" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetSource">
+            <Param Type="BSTR*" Name="pBstrSource" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetDescription">
+            <Param Type="BSTR*" Name="pBstrDescription" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetHelpFile">
+            <Param Type="BSTR*" Name="pBstrHelpFile" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetHelpContext">
+            <Param Type="DWORD*" Name="pdwHelpContext" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

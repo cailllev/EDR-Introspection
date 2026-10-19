@@ -1,0 +1,137 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="MAPI\IMAPIProp.xml" />
+    <Include Filename="MAPI\mapi.h.xml" />
+    <Interface Name="IAddrBook" Id="{00020309-0000-0000-C000-000000000046}" BaseInterface="IMAPIProp" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Office Development/Microsoft Office/Outlook/Outlook MAPI/Interfaces">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="OpenEntry">
+            <Param Type="ULONG" Name="cbEntryID" />
+            <Param Type="LPENTRYID" Name="lpEntryID" />
+            <Param Type="LPCIID" Name="lpInterface" />
+            <Param Type="ULONG" Name="ulFlags" />
+            <Param Type="[MapiObjType*]" Name="lpulObjType" />
+            <Param Type="LPUNKNOWN*" Name="lppUnk" InterfaceId="lpInterface" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CompareEntryIDs">
+            <Param Type="ULONG" Name="cbEntryID1" />
+            <Param Type="LPENTRYID" Name="lpEntryID1" />
+            <Param Type="ULONG" Name="cbEntryID2" />
+            <Param Type="LPENTRYID" Name="lpEntryID2" />
+            <Param Type="ULONG" Name="ulFlags" />
+            <Param Type="ULONG*" Name="lpulResult" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Advise">
+            <Param Type="ULONG" Name="cbEntryID" />
+            <Param Type="LPENTRYID" Name="lpEntryID" />
+            <Param Type="ULONG" Name="ulEventMask" />
+            <Param Type="LPMAPIADVISESINK" Name="lpAdviseSink" />
+            <Param Type="ULONG*" Name="lpulConnection" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Unadvise">
+            <Param Type="ULONG" Name="ulConnection" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CreateOneOff">
+            <Param Type="LPTSTR" Name="lpszName" />
+            <Param Type="LPTSTR" Name="lpszAdrType" />
+            <Param Type="LPTSTR" Name="lpszAddress" />
+            <Param Type="ULONG" Name="ulFlags" />
+            <Param Type="ULONG*" Name="lpcbEntryID" />
+            <Param Type="LPENTRYID*" Name="lppEntryID" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="NewEntry">
+            <Param Type="ULONG_PTR" Name="ulUIParam" />
+            <Param Type="ULONG" Name="ulFlags" />
+            <Param Type="ULONG" Name="cbEIDContainer" />
+            <Param Type="LPENTRYID" Name="lpEIDContainer" />
+            <Param Type="ULONG" Name="cbEIDNewEntryTpl" />
+            <Param Type="LPENTRYID" Name="lpEIDNewEntryTpl" />
+            <Param Type="ULONG*" Name="lpcbEIDNewEntry" />
+            <Param Type="LPENTRYID*" Name="lppEIDNewEntry" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ResolveName">
+            <Param Type="ULONG_PTR" Name="ulUIParam" />
+            <Param Type="ULONG" Name="ulFlags" />
+            <Param Type="LPTSTR" Name="lpszNewEntryTitle" />
+            <Param Type="LPADRLIST" Name="lpAdrList" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Address">
+            <Param Type="ULONG_PTR*" Name="lpulUIParam" />
+            <Param Type="LPADRPARM" Name="lpAdrParms" />
+            <Param Type="LPADRLIST*" Name="lppAdrList" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Details">
+            <Param Type="ULONG*" Name="lpulUIParam" />
+            <Param Type="LPFNDISMISS" Name="lpfnDismiss" />
+            <Param Type="LPVOID" Name="lpvDismissContext" />
+            <Param Type="ULONG" Name="cbEntryID" />
+            <Param Type="LPENTRYID" Name="lpEntryID" />
+            <Param Type="LPFNBUTTON" Name="lpfButtonCallback" />
+            <Param Type="LPVOID" Name="lpvButtonContext" />
+            <Param Type="LPTSTR" Name="lpszButtonText" />
+            <Param Type="ULONG" Name="ulFlags" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="RecipOptions">
+            <Param Type="ULONG_PTR" Name="ulUIParam" />
+            <Param Type="ULONG" Name="ulFlags" />
+            <Param Type="LPADRENTRY" Name="lpRecip" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="QueryDefaultRecipOpt">
+            <Param Type="LPTSTR" Name="lpszAdrType" />
+            <Param Type="ULONG" Name="ulFlags" />
+            <Param Type="ULONG*" Name="lpcValues" />
+            <Param Type="LPSPropValue*" Name="lppOptions" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetPAB">
+            <Param Type="ULONG*" Name="lpcbEntryID" />
+            <Param Type="LPENTRYID*" Name="lppEntryID" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetPAB">
+            <Param Type="ULONG" Name="cbEntryID" />
+            <Param Type="LPENTRYID" Name="lpEntryID" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetDefaultDir">
+            <Param Type="ULONG*" Name="lpcbEntryID" />
+            <Param Type="LPENTRYID*" Name="lppEntryID" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetDefaultDir">
+            <Param Type="ULONG" Name="cbEntryID" />
+            <Param Type="LPENTRYID" Name="lpEntryID" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetSearchPath">
+            <Param Type="ULONG" Name="ulFlags" />
+            <Param Type="LPSRowSet*" Name="lppSearchPath" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetSearchPath">
+            <Param Type="ULONG" Name="ulFlags" />
+            <Param Type="LPSRowSet" Name="lpSearchPath" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="PrepareRecips">
+            <Param Type="ULONG" Name="ulFlags" />
+            <Param Type="LPSPropTagArray" Name="lpPropTagArray" />
+            <Param Type="LPADRLIST" Name="lpRecipList" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

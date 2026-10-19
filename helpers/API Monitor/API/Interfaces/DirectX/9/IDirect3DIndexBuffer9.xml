@@ -1,0 +1,25 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\DirectX\9\IDirect3DResource9.xml" />
+    <Interface Name="IDirect3DIndexBuffer9" Id="{7C9DD65E-D3F7-4529-ACEE-785830ACDE35}" BaseInterface="IDirect3DResource9" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Graphics and Gaming/DirectX Graphics and Gaming/Direct3D/9">
+        <!-- DirectX -->
+        <Api Name="Lock">
+            <Param Type="UINT" Name="OffsetToLock" />
+            <Param Type="UINT" Name="SizeToLock" />
+            <Param Type="void**" Name="ppbData" />
+            <Param Type="DWORD" Name="Flags" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Unlock">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetDesc">
+            <Param Type="D3DINDEXBUFFER_DESC*" Name="pDesc" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

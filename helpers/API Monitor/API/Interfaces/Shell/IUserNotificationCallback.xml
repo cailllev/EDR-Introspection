@@ -1,0 +1,24 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IUserNotificationCallback" Id="{19108294-0441-4AFF-8013-FA0A730B0BEA}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Windows Environment Development/Windows Shell/Interfaces">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="OnBalloonUserClick">
+            <Param Type="POINT*" Name="pt" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="OnLeftClick">
+            <Param Type="POINT*" Name="pt" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="OnContextMenu">
+            <Param Type="POINT*" Name="pt" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

@@ -1,0 +1,18 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+<Include Filename="Interfaces\IUnknown.xml" />
+<Interface Name="IAMovieSetup" Id="{a3d8cec0-7e5a-11cf-bbc5-00805f6cef20}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/DirectShow">
+<!-- Variables -->
+<!-- Methods -->
+<Api Name="Register">
+	<Return Type="HRESULT" />
+</Api>
+<Api Name="Unregister">
+	<Return Type="HRESULT" />
+</Api>
+</Interface>
+</ApiMonitor>

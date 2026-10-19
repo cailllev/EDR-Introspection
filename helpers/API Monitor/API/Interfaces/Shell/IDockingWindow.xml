@@ -1,0 +1,26 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\COM\IOleWindow.xml" />
+    <Interface Name="IDockingWindow" Id="{012dd920-7b26-11d0-8ca9-00a0c92dbfe8}" BaseInterface="IOleWindow" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Windows Environment Development/Windows Shell/Interfaces">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="ShowDW">
+            <Param Type="BOOL" Name="fShow" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CloseDW">
+            <Param Type="DWORD" Name="dwReserved" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ResizeBorderDW">
+            <Param Type="LPCRECT" Name="prcBorder" />
+            <Param Type="IUnknown*" Name="punkToolbarSite" />
+            <Param Type="BOOL" Name="fReserved" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

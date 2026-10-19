@@ -1,0 +1,928 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2012, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Include Filename="Headers\registry.h.xml" />
+    <Module Name="Winspool.drv" CallingConvention="STDCALL" ErrorFunc="GetLastError" OnlineHelp="MSDN">
+        
+        <!-- TODO: Most of the LPBYTE buffers are conditional unions based on a 'Level' parameter to the API -->
+
+        <!-- Variables -->
+        <Variable Name="IPrintAsyncNotifyCallback"          Type="Interface" />
+        <Variable Name="IPrintAsyncNotifyChannel"           Type="Interface" />
+        <Variable Name="PCORE_PRINTER_DRIVER"               Type="Alias"    Base="LPVOID" />
+        <Variable Name="PrintAsyncNotificationType*"        Type="Alias"    Base="GUID*" />
+
+        <!-- [PrinterNotifyType] -->
+        <Variable Name="[PrinterNotifyType]" Type="Alias" Base="WORD">
+            <Display Name="WORD" />
+            <Flag>
+                <Set Name="PRINTER_NOTIFY_TYPE"     Value="0x00" />
+                <Set Name="JOB_NOTIFY_TYPE"         Value="0x01" />
+                <Set Name="SERVER_NOTIFY_TYPE"      Value="0x02" />
+            </Flag>
+        </Variable>
+
+        <!-- [PRINTER_NOTIFY_INFO_DATA_u_s] -->
+        <Variable Name="[PRINTER_NOTIFY_INFO_DATA_u_s]" Type="Struct">
+            <Display Name="struct" />
+            <Field Type="DWORD"     Name="cbBuf" />
+            <Field Type="LPVOID"    Name="pBuf" Count="cbBuf" />
+        </Variable>
+
+        <!-- [PRINTER_NOTIFY_INFO_DATA_u] -->
+        <Variable Name="[PRINTER_NOTIFY_INFO_DATA_u]" Type="Union">
+            <Display Name="union" />
+            <Field Type="DWORD [2]"                         Name="adwData" />
+            <Field Type="[PRINTER_NOTIFY_INFO_DATA_u_s]"    Name="Data" />
+        </Variable>
+
+        <!-- PRINTER_NOTIFY_INFO_DATA -->
+        <Variable Name="PRINTER_NOTIFY_INFO_DATA" Type="Struct">
+            <Field Type="[PrinterNotifyType]"           Name="Type" />
+            <Field Type="WORD"                          Name="Field" />
+            <Field Type="DWORD"                         Name="Reserved" />
+            <Field Type="DWORD"                         Name="Id" />
+            <Field Type="[PRINTER_NOTIFY_INFO_DATA_u]"  Name="NotifyData" />
+        </Variable>
+        <Variable Name="PRINTER_NOTIFY_INFO_DATA [1]" Type="Array" Base="PRINTER_NOTIFY_INFO_DATA" Count="1" />
+
+        <!-- [PRINTER_NOTIFY_INFO_FLAGS] -->
+        <Variable Name="[PRINTER_NOTIFY_INFO_FLAGS]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="PRINTER_NOTIFY_INFO_DISCARDED" Value="0x01" />
+            </Flag>
+        </Variable>
+
+        <!-- PRINTER_NOTIFY_INFO -->
+        <Variable Name="PRINTER_NOTIFY_INFO" Type="Struct">
+            <Field Type="DWORD"                         Name="Version" />
+            <Field Type="[PRINTER_NOTIFY_INFO_FLAGS]"   Name="Flags" />
+            <Field Type="DWORD"                         Name="Count" />
+            <Field Type="PRINTER_NOTIFY_INFO_DATA [1]"  Name="aData" Count="Count" />
+        </Variable>
+        <Variable Name="PPRINTER_NOTIFY_INFO" Type="Pointer" Base="PRINTER_NOTIFY_INFO" />
+
+        <!-- PRINTER_OPTION_FLAGS -->
+        <Variable Name="PRINTER_OPTION_FLAGS" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="PRINTER_OPTION_NO_CACHE"         Value="1" />
+                <Set Name="PRINTER_OPTION_CACHE"            Value="2" />
+                <Set Name="PRINTER_OPTION_CLIENT_CHANGE"    Value="4" />
+                <Set Name="PRINTER_OPTION_NO_CLIENT_DATA"   Value="8" />
+            </Flag>
+        </Variable>
+
+        <!-- PRINTER_OPTIONS -->
+        <Variable Name="PRINTER_OPTIONS" Type="Struct">
+            <Field Type="UINT"                  Name="cbSize" />
+            <Field Type="PRINTER_OPTION_FLAGS"  Name="dwFlags" />
+        </Variable>
+        <Variable Name="PPRINTER_OPTIONS" Type="Pointer" Base="PRINTER_OPTIONS" />
+
+        <!-- [PRINTER_ACCESS_MASK] -->
+        <Variable Name="[PRINTER_ACCESS_MASK]" Type="Alias" Base="ACCESS_MASK">
+            <Display Name="ACCESS_MASK" />
+            <Flag>
+                <Set Name="PRINTER_ACCESS_ADMINISTER"       Value="0x00000004" />
+                <Set Name="PRINTER_ACCESS_USE"              Value="0x00000008" />
+                <Set Name="PRINTER_ALL_ACCESS"              Value="0x000F000C" />
+            </Flag>
+        </Variable>
+
+        <!-- PRINTER_DEFAULTS -->
+        <Variable Name="PRINTER_DEFAULTS" Type="Struct">
+            <Field Type="LPTSTR"                    Name="pDatatype" />
+            <Field Type="LPDEVMODE"                 Name="pDevMode" />
+            <Field Type="[PRINTER_ACCESS_MASK]"     Name="DesiredAccess" />
+        </Variable>
+        <Variable Name="LPPRINTER_DEFAULTS" Type="Pointer" Base="PRINTER_DEFAULTS" />
+
+        <!-- [DeviceCapability] -->
+        <Variable Name="[DeviceCapability]" Type="Alias" Base="WORD">
+            <Display Name="WORD" />
+            <Enum>
+                <Set Name="DC_FIELDS"               Value="1" />
+                <Set Name="DC_PAPERS"               Value="2" />
+                <Set Name="DC_PAPERSIZE"            Value="3" />
+                <Set Name="DC_MINEXTENT"            Value="4" />
+                <Set Name="DC_MAXEXTENT"            Value="5" />
+                <Set Name="DC_BINS"                 Value="6" />
+                <Set Name="DC_DUPLEX"               Value="7" />
+                <Set Name="DC_SIZE"                 Value="8" />
+                <Set Name="DC_EXTRA"                Value="9" />
+                <Set Name="DC_VERSION"              Value="10" />
+                <Set Name="DC_DRIVER"               Value="11" />
+                <Set Name="DC_BINNAMES"             Value="12" />
+                <Set Name="DC_ENUMRESOLUTIONS"      Value="13" />
+                <Set Name="DC_FILEDEPENDENCIES"     Value="14" />
+                <Set Name="DC_TRUETYPE"             Value="15" />
+                <Set Name="DC_PAPERNAMES"           Value="16" />
+                <Set Name="DC_ORIENTATION"          Value="17" />
+                <Set Name="DC_COPIES"               Value="18" />
+                <Set Name="DC_BINADJUST"            Value="19" />
+                <Set Name="DC_EMF_COMPLIANT"        Value="20" />
+                <Set Name="DC_DATATYPE_PRODUCED"    Value="21" />
+                <Set Name="DC_COLLATE"              Value="22" />
+                <Set Name="DC_MANUFACTURER"         Value="23" />
+                <Set Name="DC_MODEL"                Value="24" />
+                <Set Name="DC_PERSONALITY"          Value="25" />
+                <Set Name="DC_PRINTRATE"            Value="26" />
+                <Set Name="DC_PRINTRATEUNIT"        Value="27" />
+                <Set Name="DC_PRINTERMEM"           Value="28" />
+                <Set Name="DC_MEDIAREADY"           Value="29" />
+                <Set Name="DC_STAPLE"               Value="30" />
+                <Set Name="DC_PRINTRATEPPM"         Value="31" />
+                <Set Name="DC_COLORDEVICE"          Value="32" />
+                <Set Name="DC_NUP"                  Value="33" />
+                <Set Name="DC_MEDIATYPENAMES"       Value="34" />
+                <Set Name="DC_MEDIATYPES"           Value="35" />
+            </Enum>
+        </Variable>
+
+        <!-- [EnumPrintersFlags] -->
+        <Variable Name="[EnumPrintersFlags]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="PRINTER_ENUM_DEFAULT"             Value="0x00000001" />
+                <Set Name="PRINTER_ENUM_LOCAL"               Value="0x00000002" />
+                <Set Name="PRINTER_ENUM_CONNECTIONS"         Value="0x00000004" />
+                <Set Name="PRINTER_ENUM_FAVORITE"            Value="0x00000004" />
+                <Set Name="PRINTER_ENUM_NAME"                Value="0x00000008" />
+                <Set Name="PRINTER_ENUM_REMOTE"              Value="0x00000010" />
+                <Set Name="PRINTER_ENUM_SHARED"              Value="0x00000020" />
+                <Set Name="PRINTER_ENUM_NETWORK"             Value="0x00000040" />
+                <Set Name="PRINTER_ENUM_EXPAND"              Value="0x00004000" />
+                <Set Name="PRINTER_ENUM_CONTAINER"           Value="0x00008000" />
+                <Set Name="PRINTER_ENUM_ICONMASK"            Value="0x00ff0000" />
+                <Set Name="PRINTER_ENUM_ICON1"               Value="0x00010000" />
+                <Set Name="PRINTER_ENUM_ICON2"               Value="0x00020000" />
+                <Set Name="PRINTER_ENUM_ICON3"               Value="0x00040000" />
+                <Set Name="PRINTER_ENUM_ICON4"               Value="0x00080000" />
+                <Set Name="PRINTER_ENUM_ICON5"               Value="0x00100000" />
+                <Set Name="PRINTER_ENUM_ICON6"               Value="0x00200000" />
+                <Set Name="PRINTER_ENUM_ICON7"               Value="0x00400000" />
+                <Set Name="PRINTER_ENUM_ICON8"               Value="0x00800000" />
+                <Set Name="PRINTER_ENUM_HIDE"                Value="0x01000000" />
+            </Flag>
+        </Variable>
+
+        <!-- [DocumentMode] -->
+        <Variable Name="[DocumentMode]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="DM_IN_BUFFER"        Value="8" />
+                <Set Name="DM_IN_PROMPT"        Value="4" />
+                <Set Name="DM_OUT_BUFFER"       Value="2" />
+                <Set Name="DM_OUT_DEFAULT"      Value="1" />
+            </Flag>
+        </Variable>
+
+        <!-- [PrinterChangeFlags] -->
+        <Variable Name="[PrinterChangeFlags]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="PRINTER_CHANGE_ADD_PRINTER"                  Value="0x00000001" />
+                <Set Name="PRINTER_CHANGE_SET_PRINTER"                  Value="0x00000002" />
+                <Set Name="PRINTER_CHANGE_DELETE_PRINTER"               Value="0x00000004" />
+                <Set Name="PRINTER_CHANGE_FAILED_CONNECTION_PRINTER"    Value="0x00000008" />
+                <Set Name="PRINTER_CHANGE_PRINTER"                      Value="0x000000FF" />
+                <Set Name="PRINTER_CHANGE_ADD_JOB"                      Value="0x00000100" />
+                <Set Name="PRINTER_CHANGE_SET_JOB"                      Value="0x00000200" />
+                <Set Name="PRINTER_CHANGE_DELETE_JOB"                   Value="0x00000400" />
+                <Set Name="PRINTER_CHANGE_WRITE_JOB"                    Value="0x00000800" />
+                <Set Name="PRINTER_CHANGE_JOB"                          Value="0x0000FF00" />
+                <Set Name="PRINTER_CHANGE_ADD_FORM"                     Value="0x00010000" />
+                <Set Name="PRINTER_CHANGE_SET_FORM"                     Value="0x00020000" />
+                <Set Name="PRINTER_CHANGE_DELETE_FORM"                  Value="0x00040000" />
+                <Set Name="PRINTER_CHANGE_FORM"                         Value="0x00070000" />
+                <Set Name="PRINTER_CHANGE_ADD_PORT"                     Value="0x00100000" />
+                <Set Name="PRINTER_CHANGE_CONFIGURE_PORT"               Value="0x00200000" />
+                <Set Name="PRINTER_CHANGE_DELETE_PORT"                  Value="0x00400000" />
+                <Set Name="PRINTER_CHANGE_PORT"                         Value="0x00700000" />
+                <Set Name="PRINTER_CHANGE_ADD_PRINT_PROCESSOR"          Value="0x01000000" />
+                <Set Name="PRINTER_CHANGE_DELETE_PRINT_PROCESSOR"       Value="0x04000000" />
+                <Set Name="PRINTER_CHANGE_PRINT_PROCESSOR"              Value="0x07000000" />
+                <Set Name="PRINTER_CHANGE_ADD_PRINTER_DRIVER"           Value="0x10000000" />
+                <Set Name="PRINTER_CHANGE_SET_PRINTER_DRIVER"           Value="0x20000000" />
+                <Set Name="PRINTER_CHANGE_DELETE_PRINTER_DRIVER"        Value="0x40000000" />
+                <Set Name="PRINTER_CHANGE_PRINTER_DRIVER"               Value="0x70000000" />
+                <Set Name="PRINTER_CHANGE_TIMEOUT"                      Value="0x80000000" />
+                <Set Name="PRINTER_CHANGE_ALL"                          Value="0x7777FFFF" />
+            </Flag>
+        </Variable>
+        <Variable Name="[PrinterChangeFlags*]" Type="Pointer" Base="[PrinterChangeFlags]">
+            <Display Name="PDWORD" />
+        </Variable>
+
+        <!-- [JobControl] -->
+        <Variable Name="[JobControl]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="JOB_CONTROL_PAUSE"               Value="1" />
+                <Set Name="JOB_CONTROL_RESUME"              Value="2" />
+                <Set Name="JOB_CONTROL_CANCEL"              Value="3" />
+                <Set Name="JOB_CONTROL_RESTART"             Value="4" />
+                <Set Name="JOB_CONTROL_DELETE"              Value="5" />
+                <Set Name="JOB_CONTROL_SENT_TO_PRINTER"     Value="6" />
+                <Set Name="JOB_CONTROL_LAST_PAGE_EJECTED"   Value="7" />
+                <Set Name="JOB_CONTROL_RETAIN"              Value="8" />
+                <Set Name="JOB_CONTROL_RELEASE"             Value="9" />
+            </Enum>
+        </Variable>
+
+        <!-- [PrinterControl] -->
+        <Variable Name="[PrinterControl]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="PRINTER_CONTROL_PAUSE"           Value="1" />
+                <Set Name="PRINTER_CONTROL_RESUME"          Value="2" />
+                <Set Name="PRINTER_CONTROL_PURGE"           Value="3" />
+                <Set Name="PRINTER_CONTROL_SET_STATUS"      Value="4" />
+            </Enum>
+        </Variable>
+
+        <!-- EPrintXPSJobOperation -->
+        <Variable Name="EPrintXPSJobOperation" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="kJobProduction"  Value="1" />
+                <Set Name="kJobConsumption" Value="2" />
+            </Enum>
+        </Variable>
+
+        <!-- EPrintXPSJobProgress -->
+        <Variable Name="EPrintXPSJobProgress" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="kAddingDocumentSequence"         Value="0" />
+                <Set Name="kDocumentSequenceAdded"          Value="1" />
+                <Set Name="kAddingFixedDocument"            Value="2" />
+                <Set Name="kFixedDocumentAdded"             Value="3" />
+                <Set Name="kAddingFixedPage"                Value="4" />
+                <Set Name="kFixedPageAdded"                 Value="5" />
+                <Set Name="kResourceAdded"                  Value="6" />
+                <Set Name="kFontAdded"                      Value="7" />
+                <Set Name="kImageAdded"                     Value="8" />
+                <Set Name="kXpsDocumentCommitted"           Value="9" />
+            </Enum>
+        </Variable>
+
+        <!-- PrintAsyncNotifyUserFilter -->
+        <Variable Name="PrintAsyncNotifyUserFilter" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="kPerUser"  Value="0" />
+                <Set Name="kAllUsers" Value="1" />
+            </Enum>
+        </Variable>
+
+        <!-- PrintAsyncNotifyConversationStyle -->
+        <Variable Name="PrintAsyncNotifyConversationStyle" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="kBiDirectional"  Value="0" />
+                <Set Name="kUniDirectional" Value="1" />
+            </Enum>
+        </Variable>
+
+        <!-- PRINTER_NOTIFY_OPTIONS_TYPE -->
+        <!-- TODO: pFields = PRINTER_NOTIFY_INFO_DATA -->
+        <Variable Name="PRINTER_NOTIFY_OPTIONS_TYPE" Type="Struct">
+            <Field Type="[PrinterNotifyType]"       Name="Type" />
+            <Field Type="WORD"                      Name="Reserved0" />
+            <Field Type="DWORD"                     Name="Reserved1" />
+            <Field Type="DWORD"                     Name="Reserved2" />
+            <Field Type="DWORD"                     Name="Count" />
+            <Field Type="PWORD"                     Name="pFields" Count="Count" />
+        </Variable>
+        <Variable Name="PPRINTER_NOTIFY_OPTIONS_TYPE" Type="Pointer" Base="PRINTER_NOTIFY_OPTIONS_TYPE" />
+
+        <!-- [PrinterNotifyFlags] -->
+        <Variable Name="[PrinterNotifyFlags]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="PRINTER_NOTIFY_OPTIONS_REFRESH" Value="0x01" />
+            </Flag>
+        </Variable>
+
+        <!-- PRINTER_NOTIFY_OPTIONS -->
+        <Variable Name="PRINTER_NOTIFY_OPTIONS" Type="Struct">
+            <Field Type="DWORD"                         Name="Version" />
+            <Field Type="[PrinterNotifyFlags]"          Name="Flags" />
+            <Field Type="DWORD"                         Name="Count" />
+            <Field Type="PPRINTER_NOTIFY_OPTIONS_TYPE"  Name="pTypes" Count="Count" />
+        </Variable>
+        <Variable Name="PPRINTER_NOTIFY_OPTIONS" Type="Pointer" Base="PRINTER_NOTIFY_OPTIONS" />
+
+        <!-- Printing and Print Spooler -->
+        <Category Name="Documents and Printing/Printing/Print Spooler" />
+        <Api Name="AddJob" BothCharset="True">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Param Type="DWORD" Name="Level" />
+            <Param Type="LPBYTE" Name="pData" />
+            <Param Type="DWORD" Name="cbBuf" />
+            <Param Type="LPDWORD" Name="pcbNeeded" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AddMonitor" BothCharset="True">
+            <Param Type="LPTSTR" Name="pName" />
+            <Param Type="DWORD" Name="Level" />
+            <Param Type="LPBYTE" Name="pMonitors" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AddPrinter" BothCharset="True">
+            <Param Type="LPTSTR*" Name="pName" />
+            <Param Type="DWORD" Name="Level" />
+            <Param Type="LPBYTE" Name="pPrinter" />
+            <Return Type="HANDLE" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="AddPrinterConnection" BothCharset="True">
+            <Param Type="LPTSTR" Name="pName" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AddPrinterConnection2" BothCharset="True">
+            <Param Type="HWND" Name="hWnd" />
+            <Param Type="LPCTSTR" Name="pszName" />
+            <Param Type="DWORD" Name="dwLevel" />
+            <Param Type="PVOID" Name="pConnectionInfo" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AddPrinterDriver" BothCharset="True">
+            <Param Type="LPTSTR" Name="pName" />
+            <Param Type="DWORD" Name="Level" />
+            <Param Type="LPBYTE" Name="pDriverInfo" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AddPrinterDriverEx" BothCharset="True">
+            <Param Type="LPTSTR" Name="pName" />
+            <Param Type="DWORD" Name="Level" />
+            <Param Type="LPBYTE" Name="pDriverInfo" />
+            <Param Type="DWORD" Name="dwFileCopyFlags" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AddPrintProcessor" BothCharset="True">
+            <Param Type="LPTSTR" Name="pName" />
+            <Param Type="LPTSTR" Name="pEnvironment" />
+            <Param Type="LPTSTR" Name="pPathName" />
+            <Param Type="LPTSTR" Name="pPrintProcessorName" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AddPrintProvidor" BothCharset="True">
+            <Param Type="LPTSTR" Name="pName" />
+            <Param Type="DWORD" Name="Level" />
+            <Param Type="LPBYTE" Name="pProviderInfo" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="ConfigurePort" BothCharset="True">
+            <Param Type="LPTSTR" Name="pName" />
+            <Param Type="HWND" Name="hWnd" />
+            <Param Type="LPTSTR" Name="pPortName" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="DeleteForm" BothCharset="True">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Param Type="LPTSTR" Name="pFormName" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="DeleteMonitor" BothCharset="True">
+            <Param Type="LPTSTR" Name="pName" />
+            <Param Type="LPTSTR" Name="pEnvironment" />
+            <Param Type="LPTSTR" Name="pMonitorName" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="DeletePort" BothCharset="True">
+            <Param Type="LPTSTR" Name="pName" />
+            <Param Type="HWND" Name="hWnd" />
+            <Param Type="LPTSTR" Name="pPortName" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="DeletePrinterConnection" BothCharset="True">
+            <Param Type="LPTSTR" Name="pName" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="DeletePrinterData" BothCharset="True">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Param Type="LPTSTR" Name="pValueName" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="DeletePrinterDataEx" BothCharset="True">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Param Type="LPCTSTR" Name="pKeyName" />
+            <Param Type="LPCTSTR" Name="pValueName" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="DeletePrinterDriver" BothCharset="True">
+            <Param Type="LPTSTR" Name="pName" />
+            <Param Type="LPTSTR" Name="pEnvironment" />
+            <Param Type="LPTSTR" Name="pDriverName" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="DeletePrinterDriverEx" BothCharset="True">
+            <Param Type="LPTSTR" Name="pName" />
+            <Param Type="LPTSTR" Name="pEnvironment" />
+            <Param Type="LPTSTR" Name="pDriverName" />
+            <Param Type="DWORD" Name="dwDeleteFlag" />
+            <Param Type="DWORD" Name="dwVersionFlag" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="DeletePrinterKey" BothCharset="True">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Param Type="LPCTSTR" Name="pKeyName" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="DeletePrintProcessor" BothCharset="True">
+            <Param Type="LPTSTR" Name="pName" />
+            <Param Type="LPTSTR" Name="pEnvironment" />
+            <Param Type="LPTSTR" Name="pPrintProcessorName" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="DeletePrintProvidor" BothCharset="True">
+            <Param Type="LPTSTR" Name="pName" />
+            <Param Type="LPTSTR" Name="pEnvironment" />
+            <Param Type="LPTSTR" Name="pPrintProviderName" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="EnumForms" BothCharset="True">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Param Type="DWORD" Name="Level" />
+            <Param Type="LPBYTE" Name="pForm" PostLength="pcbNeeded" />
+            <Param Type="DWORD" Name="cbBuf" />
+            <Param Type="LPDWORD" Name="pcbNeeded" />
+            <Param Type="LPDWORD" Name="pcReturned" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="EnumJobs" BothCharset="True">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Param Type="DWORD" Name="FirstJob" />
+            <Param Type="DWORD" Name="NoJobs" />
+            <Param Type="DWORD" Name="Level" />
+            <Param Type="LPBYTE" Name="pJob" />
+            <Param Type="DWORD" Name="cbBuf" />
+            <Param Type="LPDWORD" Name="pcbNeeded" />
+            <Param Type="LPDWORD" Name="pcReturned" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="EnumMonitors" BothCharset="True">
+            <Param Type="LPTSTR" Name="pName" />
+            <Param Type="DWORD" Name="Level" />
+            <Param Type="LPBYTE" Name="pMonitors" />
+            <Param Type="DWORD" Name="cbBuf" />
+            <Param Type="LPDWORD" Name="pcbNeeded" />
+            <Param Type="LPDWORD" Name="pcReturned" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="EnumPorts" BothCharset="True">
+            <Param Type="LPTSTR" Name="pName" />
+            <Param Type="DWORD" Name="Level" />
+            <Param Type="LPBYTE" Name="pPorts" />
+            <Param Type="DWORD" Name="cbBuf" />
+            <Param Type="LPDWORD" Name="pcbNeeded" />
+            <Param Type="LPDWORD" Name="pcReturned" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="EnumPrinterData" BothCharset="True">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Param Type="DWORD" Name="dwIndex" />
+            <Param Type="LPTSTR" Name="pValueName" />
+            <Param Type="DWORD" Name="cbValueName" />
+            <Param Type="LPDWORD" Name="pcbValueName" />
+            <Param Type="LPDWORD" Name="pType" />
+            <Param Type="LPBYTE" Name="pData" />
+            <Param Type="DWORD" Name="cbData" />
+            <Param Type="LPDWORD" Name="pcbData" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="EnumPrinterDataEx" BothCharset="True">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Param Type="LPCTSTR" Name="pKeyName" />
+            <Param Type="LPBYTE" Name="pEnumValues" PostLength="pcbEnumValues" />
+            <Param Type="DWORD" Name="cbEnumValues" />
+            <Param Type="LPDWORD" Name="pcbEnumValues" />
+            <Param Type="LPDWORD" Name="pnEnumValues" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="EnumPrinterDrivers" BothCharset="True">
+            <Param Type="LPTSTR" Name="pName" />
+            <Param Type="LPTSTR" Name="pEnvironment" />
+            <Param Type="DWORD" Name="Level" />
+            <Param Type="LPBYTE" Name="pDriverInfo" PostLength="cbBuf" />
+            <Param Type="DWORD" Name="cbBuf" />
+            <Param Type="LPDWORD" Name="pcbNeeded" />
+            <Param Type="LPDWORD" Name="pcReturned" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="EnumPrinterKey" BothCharset="True">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Param Type="LPCTSTR" Name="pKeyName" />
+            <Param Type="LPTSTR" Name="pSubkey" />
+            <Param Type="DWORD" Name="cbSubkey" />
+            <Param Type="LPDWORD" Name="pcbSubkey" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="EnumPrinters" BothCharset="True">
+            <Param Type="[EnumPrintersFlags]" Name="Flags" />
+            <Param Type="LPTSTR" Name="Name" />
+            <Param Type="DWORD" Name="Level" />
+            <!-- TODO: pPrinterEnum should be a array of count 'pcReturned' of conditional union
+            of PRINTER_INFO_1, PRINTER_INFO_2, PRINTER_INFO_4 or PRINTER_INFO_5 structures -->
+            <!-- TODO: pPrinterEnum PostLength="pcbNeeded" -->
+            <Param Type="LPBYTE" Name="pPrinterEnum" />
+            <Param Type="DWORD" Name="cbBuf" />
+            <Param Type="LPDWORD" Name="pcbNeeded" />
+            <Param Type="LPDWORD" Name="pcReturned" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="EnumPrintProcessorDatatypes" BothCharset="True">
+            <Param Type="LPTSTR" Name="pName" />
+            <Param Type="LPTSTR" Name="pPrintProcessorName" />
+            <Param Type="DWORD" Name="Level" />
+            <Param Type="LPBYTE" Name="pDatatypes" />
+            <Param Type="DWORD" Name="cbBuf" />
+            <Param Type="LPDWORD" Name="pcbNeeded" />
+            <Param Type="LPDWORD" Name="pcReturned" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="EnumPrintProcessors" BothCharset="True">
+            <Param Type="LPTSTR" Name="pName" />
+            <Param Type="LPTSTR" Name="pEnvironment" />
+            <Param Type="DWORD" Name="Level" />
+            <Param Type="LPBYTE" Name="pPrintProcessorInfo" />
+            <Param Type="DWORD" Name="cbBuf" />
+            <Param Type="LPDWORD" Name="pcbNeeded" />
+            <Param Type="LPDWORD" Name="pcReturned" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="FlushPrinter">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Param Type="LPVOID" Name="pBuf" />
+            <Param Type="DWORD" Name="cbBuf" />
+            <Param Type="LPDWORD" Name="pcWritten" />
+            <Param Type="DWORD" Name="cSleep" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetForm" BothCharset="True">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Param Type="LPTSTR" Name="pFormName" />
+            <Param Type="DWORD" Name="Level" />
+            <Param Type="LPBYTE" Name="pForm" PostLength="pcbNeeded" />
+            <Param Type="DWORD" Name="cbBuf" />
+            <Param Type="LPDWORD" Name="pcbNeeded" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetJob" BothCharset="True">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Param Type="DWORD" Name="JobId" />
+            <Param Type="DWORD" Name="Level" />
+            <Param Type="LPBYTE" Name="pJob" />
+            <Param Type="DWORD" Name="cbBuf" />
+            <Param Type="LPDWORD" Name="pcbNeeded" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetPrinter" BothCharset="True">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Param Type="DWORD" Name="Level" />
+            <!-- TODO: pPrinter is a conditional union of PRINTER_INFO_1 , PRINTER_INFO_2, etc based on Level -->
+            <Param Type="LPBYTE" Name="pPrinter" />
+            <Param Type="DWORD" Name="cbBuf" />
+            <Param Type="LPDWORD" Name="pcbNeeded" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetPrinterData" BothCharset="True" ErrorIsReturnValue="True">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Param Type="LPTSTR" Name="pValueName" />
+            <Param Type="[RegType*]" Name="pType" />
+            <Param Type="LPBYTE" Name="pData" PostLength="pcbNeeded" />
+            <Param Type="DWORD" Name="nSize" />
+            <Param Type="LPDWORD" Name="pcbNeeded" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="GetPrinterDataEx" BothCharset="True" ErrorIsReturnValue="True">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Param Type="LPCTSTR" Name="pKeyName" />
+            <Param Type="LPCTSTR" Name="pValueName" />
+            <Param Type="[RegType*]" Name="pType" />
+            <Param Type="LPBYTE" Name="pData" PostLength="pcbNeeded" />
+            <Param Type="DWORD" Name="nSize" />
+            <Param Type="LPDWORD" Name="pcbNeeded" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="GetPrinterDriver" BothCharset="True">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Param Type="LPTSTR" Name="pEnvironment" />
+            <Param Type="DWORD" Name="Level" />
+            <Param Type="LPBYTE" Name="pDriverInfo" PostLength="pcbNeeded" />
+            <Param Type="DWORD" Name="cbBuf" />
+            <Param Type="LPDWORD" Name="pcbNeeded" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetPrinterDriverDirectory" BothCharset="True">
+            <Param Type="LPTSTR" Name="pName" />
+            <Param Type="LPTSTR" Name="pEnvironment" />
+            <Param Type="DWORD" Name="Level" />
+            <Param Type="LPWSTR" Display="LPBYTE" Name="pDriverDirectory" />
+            <Param Type="DWORD" Name="cbBuf" />
+            <Param Type="LPDWORD" Name="pcbNeeded" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetPrintProcessorDirectory" BothCharset="True">
+            <Param Type="LPTSTR" Name="pName" />
+            <Param Type="LPTSTR" Name="pEnvironment" />
+            <Param Type="DWORD" Name="Level" />
+            <Param Type="LPBYTE" Name="pPrintProcessorInfo" />
+            <Param Type="DWORD" Name="cbBuf" />
+            <Param Type="LPDWORD" Name="pcbNeeded" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="OpenPrinter" BothCharset="True">
+            <Param Type="LPTSTR" Name="pPrinterName" />
+            <Param Type="LPHANDLE" Name="phPrinter" />
+            <Param Type="LPPRINTER_DEFAULTS" Name="pDefault" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="ResetPrinter" BothCharset="True">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Param Type="LPPRINTER_DEFAULTS" Name="pDefault" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="StartDocPrinter" BothCharset="True">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Param Type="DWORD" Name="Level" />
+            <Param Type="LPBYTE" Name="pDocInfo" />
+            <Return Type="DWORD" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="SetForm" BothCharset="True">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Param Type="LPTSTR" Name="pFormName" />
+            <Param Type="DWORD" Name="Level" />
+            <Param Type="LPTSTR" Name="pForm" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="SetJob" BothCharset="True">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Param Type="DWORD" Name="JobId" />
+            <Param Type="DWORD" Name="Level" />
+            <Param Type="LPBYTE" Name="pJob" />
+            <Param Type="[JobControl]" Name="Command" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="SetPort" BothCharset="True">
+            <Param Type="LPTSTR" Name="pName" />
+            <Param Type="LPTSTR" Name="pPortName" />
+            <Param Type="DWORD" Name="dwLevel" />
+            <Param Type="LPBYTE" Name="pPortInfo" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="SetPrinter" BothCharset="True">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Param Type="DWORD" Name="Level" />
+            <Param Type="LPBYTE" Name="pPrinter" />
+            <Param Type="[PrinterControl]" Name="Command" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="SetPrinterData" BothCharset="True">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Param Type="LPTSTR" Name="pValueName" />
+            <Param Type="[RegType]" Name="Type" />
+            <Param Type="LPBYTE" Name="pData" Length="cbData" />
+            <Param Type="DWORD" Name="cbData" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="SetPrinterDataEx" BothCharset="True">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Param Type="LPCTSTR" Name="pKeyName" />
+            <Param Type="LPCTSTR" Name="pValueName" />
+            <Param Type="[RegType]" Name="Type" />
+            <Param Type="LPBYTE" Name="pData" Length="cbData" />
+            <Param Type="DWORD" Name="cbData" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="DeviceCapabilities" BothCharset="True">
+            <Param Type="LPCTSTR" Name="pDevice" />
+            <Param Type="LPCTSTR" Name="pPort" />
+            <Param Type="[DeviceCapability]" Name="fwCapability" />
+            <Param Type="LPTSTR" Name="pOutput" />
+            <Param Type="const DEVMODE*" Name="pDevMode" />
+            <Return Type="DWORD" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CorePrinterDriverInstalled" BothCharset="True">
+            <Param Type="LPCTSTR" Name="pszServer" />
+            <Param Type="LPCTSTR" Name="pszEnvironment" />
+            <Param Type="GUID" Name="CoreDriverGUID" />
+            <Param Type="FILETIME" Name="ftDriverDate" />
+            <Param Type="DWORDLONG" Name="dwlDriverVersion" />
+            <Param Type="BOOL*" Name="pbDriverInstalled" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DeletePrinterDriverPackage" BothCharset="True">
+            <Param Type="LPCTSTR" Name="pszServer" />
+            <Param Type="LPCTSTR" Name="pszInfPath" />
+            <Param Type="LPCTSTR" Name="pszEnvironment" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetCorePrinterDrivers" BothCharset="True">
+            <Param Type="LPCTSTR" Name="pszServer" />
+            <Param Type="LPCTSTR" Name="pszEnvironment" />
+            <Param Type="LPCTSTR" Name="pszzCoreDriverDependencies" />
+            <Param Type="DWORD" Name="cCorePrinterDrivers" />
+            <Param Type="PCORE_PRINTER_DRIVER" Name="pCorePrinterDrivers" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetPrinterDriverPackagePath" BothCharset="True">
+            <Param Type="LPCTSTR" Name="pszServer" />
+            <Param Type="LPCTSTR" Name="pszEnvironment" />
+            <Param Type="LPCTSTR" Name="pszLanguage" />
+            <Param Type="LPCTSTR" Name="pszPackageID" />
+            <Param Type="LPTSTR" Name="pszDriverPackageCab" />
+            <Param Type="DWORD" Name="cchDriverPackageCab" />
+            <Param Type="LPDWORD" Name="pcchRequiredSize" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="InstallPrinterDriverFromPackage" BothCharset="True">
+            <Param Type="LPCTSTR" Name="pszServer" />
+            <Param Type="LPCTSTR" Name="pszInfPath" />
+            <Param Type="LPCTSTR" Name="pszDriverName" />
+            <Param Type="LPCTSTR" Name="pszEnvironment" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="UploadPrinterDriverPackage" BothCharset="True">
+            <Param Type="LPCTSTR" Name="pszServer" />
+            <Param Type="LPCTSTR" Name="pszInfPath" />
+            <Param Type="LPCTSTR" Name="pszEnvironment" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="HWND" Name="hwnd" />
+            <Param Type="LPTSTR" Name="pszDestInfPath" />
+            <Param Type="PULONG" Name="pcchDestInfPath" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="AbortPrinter">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AddForm" BothCharset="True">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Param Type="DWORD" Name="Level" />
+            <Param Type="LPBYTE" Name="pForm" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AddPort" BothCharset="True">
+            <Param Type="LPTSTR" Name="pName" />
+            <Param Type="HWND" Name="hWnd" />
+            <Param Type="LPTSTR" Name="pMonitorName" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AdvancedDocumentProperties" BothCharset="True">
+            <Param Type="HWND" Name="hWnd" />
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Param Type="LPTSTR" Name="pDeviceName" />
+            <Param Type="PDEVMODE" Name="pDevModeOutput" />
+            <Param Type="PDEVMODE" Name="pDevModeInput" />
+            <Return Type="LONG" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="ClosePrinter">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="ConnectToPrinterDlg">
+            <Param Type="HWND" Name="hwnd" />
+            <Param Type="DWORD" Name="Flags" />
+            <Return Type="HANDLE" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CreatePrintAsyncNotifyChannel">
+            <Param Type="LPCWSTR" Name="pName" />
+            <Param Type="PrintAsyncNotificationType*" Name="pSchema" />
+            <Param Type="PrintAsyncNotifyUserFilter" Name="filter" />
+            <Param Type="PrintAsyncNotifyConversationStyle" Name="directionality" />
+            <Param Type="IPrintAsyncNotifyCallback*" Name="pCallback" />
+            <Param Type="IPrintAsyncNotifyChannel**" Name="ppChannel" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DeletePrinter">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="DocumentProperties" BothCharset="True">
+            <Param Type="HWND" Name="hWnd" />
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Param Type="LPTSTR" Name="pDeviceName" />
+            <Param Type="PDEVMODE" Name="pDevModeOutput" />
+            <Param Type="PDEVMODE" Name="pDevModeInput" />
+            <Param Type="[DocumentMode]" Name="fMode" />
+            <Return Type="LONG" />
+            <Success Return="Greater" Value="-1" />
+        </Api>
+        <Api Name="EndDocPrinter">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="EndPagePrinter">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="FindClosePrinterChangeNotification">
+            <Param Type="HANDLE" Name="hChange" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="FindFirstPrinterChangeNotification">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Param Type="[PrinterChangeFlags]" Name="fdwFilter" />
+            <Param Type="DWORD" Name="fdwOptions" />
+            <Param Type="PPRINTER_NOTIFY_OPTIONS" Name="pPrinterNotifyOptions" />
+            <Return Type="HANDLE" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <!-- TODO: ppPrinterNotifyInfo = PPRINTER_NOTIFY_INFO* -->
+        <Api Name="FindNextPrinterChangeNotification">
+            <Param Type="HANDLE" Name="hChange" />
+            <Param Type="[PrinterChangeFlags*]" Name="pdwChange" />
+            <Param Type="PPRINTER_NOTIFY_OPTIONS" Name="pPrinterNotifyOptions" />
+            <Param Type="LPVOID*" Name="ppPrinterNotifyInfo" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="FreePrinterNotifyInfo">
+            <Param Type="PPRINTER_NOTIFY_INFO" Name="pPrinterNotifyInfo" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetDefaultPrinter" BothCharset="True" OrdinalA="201" OrdinalW="203">
+            <Param Type="LPTSTR" Name="pszBuffer" OutputOnly="True" />
+            <Param Type="LPDWORD" Name="pcchBuffer" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetPrinterDriver2" BothCharset="True">
+            <Param Type="HWND" Name="hWnd" />
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Param Type="LPTSTR" Name="pEnvironment" />
+            <Param Type="DWORD" Name="Level" />
+            <Param Type="LPBYTE" Name="pDriverInfo" />
+            <Param Type="DWORD" Name="cbBuf" />
+            <Param Type="LPDWORD" Name="pcbNeeded" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="OpenPrinter2" BothCharset="True">
+            <Param Type="LPCTSTR" Name="pPrinterName" />
+            <Param Type="LPHANDLE" Name="phPrinter" />
+            <Param Type="LPPRINTER_DEFAULTS" Name="pDefault" />
+            <Param Type="PPRINTER_OPTIONS" Name="pOptions" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="PrinterProperties">
+            <Param Type="HWND" Name="hWnd" />
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="ReadPrinter">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Param Type="LPVOID" Name="pBuf" />
+            <Param Type="DWORD" Name="cbBuf" />
+            <Param Type="LPDWORD" Name="pNoBytesRead" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="RegisterForPrintAsyncNotifications">
+            <Param Type="LPCWSTR" Name="pName" />
+            <Param Type="PrintAsyncNotificationType*" Name="pSchema" />
+            <Param Type="PrintAsyncNotifyUserFilter" Name="filter" />
+            <Param Type="PrintAsyncNotifyConversationStyle" Name="directionality" />
+            <Param Type="IPrintAsyncNotifyCallback*" Name="pCallback" />
+            <Param Type="HANDLE*" Name="pRegistrationHandler" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ReportJobProcessingProgress">
+            <Param Type="HANDLE" Name="printerHandle" />
+            <Param Type="ULONG" Name="jobId" />
+            <Param Type="EPrintXPSJobOperation" Name="jobOperation" />
+            <Param Type="EPrintXPSJobProgress" Name="jobProgress" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ScheduleJob">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Param Type="DWORD" Name="dwJobID" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="SetDefaultPrinter" BothCharset="True" OrdinalA="202" OrdinalW="204">
+            <Param Type="LPCTSTR" Name="pszPrinter" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="StartPagePrinter">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="UnRegisterForPrintAsyncNotifications">
+            <Param Type="HANDLE" Name="hRegistrationHandler" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="WritePrinter">
+            <Param Type="HANDLE" Name="hPrinter" />
+            <Param Type="LPVOID" Name="pBuf" Length="cbBuf" />
+            <Param Type="DWORD" Name="cbBuf" />
+            <Param Type="LPDWORD" Name="pcWritten" />
+            <Return Type="BOOL" />
+        </Api>
+    </Module>
+</ApiMonitor>

@@ -1,0 +1,32 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IContext" Id="{000001c0-0000-0000-C000-000000000046}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Component Object Model (COM)/COM Fundamentals/Interfaces">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="SetProperty">
+            <Param Type="REFGUID" Name="rpolicyId" />
+            <Param Type="CPFLAGS" Name="flags" />
+            <Param Type="IUnknown*" Name="pUnk" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="RemoveProperty">
+            <Param Type="REFGUID" Name="rPolicyId" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetProperty">
+            <Param Type="REFGUID" Name="rGuid" />
+            <Param Type="CPFLAGS*" Name="pFlags" />
+            <Param Type="IUnknown**" Name="ppUnk" InterfaceId="rGuid" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="EnumContextProps">
+            <Param Type="IEnumContextProps**" Name="ppEnumContextProps" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

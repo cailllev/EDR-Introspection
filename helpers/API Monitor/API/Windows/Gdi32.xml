@@ -1,0 +1,3135 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Include Filename="Headers\gdi.h.xml" />
+    <Module Name="Gdi32.dll" CallingConvention="STDCALL" ErrorFunc="GetLastError" OnlineHelp="MSDN">
+
+        <!-- Variables -->
+        <Variable Name="HGDIOBJ"                    Type="Alias"    Base="HANDLE" />
+        <Variable Name="GOBJENUMPROC"               Type="Alias"    Base="LPVOID" />
+        <Variable Name="FONTENUMPROC"               Type="Alias"    Base="LPVOID" />
+        <Variable Name="LINEDDAPROC"                Type="Alias"    Base="LPVOID" />
+        <Variable Name="ENHMFENUMPROC"              Type="Alias"    Base="LPVOID" />
+        <Variable Name="MFENUMPROC"                 Type="Alias"    Base="LPVOID" />
+        <Variable Name="ABORTPROC"                  Type="Alias"    Base="LPVOID" />
+        <Variable Name="HCOLORSPACE"                Type="Alias"    Base="HANDLE" />
+        <Variable Name="HTRANSFORM"                 Type="Alias"    Base="HANDLE" />
+        <Variable Name="ICMENUMPROC"                Type="Alias"    Base="LPVOID" />
+        
+        <!-- Arrays -->
+        <Variable Name="WORD [1]"                   Type="Array"    Base="WORD"         Count="1" />
+        <Variable Name="HGDIOBJ [1]"                Type="Array"    Base="HGDIOBJ"      Count="1" />
+        <Variable Name="LONG [MM_MAX_NUMAXES]"      Type="Array"    Base="LONG"         Count="16" />
+        <Variable Name="TCHAR [LF_FULLFACESIZE]"    Type="Array"    Base="TCHAR"        Count="64" />
+
+        <!-- [FontCharset-int] -->
+        <Variable Name="[FontCharset-int]" Type="Alias" Base="[FontCharset]">
+            <Display Name="int" />
+        </Variable>
+
+        <!-- ENUMLOGFONTEX -->
+        <Variable Name="ENUMLOGFONTEX" Type="Struct">
+            <Field Type="LOGFONT"                   Name="elfLogFont" />
+            <Field Type="TCHAR [LF_FULLFACESIZE]"   Name="elfFullName" />
+            <Field Type="TCHAR [LF_FACESIZE]"       Name="elfStyle" />
+            <Field Type="TCHAR [LF_FACESIZE]"       Name="elfScript" />
+        </Variable>
+
+        <!-- DESIGNVECTOR -->
+        <Variable Name="DESIGNVECTOR" Type="Struct">
+            <Field Type="DWORD"                     Name="dvReserved" />
+            <Field Type="DWORD"                     Name="dvNumAxes" />
+            <Field Type="LONG [MM_MAX_NUMAXES]"     Name="dvValues" />
+        </Variable>
+
+        <!-- ENUMLOGFONTEXDV -->
+        <Variable Name="ENUMLOGFONTEXDV" Type="Struct">
+            <Field Type="ENUMLOGFONTEX"     Name="elfEnumLogfontEx" />
+            <Field Type="DESIGNVECTOR"      Name="elfDesignVector" />
+        </Variable>
+        <Variable Name="const ENUMLOGFONTEXDV*" Type="Pointer" Base="ENUMLOGFONTEXDV" />
+
+        <!-- WCRANGE -->
+        <Variable Name="WCRANGE" Type="Struct">
+            <Field Type="WCHAR"     Name="wcLow" />
+            <Field Type="USHORT"    Name="cGlyphs" />
+        </Variable>
+        <Variable Name="WCRANGE [1]" Type="Array" Base="WCRANGE"  Count="1" />
+
+        <!-- GLYPHSET -->
+        <Variable Name="GLYPHSET" Type="Struct">
+            <Field Type="DWORD"         Name="cbThis" />
+            <Field Type="DWORD"         Name="flAccel" />
+            <Field Type="DWORD"         Name="cGlyphsSupported" />
+            <Field Type="DWORD"         Name="cRanges" />
+            <Field Type="WCRANGE [1]"   Name="ranges" Count="cRanges" />
+        </Variable>
+        <Variable Name="LPGLYPHSET" Type="Pointer" Base="GLYPHSET" />
+
+        <!-- [OTM_SELECTION] -->
+        <Variable Name="[OTM_SELECTION]" Type="Alias" Base="UINT">
+            <Display Name="UINT" />
+            <Flag>
+                <Set Name="Italic"          Value="0x1" />
+                <Set Name="Underscore"      Value="0x2" />
+                <Set Name="Negative"        Value="0x4" />
+                <Set Name="Outline"         Value="0x8" />
+                <Set Name="Strikeout"       Value="0x10" />
+                <Set Name="Bold"            Value="0x20" />
+            </Flag>
+        </Variable>
+
+        <!-- [PANOSE_FAMILY] -->
+        <Variable Name="[PANOSE_FAMILY]" Type="Alias" Base="BYTE">
+            <Display Name="BYTE" />
+            <Enum>
+                <Set Name="PAN_ANY"                         Value="0" />
+                <Set Name="PAN_NO_FIT"                      Value="1" />
+                <Set Name="PAN_FAMILY_TEXT_DISPLAY"         Value="2" />
+                <Set Name="PAN_FAMILY_SCRIPT"               Value="3" />
+                <Set Name="PAN_FAMILY_DECORATIVE"           Value="4" />
+                <Set Name="PAN_FAMILY_PICTORIAL"            Value="5" />
+            </Enum>
+        </Variable>
+
+        <!-- [PANOSE_SERIF] -->
+        <Variable Name="[PANOSE_SERIF]" Type="Alias" Base="BYTE">
+            <Display Name="BYTE" />
+            <Enum>
+                <Set Name="PAN_ANY"                         Value="0" />
+                <Set Name="PAN_NO_FIT"                      Value="1" />
+                <Set Name="PAN_SERIF_COVE"                  Value="2" />
+                <Set Name="PAN_SERIF_OBTUSE_COVE"           Value="3" />
+                <Set Name="PAN_SERIF_SQUARE_COVE"           Value="4" />
+                <Set Name="PAN_SERIF_OBTUSE_SQUARE_COVE"    Value="5" />
+                <Set Name="PAN_SERIF_SQUARE"                Value="6" />
+                <Set Name="PAN_SERIF_THIN"                  Value="7" />
+                <Set Name="PAN_SERIF_BONE"                  Value="8" />
+                <Set Name="PAN_SERIF_EXAGGERATED"           Value="9" />
+                <Set Name="PAN_SERIF_TRIANGLE"              Value="10" />
+                <Set Name="PAN_SERIF_NORMAL_SANS"           Value="11" />
+                <Set Name="PAN_SERIF_OBTUSE_SANS"           Value="12" />
+                <Set Name="PAN_SERIF_PERP_SANS"             Value="13" />
+                <Set Name="PAN_SERIF_FLARED"                Value="14" />
+                <Set Name="PAN_SERIF_ROUNDED"               Value="15" />
+            </Enum>
+        </Variable>
+
+        <!-- [PANOSE_WEIGHT] -->
+        <Variable Name="[PANOSE_WEIGHT]" Type="Alias" Base="BYTE">
+            <Display Name="BYTE" />
+            <Enum>
+                <Set Name="PAN_ANY"                         Value="0" />
+                <Set Name="PAN_NO_FIT"                      Value="1" />
+                <Set Name="PAN_WEIGHT_VERY_LIGHT"           Value="2" />
+                <Set Name="PAN_WEIGHT_LIGHT"                Value="3" />
+                <Set Name="PAN_WEIGHT_THIN"                 Value="4" />
+                <Set Name="PAN_WEIGHT_BOOK"                 Value="5" />
+                <Set Name="PAN_WEIGHT_MEDIUM"               Value="6" />
+                <Set Name="PAN_WEIGHT_DEMI"                 Value="7" />
+                <Set Name="PAN_WEIGHT_BOLD"                 Value="8" />
+                <Set Name="PAN_WEIGHT_HEAVY"                Value="9" />
+                <Set Name="PAN_WEIGHT_BLACK"                Value="10" />
+                <Set Name="PAN_WEIGHT_NORD"                 Value="11" />
+            </Enum>
+        </Variable>
+
+        <!-- [PANOSE_PROPORTION] -->
+        <Variable Name="[PANOSE_PROPORTION]" Type="Alias" Base="BYTE">
+            <Display Name="BYTE" />
+            <Enum>
+                <Set Name="PAN_ANY"                         Value="0" />
+                <Set Name="PAN_NO_FIT"                      Value="1" />
+                <Set Name="PAN_PROP_OLD_STYLE"              Value="2" />
+                <Set Name="PAN_PROP_MODERN"                 Value="3" />
+                <Set Name="PAN_PROP_EVEN_WIDTH"             Value="4" />
+                <Set Name="PAN_PROP_EXPANDED"               Value="5" />
+                <Set Name="PAN_PROP_CONDENSED"              Value="6" />
+                <Set Name="PAN_PROP_VERY_EXPANDED"          Value="7" />
+                <Set Name="PAN_PROP_VERY_CONDENSED"         Value="8" />
+                <Set Name="PAN_PROP_MONOSPACED"             Value="9" />
+            </Enum>
+        </Variable>
+
+        <!-- [PANOSE_CONTRAST] -->
+        <Variable Name="[PANOSE_CONTRAST]" Type="Alias" Base="BYTE">
+            <Display Name="BYTE" />
+            <Enum>
+                <Set Name="PAN_ANY"                         Value="0" />
+                <Set Name="PAN_NO_FIT"                      Value="1" />
+                <Set Name="PAN_CONTRAST_NONE"               Value="2" />
+                <Set Name="PAN_CONTRAST_VERY_LOW"           Value="3" />
+                <Set Name="PAN_CONTRAST_LOW"                Value="4" />
+                <Set Name="PAN_CONTRAST_MEDIUM_LOW"         Value="5" />
+                <Set Name="PAN_CONTRAST_MEDIUM"             Value="6" />
+                <Set Name="PAN_CONTRAST_MEDIUM_HIGH"        Value="7" />
+                <Set Name="PAN_CONTRAST_HIGH"               Value="8" />
+                <Set Name="PAN_CONTRAST_VERY_HIGH"          Value="9" />
+            </Enum>
+        </Variable>
+
+        <!-- [PANOSE_STROKE] -->
+        <Variable Name="[PANOSE_STROKE]" Type="Alias" Base="BYTE">
+            <Display Name="BYTE" />
+            <Enum>
+                <Set Name="PAN_ANY"                         Value="0" />
+                <Set Name="PAN_NO_FIT"                      Value="1" />
+                <Set Name="PAN_STROKE_GRADUAL_DIAG"         Value="2" />
+                <Set Name="PAN_STROKE_GRADUAL_TRAN"         Value="3" />
+                <Set Name="PAN_STROKE_GRADUAL_VERT"         Value="4" />
+                <Set Name="PAN_STROKE_GRADUAL_HORZ"         Value="5" />
+                <Set Name="PAN_STROKE_RAPID_VERT"           Value="6" />
+                <Set Name="PAN_STROKE_RAPID_HORZ"           Value="7" />
+                <Set Name="PAN_STROKE_INSTANT_VERT"         Value="8" />
+            </Enum>
+        </Variable>
+
+        <!-- [PANOSE_ARM] -->
+        <Variable Name="[PANOSE_ARM]" Type="Alias" Base="BYTE">
+            <Display Name="BYTE" />
+            <Enum>
+                <Set Name="PAN_ANY"                         Value="0" />
+                <Set Name="PAN_NO_FIT"                      Value="1" />
+                <Set Name="PAN_STRAIGHT_ARMS_HORZ"          Value="2" />
+                <Set Name="PAN_STRAIGHT_ARMS_WEDGE"         Value="3" />
+                <Set Name="PAN_STRAIGHT_ARMS_VERT"          Value="4" />
+                <Set Name="PAN_STRAIGHT_ARMS_SINGLE_SERIF"  Value="5" />
+                <Set Name="PAN_STRAIGHT_ARMS_DOUBLE_SERIF"  Value="6" />
+                <Set Name="PAN_BENT_ARMS_HORZ"              Value="7" />
+                <Set Name="PAN_BENT_ARMS_WEDGE"             Value="8" />
+                <Set Name="PAN_BENT_ARMS_VERT"              Value="9" />
+                <Set Name="PAN_BENT_ARMS_SINGLE_SERIF"      Value="10" />
+                <Set Name="PAN_BENT_ARMS_DOUBLE_SERIF"      Value="11" />
+            </Enum>
+        </Variable>
+
+        <!-- [PANOSE_LETTER] -->
+        <Variable Name="[PANOSE_LETTER]" Type="Alias" Base="BYTE">
+            <Display Name="BYTE" />
+            <Enum>
+                <Set Name="PAN_ANY"                         Value="0" />
+                <Set Name="PAN_NO_FIT"                      Value="1" />
+                <Set Name="PAN_LETT_NORMAL_CONTACT"         Value="2" />
+                <Set Name="PAN_LETT_NORMAL_WEIGHTED"        Value="3" />
+                <Set Name="PAN_LETT_NORMAL_BOXED"           Value="4" />
+                <Set Name="PAN_LETT_NORMAL_FLATTENED"       Value="5" />
+                <Set Name="PAN_LETT_NORMAL_ROUNDED"         Value="6" />
+                <Set Name="PAN_LETT_NORMAL_OFF_CENTER"      Value="7" />
+                <Set Name="PAN_LETT_NORMAL_SQUARE"          Value="8" />
+                <Set Name="PAN_LETT_OBLIQUE_CONTACT"        Value="9" />
+                <Set Name="PAN_LETT_OBLIQUE_WEIGHTED"       Value="10" />
+                <Set Name="PAN_LETT_OBLIQUE_BOXED"          Value="11" />
+                <Set Name="PAN_LETT_OBLIQUE_FLATTENED"      Value="12" />
+                <Set Name="PAN_LETT_OBLIQUE_ROUNDED"        Value="13" />
+                <Set Name="PAN_LETT_OBLIQUE_OFF_CENTER"     Value="14" />
+                <Set Name="PAN_LETT_OBLIQUE_SQUARE"         Value="15" />
+            </Enum>
+        </Variable>
+
+        <!-- [PANOSE_MIDLINE] -->
+        <Variable Name="[PANOSE_MIDLINE]" Type="Alias" Base="BYTE">
+            <Display Name="BYTE" />
+            <Enum>
+                <Set Name="PAN_ANY"                         Value="0" />
+                <Set Name="PAN_NO_FIT"                      Value="1" />
+                <Set Name="PAN_MIDLINE_STANDARD_TRIMMED"    Value="2" />
+                <Set Name="PAN_MIDLINE_STANDARD_POINTED"    Value="3" />
+                <Set Name="PAN_MIDLINE_STANDARD_SERIFED"    Value="4" />
+                <Set Name="PAN_MIDLINE_HIGH_TRIMMED"        Value="5" />
+                <Set Name="PAN_MIDLINE_HIGH_POINTED"        Value="6" />
+                <Set Name="PAN_MIDLINE_HIGH_SERIFED"        Value="7" />
+                <Set Name="PAN_MIDLINE_CONSTANT_TRIMMED"    Value="8" />
+                <Set Name="PAN_MIDLINE_CONSTANT_POINTED"    Value="9" />
+                <Set Name="PAN_MIDLINE_CONSTANT_SERIFED"    Value="10" />
+                <Set Name="PAN_MIDLINE_LOW_TRIMMED"         Value="11" />
+                <Set Name="PAN_MIDLINE_LOW_POINTED"         Value="12" />
+                <Set Name="PAN_MIDLINE_LOW_SERIFED"         Value="13" />
+            </Enum>
+        </Variable>
+
+        <!-- [PANOSE_XHEIGHT] -->
+        <Variable Name="[PANOSE_XHEIGHT]" Type="Alias" Base="BYTE">
+            <Display Name="BYTE" />
+            <Enum>
+                <Set Name="PAN_ANY"                         Value="0" />
+                <Set Name="PAN_NO_FIT"                      Value="1" />
+                <Set Name="PAN_XHEIGHT_CONSTANT_SMALL"      Value="2" />
+                <Set Name="PAN_XHEIGHT_CONSTANT_STD"        Value="3" />
+                <Set Name="PAN_XHEIGHT_CONSTANT_LARGE"      Value="4" />
+                <Set Name="PAN_XHEIGHT_DUCKING_SMALL"       Value="5" />
+                <Set Name="PAN_XHEIGHT_DUCKING_STD"         Value="6" />
+                <Set Name="PAN_XHEIGHT_DUCKING_LARGE"       Value="7" />
+            </Enum>
+        </Variable>
+
+
+        <!-- PANOSE -->
+        <Variable Name="PANOSE" Type="Struct">
+            <Field Type="[PANOSE_FAMILY]"       Name="bFamilyType" />
+            <Field Type="[PANOSE_SERIF]"        Name="bSerifStyle" />
+            <Field Type="[PANOSE_WEIGHT]"       Name="bWeight" />
+            <Field Type="[PANOSE_PROPORTION]"   Name="bProportion" />
+            <Field Type="[PANOSE_CONTRAST]"     Name="bContrast" />
+            <Field Type="[PANOSE_STROKE]"       Name="bStrokeVariation" />
+            <Field Type="[PANOSE_ARM]"          Name="bArmStyle" />
+            <Field Type="[PANOSE_LETTER]"       Name="bLetterform" />
+            <Field Type="[PANOSE_MIDLINE]"      Name="bMidline" />
+            <Field Type="[PANOSE_XHEIGHT]"      Name="bXHeight" />
+        </Variable>
+
+        <!-- OUTLINETEXTMETRIC -->
+        <Variable Name="OUTLINETEXTMETRIC" Type="Struct">
+            <Field Type="UINT"              Name="otmSize" />
+            <Field Type="TEXTMETRIC"        Name="otmTextMetrics" />
+            <Field Type="BYTE"              Name="otmFiller" />
+            <Field Type="PANOSE"            Name="otmPanoseNumber" />
+            <Field Type="[OTM_SELECTION]"   Name="otmfsSelection" />
+            <Field Type="UINT"              Name="otmfsType" />
+            <Field Type="int"               Name="otmsCharSlopeRise" />
+            <Field Type="int"               Name="otmsCharSlopeRun" />
+            <Field Type="int"               Name="otmItalicAngle" />
+            <Field Type="UINT"              Name="otmEMSquare" />
+            <Field Type="int"               Name="otmAscent" />
+            <Field Type="int"               Name="otmDescent" />
+            <Field Type="UINT"              Name="otmLineGap" />
+            <Field Type="UINT"              Name="otmsCapEmHeight" />
+            <Field Type="UINT"              Name="otmsXHeight" />
+            <Field Type="RECT"              Name="otmrcFontBox" />
+            <Field Type="int"               Name="otmMacAscent" />
+            <Field Type="int"               Name="otmMacDescent" />
+            <Field Type="UINT"              Name="otmMacLineGap" />
+            <Field Type="UINT"              Name="otmusMinimumPPEM" />
+            <Field Type="POINT"             Name="otmptSubscriptSize" />
+            <Field Type="POINT"             Name="otmptSubscriptOffset" />
+            <Field Type="POINT"             Name="otmptSuperscriptSize" />
+            <Field Type="POINT"             Name="otmptSuperscriptOffset" />
+            <Field Type="UINT"              Name="otmsStrikeoutSize" />
+            <Field Type="int"               Name="otmsStrikeoutPosition" />
+            <Field Type="int"               Name="otmsUnderscoreSize" />
+            <Field Type="int"               Name="otmsUnderscorePosition" />
+            <Field Type="PSTR"              Name="otmpFamilyName" />
+            <Field Type="PSTR"              Name="otmpFaceName" />
+            <Field Type="PSTR"              Name="otmpStyleName" />
+            <Field Type="PSTR"              Name="otmpFullName" />
+        </Variable>
+        <Variable Name="LPOUTLINETEXTMETRIC" Type="Pointer" Base="OUTLINETEXTMETRIC" />
+
+        <!-- HANDLETABLE -->
+        <Variable Name="HANDLETABLE" Type="Struct">
+            <Field Type="HGDIOBJ [1]" Name="objectHandle" />
+        </Variable>
+        <Variable Name="LPHANDLETABLE" Type="Pointer" Base="HANDLETABLE" />
+
+        <!-- [EMR_TYPE] -->
+        <Variable Name="[EMR_TYPE]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="EMR_HEADER"                          Value="1" />
+                <Set Name="EMR_POLYBEZIER"                      Value="2" />
+                <Set Name="EMR_POLYGON"                         Value="3" />
+                <Set Name="EMR_POLYLINE"                        Value="4" />
+                <Set Name="EMR_POLYBEZIERTO"                    Value="5" />
+                <Set Name="EMR_POLYLINETO"                      Value="6" />
+                <Set Name="EMR_POLYPOLYLINE"                    Value="7" />
+                <Set Name="EMR_POLYPOLYGON"                     Value="8" />
+                <Set Name="EMR_SETWINDOWEXTEX"                  Value="9" />
+                <Set Name="EMR_SETWINDOWORGEX"                  Value="10" />
+                <Set Name="EMR_SETVIEWPORTEXTEX"                Value="11" />
+                <Set Name="EMR_SETVIEWPORTORGEX"                Value="12" />
+                <Set Name="EMR_SETBRUSHORGEX"                   Value="13" />
+                <Set Name="EMR_EOF"                             Value="14" />
+                <Set Name="EMR_SETPIXELV"                       Value="15" />
+                <Set Name="EMR_SETMAPPERFLAGS"                  Value="16" />
+                <Set Name="EMR_SETMAPMODE"                      Value="17" />
+                <Set Name="EMR_SETBKMODE"                       Value="18" />
+                <Set Name="EMR_SETPOLYFILLMODE"                 Value="19" />
+                <Set Name="EMR_SETROP2"                         Value="20" />
+                <Set Name="EMR_SETSTRETCHBLTMODE"               Value="21" />
+                <Set Name="EMR_SETTEXTALIGN"                    Value="22" />
+                <Set Name="EMR_SETCOLORADJUSTMENT"              Value="23" />
+                <Set Name="EMR_SETTEXTCOLOR"                    Value="24" />
+                <Set Name="EMR_SETBKCOLOR"                      Value="25" />
+                <Set Name="EMR_OFFSETCLIPRGN"                   Value="26" />
+                <Set Name="EMR_MOVETOEX"                        Value="27" />
+                <Set Name="EMR_SETMETARGN"                      Value="28" />
+                <Set Name="EMR_EXCLUDECLIPRECT"                 Value="29" />
+                <Set Name="EMR_INTERSECTCLIPRECT"               Value="30" />
+                <Set Name="EMR_SCALEVIEWPORTEXTEX"              Value="31" />
+                <Set Name="EMR_SCALEWINDOWEXTEX"                Value="32" />
+                <Set Name="EMR_SAVEDC"                          Value="33" />
+                <Set Name="EMR_RESTOREDC"                       Value="34" />
+                <Set Name="EMR_SETWORLDTRANSFORM"               Value="35" />
+                <Set Name="EMR_MODIFYWORLDTRANSFORM"            Value="36" />
+                <Set Name="EMR_SELECTOBJECT"                    Value="37" />
+                <Set Name="EMR_CREATEPEN"                       Value="38" />
+                <Set Name="EMR_CREATEBRUSHINDIRECT"             Value="39" />
+                <Set Name="EMR_DELETEOBJECT"                    Value="40" />
+                <Set Name="EMR_ANGLEARC"                        Value="41" />
+                <Set Name="EMR_ELLIPSE"                         Value="42" />
+                <Set Name="EMR_RECTANGLE"                       Value="43" />
+                <Set Name="EMR_ROUNDRECT"                       Value="44" />
+                <Set Name="EMR_ARC"                             Value="45" />
+                <Set Name="EMR_CHORD"                           Value="46" />
+                <Set Name="EMR_PIE"                             Value="47" />
+                <Set Name="EMR_SELECTPALETTE"                   Value="48" />
+                <Set Name="EMR_CREATEPALETTE"                   Value="49" />
+                <Set Name="EMR_SETPALETTEENTRIES"               Value="50" />
+                <Set Name="EMR_RESIZEPALETTE"                   Value="51" />
+                <Set Name="EMR_REALIZEPALETTE"                  Value="52" />
+                <Set Name="EMR_EXTFLOODFILL"                    Value="53" />
+                <Set Name="EMR_LINETO"                          Value="54" />
+                <Set Name="EMR_ARCTO"                           Value="55" />
+                <Set Name="EMR_POLYDRAW"                        Value="56" />
+                <Set Name="EMR_SETARCDIRECTION"                 Value="57" />
+                <Set Name="EMR_SETMITERLIMIT"                   Value="58" />
+                <Set Name="EMR_BEGINPATH"                       Value="59" />
+                <Set Name="EMR_ENDPATH"                         Value="60" />
+                <Set Name="EMR_CLOSEFIGURE"                     Value="61" />
+                <Set Name="EMR_FILLPATH"                        Value="62" />
+                <Set Name="EMR_STROKEANDFILLPATH"               Value="63" />
+                <Set Name="EMR_STROKEPATH"                      Value="64" />
+                <Set Name="EMR_FLATTENPATH"                     Value="65" />
+                <Set Name="EMR_WIDENPATH"                       Value="66" />
+                <Set Name="EMR_SELECTCLIPPATH"                  Value="67" />
+                <Set Name="EMR_ABORTPATH"                       Value="68" />
+                <Set Name="EMR_GDICOMMENT"                      Value="70" />
+                <Set Name="EMR_FILLRGN"                         Value="71" />
+                <Set Name="EMR_FRAMERGN"                        Value="72" />
+                <Set Name="EMR_INVERTRGN"                       Value="73" />
+                <Set Name="EMR_PAINTRGN"                        Value="74" />
+                <Set Name="EMR_EXTSELECTCLIPRGN"                Value="75" />
+                <Set Name="EMR_BITBLT"                          Value="76" />
+                <Set Name="EMR_STRETCHBLT"                      Value="77" />
+                <Set Name="EMR_MASKBLT"                         Value="78" />
+                <Set Name="EMR_PLGBLT"                          Value="79" />
+                <Set Name="EMR_SETDIBITSTODEVICE"               Value="80" />
+                <Set Name="EMR_STRETCHDIBITS"                   Value="81" />
+                <Set Name="EMR_EXTCREATEFONTINDIRECTW"          Value="82" />
+                <Set Name="EMR_EXTTEXTOUTA"                     Value="83" />
+                <Set Name="EMR_EXTTEXTOUTW"                     Value="84" />
+                <Set Name="EMR_POLYBEZIER16"                    Value="85" />
+                <Set Name="EMR_POLYGON16"                       Value="86" />
+                <Set Name="EMR_POLYLINE16"                      Value="87" />
+                <Set Name="EMR_POLYBEZIERTO16"                  Value="88" />
+                <Set Name="EMR_POLYLINETO16"                    Value="89" />
+                <Set Name="EMR_POLYPOLYLINE16"                  Value="90" />
+                <Set Name="EMR_POLYPOLYGON16"                   Value="91" />
+                <Set Name="EMR_POLYDRAW16"                      Value="92" />
+                <Set Name="EMR_CREATEMONOBRUSH"                 Value="93" />
+                <Set Name="EMR_CREATEDIBPATTERNBRUSHPT"         Value="94" />
+                <Set Name="EMR_EXTCREATEPEN"                    Value="95" />
+                <Set Name="EMR_POLYTEXTOUTA"                    Value="96" />
+                <Set Name="EMR_POLYTEXTOUTW"                    Value="97" />
+                <Set Name="EMR_SETICMMODE"                      Value="98" />
+                <Set Name="EMR_CREATECOLORSPACE"                Value="99" />
+                <Set Name="EMR_SETCOLORSPACE"                   Value="100" />
+                <Set Name="EMR_DELETECOLORSPACE"                Value="101" />
+                <Set Name="EMR_GLSRECORD"                       Value="102" />
+                <Set Name="EMR_GLSBOUNDEDRECORD"                Value="103" />
+                <Set Name="EMR_PIXELFORMAT"                     Value="104" />
+                <Set Name="EMR_RESERVED_105"                    Value="105" />
+                <Set Name="EMR_RESERVED_106"                    Value="106" />
+                <Set Name="EMR_RESERVED_107"                    Value="107" />
+                <Set Name="EMR_RESERVED_108"                    Value="108" />
+                <Set Name="EMR_RESERVED_109"                    Value="109" />
+                <Set Name="EMR_RESERVED_110"                    Value="110" />
+                <Set Name="EMR_COLORCORRECTPALETTE"             Value="111" />
+                <Set Name="EMR_SETICMPROFILEA"                  Value="112" />
+                <Set Name="EMR_SETICMPROFILEW"                  Value="113" />
+                <Set Name="EMR_ALPHABLEND"                      Value="114" />
+                <Set Name="EMR_SETLAYOUT"                       Value="115" />
+                <Set Name="EMR_TRANSPARENTBLT"                  Value="116" />
+                <Set Name="EMR_RESERVED_117"                    Value="117" />
+                <Set Name="EMR_GRADIENTFILL"                    Value="118" />
+                <Set Name="EMR_RESERVED_119"                    Value="119" />
+                <Set Name="EMR_RESERVED_120"                    Value="120" />
+                <Set Name="EMR_COLORMATCHTOTARGETW"             Value="121" />
+                <Set Name="EMR_CREATECOLORSPACEW"               Value="122" />
+            </Enum>
+        </Variable>
+
+        <!-- ENHMETARECORD -->
+        <Variable Name="ENHMETARECORD" Type="Struct">
+            <Field Type="[EMR_TYPE]"    Name="iType" />
+            <Field Type="DWORD"         Name="nSize" />
+            <Field Type="DWORD [1]"     Name="dParm" />
+        </Variable>
+        <Variable Name="const ENHMETARECORD*" Type="Pointer" Base="ENHMETARECORD" />
+
+        <!-- METARECORD -->
+        <Variable Name="METARECORD" Type="Struct">
+            <Field Type="DWORD"         Name="rdSize" />
+            <Field Type="WORD"          Name="rdFunction" />
+            <Field Type="WORD [1]"      Name="rdParm" />
+        </Variable>
+        <Variable Name="LPMETARECORD" Type="Pointer" Base="METARECORD" />
+
+        <!-- FONTSIGNATURE -->
+        <Variable Name="FONTSIGNATURE" Type="Struct">
+            <Field Type="DWORD [4]"     Name="fsUsb" />
+            <Field Type="DWORD [2]"     Name="fsCsb" />
+        </Variable>
+        <Variable Name="LPFONTSIGNATURE" Type="Pointer" Base="FONTSIGNATURE" />
+
+        <!-- CHARSETINFO -->
+        <Variable Name="CHARSETINFO" Type="Struct">
+            <!-- TODO: ciCharset is FontCharset but not UINT instead of BYTE -->
+            <Field Type="UINT"              Name="ciCharset" />
+            <Field Type="[CodePageEnum]"    Name="ciACP" />
+            <Field Type="FONTSIGNATURE"     Name="fs" />
+        </Variable>
+        <Variable Name="LPCHARSETINFO" Type="Pointer" Base="CHARSETINFO" />
+
+        <!-- BITMAP -->
+        <Variable Name="BITMAP" Type="Struct">
+            <Field Type="LONG"        	Name="bmType" />
+            <Field Type="LONG"        	Name="bmWidth" />
+            <Field Type="LONG"        	Name="bmHeight" />
+            <Field Type="LONG"        	Name="bmWidthBytes" />
+            <Field Type="WORD"        	Name="bmPlanes" />
+            <Field Type="WORD"        	Name="bmBitsPixel" />
+            <Field Type="LPVOID"      	Name="bmBits" />
+        </Variable>
+        <Variable Name="const BITMAP*" Type="Pointer" Base="BITMAP" />
+
+        <!-- LOGBRUSH -->
+        <Variable Name="LOGBRUSH" Type="Struct">
+            <Field Type="UINT"        	Name="lbStyle" />
+            <Field Type="COLORREF"    	Name="lbColor" />
+            <Field Type="ULONG_PTR"   	Name="lbHatch" />
+        </Variable>
+        <Variable Name="const LOGBRUSH*" Type="Pointer" Base="LOGBRUSH" />
+
+        <!-- COLORADJUSTMENT -->
+        <Variable Name="COLORADJUSTMENT" Type="Struct">
+            <Field Type="WORD"   	Name="caSize" />
+            <Field Type="WORD"   	Name="caFlags" />
+            <Field Type="WORD"   	Name="caIlluminantIndex" />
+            <Field Type="WORD"   	Name="caRedGamma" />
+            <Field Type="WORD"   	Name="caGreenGamma" />
+            <Field Type="WORD"   	Name="caBlueGamma" />
+            <Field Type="WORD"   	Name="caReferenceBlack" />
+            <Field Type="WORD"   	Name="caReferenceWhite" />
+            <Field Type="SHORT"  	Name="caContrast" />
+            <Field Type="SHORT"  	Name="caBrightness" />
+            <Field Type="SHORT"  	Name="caColorfulness" />
+            <Field Type="SHORT"  	Name="caRedGreenTint" />
+        </Variable>
+        <Variable Name="LPCOLORADJUSTMENT"          Type="Pointer" Base="COLORADJUSTMENT" />
+        <Variable Name="const COLORADJUSTMENT*"     Type="Pointer" Base="COLORADJUSTMENT" />
+
+        <!-- XFORM -->
+        <Variable Name="XFORM" Type="Struct">
+            <Field Type="FLOAT"   	Name="eM11" />
+            <Field Type="FLOAT"   	Name="eM12" />
+            <Field Type="FLOAT"   	Name="eM21" />
+            <Field Type="FLOAT"   	Name="eM22" />
+            <Field Type="FLOAT"   	Name="eDx" />
+            <Field Type="FLOAT"   	Name="eDy" />
+        </Variable>
+        <Variable Name="LPXFORM"        Type="Pointer" Base="XFORM" />
+        <Variable Name="const XFORM*"   Type="Pointer" Base="XFORM" />
+
+        <!-- ABCFLOAT -->
+        <Variable Name="ABCFLOAT" Type="Struct">
+            <Field Type="FLOAT"   	Name="abcfA" />
+            <Field Type="FLOAT"   	Name="abcfB" />
+            <Field Type="FLOAT"   	Name="abcfC" />
+        </Variable>
+        <Variable Name="LPABCFLOAT" Type="Pointer" Base="ABCFLOAT" />
+
+        <!-- GCP_RESULTS -->
+        <Variable Name="GCP_RESULTS" Type="Struct">
+            <Field Type="DWORD"   	Name="lStructSize" />
+            <Field Type="LPTSTR"    Name="lpOutString" />
+            <Field Type="UINT*" 	Name="lpOrder" />
+            <Field Type="int*" 	    Name="lpDx" />
+            <Field Type="int*" 	    Name="lpCaretPos" />
+            <Field Type="LPSTR"   	Name="lpClass" />
+            <Field Type="LPWSTR"  	Name="lpGlyphs" />
+            <Field Type="UINT"    	Name="nGlyphs" />
+            <Field Type="int"       Name="nMaxFit" />
+        </Variable>
+        <Variable Name="LPGCP_RESULTS" Type="Pointer" Base="GCP_RESULTS" />
+
+        <!-- GLYPHMETRICS -->
+        <Variable Name="GLYPHMETRICS" Type="Struct">
+            <Field Type="UINT"    	Name="gmBlackBoxX" />
+            <Field Type="UINT"    	Name="gmBlackBoxY" />
+            <Field Type="POINT"   	Name="gmptGlyphOrigin" />
+            <Field Type="short"   	Name="gmCellIncX" />
+            <Field Type="short"   	Name="gmCellIncY" />
+        </Variable>
+        <Variable Name="LPGLYPHMETRICS" Type="Pointer" Base="GLYPHMETRICS" />
+
+        <!-- FIXED -->
+        <Variable Name="FIXED" Type="Struct">
+            <Field Type="WORD"    	Name="fract" />
+            <Field Type="short"   	Name="value" />
+        </Variable>
+
+        <!-- MAT2 -->
+        <Variable Name="MAT2" Type="Struct">
+            <Field Type="FIXED"  	Name="eM11" />
+            <Field Type="FIXED"  	Name="eM12" />
+            <Field Type="FIXED"  	Name="eM21" />
+            <Field Type="FIXED"  	Name="eM22" />
+        </Variable>
+        <Variable Name="const MAT2*" Type="Pointer" Base="MAT2" />
+
+        <!-- KERNINGPAIR -->
+        <Variable Name="KERNINGPAIR" Type="Struct">
+            <Field Type="WORD" 	Name="wFirst" />
+            <Field Type="WORD" 	Name="wSecond" />
+            <Field Type="int"  	Name="iKernAmount" />
+        </Variable>
+        <Variable Name="LPKERNINGPAIR" Type="Pointer" Base="KERNINGPAIR" />
+
+        <!-- RASTERIZER_STATUS -->
+        <Variable Name="RASTERIZER_STATUS" Type="Struct">
+            <Field Type="short"   	Name="nSize" />
+            <Field Type="short"   	Name="wFlags" />
+            <Field Type="short"   	Name="nLanguageID" />
+        </Variable>
+        <Variable Name="LPRASTERIZER_STATUS" Type="Pointer" Base="RASTERIZER_STATUS" />
+
+        <!-- POLYTEXT -->
+        <Variable Name="POLYTEXT" Type="Struct">
+            <Field Type="int"       	Name="x" />
+            <Field Type="int"       	Name="y" />
+            <Field Type="UINT"      	Name="n" />
+            <Field Type="LPCTSTR"    	Name="lpstr" />
+            <Field Type="UINT"      	Name="uiFlags" />
+            <Field Type="RECT"      	Name="rcl" />
+            <Field Type="int*"      	Name="pdx" />
+        </Variable>
+        <Variable Name="const POLYTEXT*" Type="Pointer" Base="POLYTEXT" />
+
+        <!-- ENHMETAHEADER -->
+        <Variable Name="ENHMETAHEADER" Type="Struct">
+            <Field Type="DWORD"   	Name="iType" />
+            <Field Type="DWORD"   	Name="nSize" />
+            <Field Type="RECTL"   	Name="rclBounds" />
+            <Field Type="RECTL"   	Name="rclFrame" />
+            <Field Type="DWORD"   	Name="dSignature" />
+            <Field Type="DWORD"   	Name="nVersion" />
+            <Field Type="DWORD"   	Name="nBytes" />
+            <Field Type="DWORD"   	Name="nRecords" />
+            <Field Type="WORD"    	Name="nHandles" />
+            <Field Type="WORD"    	Name="sReserved" />
+            <Field Type="DWORD"   	Name="nDescription" />
+            <Field Type="DWORD"   	Name="offDescription" />
+            <Field Type="DWORD"   	Name="nPalEntries" />
+            <Field Type="SIZEL"   	Name="szlDevice" />
+            <Field Type="SIZEL"   	Name="szlMillimeters" />
+            <Field Type="DWORD"   	Name="cbPixelFormat" />
+            <Field Type="DWORD"   	Name="offPixelFormat" />
+            <Field Type="DWORD"   	Name="bOpenGL" />
+            <Field Type="SIZEL"   	Name="szlMicrometers" />
+        </Variable>
+        <Variable Name="LPENHMETAHEADER" Type="Pointer" Base="ENHMETAHEADER" />
+
+        <!-- METAFILEPICT -->
+        <Variable Name="METAFILEPICT" Type="Struct">
+            <Field Type="LONG"        	Name="mm" />
+            <Field Type="LONG"        	Name="xExt" />
+            <Field Type="LONG"        	Name="yExt" />
+            <Field Type="HMETAFILE"   	Name="hMF" />
+        </Variable>
+        <Variable Name="const METAFILEPICT*" Type="Pointer" Base="METAFILEPICT" />
+
+        <!-- DOCINFO -->
+        <Variable Name="DOCINFO" Type="Struct">
+            <Field Type="int"     	Name="cbSize" />
+            <Field Type="LPCTSTR"  	Name="lpszDocName" />
+            <Field Type="LPCTSTR"  	Name="lpszOutput" />
+            <Field Type="LPCTSTR"  	Name="lpszDatatype" />
+            <Field Type="DWORD"    	Name="fwType" />
+        </Variable>
+        <Variable Name="const DOCINFO*" Type="Pointer" Base="DOCINFO" />
+
+        <!-- PIXELFORMATDESCRIPTOR -->
+        <Variable Name="PIXELFORMATDESCRIPTOR" Type="Struct">
+            <Field Type="WORD"  	Name="nSize" />
+            <Field Type="WORD"  	Name="nVersion" />
+            <Field Type="DWORD" 	Name="dwFlags" />
+            <Field Type="BYTE"  	Name="iPixelType" />
+            <Field Type="BYTE"  	Name="cColorBits" />
+            <Field Type="BYTE"  	Name="cRedBits" />
+            <Field Type="BYTE"  	Name="cRedShift" />
+            <Field Type="BYTE"  	Name="cGreenBits" />
+            <Field Type="BYTE"  	Name="cGreenShift" />
+            <Field Type="BYTE"  	Name="cBlueBits" />
+            <Field Type="BYTE"  	Name="cBlueShift" />
+            <Field Type="BYTE"  	Name="cAlphaBits" />
+            <Field Type="BYTE"  	Name="cAlphaShift" />
+            <Field Type="BYTE"  	Name="cAccumBits" />
+            <Field Type="BYTE"  	Name="cAccumRedBits" />
+            <Field Type="BYTE"  	Name="cAccumGreenBits" />
+            <Field Type="BYTE"  	Name="cAccumBlueBits" />
+            <Field Type="BYTE"  	Name="cAccumAlphaBits" />
+            <Field Type="BYTE"  	Name="cDepthBits" />
+            <Field Type="BYTE"  	Name="cStencilBits" />
+            <Field Type="BYTE"  	Name="cAuxBuffers" />
+            <Field Type="BYTE"  	Name="iLayerType" />
+            <Field Type="BYTE"  	Name="bReserved" />
+            <Field Type="DWORD" 	Name="dwLayerMask" />
+            <Field Type="DWORD" 	Name="dwVisibleMask" />
+            <Field Type="DWORD" 	Name="dwDamageMask" />
+        </Variable>
+        <Variable Name="LPPIXELFORMATDESCRIPTOR"      Type="Pointer" Base="PIXELFORMATDESCRIPTOR" />
+        <Variable Name="const PIXELFORMATDESCRIPTOR*" Type="Pointer" Base="PIXELFORMATDESCRIPTOR" />
+
+        <!-- [DeviceCapsEnum] -->
+        <Variable Name="[DeviceCapsEnum]" Type="Alias" Base="int">
+            <Display Name="int" />
+            <Enum>
+                <Set Name="DRIVERVERSION"       Value="0" />
+                <Set Name="TECHNOLOGY"          Value="2" />
+                <Set Name="HORZSIZE"            Value="4" />
+                <Set Name="VERTSIZE"            Value="6" />
+                <Set Name="HORZRES"             Value="8" />
+                <Set Name="VERTRES"             Value="10" />
+                <Set Name="BITSPIXEL"           Value="12" />
+                <Set Name="PLANES"              Value="14" />
+                <Set Name="NUMBRUSHES"          Value="16" />
+                <Set Name="NUMPENS"             Value="18" />
+                <Set Name="NUMMARKERS"          Value="20" />
+                <Set Name="NUMFONTS"            Value="22" />
+                <Set Name="NUMCOLORS"           Value="24" />
+                <Set Name="PDEVICESIZE"         Value="26" />
+                <Set Name="CURVECAPS"           Value="28" />
+                <Set Name="LINECAPS"            Value="30" />
+                <Set Name="POLYGONALCAPS"       Value="32" />
+                <Set Name="TEXTCAPS"            Value="34" />
+                <Set Name="CLIPCAPS"            Value="36" />
+                <Set Name="RASTERCAPS"          Value="38" />
+                <Set Name="ASPECTX"             Value="40" />
+                <Set Name="ASPECTY"             Value="42" />
+                <Set Name="ASPECTXY"            Value="44" />
+                <Set Name="LOGPIXELSX"          Value="88" />
+                <Set Name="LOGPIXELSY"          Value="90" />
+                <Set Name="SIZEPALETTE"         Value="104" />
+                <Set Name="NUMRESERVED"         Value="106" />
+                <Set Name="COLORRES"            Value="108" />
+                <Set Name="PHYSICALWIDTH"       Value="110" />
+                <Set Name="PHYSICALHEIGHT"      Value="111" />
+                <Set Name="PHYSICALOFFSETX"     Value="112" />
+                <Set Name="PHYSICALOFFSETY"     Value="113" />
+                <Set Name="SCALINGFACTORX"      Value="114" />
+                <Set Name="SCALINGFACTORY"      Value="115" />
+                <Set Name="VREFRESH"            Value="116" />
+                <Set Name="DESKTOPVERTRES"      Value="117" />
+                <Set Name="DESKTOPHORZRES"      Value="118" />
+                <Set Name="BLTALIGNMENT"        Value="119" />
+                <Set Name="SHADEBLENDCAPS"      Value="120" />
+                <Set Name="COLORMGMTCAPS"       Value="121" />
+            </Enum>
+        </Variable>
+
+        <!-- [RasterOperationEnum] -->
+        <Variable Name="[RasterOperationEnum]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="SRCCOPY"             Value="0x00CC0020" />
+                <Set Name="SRCPAINT"            Value="0x00EE0086" />
+                <Set Name="SRCAND"              Value="0x008800C6" />
+                <Set Name="SRCINVERT"           Value="0x00660046" />
+                <Set Name="SRCERASE"            Value="0x00440328" />
+                <Set Name="NOTSRCCOPY"          Value="0x00330008" />
+                <Set Name="NOTSRCERASE"         Value="0x001100A6" />
+                <Set Name="MERGECOPY"           Value="0x00C000CA" />
+                <Set Name="MERGEPAINT"          Value="0x00BB0226" />
+                <Set Name="PATCOPY"             Value="0x00F00021" />
+                <Set Name="PATPAINT"            Value="0x00FB0A09" />
+                <Set Name="PATINVERT"           Value="0x005A0049" />
+                <Set Name="DSTINVERT"           Value="0x00550009" />
+                <Set Name="BLACKNESS"           Value="0x00000042" />
+                <Set Name="WHITENESS"           Value="0x00FF0062" />
+                <Set Name="NOMIRRORBITMAP"      Value="0x80000000" />
+                <Set Name="CAPTUREBLT"          Value="0x40000000" />
+            </Enum>
+        </Variable>
+
+        <!-- [StretchModeEnum] -->
+        <Variable Name="[StretchModeEnum]" Type="Alias" Base="int">
+            <Display Name="int" />
+            <Enum>
+                <Set Name="BLACKONWHITE"        Value="1" />
+                <Set Name="WHITEONBLACK"        Value="2" />
+                <Set Name="COLORONCOLOR"        Value="3" />
+                <Set Name="HALFTONE"            Value="4" />
+            </Enum>
+        </Variable>
+
+        <!-- [RandomRgnEnum] -->
+        <Variable Name="[RandomRgnEnum]" Type="Alias" Base="INT">
+            <Display Name="INT" />
+            <Enum>
+                <Set Name="SYSRGN"              Value="4" />
+            </Enum>
+        </Variable>
+
+        <!-- [ColorUseEnum] -->
+        <Variable Name="[ColorUseEnum]" Type="Alias" Base="UINT">
+            <Display Name="UINT" />
+            <Enum>
+                <Set Name="DIB_RGB_COLORS"      Value="0" />
+                <Set Name="DIB_PAL_COLORS"      Value="1" />
+            </Enum>
+        </Variable>
+
+        <!-- [CreateBitmapInitFlag] -->
+        <Variable Name="[CreateBitmapInitFlag]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="CBM_INIT"      Value="0x04" />
+            </Flag>
+        </Variable>
+
+        <!-- [ROP2ModeEnum] -->
+        <Variable Name="[ROP2ModeEnum]" Type="Alias" Base="int">
+            <Display Name="int" />
+            <Enum>
+                <Set Name="R2_BLACK"            Value="1" />
+                <Set Name="R2_NOTMERGEPEN"      Value="2" />
+                <Set Name="R2_MASKNOTPEN"       Value="3" />
+                <Set Name="R2_NOTCOPYPEN"       Value="4" />
+                <Set Name="R2_MASKPENNOT"       Value="5" />
+                <Set Name="R2_NOT"              Value="6" />
+                <Set Name="R2_XORPEN"           Value="7" />
+                <Set Name="R2_NOTMASKPEN"       Value="8" />
+                <Set Name="R2_MASKPEN"          Value="9" />
+                <Set Name="R2_NOTXORPEN"        Value="10" />
+                <Set Name="R2_NOP"              Value="11" />
+                <Set Name="R2_MERGENOTPEN"      Value="12" />
+                <Set Name="R2_COPYPEN"          Value="13" />
+                <Set Name="R2_MERGEPENNOT"      Value="14" />
+                <Set Name="R2_MERGEPEN"         Value="15" />
+                <Set Name="R2_WHITE"            Value="16" />
+            </Enum>
+        </Variable>
+
+        <!-- [BkModeEnum] -->
+        <Variable Name="[BkModeEnum]" Type="Alias" Base="int">
+            <Display Name="int" />
+            <Enum>
+                <Set Name="TRANSPARENT"         Value="1" />
+                <Set Name="OPAQUE"              Value="2" />
+            </Enum>
+        </Variable>
+
+        <!-- [TextAlignFlag] -->
+        <Variable Name="[TextAlignFlag]" Type="Alias" Base="UINT">
+            <Display Name="UINT" />
+            <Flag>
+                <Set Name="TA_NOUPDATECP"       Value="0" />
+                <Set Name="TA_UPDATECP"         Value="1" />
+                <Set Name="TA_LEFT"             Value="0" />
+                <Set Name="TA_RIGHT"            Value="2" />
+                <Set Name="TA_CENTER"           Value="6" />
+                <Set Name="TA_TOP"              Value="0" />
+                <Set Name="TA_BOTTOM"           Value="8" />
+                <Set Name="TA_BASELINE"         Value="24" />
+                <Set Name="TA_RTLREADING"       Value="256" />
+                <Set Name="GDI_ERROR"           Value="0xFFFFFFFF" />
+            </Flag>
+        </Variable>
+
+        <!-- [RgnMode] -->
+        <Variable Name="[RgnMode]" Type="Alias" Base="int">
+            <Display Name="int" />
+            <Enum>
+                <Set Name="RGN_AND"             Value="1" />
+                <Set Name="RGN_OR"              Value="2" />
+                <Set Name="RGN_XOR"             Value="3" />
+                <Set Name="RGN_DIFF"            Value="4" />
+                <Set Name="RGN_COPY"            Value="5" />
+            </Enum>
+        </Variable>
+
+        <!-- [TranslateCharsetInfoFlag] -->
+        <Variable Name="[TranslateCharsetInfoFlag]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="TCI_SRCCHARSET"      Value="1" />
+                <Set Name="TCI_SRCCODEPAGE"     Value="2" />
+                <Set Name="TCI_SRCFONTSIG"      Value="3" />
+                <Set Name="TCI_SRCLOCALE"       Value="0x1000" />
+            </Enum>
+        </Variable>
+
+        <!-- [ObjectType] -->
+        <Variable Name="[ObjectType]" Type="Alias" Base="UINT">
+            <Display Name="UINT" />
+            <Enum>
+                <Set Name="OBJ_PEN"             Value="1" />
+                <Set Name="OBJ_BRUSH"           Value="2" />
+                <Set Name="OBJ_DC"              Value="3" />
+                <Set Name="OBJ_METADC"          Value="4" />
+                <Set Name="OBJ_PAL"             Value="5" />
+                <Set Name="OBJ_FONT"            Value="6" />
+                <Set Name="OBJ_BITMAP"          Value="7" />
+                <Set Name="OBJ_REGION"          Value="8" />
+                <Set Name="OBJ_METAFILE"        Value="9" />
+                <Set Name="OBJ_MEMDC"           Value="10" />
+                <Set Name="OBJ_EXTPEN"          Value="11" />
+                <Set Name="OBJ_ENHMETADC"       Value="12" />
+                <Set Name="OBJ_ENHMETAFILE"     Value="13" />
+                <Set Name="OBJ_COLORSPACE"      Value="14" />
+            </Enum>
+        </Variable>
+
+        <!-- [MappingMode] -->
+        <Variable Name="[MappingMode]" Type="Alias" Base="int">
+            <Display Name="int" />
+            <Enum>
+                <Set Name="MM_TEXT"             Value="1" />
+                <Set Name="MM_LOMETRIC"         Value="2" />
+                <Set Name="MM_HIMETRIC"         Value="3" />
+                <Set Name="MM_LOENGLISH"        Value="4" />
+                <Set Name="MM_HIENGLISH"        Value="5" />
+                <Set Name="MM_TWIPS"            Value="6" />
+                <Set Name="MM_ISOTROPIC"        Value="7" />
+                <Set Name="MM_ANISOTROPIC"      Value="8" />
+            </Enum>
+        </Variable>
+
+        <!-- [LayoutFlags] -->
+        <Variable Name="[LayoutFlags]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="LAYOUT_RTL"                          Value="0x00000001" />
+                <Set Name="LAYOUT_BTT"                          Value="0x00000002" />
+                <Set Name="LAYOUT_VBH"                          Value="0x00000004" />
+                <Set Name="LAYOUT_ORIENTATIONMASK"              Value="0x00000007" />
+                <Set Name="LAYOUT_BITMAPORIENTATIONPRESERVED"   Value="0x00000008" />
+            </Flag>
+        </Variable>
+
+        <!-- [BoundsAccumulationFlags] -->
+        <Variable Name="[BoundsAccumulationFlags]" Type="Alias" Base="UINT">
+            <Display Name="UINT" />
+            <Flag>
+                <Set Name="DCB_RESET"           Value="0x0001" />
+                <Set Name="DCB_ACCUMULATE"      Value="0x0002" />
+                <Set Name="DCB_SET"             Value="0x0003" />
+                <Set Name="DCB_ENABLE"          Value="0x0004" />
+                <Set Name="DCB_DISABLE"         Value="0x0008" />
+            </Flag>
+        </Variable>
+
+        <!-- [ExtTextOutFlags] -->
+        <Variable Name="[ExtTextOutFlags]" Type="Alias" Base="UINT">
+            <Display Name="UINT" />
+            <Flag>
+                <Set Name="ETO_OPAQUE"              Value="0x0002" />
+                <Set Name="ETO_CLIPPED"             Value="0x0004" />
+                <Set Name="ETO_GLYPH_INDEX"         Value="0x0010" />
+                <Set Name="ETO_RTLREADING"          Value="0x0080" />
+                <Set Name="ETO_NUMERICSLOCAL"       Value="0x0400" />
+                <Set Name="ETO_NUMERICSLATIN"       Value="0x0800" />
+                <Set Name="ETO_IGNORELANGUAGE"      Value="0x1000" />
+                <Set Name="ETO_PDY"                 Value="0x2000" />
+                <Set Name="ETO_REVERSE_INDEX_MAP"   Value="0x10000" />
+            </Flag>
+        </Variable>
+
+        <!-- [ModifyWorldTransformMode] -->
+        <Variable Name="[ModifyWorldTransformMode]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="MWT_IDENTITY"            Value="1" />
+                <Set Name="MWT_LEFTMULTIPLY"        Value="2" />
+                <Set Name="MWT_RIGHTMULTIPLY"       Value="3" />
+            </Enum>
+        </Variable>
+
+        <!-- [GetGlyphIndicesFlag] -->
+        <Variable Name="[GetGlyphIndicesFlag]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="GGI_MARK_NONEXISTING_GLYPHS" Value="0x0001" />
+            </Flag>
+        </Variable>
+
+        <!-- [PolyFillModes] -->
+        <Variable Name="[PolyFillModes]" Type="Alias" Base="int">
+            <Display Name="int" />
+            <Enum>
+                <Set Name="ALTERNATE"   Value="1" />
+                <Set Name="WINDING"     Value="2" />
+            </Enum>
+        </Variable>
+
+        <!-- [GraphicsModes] -->
+        <Variable Name="[GraphicsModes]" Type="Alias" Base="int">
+            <Display Name="int" />
+            <Enum>
+                <Set Name="GM_COMPATIBLE"   Value="1" />
+                <Set Name="GM_ADVANCED"     Value="2" />
+            </Enum>
+        </Variable>
+
+        <!-- [HatchStyle] -->
+        <Variable Name="[HatchStyle]" Type="Alias" Base="int">
+            <Display Name="int" />
+            <Enum>
+                <Set Name="HS_HORIZONTAL"   Value="0" />
+                <Set Name="HS_VERTICAL"     Value="1" />
+                <Set Name="HS_FDIAGONAL"    Value="2" />
+                <Set Name="HS_BDIAGONAL"    Value="3" />
+                <Set Name="HS_CROSS"        Value="4" />
+                <Set Name="HS_DIAGCROSS"    Value="5" />
+            </Enum>
+        </Variable>
+
+        <!-- [GdiEscapeFunction] -->
+        <Variable Name="[GdiEscapeFunction]" Type="Alias" Base="int">
+            <Display Name="int" />
+            <Enum>
+                <Set Name="NEWFRAME"                        Value="1" />
+                <Set Name="ABORTDOC"                        Value="2" />
+                <Set Name="NEXTBAND"                        Value="3" />
+                <Set Name="SETCOLORTABLE"                   Value="4" />
+                <Set Name="GETCOLORTABLE"                   Value="5" />
+                <Set Name="FLUSHOUTPUT"                     Value="6" />
+                <Set Name="DRAFTMODE"                       Value="7" />
+                <Set Name="QUERYESCSUPPORT"                 Value="8" />
+                <Set Name="SETABORTPROC"                    Value="9" />
+                <Set Name="STARTDOC"                        Value="10" />
+                <Set Name="ENDDOC"                          Value="11" />
+                <Set Name="GETPHYSPAGESIZE"                 Value="12" />
+                <Set Name="GETPRINTINGOFFSET"               Value="13" />
+                <Set Name="GETSCALINGFACTOR"                Value="14" />
+                <Set Name="MFCOMMENT"                       Value="15" />
+                <Set Name="GETPENWIDTH"                     Value="16" />
+                <Set Name="SETCOPYCOUNT"                    Value="17" />
+                <Set Name="SELECTPAPERSOURCE"               Value="18" />
+                <Set Name="DEVICEDATA"                      Value="19" />
+                <Set Name="PASSTHROUGH"                     Value="19" />
+                <Set Name="GETTECHNOLOGY"                   Value="20" />
+                <Set Name="SETLINECAP"                      Value="21" />
+                <Set Name="SETLINEJOIN"                     Value="22" />
+                <Set Name="SETMITERLIMIT"                   Value="23" />
+                <Set Name="BANDINFO"                        Value="24" />
+                <Set Name="DRAWPATTERNRECT"                 Value="25" />
+                <Set Name="GETVECTORPENSIZE"                Value="26" />
+                <Set Name="GETVECTORBRUSHSIZE"              Value="27" />
+                <Set Name="ENABLEDUPLEX"                    Value="28" />
+                <Set Name="GETSETPAPERBINS"                 Value="29" />
+                <Set Name="GETSETPRINTORIENT"               Value="30" />
+                <Set Name="ENUMPAPERBINS"                   Value="31" />
+                <Set Name="SETDIBSCALING"                   Value="32" />
+                <Set Name="EPSPRINTING"                     Value="33" />
+                <Set Name="ENUMPAPERMETRICS"                Value="34" />
+                <Set Name="GETSETPAPERMETRICS"              Value="35" />
+                <Set Name="POSTSCRIPT_DATA"                 Value="37" />
+                <Set Name="POSTSCRIPT_IGNORE"               Value="38" />
+                <Set Name="MOUSETRAILS"                     Value="39" />
+                <Set Name="GETDEVICEUNITS"                  Value="42" />
+                <Set Name="GETEXTENDEDTEXTMETRICS"          Value="256" />
+                <Set Name="GETEXTENTTABLE"                  Value="257" />
+                <Set Name="GETPAIRKERNTABLE"                Value="258" />
+                <Set Name="GETTRACKKERNTABLE"               Value="259" />
+                <Set Name="EXTTEXTOUT"                      Value="512" />
+                <Set Name="GETFACENAME"                     Value="513" />
+                <Set Name="DOWNLOADFACE"                    Value="514" />
+                <Set Name="ENABLERELATIVEWIDTHS"            Value="768" />
+                <Set Name="ENABLEPAIRKERNING"               Value="769" />
+                <Set Name="SETKERNTRACK"                    Value="770" />
+                <Set Name="SETALLJUSTVALUES"                Value="771" />
+                <Set Name="SETCHARSET"                      Value="772" />
+                <Set Name="STRETCHBLT"                      Value="2048" />
+                <Set Name="METAFILE_DRIVER"                 Value="2049" />
+                <Set Name="GETSETSCREENPARAMS"              Value="3072" />
+                <Set Name="QUERYDIBSUPPORT"                 Value="3073" />
+                <Set Name="BEGIN_PATH"                      Value="4096" />
+                <Set Name="CLIP_TO_PATH"                    Value="4097" />
+                <Set Name="END_PATH"                        Value="4098" />
+                <Set Name="EXT_DEVICE_CAPS"                 Value="4099" />
+                <Set Name="RESTORE_CTM"                     Value="4100" />
+                <Set Name="SAVE_CTM"                        Value="4101" />
+                <Set Name="SET_ARC_DIRECTION"               Value="4102" />
+                <Set Name="SET_BACKGROUND_COLOR"            Value="4103" />
+                <Set Name="SET_POLY_MODE"                   Value="4104" />
+                <Set Name="SET_SCREEN_ANGLE"                Value="4105" />
+                <Set Name="SET_SPREAD"                      Value="4106" />
+                <Set Name="TRANSFORM_CTM"                   Value="4107" />
+                <Set Name="SET_CLIP_BOX"                    Value="4108" />
+                <Set Name="SET_BOUNDS"                      Value="4109" />
+                <Set Name="SET_MIRROR_MODE"                 Value="4110" />
+                <Set Name="OPENCHANNEL"                     Value="4110" />
+                <Set Name="DOWNLOADHEADER"                  Value="4111" />
+                <Set Name="CLOSECHANNEL"                    Value="4112" />
+                <Set Name="POSTSCRIPT_PASSTHROUGH"          Value="4115" />
+                <Set Name="ENCAPSULATED_POSTSCRIPT"         Value="4116" />
+                <Set Name="POSTSCRIPT_IDENTIFY"             Value="4117" />
+                <Set Name="POSTSCRIPT_INJECTION"            Value="4118" />
+                <Set Name="CHECKJPEGFORMAT"                 Value="4119" />
+                <Set Name="CHECKPNGFORMAT"                  Value="4120" />
+                <Set Name="GET_PS_FEATURESETTING"           Value="4121" />
+                <Set Name="GDIPLUS_TS_QUERYVER"             Value="4122" />
+                <Set Name="GDIPLUS_TS_RECORD"               Value="4123" />
+            </Enum>
+        </Variable>
+
+        <!-- [GetGlyphOutlineFormat] -->
+        <Variable Name="[GetGlyphOutlineFormat]" Type="Alias" Base="UINT">
+            <Display Name="UINT" />
+            <Enum>
+                <Set Name="GGO_METRICS"         Value="0" />
+                <Set Name="GGO_BITMAP"          Value="1" />
+                <Set Name="GGO_NATIVE"          Value="2" />
+                <Set Name="GGO_BEZIER"          Value="3" />
+                <Set Name="GGO_GRAY2_BITMAP"    Value="4" />
+                <Set Name="GGO_GRAY4_BITMAP"    Value="5" />
+                <Set Name="GGO_GRAY8_BITMAP"    Value="6" />
+                <Set Name="GGO_GLYPH_INDEX"     Value="0x0080" />
+                <Set Name="GGO_UNHINTED"        Value="0x0100" />
+            </Enum>
+        </Variable>
+
+        <!-- [STOCK_OBJECT] -->
+        <Variable Name="[STOCK_OBJECT]" Type="Alias" Base="int">
+            <Display Name="int" />
+            <Enum>
+                <Set Name="WHITE_BRUSH"             Value="0" />
+                <Set Name="LTGRAY_BRUSH"            Value="1" />
+                <Set Name="GRAY_BRUSH"              Value="2" />
+                <Set Name="DKGRAY_BRUSH"            Value="3" />
+                <Set Name="BLACK_BRUSH"             Value="4" />
+                <Set Name="HOLLOW_BRUSH"            Value="5" />
+                <Set Name="WHITE_PEN"               Value="6" />
+                <Set Name="BLACK_PEN"               Value="7" />
+                <Set Name="NULL_PEN"                Value="8" />
+                <Set Name="OEM_FIXED_FONT"          Value="10" />
+                <Set Name="ANSI_FIXED_FONT"         Value="11" />
+                <Set Name="ANSI_VAR_FONT"           Value="12" />
+                <Set Name="SYSTEM_FONT"             Value="13" />
+                <Set Name="DEVICE_DEFAULT_FONT"     Value="14" />
+                <Set Name="DEFAULT_PALETTE"         Value="15" />
+                <Set Name="SYSTEM_FIXED_FONT"       Value="16" />
+                <Set Name="DEFAULT_GUI_FONT"        Value="17" />
+                <Set Name="DC_BRUSH"                Value="18" />
+                <Set Name="DC_PEN"                  Value="19" />
+            </Enum>
+        </Variable>
+
+        <!-- [GCP_FLAGS] -->
+        <Variable Name="[GCP_FLAGS]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="GCP_DBCS"                    Value="0x0001" />
+                <Set Name="GCP_REORDER"                 Value="0x0002" />
+                <Set Name="GCP_USEKERNING"              Value="0x0008" />
+                <Set Name="GCP_GLYPHSHAPE"              Value="0x0010" />
+                <Set Name="GCP_LIGATE"                  Value="0x0020" />
+                <Set Name="GCP_GLYPHINDEXING"           Value="0x0080" />
+                <Set Name="GCP_DIACRITIC"               Value="0x0100" />
+                <Set Name="GCP_KASHIDA"                 Value="0x0400" />
+                <Set Name="GCP_ERROR"                   Value="0x8000" />
+                <Set Name="GCP_JUSTIFY"                 Value="0x00010000" />
+                <Set Name="GCP_NODIACRITICS"            Value="0x00020000" />
+                <Set Name="FLI_GLYPHS"                  Value="0x00040000" />
+                <Set Name="GCP_CLASSIN"                 Value="0x00080000" />
+                <Set Name="GCP_MAXEXTENT"               Value="0x00100000" />
+                <Set Name="GCP_JUSTIFYIN"               Value="0x00200000" />
+                <Set Name="GCP_DISPLAYZWG"              Value="0x00400000" />
+                <Set Name="GCP_SYMSWAPOFF"              Value="0x00800000" />
+                <Set Name="GCP_NUMERICOVERRIDE"         Value="0x01000000" />
+                <Set Name="GCP_NEUTRALOVERRIDE"         Value="0x02000000" />
+                <Set Name="GCP_NUMERICSLATIN"           Value="0x04000000" />
+                <Set Name="GCP_NUMERICSLOCAL"           Value="0x08000000" />
+            </Flag>
+        </Variable>
+
+        <!-- WCS_PROFILE_MANAGEMENT_SCOPE -->
+        <Variable Name="WCS_PROFILE_MANAGEMENT_SCOPE" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="WCS_PROFILE_MANAGEMENT_SCOPE_SYSTEM_WIDE"    Value="0" />
+                <Set Name="WCS_PROFILE_MANAGEMENT_SCOPE_CURRENT_USER"   Value="1" />
+            </Enum>
+        </Variable>
+
+        <!-- [CS_ACTION] -->
+        <Variable Name="[CS_ACTION]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="CS_ENABLE"           Value="0x00000001" />
+                <Set Name="CS_DISABLE"          Value="0x00000002" />
+                <Set Name="CS_DELETE_TRANSFORM" Value="0x00000003" />
+            </Enum>
+        </Variable>
+
+        <!-- [ICM_MODE] -->
+        <Variable Name="[ICM_MODE]" Type="Alias" Base="int">
+            <Display Name="int" />
+            <Enum>
+                <Set Name="ICM_OFF"             Value="1" />
+                <Set Name="ICM_ON"              Value="2" />
+                <Set Name="ICM_QUERY"           Value="3" />
+                <Set Name="ICM_DONE_OUTSIDEDC"  Value="4" />
+            </Enum>
+        </Variable>
+
+        <!-- [ICM_COMMAND] -->
+        <Variable Name="[ICM_COMMAND]" Type="Alias" Base="UINT">
+            <Display Name="UINT" />
+            <Enum>
+                <Set Name="ICM_ADDPROFILE"              Value="1" />
+                <Set Name="ICM_DELETEPROFILE"           Value="2" />
+                <Set Name="ICM_QUERYPROFILE"            Value="3" />
+                <Set Name="ICM_SETDEFAULTPROFILE"       Value="4" />
+                <Set Name="ICM_REGISTERICMATCHER"       Value="5" />
+                <Set Name="ICM_UNREGISTERICMATCHER"     Value="6" />
+                <Set Name="ICM_QUERYMATCH"              Value="7" />
+            </Enum>
+        </Variable>
+
+        <!-- [POINT_TYPE] -->
+        <Variable Name="[POINT_TYPE]" Type="Alias" Base="BYTE">
+            <Display Name="BYTE" />
+            <Enum>
+                <Set Name="PT_CLOSEFIGURE"  Value="0x01" />
+                <Set Name="PT_LINETO"       Value="0x02" />
+                <Set Name="PT_BEZIERTO"     Value="0x04" />
+                <Set Name="PT_MOVETO"       Value="0x06" />
+            </Enum>
+        </Variable>
+        <Variable Name="[POINT_TYPE*]" Type="Pointer" Base="[POINT_TYPE]">
+            <Display Name="LPBYTE" />
+        </Variable>
+
+        <!-- Bitmaps -->
+        <Category Name="Graphics and Gaming/Legacy Graphics/Windows GDI/Bitmaps" />
+        <Api Name="BitBlt">
+            <Param Type="HDC" Name="hdcDest" />
+            <Param Type="int" Name="nXDest" />
+            <Param Type="int" Name="nYDest" />
+            <Param Type="int" Name="nWidth" />
+            <Param Type="int" Name="nHeight" />
+            <Param Type="HDC" Name="hdcSrc" />
+            <Param Type="int" Name="nXSrc" />
+            <Param Type="int" Name="nYSrc" />
+            <Param Type="[RasterOperationEnum]" Name="dwRop" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CreateBitmap">
+            <Param Type="int" Name="nWidth" />
+            <Param Type="int" Name="nHeight" />
+            <Param Type="UINT" Name="cPlanes" />
+            <Param Type="UINT" Name="cBitsPerPel" />
+            <Param Type="const VOID*" Name="lpvBits" />
+            <Return Type="HBITMAP" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CreateBitmapIndirect">
+            <Param Type="const BITMAP*" Name="lpbm" />
+            <Return Type="HBITMAP" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CreateCompatibleBitmap">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="nWidth" />
+            <Param Type="int" Name="nHeight" />
+            <Return Type="HBITMAP" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CreateDIBitmap">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="const BITMAPINFOHEADER*" Name="lpbmih" />
+            <Param Type="[CreateBitmapInitFlag]" Name="fdwInit" />
+            <Param Type="const VOID*" Name="lpbInit" />
+            <Param Type="const BITMAPINFO*" Name="lpbmi" />
+            <Param Type="[ColorUseEnum]" Name="fuUsage" />
+            <Return Type="HBITMAP" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CreateDIBSection">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="const BITMAPINFO*" Name="pbmi" />
+            <Param Type="[ColorUseEnum]" Name="iUsage" />
+            <Param Type="VOID**" Name="ppvBits" />
+            <Param Type="HANDLE" Name="hSection" />
+            <Param Type="DWORD" Name="dwOffset" />
+            <Return Type="HBITMAP" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="ExtFloodFill">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="nXStart" />
+            <Param Type="int" Name="nYStart" />
+            <Param Type="COLORREF" Name="crColor" />
+            <Param Type="UINT" Name="fuFillType" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetBitmapDimensionEx">
+            <Param Type="HBITMAP" Name="hBitmap" />
+            <Param Type="LPSIZE" Name="lpDimension" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetDIBColorTable">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="UINT" Name="uStartIndex" />
+            <Param Type="UINT" Name="cEntries" />
+            <Param Type="RGBQUAD*" Name="pColors" PostCount="Return" />
+            <Return Type="UINT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetDIBits">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="HBITMAP" Name="hbmp" />
+            <Param Type="UINT" Name="uStartScan" />
+            <Param Type="UINT" Name="cScanLines" />
+            <Param Type="LPVOID" Name="lpvBits" />
+            <Param Type="LPBITMAPINFO" Name="lpbi" />
+            <Param Type="[ColorUseEnum]" Name="uUsage" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetPixel">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="nXPos" />
+            <Param Type="int" Name="nYPos" />
+            <Return Type="COLORREF" />
+            <Success Return="NotEqual" Value="0xFFFFFFFF" />
+        </Api>
+        <Api Name="GetStretchBltMode">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="MaskBlt">
+            <Param Type="HDC" Name="hdcDest" />
+            <Param Type="int" Name="nXDest" />
+            <Param Type="int" Name="nYDest" />
+            <Param Type="int" Name="nWidth" />
+            <Param Type="int" Name="nHeight" />
+            <Param Type="HDC" Name="hdcSrc" />
+            <Param Type="int" Name="nXSrc" />
+            <Param Type="int" Name="nYSrc" />
+            <Param Type="HBITMAP" Name="hbmMask" />
+            <Param Type="int" Name="xMask" />
+            <Param Type="int" Name="yMask" />
+            <Param Type="[RasterOperationEnum]" Name="dwRop" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="PlgBlt">
+            <Param Type="HDC" Name="hdcDest" />
+            <Param Type="const POINT*" Name="lpPoint" />
+            <Param Type="HDC" Name="hdcSrc" />
+            <Param Type="int" Name="nXSrc" />
+            <Param Type="int" Name="nYSrc" />
+            <Param Type="int" Name="nWidth" />
+            <Param Type="int" Name="nHeight" />
+            <Param Type="HBITMAP" Name="hbmMask" />
+            <Param Type="int" Name="xMask" />
+            <Param Type="int" Name="yMask" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="SetBitmapDimensionEx">
+            <Param Type="HBITMAP" Name="hBitmap" />
+            <Param Type="int" Name="nWidth" />
+            <Param Type="int" Name="nHeight" />
+            <Param Type="LPSIZE" Name="lpSize" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="SetDIBColorTable">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="UINT" Name="uStartIndex" />
+            <Param Type="UINT" Name="cEntries" />
+            <Param Type="const RGBQUAD*" Name="pColors" Count="cEntries" />
+            <Return Type="UINT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="SetDIBits">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="HBITMAP" Name="hbmp" />
+            <Param Type="UINT" Name="uStartScan" />
+            <Param Type="UINT" Name="cScanLines" />
+            <Param Type="const VOID*" Name="lpvBits" />
+            <Param Type="const BITMAPINFO*" Name="lpbmi" />
+            <Param Type="[ColorUseEnum]" Name="fuColorUse" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="SetDIBitsToDevice">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="XDest" />
+            <Param Type="int" Name="YDest" />
+            <Param Type="DWORD" Name="dwWidth" />
+            <Param Type="DWORD" Name="dwHeight" />
+            <Param Type="int" Name="XSrc" />
+            <Param Type="int" Name="YSrc" />
+            <Param Type="UINT" Name="uStartScan" />
+            <Param Type="UINT" Name="cScanLines" />
+            <Param Type="const VOID*" Name="lpvBits" />
+            <Param Type="const BITMAPINFO*" Name="lpbmi" />
+            <Param Type="[ColorUseEnum]" Name="fuColorUse" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="SetPixel" ErrorFunc="">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="X" />
+            <Param Type="int" Name="Y" />
+            <Param Type="COLORREF" Name="crColor" />
+            <Return Type="COLORREF" />
+            <Success Return="NotEqual" Value="0xFFFFFFFF" />
+        </Api>
+        <Api Name="SetPixelV" ErrorFunc="">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="X" />
+            <Param Type="int" Name="Y" />
+            <Param Type="COLORREF" Name="crColor" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="SetStretchBltMode">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="[StretchModeEnum]" Name="iStretchMode" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="StretchBlt">
+            <Param Type="HDC" Name="hdcDest" />
+            <Param Type="int" Name="nXOriginDest" />
+            <Param Type="int" Name="nYOriginDest" />
+            <Param Type="int" Name="nWidthDest" />
+            <Param Type="int" Name="nHeightDest" />
+            <Param Type="HDC" Name="hdcSrc" />
+            <Param Type="int" Name="nXOriginSrc" />
+            <Param Type="int" Name="nYOriginSrc" />
+            <Param Type="int" Name="nWidthSrc" />
+            <Param Type="int" Name="nHeightSrc" />
+            <Param Type="[RasterOperationEnum]" Name="dwRop" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="StretchDIBits">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="XDest" />
+            <Param Type="int" Name="YDest" />
+            <Param Type="int" Name="nDestWidth" />
+            <Param Type="int" Name="nDestHeight" />
+            <Param Type="int" Name="XSrc" />
+            <Param Type="int" Name="YSrc" />
+            <Param Type="int" Name="nSrcWidth" />
+            <Param Type="int" Name="nSrcHeight" />
+            <Param Type="const VOID*" Name="lpBits" />
+            <Param Type="const BITMAPINFO*" Name="lpBitsInfo" />
+            <Param Type="[ColorUseEnum]" Name="iUsage" />
+            <Param Type="[RasterOperationEnum]" Name="dwRop" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CreateDiscardableBitmap">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="nWidth" />
+            <Param Type="int" Name="nHeight" />
+            <Return Type="HBITMAP" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="FloodFill">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="nXStart" />
+            <Param Type="int" Name="nYStart" />
+            <Param Type="COLORREF" Name="crFill" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetBitmapBits">
+            <Param Type="HBITMAP" Name="hbmp" />
+            <Param Type="LONG" Name="cbBuffer" />
+            <Param Type="LPVOID" Name="lpvBits" />
+            <Return Type="LONG" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="SetBitmapBits">
+            <Param Type="HBITMAP" Name="hbmp" />
+            <Param Type="DWORD" Name="cBytes" />
+            <Param Type="const VOID*" Name="lpBits" />
+            <Return Type="LONG" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <!--
+    Brushes
+    -->
+        <Category Name="Graphics and Gaming/Legacy Graphics/Windows GDI/Brushes" />
+        <Api Name="CreateBrushIndirect">
+            <Param Type="const LOGBRUSH*" Name="lplb" />
+            <Return Type="HBRUSH" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CreateDIBPatternBrushPt">
+            <Param Type="const VOID*" Name="lpPackedDIB" />
+            <Param Type="[ColorUseEnum]" Name="iUsage" />
+            <Return Type="HBRUSH" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CreateHatchBrush">
+            <Param Type="[HatchStyle]" Name="fnStyle" />
+            <Param Type="COLORREF" Name="clrref" />
+            <Return Type="HBRUSH" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CreatePatternBrush">
+            <Param Type="HBITMAP" Name="hbmp" />
+            <Return Type="HBRUSH" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CreateSolidBrush">
+            <Param Type="COLORREF" Name="crColor" />
+            <Return Type="HBRUSH" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetBrushOrgEx">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="LPPOINT" Name="lppt" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="PatBlt">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="nXLeft" />
+            <Param Type="int" Name="nYLeft" />
+            <Param Type="int" Name="nWidth" />
+            <Param Type="int" Name="nHeight" />
+            <Param Type="[RasterOperationEnum]" Name="dwRop" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="SetBrushOrgEx">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="nXOrg" />
+            <Param Type="int" Name="nYOrg" />
+            <Param Type="LPPOINT" Name="lppt" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CreateDIBPatternBrush">
+            <Param Type="HGLOBAL" Name="hglbDIBPacked" />
+            <Param Type="UINT" Name="fuColorSpec" />
+            <Return Type="HBRUSH" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <!-- Clipping -->
+        <Category Name="Graphics and Gaming/Legacy Graphics/Windows GDI/Clipping" />
+        <Api Name="ExcludeClipRect">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="nLeftRect" />
+            <Param Type="int" Name="nTopRect" />
+            <Param Type="int" Name="nRightRect" />
+            <Param Type="int" Name="nBottomRect" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="ExtSelectClipRgn">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="HRGN" Name="hrgn" />
+            <Param Type="[RgnMode]" Name="fnMode" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetClipBox">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="LPRECT" Name="lprc" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetClipRgn">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="HRGN" Name="hrgn" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="-1" />
+        </Api>
+        <Api Name="GetMetaRgn">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="HRGN" Name="hrgn" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetRandomRgn">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="HRGN" Name="hrgn" />
+            <Param Type="[RandomRgnEnum]" Name="iNum" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="IntersectClipRect">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="nLeftRect" />
+            <Param Type="int" Name="nTopRect" />
+            <Param Type="int" Name="nRightRect" />
+            <Param Type="int" Name="nBottomRect" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="OffsetClipRgn">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="nXOffset" />
+            <Param Type="int" Name="nYOffset" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="PtVisible">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="X" />
+            <Param Type="int" Name="Y" />
+            <Return Type="[BOOL_NUMBER]" />
+            <Success Return="NotEqual" Value="-1" />
+        </Api>
+        <Api Name="RectVisible">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="const RECT*" Name="lprc" />
+            <Return Type="[BOOL_NUMBER]" />
+            <Success Return="Less" Value="3" />
+        </Api>
+        <Api Name="SelectClipPath">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="iMode" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="SelectClipRgn">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="HRGN" Name="hrgn" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="SetMetaRgn">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <!-- Colors -->
+        <Category Name="Graphics and Gaming/Legacy Graphics/Windows GDI/Colors" />
+        <Api Name="AnimatePalette">
+            <Param Type="HPALETTE" Name="hpal" />
+            <Param Type="UINT" Name="iStartIndex" />
+            <Param Type="UINT" Name="cEntries" />
+            <Param Type="const PALETTEENTRY*" Name="ppe" Count="cEntries" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CreateHalftonePalette">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="HPALETTE" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CreatePalette">
+            <Param Type="const LOGPALETTE*" Name="lplgpl" />
+            <Return Type="HPALETTE" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetColorAdjustment">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="LPCOLORADJUSTMENT" Name="lpca" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetNearestColor">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="COLORREF" Name="crColor" />
+            <Return Type="COLORREF" />
+            <Success Return="NotEqual" Value="0xFFFFFFFF" />
+        </Api>
+        <Api Name="GetNearestPaletteIndex">
+            <Param Type="HPALETTE" Name="hpal" />
+            <Param Type="COLORREF" Name="crColor" />
+            <Return Type="UINT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetPaletteEntries">
+            <Param Type="HPALETTE" Name="hpal" />
+            <Param Type="UINT" Name="iStartIndex" />
+            <Param Type="UINT" Name="nEntries" />
+            <Param Type="LPPALETTEENTRY" Name="lppe" PostCount="nEntries" />
+            <Return Type="UINT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetSystemPaletteEntries">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="UINT" Name="iStartIndex" />
+            <Param Type="UINT" Name="nEntries" />
+            <Param Type="LPPALETTEENTRY" Name="lppe" PostCount="nEntries" />
+            <Return Type="UINT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetSystemPaletteUse">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="UINT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="RealizePalette">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="UINT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="ResizePalette">
+            <Param Type="HPALETTE" Name="hpal" />
+            <Param Type="UINT" Name="nEntries" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="SelectPalette">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="HPALETTE" Name="hpal" />
+            <Param Type="BOOL" Name="bForceBackground" />
+            <Return Type="HPALETTE" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="SetColorAdjustment">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="const COLORADJUSTMENT*" Name="lpca" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="SetPaletteEntries">
+            <Param Type="HPALETTE" Name="hpal" />
+            <Param Type="UINT" Name="iStart" />
+            <Param Type="UINT" Name="cEntries" />
+            <Param Type="const PALETTEENTRY*" Name="lppe" Count="cEntries" />
+            <Return Type="UINT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="SetSystemPaletteUse">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="UINT" Name="uUsage" />
+            <Return Type="UINT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="UnrealizeObject">
+            <Param Type="HGDIOBJ" Name="hgdiobj" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="UpdateColors">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="BOOL" />
+        </Api>
+        <!-- Coordinate Space and Transformation -->
+        <Category Name="Graphics and Gaming/Legacy Graphics/Windows GDI/Coordinate Spaces and Transformations" />
+        <Api Name="CombineTransform">
+            <Param Type="LPXFORM" Name="lpxformResult" />
+            <Param Type="const XFORM*" Name="lpxform1" />
+            <Param Type="const XFORM*" Name="lpxform2" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="DPtoLP">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="LPPOINT" Name="lpPoints" />
+            <Param Type="int" Name="nCount" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetCurrentPositionEx">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="LPPOINT" Name="lpPoint" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetGraphicsMode">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetMapMode">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetViewportExtEx">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="LPSIZE" Name="lpSize" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetViewportOrgEx">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="LPPOINT" Name="lpPoint" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetWindowExtEx">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="LPSIZE" Name="lpSize" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetWindowOrgEx">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="LPPOINT" Name="lpPoint" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetWorldTransform">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="LPXFORM" Name="lpXform" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="LPtoDP">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="LPPOINT" Name="lpPoints" Count="nCount" />
+            <Param Type="int" Name="nCount" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="ModifyWorldTransform">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="const XFORM*" Name="lpXform" />
+            <Param Type="[ModifyWorldTransformMode]" Name="iMode" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="OffsetViewportOrgEx">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="nXOffset" />
+            <Param Type="int" Name="nYOffset" />
+            <Param Type="LPPOINT" Name="lpPoint" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="OffsetWindowOrgEx">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="nXOffset" />
+            <Param Type="int" Name="nYOffset" />
+            <Param Type="LPPOINT" Name="lpPoint" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="ScaleViewportExtEx">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="Xnum" />
+            <Param Type="int" Name="Xdenom" />
+            <Param Type="int" Name="Ynum" />
+            <Param Type="int" Name="Ydenom" />
+            <Param Type="LPSIZE" Name="lpSize" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="ScaleWindowExtEx">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="Xnum" />
+            <Param Type="int" Name="Xdenom" />
+            <Param Type="int" Name="Ynum" />
+            <Param Type="int" Name="Ydenom" />
+            <Param Type="LPSIZE" Name="lpSize" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="SetGraphicsMode">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="[GraphicsModes]" Name="iMode" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="SetMapMode">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="[MappingMode]" Name="fnMapMode" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="SetViewportExtEx">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="nXExtent" />
+            <Param Type="int" Name="nYExtent" />
+            <Param Type="LPSIZE" Name="lpSize" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="SetViewportOrgEx">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="X" />
+            <Param Type="int" Name="Y" />
+            <Param Type="LPPOINT" Name="lpPoint" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="SetWindowExtEx">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="nXExtent" />
+            <Param Type="int" Name="nYExtent" />
+            <Param Type="LPSIZE" Name="lpSize" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="SetWindowOrgEx">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="X" />
+            <Param Type="int" Name="Y" />
+            <Param Type="LPPOINT" Name="lpPoint" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="SetWorldTransform">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="const XFORM*" Name="lpXform" />
+            <Return Type="BOOL" />
+        </Api>
+        <!-- Device Context -->
+        <Category Name="Graphics and Gaming/Legacy Graphics/Windows GDI/Device Contexts" />
+        <Api Name="CancelDC">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CreateCompatibleDC">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="HDC" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CreateDC" BothCharset="True">
+            <Param Type="LPCTSTR" Name="lpszDriver" />
+            <Param Type="LPCTSTR" Name="lpszDevice" />
+            <Param Type="LPCTSTR" Name="lpszOutput" />
+            <Param Type="const DEVMODE*" Name="lpInitData" />
+            <Return Type="HDC" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CreateIC" BothCharset="True">
+            <Param Type="LPCTSTR" Name="lpszDriver" />
+            <Param Type="LPCTSTR" Name="lpszDevice" />
+            <Param Type="LPCTSTR" Name="lpszOutput" />
+            <Param Type="const DEVMODE*" Name="lpdvmInit" />
+            <Return Type="HDC" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="DeleteDC">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="DeleteObject">
+            <Param Type="HGDIOBJ" Name="hObject" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="DrawEscape">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="nEscape" />
+            <Param Type="int" Name="cbInput" />
+            <Param Type="LPCSTR" Name="lpszInData" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="EnumObjects">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="nObjectType" />
+            <Param Type="GOBJENUMPROC" Name="lpObjectFunc" />
+            <Param Type="LPARAM" Name="lParam" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetCurrentObject">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="[ObjectType]" Name="uObjectType" />
+            <Return Type="HGDIOBJ" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetDCBrushColor">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="COLORREF" />
+            <Success Return="NotEqual" Value="0xFFFFFFFF" />
+        </Api>
+        <Api Name="GetDCOrgEx">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="LPPOINT" Name="lpPoint" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetDCPenColor">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="COLORREF" />
+            <Success Return="NotEqual" Value="0xFFFFFFFF" />
+        </Api>
+        <Api Name="GetDeviceCaps">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="[DeviceCapsEnum]" Name="nIndex" />
+            <Return Type="int" />
+        </Api>
+        <Api Name="GetLayout">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="DWORD" />
+            <Success Return="NotEqual" Value="-1" />
+        </Api>
+        <Api Name="GetObject" BothCharset="True">
+            <Param Type="HGDIOBJ" Name="hgdiobj" />
+            <Param Type="int" Name="cbBuffer" />
+            <Param Type="LPVOID" Name="lpvObject" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetObjectType">
+            <Param Type="HGDIOBJ" Name="h" />
+            <Return Type="DWORD" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetStockObject">
+            <Param Type="[STOCK_OBJECT]" Name="fnObject" />
+            <Return Type="HGDIOBJ" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="ResetDC" BothCharset="True">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="const DEVMODE*" Name="lpInitData" />
+            <Return Type="HDC" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="RestoreDC">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="nSavedDC" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="SaveDC">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="SelectObject">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="HGDIOBJ" Name="hgdiobj" />
+            <Return Type="HGDIOBJ" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="SetDCBrushColor">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="COLORREF" Name="crColor" />
+            <Return Type="COLORREF" />
+            <Success Return="NotEqual" Value="0xFFFFFFFF" />
+        </Api>
+        <Api Name="SetDCPenColor">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="COLORREF" Name="crColor" />
+            <Return Type="COLORREF" />
+            <Success Return="NotEqual" Value="0xFFFFFFFF" />
+        </Api>
+        <Api Name="SetLayout">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="[LayoutFlags]" Name="dwLayout" />
+            <Return Type="DWORD" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <!-- Filled Shapes -->
+        <Category Name="Graphics and Gaming/Legacy Graphics/Windows GDI/Filled Shapes" />
+        <Api Name="Chord">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="nLeftRect" />
+            <Param Type="int" Name="nTopRect" />
+            <Param Type="int" Name="nRightRect" />
+            <Param Type="int" Name="nBottomRect" />
+            <Param Type="int" Name="nXRadial1" />
+            <Param Type="int" Name="nYRadial1" />
+            <Param Type="int" Name="nXRadial2" />
+            <Param Type="int" Name="nYRadial2" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="Ellipse">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="nLeftRect" />
+            <Param Type="int" Name="nTopRect" />
+            <Param Type="int" Name="nRightRect" />
+            <Param Type="int" Name="nBottomRect" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="Pie">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="nLeftRect" />
+            <Param Type="int" Name="nTopRect" />
+            <Param Type="int" Name="nRightRect" />
+            <Param Type="int" Name="nBottomRect" />
+            <Param Type="int" Name="nXRadial1" />
+            <Param Type="int" Name="nYRadial1" />
+            <Param Type="int" Name="nXRadial2" />
+            <Param Type="int" Name="nYRadial2" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="Polygon">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="const POINT*" Name="lpPoints" Count="nCount" />
+            <Param Type="int" Name="nCount" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="PolyPolygon">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="const POINT*" Name="lpPoints" />
+            <Param Type="const INT*" Name="lpPolyCounts" />
+            <Param Type="int" Name="nCount" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="Rectangle">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="nLeftRect" />
+            <Param Type="int" Name="nTopRect" />
+            <Param Type="int" Name="nRightRect" />
+            <Param Type="int" Name="nBottomRect" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="RoundRect">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="nLeftRect" />
+            <Param Type="int" Name="nTopRect" />
+            <Param Type="int" Name="nRightRect" />
+            <Param Type="int" Name="nBottomRect" />
+            <Param Type="int" Name="nWidth" />
+            <Param Type="int" Name="nHeight" />
+            <Return Type="BOOL" />
+        </Api>
+        <!-- Font and Text -->
+        <Category Name="Graphics and Gaming/Legacy Graphics/Windows GDI/Fonts and Text" />
+        <Api Name="AddFontMemResourceEx">
+            <Param Type="PVOID" Name="pbFont" Length="cbFont" />
+            <Param Type="DWORD" Name="cbFont" />
+            <Param Type="PVOID" Name="pdv" />
+            <Param Type="DWORD*" Name="pcFonts" />
+            <Return Type="HANDLE" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="AddFontResource" BothCharset="True">
+            <Param Type="LPCTSTR" Name="lpszFilename" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="AddFontResourceEx" BothCharset="True">
+            <Param Type="LPCTSTR" Name="lpszFilename" />
+            <Param Type="DWORD" Name="fl" />
+            <Param Type="PVOID" Name="pdv" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CreateFont" BothCharset="True">
+            <Param Type="int" Name="nHeight" />
+            <Param Type="int" Name="nWidth" />
+            <Param Type="int" Name="nEscapement" />
+            <Param Type="int" Name="nOrientation" />
+            <Param Type="[FontWeight]" Name="fnWeight" Display="int" />
+            <Param Type="DWORD" Name="fdwItalic" />
+            <Param Type="DWORD" Name="fdwUnderline" />
+            <Param Type="DWORD" Name="fdwStrikeOut" />
+            <Param Type="[FontCharset]" Name="fdwCharSet" Display="DWORD" />
+            <Param Type="[FontOutputPrecision]" Name="fdwOutputPrecision" Display="DWORD" />
+            <Param Type="[FontClipPrecision]" Name="fdwClipPrecision" Display="DWORD" />
+            <Param Type="[FontQuality]" Name="fdwQuality" Display="DWORD" />
+            <Param Type="[FontPitchAndFamily]" Name="fdwPitchAndFamily" Display="DWORD" />
+            <Param Type="LPCTSTR" Name="lpszFace" />
+            <Return Type="HFONT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CreateFontIndirect" BothCharset="True">
+            <Param Type="const LOGFONT*" Name="lplf" />
+            <Return Type="HFONT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CreateFontIndirectEx" BothCharset="True">
+            <Param Type="const ENUMLOGFONTEXDV*" Name="penumlfex" />
+            <Return Type="HFONT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CreateScalableFontResource" BothCharset="True">
+            <Param Type="DWORD" Name="fdwHidden" />
+            <Param Type="LPCTSTR" Name="lpszFontRes" />
+            <Param Type="LPCTSTR" Name="lpszFontFile" />
+            <Param Type="LPCTSTR" Name="lpszCurrentPath" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="EnumFontFamiliesEx" BothCharset="True">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="LPLOGFONT" Name="lpLogfont" />
+            <Param Type="FONTENUMPROC" Name="lpEnumFontFamExProc" />
+            <Param Type="LPARAM" Name="lParam" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Return Type="int" />
+        </Api>
+        <Api Name="ExtTextOut" BothCharset="True">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="X" />
+            <Param Type="int" Name="Y" />
+            <Param Type="[ExtTextOutFlags]" Name="fuOptions" />
+            <Param Type="const RECT*" Name="lprc" />
+            <Param Type="LPCTSTR" Name="lpString" />
+            <Param Type="UINT" Name="cbCount" />
+            <Param Type="const INT*" Name="lpDx" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetAspectRatioFilterEx">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="LPSIZE" Name="lpAspectRatio" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetCharABCWidths" BothCharset="True">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="UINT" Name="uFirstChar" />
+            <Param Type="UINT" Name="uLastChar" />
+            <Param Type="LPABC" Name="lpabc" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetCharABCWidthsFloat" BothCharset="True">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="UINT" Name="iFirstChar" />
+            <Param Type="UINT" Name="iLastChar" />
+            <Param Type="LPABCFLOAT" Name="lpABCF" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetCharABCWidthsI">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="UINT" Name="giFirst" />
+            <Param Type="UINT" Name="cgi" />
+            <Param Type="LPWORD" Name="pgi" />
+            <Param Type="LPABC" Name="lpabc" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetCharacterPlacement" BothCharset="True">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="LPCTSTR" Name="lpString" />
+            <Param Type="int" Name="nCount" />
+            <Param Type="int" Name="nMaxExtent" />
+            <Param Type="LPGCP_RESULTS" Name="lpResults" />
+            <Param Type="[GCP_FLAGS]" Name="dwFlags" />
+            <Return Type="DWORD" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetCharWidth32" BothCharset="True">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="UINT" Name="iFirstChar" />
+            <Param Type="UINT" Name="iLastChar" />
+            <Param Type="LPINT" Name="lpBuffer" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetCharWidthFloat" BothCharset="True">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="UINT" Name="iFirstChar" />
+            <Param Type="UINT" Name="iLastChar" />
+            <Param Type="PFLOAT" Name="pxBuffer" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetCharWidthI">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="UINT" Name="giFirst" />
+            <Param Type="UINT" Name="cgi" />
+            <Param Type="LPWORD" Name="pgi" />
+            <Param Type="LPINT" Name="lpBuffer" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetFontData">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="DWORD" Name="dwTable" />
+            <Param Type="DWORD" Name="dwOffset" />
+            <Param Type="LPVOID" Name="lpvBuffer" />
+            <Param Type="DWORD" Name="cbData" />
+            <Return Type="DWORD" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetFontLanguageInfo">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="DWORD" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetFontUnicodeRanges">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="LPGLYPHSET" Name="lpgs" />
+            <Return Type="DWORD" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetGlyphIndices" BothCharset="True">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="LPCTSTR" Name="lpstr" />
+            <Param Type="int" Name="c" />
+            <Param Type="LPWORD" Name="pgi" />
+            <Param Type="[GetGlyphIndicesFlag]" Name="fl" />
+            <Return Type="DWORD" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetGlyphOutline" BothCharset="True">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="UINT" Name="uChar" />
+            <Param Type="[GetGlyphOutlineFormat]" Name="uFormat" />
+            <Param Type="LPGLYPHMETRICS" Name="lpgm" />
+            <Param Type="DWORD" Name="cbBuffer" />
+            <Param Type="LPVOID" Name="lpvBuffer" PostLength="cbBuffer" />
+            <Param Type="const MAT2*" Name="lpmat2" />
+            <Return Type="DWORD" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetKerningPairs" BothCharset="True">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="DWORD" Name="nNumPairs" />
+            <Param Type="LPKERNINGPAIR" Name="lpkrnpair" />
+            <Return Type="DWORD" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetOutlineTextMetrics" BothCharset="True">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="UINT" Name="cbData" />
+            <Param Type="LPOUTLINETEXTMETRIC" Name="lpOTM" />
+            <Return Type="UINT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetRasterizerCaps">
+            <Param Type="LPRASTERIZER_STATUS" Name="lprs" />
+            <Param Type="UINT" Name="cb" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetTextAlign">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="[TextAlignFlag]" />
+            <Success Return="NotEqual" Value="-1" />
+        </Api>
+        <Api Name="GetTextCharacterExtra">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetTextColor">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="COLORREF" />
+            <Success Return="NotEqual" Value="0xFFFFFFFF" />
+        </Api>
+        <Api Name="GetTextExtentExPoint" BothCharset="True">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="LPCTSTR" Name="lpszStr" />
+            <Param Type="int" Name="cchString" />
+            <Param Type="int" Name="nMaxExtent" />
+            <Param Type="LPINT" Name="lpnFit" />
+            <Param Type="LPINT" Name="alpDx" />
+            <Param Type="LPSIZE" Name="lpSize" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetTextExtentExPointI">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="LPWORD" Name="pgiIn" />
+            <Param Type="int" Name="cgi" />
+            <Param Type="int" Name="nMaxExtent" />
+            <Param Type="LPINT" Name="lpnFit" />
+            <Param Type="LPINT" Name="alpDx" />
+            <Param Type="LPSIZE" Name="lpSize" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetTextExtentPoint32" BothCharset="True">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="LPCTSTR" Name="lpString" />
+            <Param Type="int" Name="c" />
+            <Param Type="LPSIZE" Name="lpSize" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetTextExtentPointI">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="LPWORD" Name="pgiIn" />
+            <Param Type="int" Name="cgi" />
+            <Param Type="LPSIZE" Name="lpSize" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetTextFace" BothCharset="True">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="nCount" />
+            <Param Type="LPTSTR" Name="lpFaceName" OutputOnly="True" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetTextMetrics" BothCharset="True">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="LPTEXTMETRIC" Name="lptm" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="PolyTextOut" BothCharset="True">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="const POLYTEXT*" Name="pptxt" Count="cStrings" />
+            <Param Type="int" Name="cStrings" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="RemoveFontMemResourceEx">
+            <Param Type="HANDLE" Name="fh" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="RemoveFontResource" BothCharset="True">
+            <Param Type="LPCTSTR" Name="lpFileName" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="RemoveFontResourceEx" BothCharset="True">
+            <Param Type="LPCTSTR" Name="lpFileName" />
+            <Param Type="DWORD" Name="fl" />
+            <Param Type="PVOID" Name="pdv" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="SetMapperFlags">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="DWORD" Name="dwFlag" />
+            <Return Type="DWORD" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="SetTextAlign">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="[TextAlignFlag]" Name="fMode" />
+            <Return Type="[TextAlignFlag]" />
+            <Success Return="NotEqual" Value="0xFFFFFFFF" />
+        </Api>
+        <Api Name="SetTextCharacterExtra">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="nCharExtra" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="SetTextColor">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="COLORREF" Name="crColor" />
+            <Return Type="COLORREF" />
+            <Success Return="NotEqual" Value="0xFFFFFFFF" />
+        </Api>
+        <Api Name="SetTextJustification">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="nBreakExtra" />
+            <Param Type="int" Name="nBreakCount" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="TextOut" BothCharset="True">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="nXStart" />
+            <Param Type="int" Name="nYStart" />
+            <Param Type="LPCTSTR" Name="lpString" />
+            <Param Type="int" Name="cbString" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="EnumFontFamilies" BothCharset="True">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="LPCTSTR" Name="lpszFamily" />
+            <Param Type="FONTENUMPROC" Name="lpEnumFontFamProc" />
+            <Param Type="LPARAM" Name="lParam" />
+            <Return Type="int" />
+        </Api>
+        <Api Name="EnumFonts" BothCharset="True">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="LPCTSTR" Name="lpFaceName" />
+            <Param Type="FONTENUMPROC" Name="lpFontFunc" />
+            <Param Type="LPARAM" Name="lParam" />
+            <Return Type="int" />
+        </Api>
+        <Api Name="GetCharWidth" BothCharset="True">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="UINT" Name="iFirstChar" />
+            <Param Type="UINT" Name="iLastChar" />
+            <Param Type="LPINT" Name="lpBuffer" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetTextExtentPoint" BothCharset="True">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="LPCTSTR" Name="lpString" />
+            <Param Type="int" Name="cbString" />
+            <Param Type="LPSIZE" Name="lpSize" />
+            <Return Type="BOOL" />
+        </Api>
+        <!-- Lines and Curves -->
+        <Category Name="Graphics and Gaming/Legacy Graphics/Windows GDI/Lines and Curves" />
+        <Api Name="AngleArc">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="X" />
+            <Param Type="int" Name="Y" />
+            <Param Type="DWORD" Name="dwRadius" />
+            <Param Type="FLOAT" Name="eStartAngle" />
+            <Param Type="FLOAT" Name="eSweepAngle" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="Arc">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="nLeftRect" />
+            <Param Type="int" Name="nTopRect" />
+            <Param Type="int" Name="nRightRect" />
+            <Param Type="int" Name="nBottomRect" />
+            <Param Type="int" Name="nXStartArc" />
+            <Param Type="int" Name="nYStartArc" />
+            <Param Type="int" Name="nXEndArc" />
+            <Param Type="int" Name="nYEndArc" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="ArcTo">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="nLeftRect" />
+            <Param Type="int" Name="nTopRect" />
+            <Param Type="int" Name="nRightRect" />
+            <Param Type="int" Name="nBottomRect" />
+            <Param Type="int" Name="nXRadial1" />
+            <Param Type="int" Name="nYRadial1" />
+            <Param Type="int" Name="nXRadial2" />
+            <Param Type="int" Name="nYRadial2" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetArcDirection">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="LineDDA">
+            <Param Type="int" Name="nXStart" />
+            <Param Type="int" Name="nYStart" />
+            <Param Type="int" Name="nXEnd" />
+            <Param Type="int" Name="nYEnd" />
+            <Param Type="LINEDDAPROC" Name="lpLineFunc" />
+            <Param Type="LPARAM" Name="lpData" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="LineTo">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="nXEnd" />
+            <Param Type="int" Name="nYEnd" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="MoveToEx">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="X" />
+            <Param Type="int" Name="Y" />
+            <Param Type="LPPOINT" Name="lpPoint" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="PolyBezier">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="const POINT*" Name="lppt" />
+            <Param Type="DWORD" Name="cPoints" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="PolyBezierTo">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="const POINT*" Name="lppt" />
+            <Param Type="DWORD" Name="cCount" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="PolyDraw">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="const POINT*" Name="lppt" Count="cCount" />
+            <Param Type="[POINT_TYPE*]" Display="const BYTE*" Name="lpbTypes" Count="cCount" />
+            <Param Type="int" Name="cCount" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="Polyline">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="const POINT*" Name="lppt" />
+            <Param Type="int" Name="cPoints" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="PolylineTo">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="const POINT*" Name="lppt" />
+            <Param Type="DWORD" Name="cCount" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="PolyPolyline">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="const POINT*" Name="lppt" />
+            <Param Type="const DWORD*" Name="lpdwPolyPoints" />
+            <Param Type="DWORD" Name="cCount" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="SetArcDirection">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="ArcDirection" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <!-- Metafiles -->
+        <Category Name="Graphics and Gaming/Legacy Graphics/Windows GDI/Metafiles" />
+        <Api Name="CloseEnhMetaFile">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="HENHMETAFILE" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CopyEnhMetaFile" BothCharset="True">
+            <Param Type="HENHMETAFILE" Name="hemfSrc" />
+            <Param Type="LPCTSTR" Name="lpszFile" />
+            <Return Type="HENHMETAFILE" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CreateEnhMetaFile" BothCharset="True">
+            <Param Type="HDC" Name="hdcRef" />
+            <Param Type="LPCTSTR" Name="lpFilename" />
+            <Param Type="const RECT*" Name="lpRect" />
+            <Param Type="LPCTSTR" Name="lpDescription" />
+            <Return Type="HDC" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="DeleteEnhMetaFile">
+            <Param Type="HENHMETAFILE" Name="hemf" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="EnumEnhMetaFile">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="HENHMETAFILE" Name="hemf" />
+            <Param Type="ENHMFENUMPROC" Name="lpEnhMetaFunc" />
+            <Param Type="LPVOID" Name="lpData" />
+            <Param Type="const RECT*" Name="lpRect" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GdiComment">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="UINT" Name="cbSize" />
+            <Param Type="const BYTE*" Name="lpData" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetEnhMetaFile" BothCharset="True" ErrorFunc="">
+            <Param Type="LPCTSTR" Name="lpszMetaFile" />
+            <Return Type="HENHMETAFILE" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetEnhMetaFileBits">
+            <Param Type="HENHMETAFILE" Name="hemf" />
+            <Param Type="UINT" Name="cbBuffer" />
+            <Param Type="LPBYTE" Name="lpbBuffer" />
+            <Return Type="UINT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetEnhMetaFileDescription" BothCharset="True">
+            <Param Type="HENHMETAFILE" Name="hemf" />
+            <Param Type="UINT" Name="cchBuffer" />
+            <Param Type="LPTSTR" Name="lpszDescription" />
+            <Return Type="UINT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetEnhMetaFileHeader">
+            <Param Type="HENHMETAFILE" Name="hemf" />
+            <Param Type="UINT" Name="cbBuffer" />
+            <Param Type="LPENHMETAHEADER" Name="lpemh" />
+            <Return Type="UINT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetEnhMetaFilePaletteEntries">
+            <Param Type="HENHMETAFILE" Name="hemf" />
+            <Param Type="UINT" Name="cEntries" />
+            <Param Type="LPPALETTEENTRY" Name="lppe" PostCount="cEntries" />
+            <Return Type="UINT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetWinMetaFileBits">
+            <Param Type="HENHMETAFILE" Name="hemf" />
+            <Param Type="UINT" Name="cbBuffer" />
+            <Param Type="LPBYTE" Name="lpbBuffer" />
+            <Param Type="[MappingMode]" Display="INT" Name="fnMapMode" />
+            <Param Type="HDC" Name="hdcRef" />
+            <Return Type="UINT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="PlayEnhMetaFile">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="HENHMETAFILE" Name="hemf" />
+            <Param Type="const RECT*" Name="lpRect" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="PlayEnhMetaFileRecord">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="LPHANDLETABLE" Name="lpHandletable" />
+            <Param Type="const ENHMETARECORD*" Name="lpEnhMetaRecord" />
+            <Param Type="UINT" Name="nHandles" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="SetEnhMetaFileBits">
+            <Param Type="UINT" Name="cbBuffer" />
+            <Param Type="const BYTE*" Name="lpData" />
+            <Return Type="HENHMETAFILE" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="SetWinMetaFileBits">
+            <Param Type="UINT" Name="cbBuffer" />
+            <Param Type="const BYTE*" Name="lpbBuffer" />
+            <Param Type="HDC" Name="hdcRef" />
+            <Param Type="const METAFILEPICT*" Name="lpmfp" />
+            <Return Type="HENHMETAFILE" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CloseMetaFile">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="HMETAFILE" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CopyMetaFile" BothCharset="True">
+            <Param Type="HMETAFILE" Name="hmfSrc" />
+            <Param Type="LPCTSTR" Name="lpszFile" />
+            <Return Type="HMETAFILE" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CreateMetaFile" BothCharset="True">
+            <Param Type="LPCTSTR" Name="lpszFile" />
+            <Return Type="HDC" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="DeleteMetaFile">
+            <Param Type="HMETAFILE" Name="hmf" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="EnumMetaFile">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="HMETAFILE" Name="hmf" />
+            <Param Type="MFENUMPROC" Name="lpMetaFunc" />
+            <Param Type="LPARAM" Name="lParam" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetMetaFileBitsEx">
+            <Param Type="HMETAFILE" Name="hmf" />
+            <Param Type="UINT" Name="nSize" />
+            <Param Type="LPVOID" Name="lpvData" />
+            <Return Type="UINT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="PlayMetaFile">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="HMETAFILE" Name="hmf" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="PlayMetaFileRecord">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="LPHANDLETABLE" Name="lpHandletable" />
+            <Param Type="LPMETARECORD" Name="lpMetaRecord" />
+            <Param Type="UINT" Name="nHandles" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="SetMetaFileBitsEx">
+            <Param Type="UINT" Name="nSize" />
+            <Param Type="const BYTE*" Name="lpData" />
+            <Return Type="HMETAFILE" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <!-- Painting and Drawing -->
+        <Category Name="Graphics and Gaming/Legacy Graphics/Windows GDI/Painting and Drawing" />
+        <Api Name="GdiFlush">
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GdiGetBatchLimit">
+            <Return Type="DWORD" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GdiSetBatchLimit">
+            <Param Type="DWORD" Name="dwLimit" />
+            <Return Type="DWORD" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetBkColor">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="COLORREF" />
+            <Success Return="NotEqual" Value="0xFFFFFFFF" />
+        </Api>
+        <Api Name="GetBkMode">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetBoundsRect">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="LPRECT" Name="lprcBounds" />
+            <Param Type="[BoundsAccumulationFlags]" Name="flags" />
+            <Return Type="UINT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetROP2">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="SetBkColor">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="COLORREF" Name="crColor" />
+            <Return Type="COLORREF" />
+            <Success Return="NotEqual" Value="0xFFFFFFFF" />
+        </Api>
+        <Api Name="SetBkMode">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="[BkModeEnum]" Name="iBkMode" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="SetBoundsRect">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="const RECT*" Name="lprcBounds" />
+            <Param Type="[BoundsAccumulationFlags]" Name="flags" />
+            <Return Type="UINT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="SetROP2">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="[ROP2ModeEnum]" Name="fnDrawMode" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <!-- Paths -->
+        <Category Name="Graphics and Gaming/Legacy Graphics/Windows GDI/Paths" />
+        <Api Name="AbortPath">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="BeginPath">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CloseFigure">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="EndPath">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="FillPath">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="FlattenPath">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetMiterLimit">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="PFLOAT" Name="peLimit" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetPath">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="LPPOINT" Name="lpPoints" PostCount="Return" />
+            <Param Type="[POINT_TYPE*]" Name="lpTypes" PostCount="Return" />
+            <Param Type="int" Name="nSize" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="-1" />
+        </Api>
+        <Api Name="PathToRegion">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="HRGN" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="SetMiterLimit">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="FLOAT" Name="eNewLimit" />
+            <Param Type="PFLOAT" Name="peOldLimit" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="StrokeAndFillPath">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="StrokePath">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="WidenPath">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="BOOL" />
+        </Api>
+        <!-- Printing and Print Spooler -->
+        <Category Name="Documents and Printing/Printing/GDI Print" />
+        <Api Name="AbortDoc">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="StartDoc" BothCharset="True">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="const DOCINFO*" Name="lpdi" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="EndDoc">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="EndPage">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="Escape">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="[GdiEscapeFunction]" Name="nEscape" />
+            <Param Type="int" Name="cbInput" />
+            <Param Type="LPCSTR" Name="lpvInData" />
+            <Param Type="LPVOID" Name="lpvOutData" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="ExtEscape">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="nEscape" />
+            <Param Type="int" Name="cbInput" />
+            <Param Type="LPCSTR" Name="lpszInData" />
+            <Param Type="int" Name="cbOutput" />
+            <Param Type="LPSTR" Name="lpszOutData" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="SetAbortProc">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="ABORTPROC" Name="lpAbortProc" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="StartPage">
+            <Param Type="HDC" Name="hDC" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <!-- Regions -->
+        <Category Name="Graphics and Gaming/Legacy Graphics/Windows GDI/Regions" />
+        <Api Name="CombineRgn">
+            <Param Type="HRGN" Name="hrgnDest" />
+            <Param Type="HRGN" Name="hrgnSrc1" />
+            <Param Type="HRGN" Name="hrgnSrc2" />
+            <Param Type="[RgnMode]" Name="fnCombineMode" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CreateEllipticRgn">
+            <Param Type="int" Name="nLeftRect" />
+            <Param Type="int" Name="nTopRect" />
+            <Param Type="int" Name="nRightRect" />
+            <Param Type="int" Name="nBottomRect" />
+            <Return Type="HRGN" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CreateEllipticRgnIndirect">
+            <Param Type="const RECT*" Name="lprc" />
+            <Return Type="HRGN" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CreatePolygonRgn">
+            <Param Type="const POINT*" Name="lppt" />
+            <Param Type="int" Name="cPoints" />
+            <Param Type="[PolyFillModes]" Name="fnPolyFillMode" />
+            <Return Type="HRGN" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CreatePolyPolygonRgn">
+            <Param Type="const POINT*" Name="lppt" />
+            <Param Type="const INT*" Name="lpPolyCounts" />
+            <Param Type="int" Name="nCount" />
+            <Param Type="[PolyFillModes]" Name="fnPolyFillMode" />
+            <Return Type="HRGN" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CreateRectRgn">
+            <Param Type="int" Name="nLeftRect" />
+            <Param Type="int" Name="nTopRect" />
+            <Param Type="int" Name="nRightRect" />
+            <Param Type="int" Name="nBottomRect" />
+            <Return Type="HRGN" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CreateRectRgnIndirect">
+            <Param Type="const RECT*" Name="lprc" />
+            <Return Type="HRGN" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CreateRoundRectRgn">
+            <Param Type="int" Name="nLeftRect" />
+            <Param Type="int" Name="nTopRect" />
+            <Param Type="int" Name="nRightRect" />
+            <Param Type="int" Name="nBottomRect" />
+            <Param Type="int" Name="nWidthEllipse" />
+            <Param Type="int" Name="nHeightEllipse" />
+            <Return Type="HRGN" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="EqualRgn">
+            <Param Type="HRGN" Name="hSrcRgn1" />
+            <Param Type="HRGN" Name="hSrcRgn2" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="ExtCreateRegion">
+            <Param Type="const XFORM*" Name="lpXform" />
+            <Param Type="DWORD" Name="nCount" />
+            <Param Type="const RGNDATA*" Name="lpRgnData" />
+            <Return Type="HRGN" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="FillRgn">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="HRGN" Name="hrgn" />
+            <Param Type="HBRUSH" Name="hbr" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="FrameRgn">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="HRGN" Name="hrgn" />
+            <Param Type="HBRUSH" Name="hbr" />
+            <Param Type="int" Name="nWidth" />
+            <Param Type="int" Name="nHeight" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetPolyFillMode">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetRegionData">
+            <Param Type="HRGN" Name="hRgn" />
+            <Param Type="DWORD" Name="dwCount" />
+            <Param Type="LPRGNDATA" Name="lpRgnData" />
+            <Return Type="DWORD" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetRgnBox">
+            <Param Type="HRGN" Name="hrgn" />
+            <Param Type="LPRECT" Name="lprc" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="InvertRgn">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="HRGN" Name="hrgn" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="OffsetRgn">
+            <Param Type="HRGN" Name="hrgn" />
+            <Param Type="int" Name="nXOffset" />
+            <Param Type="int" Name="nYOffset" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="PaintRgn">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="HRGN" Name="hrgn" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="PtInRegion">
+            <Param Type="HRGN" Name="hrgn" />
+            <Param Type="int" Name="X" />
+            <Param Type="int" Name="Y" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="RectInRegion">
+            <Param Type="HRGN" Name="hrgn" />
+            <Param Type="const RECT*" Name="lprc" />
+            <Return Type="BOOL" />
+            <Success />
+        </Api>
+        <Api Name="SetPolyFillMode">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="[PolyFillModes]" Name="iPolyFillMode" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="SetRectRgn">
+            <Param Type="HRGN" Name="hrgn" />
+            <Param Type="int" Name="nLeftRect" />
+            <Param Type="int" Name="nTopRect" />
+            <Param Type="int" Name="nRightRect" />
+            <Param Type="int" Name="nBottomRect" />
+            <Return Type="BOOL" />
+        </Api>
+        <!-- Unicode and Character Set -->
+        <Category Name="Windows Application UI Development/Internationalization for Windows Applications/Unicode and Character Sets" />
+        <Api Name="GetTextCharset">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="[FontCharset-int]" />
+            <Success Return="NotEqual" Value="1" />
+        </Api>
+        <Api Name="GetTextCharsetInfo">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="LPFONTSIGNATURE" Name="lpSig" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Return Type="[FontCharset-int]" />
+            <Success Return="NotEqual" Value="1" />
+        </Api>
+        <Api Name="TranslateCharsetInfo">
+            <Param Type="DWORD*" Name="lpSrc" />
+            <Param Type="LPCHARSETINFO" Name="lpCs" />
+            <Param Type="[TranslateCharsetInfoFlag]" Name="dwFlags" />
+            <Return Type="BOOL" />
+        </Api>
+        <!-- OpenGL -->
+        <Category Name="Graphics and Gaming/Legacy Graphics/OpenGL/Windows Extensions to OpenGL (WGL)" />
+        <Api Name="ChoosePixelFormat">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="const PIXELFORMATDESCRIPTOR*" Name="ppfd" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="DescribePixelFormat">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="iPixelFormat" />
+            <Param Type="UINT" Name="nBytes" />
+            <Param Type="LPPIXELFORMATDESCRIPTOR" Name="ppfd" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetPixelFormat">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="SetPixelFormat">
+            <Param Type="HDC" Name="hdc" />
+            <Param Type="int" Name="iPixelFormat" />
+            <Param Type="const PIXELFORMATDESCRIPTOR*" Name="ppfd" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetEnhMetaFilePixelFormat">
+            <Param Type="HENHMETAFILE" Name="hemf" />
+            <Param Type="DWORD" Name="cbBuffer" />
+            <Param Type="const PIXELFORMATDESCRIPTOR*" Name="ppfd" />
+            <Return Type="UINT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="SwapBuffers">
+            <Param Type="HDC" Name="hdc" />
+            <Return Type="BOOL" />
+        </Api>
+        <!-- Windows Color System/Basic -->
+        <Category Name="Graphics and Gaming/Legacy Graphics/Windows Color System/Basic" />
+        <Api Name="CheckColorsInGamut">
+            <Param Type="HDC" Name="hDC" />
+            <Param Type="LPVOID" Name="lpRGBTriples" Count="nCount" />
+            <Param Type="LPVOID" Name="lpBuffer" />
+            <Param Type="UINT" Name="nCount" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="ColorCorrectPalette">
+            <Param Type="HDC" Name="hDC" />
+            <Param Type="HPALETTE" Name="hPalette" />
+            <Param Type="DWORD" Name="dwFirstEntry" />
+            <Param Type="DWORD" Name="dwNumOfEntries" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="ColorMatchToTarget">
+            <Param Type="HDC" Name="hDC" />
+            <Param Type="HDC" Name="hdcTarget" />
+            <Param Type="[CS_ACTION]" Name="uiAction" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CreateColorSpace" BothCharset="True">
+            <Param Type="LPLOGCOLORSPACE" Name="lpLogColorSpace" />
+            <Return Type="HCOLORSPACE" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="DeleteColorSpace">
+            <Param Type="HCOLORSPACE" Name="hColorSpace" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="EnumICMProfiles" BothCharset="True">
+            <Param Type="HDC" Name="hDC" />
+            <Param Type="ICMENUMPROC" Name="lpEnumICMProfilesFunc" />
+            <Param Type="LPARAM" Name="lParam" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="-1" />
+        </Api>
+        <Api Name="GetColorSpace">
+            <Param Type="HDC" Name="hDC" />
+            <Return Type="HCOLORSPACE" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetICMProfile" BothCharset="True">
+            <Param Type="HDC" Name="hDC" />
+            <Param Type="LPDWORD" Name="lpcbName" />
+            <Param Type="LPTSTR" Name="lpszFilename" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetLogColorSpace" BothCharset="True">
+            <Param Type="HCOLORSPACE" Name="hColorSpace" />
+            <Param Type="LPLOGCOLORSPACE" Name="lpBuffer" />
+            <Param Type="DWORD" Name="nSize" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="SetColorSpace">
+            <Param Type="HDC" Name="hDC" />
+            <Param Type="HCOLORSPACE" Name="hColorSpace" />
+            <Return Type="HCOLORSPACE" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="SetICMMode">
+            <Param Type="HDC" Name="hDC" />
+            <Param Type="[ICM_MODE]" Name="iEnableICM" />
+            <Return Type="int" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="SetICMProfile" BothCharset="True">
+            <Param Type="HDC" Name="hDC" />
+            <Param Type="LPTSTR" Name="lpFileName" />
+            <Return Type="BOOL" />
+        </Api>
+        <!-- Profile Management -->
+        <Category Name="Graphics and Gaming/Legacy Graphics/Windows Color System/Profile Management" />
+        <Api Name="GetDeviceGammaRamp">
+            <Param Type="HDC" Name="hDC" />
+            <Param Type="LPVOID" Name="lpRamp" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="SetDeviceGammaRamp">
+            <Param Type="HDC" Name="hDC" />
+            <Param Type="LPVOID" Name="lpRamp" />
+            <Return Type="BOOL" />
+        </Api>
+        <!-- Windows Color System/Obsolete -->
+        <Category Name="Graphics and Gaming/Legacy Graphics/Windows Color System/Obsolete" />
+        <Api Name="UpdateICMRegKey" BothCharset="True">
+            <Param Type="DWORD" Name="dwReserved" />
+            <Param Type="LPTSTR" Name="lpszCMID" />
+            <Param Type="LPTSTR" Name="lpszFileName" />
+            <Param Type="[ICM_COMMAND]" Name="nCommand" />
+            <Return Type="BOOL" />
+        </Api>
+
+    </Module>
+</ApiMonitor>

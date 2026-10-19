@@ -1,0 +1,180 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2012, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Module Name="Dhcpcsvc.dll" CallingConvention="STDCALL" ErrorFunc="GetLastError" OnlineHelp="MSDN">
+
+        <!-- Variables-->
+        <Variable Name="IP_ADDR_FAMILY"         Type="Alias" Base="unsigned short" />
+
+        <!-- IPNG_ADDRESS -->
+        <Variable Name="IPNG_ADDRESS" Type="Union">
+            <Field Type="DWORD"         Name="IpAddrV4" />
+            <Field Type="BYTE [16]"     Name="IpAddrV6" />
+        </Variable>
+
+        <!-- MCAST_LEASE_REQUEST -->
+        <Variable Name="MCAST_LEASE_REQUEST" Type="Struct">
+            <Field Type="LONG"          Name="LeaseStartTime" />
+            <Field Type="LONG"          Name="MaxLeaseStartTime" />
+            <Field Type="DWORD"         Name="LeaseDuration" />
+            <Field Type="DWORD"         Name="MinLeaseDuration" />
+            <Field Type="IPNG_ADDRESS"  Name="ServerAddress" />
+            <Field Type="WORD"          Name="MinAddrCount" />
+            <Field Type="WORD"          Name="AddrCount" />
+            <Field Type="PBYTE"         Name="pAddrBuf" />
+        </Variable>
+        <Variable Name="PMCAST_LEASE_REQUEST" Type="Pointer" Base="MCAST_LEASE_REQUEST" />
+
+        <!-- MCAST_LEASE_RESPONSE -->
+        <Variable Name="MCAST_LEASE_RESPONSE" Type="Struct">
+            <Field Type="LONG"          Name="LeaseStartTime" />
+            <Field Type="LONG"          Name="LeaseEndTime" />
+            <Field Type="IPNG_ADDRESS"  Name="ServerAddress" />
+            <Field Type="WORD"          Name="AddrCount" />
+            <Field Type="PBYTE"         Name="pAddrBuf" />
+        </Variable>
+        <Variable Name="PMCAST_LEASE_RESPONSE" Type="Pointer" Base="MCAST_LEASE_RESPONSE" />
+
+        <!-- MCAST_SCOPE_CTX -->
+        <Variable Name="MCAST_SCOPE_CTX" Type="Struct">
+            <Field Type="IPNG_ADDRESS"      Name="ScopeID" />
+            <Field Type="IPNG_ADDRESS"      Name="Interface" />
+            <Field Type="IPNG_ADDRESS"      Name="ServerID" />
+        </Variable>
+        <Variable Name="PMCAST_SCOPE_CTX" Type="Pointer" Base="MCAST_SCOPE_CTX" />
+
+        <!-- MCAST_SCOPE_ENTRY -->
+        <Variable Name="MCAST_SCOPE_ENTRY" Type="Struct">
+            <Field Type="MCAST_SCOPE_CTX"   Name="ScopeCtx" />
+            <Field Type="IPNG_ADDRESS"      Name="LastAddr" />
+            <Field Type="DWORD"             Name="TTL" />
+            <Field Type="UNICODE_STRING"    Name="ScopeDesc" />
+        </Variable>
+        <Variable Name="PMCAST_SCOPE_ENTRY" Type="Pointer" Base="MCAST_SCOPE_ENTRY" />
+
+        <!-- DHCPCAPI_CLASSID -->
+        <Variable Name="DHCPCAPI_CLASSID" Type="Struct">
+            <Field Type="ULONG"     Name="Flags" />
+            <Field Type="LPBYTE" 	Name="Data" />
+            <Field Type="ULONG"     Name="nBytesData" />
+        </Variable>
+        <Variable Name="LPDHCPCAPI_CLASSID" Type="Pointer" Base="DHCPCAPI_CLASSID" />
+
+        <!-- DHCPAPI_PARAMS -->
+        <Variable Name="DHCPAPI_PARAMS" Type="Struct">
+            <Field Type="ULONG"     Name="Flags" />
+            <Field Type="ULONG"     Name="OptionId" />
+            <Field Type="BOOL"      Name="IsVendor" />
+            <Field Type="LPBYTE" 	Name="Data" />
+            <Field Type="DWORD"     Name="nBytesData" />
+        </Variable>
+        <Variable Name="LPDHCPCAPI_PARAMS" Type="Pointer" Base="DHCPAPI_PARAMS" />
+
+        <!-- DHCPCAPI_PARAMS_ARRAY -->
+        <Variable Name="DHCPCAPI_PARAMS_ARRAY" Type="Struct">
+            <Field Type="ULONG"             Name="nParams" />
+            <Field Type="LPDHCPCAPI_PARAMS" Name="Params" />
+        </Variable>
+
+        <!-- MCAST_CLIENT_UID -->
+        <Variable Name="MCAST_CLIENT_UID" Type="Struct">
+            <Field Type="LPBYTE" 	Name="ClientUID" />
+            <Field Type="DWORD" 	Name="ClientUIDLength" />
+        </Variable>
+        <Variable Name="LPMCAST_CLIENT_UID" Type="Pointer" Base="MCAST_CLIENT_UID" />
+
+        <!-- Dynamic Host Configuration Protocol (DHCP) -->
+        <Category Name="Networking/Dynamic Host Configuration Protocol (DHCP)/DHCP Client" />
+        <Api Name="DhcpCApiCleanup">
+            <Return Type="VOID" />
+        </Api>
+        <Api Name="DhcpDeRegisterParamChange">
+            <Param Type="DWORD" Name="Flags" />
+            <Param Type="LPVOID" Name="Reserved" />
+            <Param Type="LPVOID" Name="Event" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="DhcpRegisterParamChange">
+            <Param Type="DWORD" Name="Flags" />
+            <Param Type="LPVOID" Name="Reserved" />
+            <Param Type="LPWSTR" Name="AdapterName" />
+            <Param Type="LPDHCPCAPI_CLASSID" Name="pClassId" />
+            <Param Type="DHCPCAPI_PARAMS_ARRAY" Name="Params" />
+            <Param Type="LPVOID" Name="Handle" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="DhcpRequestParams">
+            <Param Type="DWORD" Name="Flags" />
+            <Param Type="LPVOID" Name="Reserved" />
+            <Param Type="LPWSTR" Name="AdapterName" />
+            <Param Type="LPDHCPCAPI_CLASSID" Name="ClassId" />
+            <Param Type="DHCPCAPI_PARAMS_ARRAY" Name="SendParams" />
+            <Param Type="DHCPCAPI_PARAMS_ARRAY" Name="RecdParams" />
+            <Param Type="LPBYTE" Name="Buffer" />
+            <Param Type="LPDWORD" Name="pSize" />
+            <Param Type="LPWSTR" Name="RequestIdStr" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="DhcpRemoveDNSRegistrations">
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="DhcpUndoRequestParams">
+            <Param Type="DWORD" Name="Flags" />
+            <Param Type="LPVOID" Name="Reserved" />
+            <Param Type="LPWSTR" Name="AdapterName" />
+            <Param Type="LPWSTR" Name="RequestIdStr" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="DhcpCApiInitialize">
+            <Param Type="LPDWORD" Name="Version" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        
+        <!-- Multicast Address Dynamic Client Allocation Protocol (MADCAP) -->
+        <Category Name="Networking/Multicast Address Dynamic Client Allocation Protocol (MADCAP)" />
+        <Api Name="McastApiCleanup">
+            <Return Type="VOID" />
+        </Api>
+        <Api Name="McastApiStartup">
+            <Param Type="PDWORD" Name="pVersion" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="McastEnumerateScopes">
+            <Param Type="IP_ADDR_FAMILY" Name="AddrFamily" />
+            <Param Type="BOOL" Name="ReQuery" />
+            <Param Type="PMCAST_SCOPE_ENTRY" Name="pScopeList" />
+            <Param Type="PDWORD" Name="pScopeLen" />
+            <Param Type="PDWORD" Name="pScopeCount" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="McastGenUID">
+            <Param Type="LPMCAST_CLIENT_UID" Name="pRequestID" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="McastReleaseAddress">
+            <Param Type="IP_ADDR_FAMILY" Name="AddrFamily" />
+            <Param Type="LPMCAST_CLIENT_UID" Name="pRequestID" />
+            <Param Type="PMCAST_LEASE_REQUEST" Name="pReleaseRequest" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="McastRenewAddress">
+            <Param Type="IP_ADDR_FAMILY" Name="AddrFamily" />
+            <Param Type="LPMCAST_CLIENT_UID" Name="pRequestID" />
+            <Param Type="PMCAST_LEASE_REQUEST" Name="pRenewRequest" />
+            <Param Type="PMCAST_LEASE_RESPONSE" Name="pRenewResponse" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="McastRequestAddress">
+            <Param Type="IP_ADDR_FAMILY" Name="AddrFamily" />
+            <Param Type="LPMCAST_CLIENT_UID" Name="pRequestID" />
+            <Param Type="PMCAST_SCOPE_CTX" Name="pScopeCtx" />
+            <Param Type="PMCAST_LEASE_REQUEST" Name="pAddrRequest" />
+            <Param Type="PMCAST_LEASE_RESPONSE" Name="pAddrResponse" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+    </Module>
+</ApiMonitor>

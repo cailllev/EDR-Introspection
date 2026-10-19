@@ -1,0 +1,29 @@
+<!--
+    API Monitor Definitions
+    (c) 2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\WIC\IWICMetadataHandlerInfo.xml" />
+    <Interface Name="IWICMetadataReaderInfo" Id="{EEBF1F5B-07C1-4447-A3AB-22ACAF78A804}" BaseInterface="IWICMetadataHandlerInfo" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Graphics and Gaming/Windows Imaging Component (WIC)">
+        <!-- Methods -->
+        <Api Name="GetPatterns">
+            <Param Type="REFGUID" Name="guidContainerFormat" />
+            <Param Type="UINT" Name="cbSize" />
+            <Param Type="WICMetadataPattern*" Name="pPattern" PostCount="pcCount" />
+            <Param Type="UINT*" Name="pcCount" />
+            <Param Type="UINT*" Name="pcbActual" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="MatchesPattern">
+            <Param Type="REFGUID" Name="guidContainerFormat" />
+            <Param Type="IStream*" Name="pIStream" />
+            <Param Type="BOOL*" Name="pfMatches" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="CreateInstance">
+            <Param Type="IWICMetadataReader**" Name="ppIReader" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+    </Interface>
+</ApiMonitor>

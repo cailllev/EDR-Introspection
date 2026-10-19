@@ -1,0 +1,143 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IDvdControl" Id="{A70EFE61-E2A3-11d0-A9BE-00AA0061BE93}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/DirectShow">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="TitlePlay">
+            <Param Type="ULONG" Name="ulTitle" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ChapterPlay">
+            <Param Type="ULONG" Name="ulTitle" />
+            <Param Type="ULONG" Name="ulChapter" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="TimePlay">
+            <Param Type="ULONG" Name="ulTitle" />
+            <Param Type="ULONG" Name="bcdTime" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="StopForResume">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GoUp">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="TimeSearch">
+            <Param Type="ULONG" Name="bcdTime" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ChapterSearch">
+            <Param Type="ULONG" Name="ulChapter" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="PrevPGSearch">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="TopPGSearch">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="NextPGSearch">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ForwardScan">
+            <Param Type="double" Name="dwSpeed" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="BackwardScan">
+            <Param Type="double" Name="dwSpeed" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MenuCall">
+            <Param Type="DVD_MENU_ID" Name="MenuID" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Resume">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="UpperButtonSelect">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="LowerButtonSelect">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="LeftButtonSelect">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="RightButtonSelect">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ButtonActivate">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ButtonSelectAndActivate">
+            <Param Type="ULONG" Name="ulButton" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="StillOff">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="PauseOn">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="PauseOff">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MenuLanguageSelect">
+            <Param Type="LCID" Name="Language" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="AudioStreamChange">
+            <Param Type="ULONG" Name="ulAudio" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SubpictureStreamChange">
+            <Param Type="ULONG" Name="ulSubPicture" />
+            <Param Type="BOOL" Name="bDisplay" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="AngleChange">
+            <Param Type="ULONG" Name="ulAngle" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ParentalLevelSelect">
+            <Param Type="ULONG" Name="ulParentalLevel" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ParentalCountrySelect">
+            <Param Type="WORD" Name="wCountry" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="KaraokeAudioPresentationModeChange">
+            <Param Type="ULONG" Name="ulMode" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="VideoModePreferrence">
+            <Param Type="ULONG" Name="ulPreferredDisplayMode" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetRoot">
+            <Param Type="LPCWSTR" Name="pszPath" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MouseActivate">
+            <Param Type="POINT" Name="point" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MouseSelect">
+            <Param Type="POINT" Name="point" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ChapterPlayAutoStop">
+            <Param Type="ULONG" Name="ulTitle" />
+            <Param Type="ULONG" Name="ulChapter" />
+            <Param Type="ULONG" Name="ulChaptersToPlay" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

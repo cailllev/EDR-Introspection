@@ -1,0 +1,339 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Module Name="Wsdapi.dll" CallingConvention="STDCALL" ErrorFunc="HRESULT" OnlineHelp="MSDN">
+
+        <!-- Variables -->
+        <Variable Name="IWSDAddress"                    Type="Interface" />
+        <Variable Name="IWSDUdpAddress"                 Type="Interface" />
+        <Variable Name="IWSDXMLContext"                 Type="Interface" />
+        <Variable Name="IWSDDeviceHost"                 Type="Interface" />
+        <Variable Name="IWSDHttpAddress"                Type="Interface" />
+        <Variable Name="IWSDDeviceProxy"                Type="Interface" />
+        <Variable Name="IWSDiscoveryProvider"           Type="Interface" />
+        <Variable Name="IWSDiscoveryPublisher"          Type="Interface" />
+        <Variable Name="IWSDOutboundAttachment"         Type="Interface" />
+        <Variable Name="IWSDHttpMessageParameters"      Type="Interface" />
+        <Variable Name="IWSDUdpMessageParameters"       Type="Interface" />
+
+        <!-- WSD_LOCALIZED_STRING -->
+        <Variable Name="WSD_LOCALIZED_STRING" Type="Struct">
+            <Field Type="const WCHAR*"  Name="lang" />
+            <Field Type="const WCHAR*"  Name="String" />
+        </Variable>
+        <Variable Name="WSD_LOCALIZED_STRING*" Type="Pointer" Base="WSD_LOCALIZED_STRING" />
+
+        <!-- WSD_LOCALIZED_STRING_LIST -->
+        <Variable Name="WSD_LOCALIZED_STRING_LIST" Type="Struct">
+            <!-- TODO: Self-Referencing - Next is WSD_LOCALIZED_STRING_LIST* -->
+            <Field Type="LPVOID"                    Name="Next" Display="WSD_LOCALIZED_STRING_LIST*" />
+            <Field Type="WSD_LOCALIZED_STRING*"     Name="Element" />
+        </Variable>
+        <Variable Name="WSD_LOCALIZED_STRING_LIST*" Type="Pointer" Base="WSD_LOCALIZED_STRING_LIST" />
+        
+        <!-- WSDXML_NAMESPACE -->
+        <Variable Name="WSDXML_NAMESPACE" Type="Struct">
+            <Field Type="const WCHAR*"      Name="Uri" />
+            <Field Type="const WCHAR*"      Name="PreferredPrefix" />
+            <!-- TODO: Parent-Reference - Names is WSDXML_NAME* -->
+            <Field Type="LPVOID"            Name="Names" Display="WSDXML_NAME*" />
+            <Field Type="WORD"              Name="NamesCount" />
+            <Field Type="WORD"              Name="Encoding" />
+        </Variable>
+        <Variable Name="WSDXML_NAMESPACE*" Type="Pointer" Base="WSDXML_NAMESPACE" />
+
+        <!-- WSDXML_NAME -->
+        <Variable Name="WSDXML_NAME" Type="Struct">
+            <Field Type="WSDXML_NAMESPACE*" 	Name="Space" />
+            <Field Type="WCHAR*" 	            Name="LocalName" />
+        </Variable>
+        <Variable Name="WSDXML_NAME*"  Type="Pointer" Base="WSDXML_NAME" />
+        <Variable Name="WSDXML_NAME**" Type="Pointer" Base="WSDXML_NAME*" />
+
+        <!-- WSD_SOAP_FAULT_SUBCODE -->
+        <Variable Name="WSD_SOAP_FAULT_SUBCODE" Type="Struct">
+            <Field Type="WSDXML_NAME*"      Name="Value" />
+            <!-- TODO: Self-Referencing - Subcode is WSD_SOAP_FAULT_SUBCODE* -->
+            <Field Type="LPVOID"            Name="Subcode" Display="WSD_SOAP_FAULT_SUBCODE*" />
+        </Variable>
+        <Variable Name="WSD_SOAP_FAULT_SUBCODE*" Type="Pointer" Base="WSD_SOAP_FAULT_SUBCODE" />
+
+        <!-- [WSDXML_NODE_TYPE] -->
+        <Variable Name="[WSDXML_NODE_TYPE]" Type="Alias" Base="UINT">
+            <Display Name="enum" />
+            <Enum>
+                <Set Name="ElementType"     Value="0" />
+                <Set Name="TextType"        Value="1" />
+            </Enum>
+        </Variable>
+
+        <!-- WSDXML_NODE -->
+        <Variable Name="WSDXML_NODE" Type="Struct">
+            <Field Type="[WSDXML_NODE_TYPE]"    Name="Type" />
+            <!-- TODO: Parent-Reference - Parent is WSDXML_ELEMENT* -->
+            <Field Type="LPVOID"    Name="Parent"   Display="WSDXML_ELEMENT*" />
+            <!-- TODO: Self-Reference - Next is WSDXML_NODE* -->
+            <Field Type="LPVOID"    Name="Next"     Display="WSDXML_NODE*" />
+        </Variable>
+        <Variable Name="WSDXML_NODE*" Type="Pointer" Base="WSDXML_NODE" />
+
+        <!-- WSDXML_ATTRIBUTE -->
+        <Variable Name="WSDXML_ATTRIBUTE" Type="Struct">
+            <!-- TODO: Parent Reference - Element is WSDXML_ELEMENT* -->
+            <Field Type="LPVOID"                Name="Element" Display="WSDXML_ELEMENT*" />
+            <!-- TODO: Self-Referencing - Next is WSDXML_ATTRIBUTE* -->
+            <Field Type="LPVOID"                Name="Next" Display="WSDXML_ATTRIBUTE*" />
+            <Field Type="WSDXML_NAME*"          Name="Name" />
+            <Field Type="WCHAR*"                Name="Value" />
+        </Variable>
+        <Variable Name="WSDXML_ATTRIBUTE*" Type="Pointer" Base="WSDXML_ATTRIBUTE" />
+
+        <!-- WSDXML_PREFIX_MAPPING -->
+        <Variable Name="WSDXML_PREFIX_MAPPING" Type="Struct">
+            <Field Type="DWORD"                     Name="Refs" />
+            <!-- TODO: Self-Referencing - Next is WSDXML_PREFIX_MAPPING* -->
+            <Field Type="LPVOID"                    Name="Next" Display="WSDXML_PREFIX_MAPPING*" />
+            <Field Type="WSDXML_NAMESPACE*"         Name="Space" />
+            <Field Type="WCHAR*"                    Name="Prefix" />
+        </Variable>
+        <Variable Name="WSDXML_PREFIX_MAPPING*" Type="Pointer" Base="WSDXML_PREFIX_MAPPING" />
+
+        <!-- WSDXML_ELEMENT -->
+        <Variable Name="WSDXML_ELEMENT" Type="Struct">
+            <Field Type="WSDXML_NODE"               Name="Node" />
+            <Field Type="WSDXML_NAME*"              Name="Name" />
+            <Field Type="WSDXML_ATTRIBUTE*"         Name="FirstAttribute" />
+            <Field Type="WSDXML_NODE*"              Name="FirstChild" />
+            <Field Type="WSDXML_PREFIX_MAPPING*"    Name="PrefixMappings" />
+        </Variable>
+        <Variable Name="WSDXML_ELEMENT*"    Type="Pointer" Base="WSDXML_ELEMENT" />
+        <Variable Name="WSDXML_ELEMENT**"   Type="Pointer" Base="WSDXML_ELEMENT*" />
+
+        <!-- WSD_CONFIG_PARAM_TYPE -->
+        <Variable Name="WSD_CONFIG_PARAM_TYPE" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="WSD_CONFIG_MAX_INBOUND_MESSAGE_SIZE"         Value="1" />
+                <Set Name="WSD_CONFIG_MAX_OUTBOUND_MESSAGE_SIZE"        Value="2" />
+                <Set Name="WSD_SECURITY_SSL_CERT_FOR_CLIENT_AUTH"       Value="3" />
+                <Set Name="WSD_SECURITY_SSL_SERVER_CERT_VALIDATION"     Value="4" />
+                <Set Name="WSD_SECURITY_SSL_CLIENT_CERT_VALIDATION"     Value="5" />
+                <Set Name="WSD_SECURITY_SSL_NEGOTIATE_CLIENT_CERT"      Value="6" />
+                <Set Name="WSD_SECURITY_COMPACTSIG_SIGNING_CERT"        Value="7" />
+                <Set Name="WSD_SECURITY_COMPACTSIG_VALIDATION"          Value="8" />
+                <Set Name="WSD_CONFIG_HOSTING_ADDRESSES"                Value="9" />
+                <Set Name="WSD_CONFIG_DEVICE_ADDRESSES"                 Value="10" />
+            </Enum>
+        </Variable>
+
+        <!-- WSD_CONFIG_PARAM -->
+        <Variable Name="WSD_CONFIG_PARAM" Type="Struct">
+            <Field Type="WSD_CONFIG_PARAM_TYPE" 	Name="configParamType" />
+            <Field Type="PVOID" 	                Name="pConfigData" />
+            <Field Type="DWORD" 	                Name="dwConfigDataSize" />
+        </Variable>
+        <Variable Name="WSD_CONFIG_PARAM*" Type="Pointer" Base="WSD_CONFIG_PARAM" />
+
+        <!-- WSD_SOAP_FAULT_CODE -->
+        <Variable Name="WSD_SOAP_FAULT_CODE" Type="Struct">
+            <Field Type="WSDXML_NAME*" 	            Name="Value" />
+            <Field Type="WSD_SOAP_FAULT_SUBCODE*" 	Name="Subcode" />
+        </Variable>
+        <Variable Name="WSD_SOAP_FAULT_CODE*" Type="Pointer" Base="WSD_SOAP_FAULT_CODE" />
+
+        <!-- WSD_SOAP_FAULT_REASON -->
+        <Variable Name="WSD_SOAP_FAULT_REASON" Type="Struct">
+            <Field Type="WSD_LOCALIZED_STRING_LIST*" Name="Text" />
+        </Variable>
+        <Variable Name="WSD_SOAP_FAULT_REASON*" Type="Pointer" Base="WSD_SOAP_FAULT_REASON" />
+
+        <!-- WSD_SOAP_FAULT -->
+        <Variable Name="WSD_SOAP_FAULT" Type="Struct">
+            <Field Type="WSD_SOAP_FAULT_CODE*" 	    Name="Code" />
+            <Field Type="WSD_SOAP_FAULT_REASON*" 	Name="Reason" />
+            <Field Type="const WCHAR*" 	            Name="Node" />
+            <Field Type="const WCHAR*" 	            Name="Role" />
+            <Field Type="WSDXML_ELEMENT*" 	        Name="Detail" />
+        </Variable>
+        <Variable Name="WSD_SOAP_FAULT*"    Type="Pointer" Base="WSD_SOAP_FAULT" />
+        <Variable Name="WSD_SOAP_FAULT**"   Type="Pointer" Base="WSD_SOAP_FAULT*" />
+
+        <!-- Web Services on Devices -->
+        <Category Name="Devices/Web Services on Devices" />
+        <Api Name="WSDAllocateLinkedMemory">
+            <Param Type="void*" Name="pParent" />
+            <Param Type="size_t" Name="cbSize" />
+            <Return Type="void*" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="WSDAttachLinkedMemory">
+            <Param Type="void*" Name="pParent" />
+            <Param Type="void*" Name="pChild" />
+            <Return Type="void" />
+        </Api>
+        <Api Name="WSDCreateDeviceHost">
+            <Param Type="const WCHAR*" Name="pszLocalId" />
+            <Param Type="IWSDXMLContext*" Name="pContext" />
+            <Param Type="IWSDDeviceHost**" Name="ppDeviceHost" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="WSDCreateDeviceHostAdvanced">
+            <Param Type="const WCHAR*" Name="pszLocalId" />
+            <Param Type="IWSDXMLContext*" Name="pContext" />
+            <Param Type="IWSDAddress**" Name="ppHostAddresses" />
+            <Param Type="DWORD" Name="dwHostAddressCount" />
+            <Param Type="IWSDDeviceHost**" Name="ppDeviceHost" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="WSDCreateDeviceProxy">
+            <Param Type="const WCHAR*" Name="pszDeviceId" />
+            <Param Type="const WCHAR*" Name="pszLocalId" />
+            <Param Type="IWSDXMLContext*" Name="pContext" />
+            <Param Type="IWSDDeviceProxy**" Name="ppDeviceProxy" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="WSDCreateDeviceProxyAdvanced">
+            <Param Type="const WCHAR*" Name="pszDeviceId" />
+            <Param Type="IWSDAddress*" Name="pDeviceAddress" />
+            <Param Type="const WCHAR*" Name="pszLocalId" />
+            <Param Type="IWSDXMLContext*" Name="pContext" />
+            <Param Type="IWSDDeviceProxy**" Name="ppDeviceProxy" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="WSDCreateDiscoveryProvider">
+            <Param Type="IWSDXMLContext*" Name="pContext" />
+            <Param Type="IWSDiscoveryProvider**" Name="ppProvider" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="WSDCreateDiscoveryProvider2">
+            <Param Type="IWSDXMLContext*" Name="pContext" />
+            <Param Type="WSD_CONFIG_PARAM*" Name="pConfigParams" />
+            <Param Type="DWORD" Name="dwConfigParamCount" />
+            <Param Type="IWSDiscoveryProvider**" Name="ppProvider" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="WSDCreateDiscoveryPublisher">
+            <Param Type="IWSDXMLContext*" Name="pContext" />
+            <Param Type="IWSDiscoveryPublisher**" Name="ppPublisher" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="WSDCreateDiscoveryPublisher2">
+            <Param Type="IWSDXMLContext*" Name="pContext" />
+            <Param Type="WSD_CONFIG_PARAM*" Name="pConfigParams" />
+            <Param Type="DWORD" Name="dwConfigParamCount" />
+            <Param Type="IWSDiscoveryPublisher**" Name="ppPublisher" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="WSDCreateHttpAddress">
+            <Param Type="IWSDHttpAddress**" Name="ppAddress" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="WSDCreateHttpMessageParameters">
+            <Param Type="IWSDHttpMessageParameters**" Name="ppTxParams" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="WSDCreateOutboundAttachment">
+            <Param Type="IWSDOutboundAttachment**" Name="attachmentOut" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="WSDCreateUdpAddress">
+            <Param Type="IWSDUdpAddress**" Name="ppAddress" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="WSDCreateUdpMessageParameters">
+            <Param Type="IWSDUdpMessageParameters**" Name="ppTxParams" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="WSDDetachLinkedMemory">
+            <Param Type="void*" Name="pVoid" />
+            <Return Type="void" />
+        </Api>
+        <Api Name="WSDFreeLinkedMemory">
+            <Param Type="void*" Name="pVoid" />
+            <Return Type="void" />
+        </Api>
+        <Api Name="WSDGenerateFault">
+            <Param Type="LPCWSTR" Name="pszCode" />
+            <Param Type="LPCWSTR" Name="pszSubCode" />
+            <Param Type="LPCWSTR" Name="pszReason" />
+            <Param Type="LPCWSTR" Name="pszDetail" />
+            <Param Type="IWSDXMLContext*" Name="pContext" />
+            <Param Type="WSD_SOAP_FAULT**" Name="ppFault" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="WSDGenerateFaultEx">
+            <Param Type="WSDXML_NAME*" Name="pCode" />
+            <Param Type="WSDXML_NAME*" Name="pSubCode" />
+            <Param Type="WSD_LOCALIZED_STRING_LIST*" Name="pReasons" />
+            <Param Type="LPCWSTR" Name="pszDetail" />
+            <Param Type="WSD_SOAP_FAULT**" Name="ppFault" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="WSDGetConfigurationOption">
+            <Param Type="DWORD" Name="dwOption" />
+            <Param Type="LPVOID" Name="pVoid" />
+            <Param Type="DWORD" Name="cbOutBuffer" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="WSDSetConfigurationOption">
+            <Param Type="DWORD" Name="dwOption" />
+            <Param Type="LPVOID" Name="pVoid" />
+            <Param Type="DWORD" Name="cbInBuffer" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="WSDUriDecode">
+            <Param Type="LPCWSTR" Name="source" />
+            <Param Type="DWORD" Name="cchSource" />
+            <Param Type="LPWSTR*" Name="destOut" />
+            <Param Type="DWORD*" Name="cchDestOut" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="WSDUriEncode">
+            <Param Type="LPCWSTR" Name="source" />
+            <Param Type="DWORD" Name="cchSource" />
+            <Param Type="LPWSTR*" Name="destOut" />
+            <Param Type="DWORD*" Name="cchDestOut" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="WSDXMLAddChild">
+            <Param Type="WSDXML_ELEMENT*" Name="pParent" />
+            <Param Type="WSDXML_ELEMENT*" Name="pChild" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="WSDXMLAddSibling">
+            <Param Type="WSDXML_ELEMENT*" Name="pFirst" />
+            <Param Type="WSDXML_ELEMENT*" Name="pSecond" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="WSDXMLBuildAnyForSingleElement">
+            <Param Type="WSDXML_NAME*" Name="pElementName" />
+            <Param Type="LPCWSTR" Name="pszText" />
+            <Param Type="WSDXML_ELEMENT**" Name="ppAny" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="WSDXMLCleanupElement">
+            <Param Type="WSDXML_ELEMENT*" Name="pAny" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="WSDXMLCreateContext">
+            <Param Type="IWSDXMLContext**" Name="ppContext" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="WSDXMLGetNameFromBuiltinNamespace">
+            <Param Type="LPCWSTR" Name="pszNamespace" />
+            <Param Type="LPCWSTR" Name="pszName" />
+            <Param Type="WSDXML_NAME**" Name="ppName" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="WSDXMLGetValueFromAny">
+            <Param Type="const WCHAR*" Name="pszNamespace" />
+            <Param Type="const WCHAR*" Name="pszName" />
+            <Param Type="WSDXML_ELEMENT*" Name="pAny" />
+            <Param Type="LPCWSTR*" Name="ppszValue" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Module>
+</ApiMonitor>

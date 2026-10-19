@@ -1,0 +1,15 @@
+<!--
+    API Monitor Definitions
+    (c) 2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="MMF\mmfdefs.h.xml" />
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IMFRemoteDesktopPlugin" Id="{1cde6309-cae0-4940-907e-c1ec9c3d1d4a}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/Microsoft Media Foundation/Interfaces">
+        <Api Name="UpdateTopology">
+            <Param Type="IMFTopology*" Name="pTopology" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

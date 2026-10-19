@@ -1,0 +1,65 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IShellItemResources" Id="{ff5693be-2ce0-4d48-b5c5-40817d1acdb9}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Windows Environment Development/Windows Shell/Interfaces">
+
+        <!-- [FILE_ATTRIBUTE*] -->
+        <Variable Name="[FILE_ATTRIBUTE*]" Type="Pointer" Base="[FileAttributes]">
+            <Display Name="DWORD*" />
+        </Variable>
+
+        <!-- Methods -->
+        <Api Name="GetAttributes">
+            <Param Type="[FILE_ATTRIBUTE*]" Name="pdwAttributes" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetSize">
+            <Param Type="ULONGLONG*" Name="pullSize" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetTimes">
+            <Param Type="FILETIME*" Name="pftCreation" />
+            <Param Type="FILETIME*" Name="pftWrite" />
+            <Param Type="FILETIME*" Name="pftAccess" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetTimes">
+            <Param Type="const FILETIME*" Name="pftCreation" />
+            <Param Type="const FILETIME*" Name="pftWrite" />
+            <Param Type="const FILETIME*" Name="pftAccess" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetResourceDescription">
+            <Param Type="const SHELL_ITEM_RESOURCE*" Name="pcsir" />
+            <Param Type="LPWSTR*" Name="ppszDescription" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="EnumResources">
+            <Param Type="IEnumResources**" Name="ppenumr" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SupportsResource">
+            <Param Type="const SHELL_ITEM_RESOURCE*" Name="pcsir" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="OpenResource">
+            <Param Type="const SHELL_ITEM_RESOURCE*" Name="pcsir" />
+            <Param Type="REFIID" Name="riid" />
+            <Param Type="void**" Name="ppv" InterfaceId="riid" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CreateResource">
+            <Param Type="const SHELL_ITEM_RESOURCE*" Name="pcsir" />
+            <Param Type="REFIID" Name="riid" />
+            <Param Type="void**" Name="ppv" InterfaceId="riid" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MarkForDelete">
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

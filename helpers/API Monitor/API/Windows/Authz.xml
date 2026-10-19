@@ -1,0 +1,554 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Include Filename="Headers\security.h.xml" />
+    <Module Name="Authz.dll" CallingConvention="STDCALL" ErrorFunc="GetLastError" OnlineHelp="MSDN">
+
+        <!-- Variables -->
+        <Variable Name="AUTHZ_CLIENT_CONTEXT_HANDLE"            Type="Alias"    Base="HANDLE" />
+        <Variable Name="PAUTHZ_CLIENT_CONTEXT_HANDLE"           Type="Pointer"  Base="AUTHZ_CLIENT_CONTEXT_HANDLE" />
+        <Variable Name="AUTHZ_AUDIT_EVENT_HANDLE"               Type="Alias"    Base="HANDLE" />
+        <Variable Name="PAUTHZ_AUDIT_EVENT_HANDLE"              Type="Pointer"  Base="AUTHZ_AUDIT_EVENT_HANDLE" />
+        <Variable Name="AUTHZ_ACCESS_CHECK_RESULTS_HANDLE"      Type="Alias"    Base="HANDLE" />
+        <Variable Name="PAUTHZ_ACCESS_CHECK_RESULTS_HANDLE"     Type="Pointer"  Base="AUTHZ_ACCESS_CHECK_RESULTS_HANDLE" />
+        <Variable Name="AUTHZ_RESOURCE_MANAGER_HANDLE"          Type="Alias"    Base="HANDLE" />
+        <Variable Name="PAUTHZ_RESOURCE_MANAGER_HANDLE"         Type="Pointer"  Base="AUTHZ_RESOURCE_MANAGER_HANDLE" />
+        <Variable Name="PFN_AUTHZ_DYNAMIC_ACCESS_CHECK"         Type="Alias"    Base="LPVOID" />
+        <Variable Name="PFN_AUTHZ_COMPUTE_DYNAMIC_GROUPS"       Type="Alias"    Base="LPVOID" />
+        <Variable Name="PFN_AUTHZ_FREE_DYNAMIC_GROUPS"          Type="Alias"    Base="LPVOID" />
+        <Variable Name="AUTHZ_SECURITY_EVENT_PROVIDER_HANDLE"   Type="Alias"    Base="HANDLE" />
+        <Variable Name="PAUTHZ_SECURITY_EVENT_PROVIDER_HANDLE"  Type="Pointer"  Base="AUTHZ_SECURITY_EVENT_PROVIDER_HANDLE" />
+        <Variable Name="AUTHZ_AUDIT_EVENT_TYPE_HANDLE"          Type="Alias"    Base="HANDLE" />
+        <Variable Name="AUTHZ_CAP_CHANGE_SUBSCRIPTION_HANDLE"   Type="Alias"    Base="HANDLE" />
+        <Variable Name="PAUTHZ_CAP_CHANGE_SUBSCRIPTION_HANDLE"  Type="Pointer"  Base="AUTHZ_CAP_CHANGE_SUBSCRIPTION_HANDLE" />
+        
+        <!-- Arrays -->
+        <Variable Name="BYTE [_AUTHZ_SS_MAXSIZE]"               Type="Array"    Base="BYTE" Count="128" />
+
+        <!-- AUDIT_PARAM_TYPE -->
+        <Variable Name="AUDIT_PARAM_TYPE" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="APT_None"                Value="1" />
+                <Set Name="APT_String"              Value="2" />
+                <Set Name="APT_Ulong"               Value="3" />
+                <Set Name="APT_Pointer"             Value="4" />
+                <Set Name="APT_Sid"                 Value="5" />
+                <Set Name="APT_LogonId"             Value="6" />
+                <Set Name="APT_ObjectTypeList"      Value="7" />
+                <Set Name="APT_Luid"                Value="8" />
+                <Set Name="APT_Guid"                Value="9" />
+                <Set Name="APT_Time"                Value="10" />
+                <Set Name="APT_Int64"               Value="11" />
+                <Set Name="APT_IpAddress"           Value="12" />
+                <Set Name="APT_LogonIdWithSid"      Value="13" />
+            </Enum>
+        </Variable>
+
+        <!-- AUDIT_OBJECT_TYPE -->
+        <Variable Name="AUDIT_OBJECT_TYPE" Type="Struct">
+            <Field Type="GUID"          Name="ObjectType" />
+            <Field Type="USHORT"        Name="Flags" />
+            <Field Type="USHORT"        Name="Level" />
+            <Field Type="ACCESS_MASK"   Name="AccessMask" />
+        </Variable>
+        <Variable Name="AUDIT_OBJECT_TYPE*" Type="Pointer" Base="AUDIT_OBJECT_TYPE" />
+
+        <!-- AUDIT_OBJECT_TYPES -->
+        <Variable Name="AUDIT_OBJECT_TYPES" Type="Struct">
+            <Field Type="USHORT"                Name="Count" />
+            <Field Type="USHORT"                Name="Flags" />
+            <Field Type="AUDIT_OBJECT_TYPE*"    Name="pObjectTypes" Count="Count" />
+        </Variable>
+        <Variable Name="AUDIT_OBJECT_TYPES*" Type="Pointer" Base="AUDIT_OBJECT_TYPES" />
+
+        <!-- AUDIT_IP_ADDRESS -->
+        <Variable Name="AUDIT_IP_ADDRESS" Type="Struct">
+            <Field Type="BYTE [_AUTHZ_SS_MAXSIZE]" Name="pIpAddress" />
+        </Variable>
+        <Variable Name="AUDIT_IP_ADDRESS*" Type="Pointer" Base="AUDIT_IP_ADDRESS" />
+
+        <!-- [AUDIT_PARAM_u1] -->
+        <Variable Name="[AUDIT_PARAM_u1]" Type="Union">
+            <Display Name="union" />
+            <Field Type="ULONG_PTR"             Name="Data0" />
+            <Field Type="PWSTR"                 Name="String" />
+            <Field Type="ULONG_PTR"             Name="u" />
+            <Field Type="SID*"                  Name="psid" />
+            <Field Type="GUID*"                 Name="pguid" />
+            <Field Type="ULONG"                 Name="LogonId_LowPart" />
+            <Field Type="AUDIT_OBJECT_TYPES*"   Name="pObjectTypes" />
+            <Field Type="AUDIT_IP_ADDRESS*"     Name="pIpAddress" />
+        </Variable>
+
+        <!-- [AUDIT_PARAM_u2] -->
+        <Variable Name="[AUDIT_PARAM_u2]" Type="Union">
+            <Display Name="union" />
+            <Field Type="ULONG_PTR"     Name="Data1" />
+            <Field Type="LONG"          Name="LogonId_HighPart" />
+        </Variable>
+
+        <!-- AUDIT_PARAM -->
+        <Variable Name="AUDIT_PARAM" Type="Struct">
+            <Field Type="AUDIT_PARAM_TYPE"      Name="Type" />
+            <Field Type="ULONG"                 Name="Length" />
+            <Field Type="DWORD"                 Name="Flags" />
+            <Field Type="[AUDIT_PARAM_u1]"      Name="" />
+            <Field Type="[AUDIT_PARAM_u2]"      Name="" />
+        </Variable>
+        <Variable Name="AUDIT_PARAM*" Type="Pointer" Base="AUDIT_PARAM" />
+
+        <!-- [APF_TYPE] -->
+        <Variable Name="[APF_TYPE]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="APF_AuditFailure"    Value="0x00000000" />
+                <Set Name="APF_AuditSuccess"    Value="0x00000001" />
+            </Enum>
+        </Variable>
+
+        <!-- AUDIT_PARAMS -->
+        <Variable Name="AUDIT_PARAMS" Type="Struct">
+            <Field Type="ULONG"                 Name="Length" />
+            <Field Type="[APF_TYPE]"            Name="Flags" />
+            <Field Type="USHORT"                Name="Count" />
+            <Field Type="AUDIT_PARAM*"          Name="Parameters" Count="Count" />
+        </Variable>
+        <Variable Name="PAUDIT_PARAMS" Type="Pointer" Base="AUDIT_PARAMS" />
+
+        <!-- AUTHZ_SECURITY_ATTRIBUTE_FQBN_VALUE -->
+        <Variable Name="AUTHZ_SECURITY_ATTRIBUTE_FQBN_VALUE" Type="Struct">
+            <Field Type="ULONG64"   Name="Version" />
+            <Field Type="PWSTR"     Name="pName" />
+        </Variable>
+        <Variable Name="PAUTHZ_SECURITY_ATTRIBUTE_FQBN_VALUE" Type="Pointer" Base="AUTHZ_SECURITY_ATTRIBUTE_FQBN_VALUE" />
+
+        <!-- AUTHZ_SECURITY_ATTRIBUTE_OCTET_STRING_VALUE -->
+        <Variable Name="AUTHZ_SECURITY_ATTRIBUTE_OCTET_STRING_VALUE" Type="Struct">
+            <Field Type="PVOID"     Name="pValue" />
+            <Field Type="ULONG"     Name="ValueLength" />
+        </Variable>
+        <Variable Name="PAUTHZ_SECURITY_ATTRIBUTE_OCTET_STRING_VALUE" Type="Pointer" Base="AUTHZ_SECURITY_ATTRIBUTE_OCTET_STRING_VALUE" />
+
+        <!-- [AUTHZ_SECURITY_ATTRIBUTE_V1_u] -->
+        <Variable Name="[AUTHZ_SECURITY_ATTRIBUTE_V1_u]" Type="Union">
+            <Display Name="union" />
+            <Field Type="PLONG64"                                       Name="pInt64" />
+            <Field Type="PULONG64"                                      Name="pUint64" />
+            <Field Type="PWSTR*"                                        Name="ppString" />
+            <Field Type="PAUTHZ_SECURITY_ATTRIBUTE_FQBN_VALUE"          Name="pFqbn" />
+            <Field Type="PAUTHZ_SECURITY_ATTRIBUTE_OCTET_STRING_VALUE"  Name="pOctetString" />
+        </Variable>
+
+        <!-- [AUTHZ_SECURITY_ATTRIBUTE] -->
+        <Variable Name="[AUTHZ_SECURITY_ATTRIBUTE]" Type="Alias" Base="ULONG">
+            <Display Name="ULONG" />
+            <Flag>
+                <Set Name="AUTHZ_SECURITY_ATTRIBUTE_NON_INHERITABLE"        Value="0x0001" />
+                <Set Name="AUTHZ_SECURITY_ATTRIBUTE_VALUE_CASE_SENSITIVE"   Value="0x0002" />
+            </Flag>
+        </Variable>
+
+        <!-- AUTHZ_SECURITY_ATTRIBUTE_V1 -->
+        <Variable Name="AUTHZ_SECURITY_ATTRIBUTE_V1" Type="Struct">
+            <Field Type="PWSTR"                             Name="pName" />
+            <Field Type="USHORT"                            Name="ValueType" />
+            <Field Type="USHORT"                            Name="Reserved" />
+            <Field Type="[AUTHZ_SECURITY_ATTRIBUTE]"        Name="Flags" />
+            <Field Type="ULONG"                             Name="ValueCount" />
+            <Field Type="[AUTHZ_SECURITY_ATTRIBUTE_V1_u]"   Name="Values" />
+        </Variable>
+        <Variable Name="PAUTHZ_SECURITY_ATTRIBUTE_V1" Type="Pointer" Base="AUTHZ_SECURITY_ATTRIBUTE_V1" />
+
+        <!-- [AUTHZ_SECURITY_ATTRIBUTES_INFORMATION_u] -->
+        <Variable Name="[AUTHZ_SECURITY_ATTRIBUTES_INFORMATION_u]" Type="Union">
+            <Display Name="union" />
+            <Field Type="PAUTHZ_SECURITY_ATTRIBUTE_V1" Name="pAttributeV1" />
+        </Variable>
+
+        <!-- AUTHZ_SECURITY_ATTRIBUTES_INFORMATION -->
+        <Variable Name="AUTHZ_SECURITY_ATTRIBUTES_INFORMATION" Type="Struct">
+            <Field Type="USHORT"                                        Name="Version" />
+            <Field Type="USHORT"                                        Name="Reserved" />
+            <Field Type="ULONG"                                         Name="AttributeCount" />
+            <Field Type="[AUTHZ_SECURITY_ATTRIBUTES_INFORMATION_u]"     Name="Attribute" />
+        </Variable>
+        <Variable Name="PAUTHZ_SECURITY_ATTRIBUTES_INFORMATION" Type="Pointer" Base="AUTHZ_SECURITY_ATTRIBUTES_INFORMATION" />
+
+        <!-- AUTHZ_REGISTRATION_OBJECT_TYPE_NAME_OFFSET -->
+        <Variable Name="AUTHZ_REGISTRATION_OBJECT_TYPE_NAME_OFFSET" Type="Struct">
+            <Field Type="PWSTR"     Name="szObjectTypeName" />
+            <Field Type="DWORD"     Name="dwOffset" />
+        </Variable>
+        <Variable Name="AUTHZ_REGISTRATION_OBJECT_TYPE_NAME_OFFSET [ANYSIZE_ARRAY]" Type="Array" Base="AUTHZ_REGISTRATION_OBJECT_TYPE_NAME_OFFSET" Count="1" />
+
+        <!-- [AuthzRegistrationFlags] -->
+        <Variable Name="[AuthzRegistrationFlags]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="AUTHZ_ALLOW_MULTIPLE_SOURCE_INSTANCES"   Value="0x1" />
+                <Set Name="AUTHZ_MIGRATED_LEGACY_PUBLISHER"         Value="0x2" />
+            </Flag>
+        </Variable>
+
+        <!-- AUTHZ_SOURCE_SCHEMA_REGISTRATION -->
+        <Variable Name="AUTHZ_SOURCE_SCHEMA_REGISTRATION" Type="Struct">
+            <Field Type="[AuthzRegistrationFlags]"          Name="dwFlags" />
+            <Field Type="PWSTR"                             Name="szEventSourceName" />
+            <Field Type="PWSTR"                             Name="szEventMessageFile" />
+            <Field Type="PWSTR"                             Name="szEventSourceXmlSchemaFile" />
+            <Field Type="PWSTR"                             Name="szEventAccessStringsFile" />
+            <Field Type="PWSTR"                             Name="szExecutableImagePath" />
+            <Field Type="GUID*"                             Name="pProviderGuid" />
+            <Field Type="DWORD"                             Name="dwObjectTypeNameCount" />
+            <Field Type="AUTHZ_REGISTRATION_OBJECT_TYPE_NAME_OFFSET [ANYSIZE_ARRAY]" Name="ObjectTypeNames" Count="dwObjectTypeNameCount" />
+        </Variable>
+        <Variable Name="PAUTHZ_SOURCE_SCHEMA_REGISTRATION" Type="Pointer" Base="AUTHZ_SOURCE_SCHEMA_REGISTRATION" />
+
+
+        <!-- AUTHZ_ACCESS_REQUEST -->
+        <Variable Name="AUTHZ_ACCESS_REQUEST" Type="Struct">
+            <Field Type="ACCESS_MASK" 	    Name="DesiredAccess" />
+            <Field Type="PSID" 	            Name="PrincipalSelfSid" />
+            <Field Type="POBJECT_TYPE_LIST" Name="ObjectTypeList" />
+            <Field Type="DWORD" 	        Name="ObjectTypeListLength" />
+            <Field Type="PVOID" 	        Name="OptionalArguments" />
+        </Variable>
+        <Variable Name="PAUTHZ_ACCESS_REQUEST" Type="Pointer" Base="AUTHZ_ACCESS_REQUEST" />
+
+        <!-- AUTHZ_ACCESS_REPLY -->
+        <Variable Name="AUTHZ_ACCESS_REPLY" Type="Struct">
+            <Field Type="DWORD" 	        Name="ResultListLength" />
+            <Field Type="PACCESS_MASK" 	    Name="GrantedAccessMask" />
+            <Field Type="PDWORD" 	        Name="SaclEvaluationResults" />
+            <Field Type="PDWORD" 	        Name="Error" />
+        </Variable>
+        <Variable Name="PAUTHZ_ACCESS_REPLY" Type="Pointer" Base="AUTHZ_ACCESS_REPLY" />
+
+        <!-- AUTHZ_CONTEXT_INFORMATION_CLASS" ] -->
+        <Variable Name="AUTHZ_CONTEXT_INFORMATION_CLASS" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="AuthzContextInfoUserSid"             Value="1" />
+                <Set Name="AuthzContextInfoGroupsSids"          Value="2" />
+                <Set Name="AuthzContextInfoRestrictedSids"      Value="3" />
+                <Set Name="AuthzContextInfoPrivileges"          Value="4" />
+                <Set Name="AuthzContextInfoExpirationTime"      Value="5" />
+                <Set Name="AuthzContextInfoServerContext"       Value="6" />
+                <Set Name="AuthzContextInfoIdentifier"          Value="7" />
+                <Set Name="AuthzContextInfoSource"              Value="8" />
+                <Set Name="AuthzContextInfoAll"                 Value="9" />
+                <Set Name="AuthzContextInfoAuthenticationId"    Value="0" />
+            </Enum>
+        </Variable>
+
+        <!-- [AuthzInitRMFlags] -->
+        <Variable Name="[AuthzInitRMFlags]" Type="Alias" Base="DWORD">
+                <Display Name="DWORD" />
+            <Flag>
+                <Set Name="AUTHZ_RM_FLAG_NO_AUDIT"                          Value="0x1" />
+                <Set Name="AUTHZ_RM_FLAG_INITIALIZE_UNDER_IMPERSONATION"    Value="0x2" />
+            </Flag>
+        </Variable>
+
+        <!-- [AuthzAccessCheckFlags] -->
+        <Variable Name="[AuthzAccessCheckFlags]" Type="Alias" Base="DWORD">
+                <Display Name="DWORD" />
+            <Flag>
+                <Set Name="AUTHZ_ACCESS_CHECK_NO_DEEP_COPY_SD" Value="0x00000001" />
+            </Flag>
+        </Variable>
+
+        <!-- [AuthzInitContextFlags] -->
+        <Variable Name="[AuthzInitContextFlags]" Type="Alias" Base="DWORD">
+                <Display Name="DWORD" />
+            <Flag>
+                <Set Name="AUTHZ_SKIP_TOKEN_GROUPS"     Value="0x2" />
+                <Set Name="AUTHZ_REQUIRE_S4U_LOGON"     Value="0x4" />
+                <Set Name="AUTHZ_COMPUTE_PRIVILEGES"    Value="0x8" />
+            </Flag>
+        </Variable>
+
+        <!-- AUTHZ_SECURITY_ATTRIBUTE_OPERATION -->
+        <Variable Name="AUTHZ_SECURITY_ATTRIBUTE_OPERATION" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="AUTHZ_SECURITY_ATTRIBUTE_OPERATION_NONE"		    Value="0" />
+                <Set Name="AUTHZ_SECURITY_ATTRIBUTE_OPERATION_REPLACE_ALL"  Value="1" />
+                <Set Name="AUTHZ_SECURITY_ATTRIBUTE_OPERATION_ADD"		    Value="2" />
+                <Set Name="AUTHZ_SECURITY_ATTRIBUTE_OPERATION_DELETE"	    Value="3" />
+                <Set Name="AUTHZ_SECURITY_ATTRIBUTE_OPERATION_REPLACE"      Value="4" />
+            </Enum>
+        </Variable>
+        <Variable Name="PAUTHZ_SECURITY_ATTRIBUTE_OPERATION" Type="Pointer" Base="AUTHZ_SECURITY_ATTRIBUTE_OPERATION" />
+
+        <!-- [AUTHZ_INITOBJAUDITEVENT_FLAGS] -->
+        <Variable Name="[AUTHZ_INITOBJAUDITEVENT_FLAGS]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="AUTHZ_NO_SUCCESS_AUDIT"      Value="0x00000001" />
+                <Set Name="AUTHZ_NO_FAILURE_AUDIT"      Value="0x00000002" />
+                <Set Name="AUTHZ_NO_ALLOC_STRINGS"      Value="0x00000004" />
+            </Flag>
+        </Variable>
+
+        <!-- AUTHZ_RPC_INIT_INFO_CLIENT -->
+        <Variable Name="AUTHZ_RPC_INIT_INFO_CLIENT" Type="Struct">
+            <Field Type="USHORT"        Name="version" />
+            <Field Type="PWSTR"         Name="ObjectUuid" />
+            <Field Type="PWSTR"         Name="ProtSeq" />
+            <Field Type="PWSTR"         Name="NetworkAddr" />
+            <Field Type="PWSTR"         Name="Endpoint" />
+            <Field Type="PWSTR"         Name="Options" />
+            <Field Type="PWSTR"         Name="ServerSpn" />
+        </Variable>
+        <Variable Name="PAUTHZ_RPC_INIT_INFO_CLIENT" Type="Pointer" Base="AUTHZ_RPC_INIT_INFO_CLIENT" />
+
+        <!-- AUTHZ_SID_OPERATION -->
+        <Variable Name="AUTHZ_SID_OPERATION" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="AUTHZ_SID_OPERATION_NONE"    		Value="0" />
+                <Set Name="AUTHZ_SID_OPERATION_REPLACE_ALL"    	Value="1" />
+                <Set Name="AUTHZ_SID_OPERATION_ADD"    		    Value="2" />
+                <Set Name="AUTHZ_SID_OPERATION_DELETE"    	    Value="3" />
+                <Set Name="AUTHZ_SID_OPERATION_REPLACE"         Value="4" />
+            </Enum>
+        </Variable>
+        <Variable Name="PAUTHZ_SID_OPERATION" Type="Pointer" Base="AUTHZ_SID_OPERATION" />
+
+        <!-- Authorization -->
+        <!-- Basic Access Control -->
+        <Category Name="Security and Identity/Authorization/Basic Access Control" />
+        <Api Name="AuthzAccessCheck">
+            <Param Type="[AuthzAccessCheckFlags]" Name="flags" />
+            <Param Type="AUTHZ_CLIENT_CONTEXT_HANDLE" Name="AuthzClientContext" />
+            <Param Type="PAUTHZ_ACCESS_REQUEST" Name="pRequest" />
+            <Param Type="AUTHZ_AUDIT_EVENT_HANDLE" Name="AuditInfo" />
+            <Param Type="PSECURITY_DESCRIPTOR" Name="pSecurityDescriptor" />
+            <Param Type="PSECURITY_DESCRIPTOR*" Name="OptionalSecurityDescriptorArray" />
+            <Param Type="DWORD" Name="OptionalSecurityDescriptorCount" />
+            <Param Type="PAUTHZ_ACCESS_REPLY" Name="pReply" />
+            <Param Type="PAUTHZ_ACCESS_CHECK_RESULTS_HANDLE" Name="pAuthzHandle" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AuthzAddSidsToContext">
+            <Param Type="AUTHZ_CLIENT_CONTEXT_HANDLE" Name="OrigClientContext" />
+            <Param Type="PSID_AND_ATTRIBUTES" Name="Sids" />
+            <Param Type="DWORD" Name="SidCount" />
+            <Param Type="PSID_AND_ATTRIBUTES" Name="RestrictedSids" />
+            <Param Type="DWORD" Name="RestrictedSidCount" />
+            <Param Type="PAUTHZ_CLIENT_CONTEXT_HANDLE" Name="pNewClientContext" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AuthzCachedAccessCheck">
+            <Param Type="DWORD" Name="Flags" />
+            <Param Type="AUTHZ_ACCESS_CHECK_RESULTS_HANDLE" Name="AuthzHandle" />
+            <Param Type="PAUTHZ_ACCESS_REQUEST" Name="pRequest" />
+            <Param Type="AUTHZ_AUDIT_EVENT_HANDLE" Name="AuditInfo" />
+            <Param Type="PAUTHZ_ACCESS_REPLY" Name="pReply" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AuthzEnumerateSecurityEventSources">
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="PAUTHZ_SOURCE_SCHEMA_REGISTRATION" Name="Buffer" />
+            <Param Type="PDWORD" Name="pdwCount" />
+            <Param Type="PDWORD" Name="pdwLength" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AuthzFreeAuditEvent">
+            <Param Type="AUTHZ_AUDIT_EVENT_HANDLE" Name="pAuditEventInfo" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AuthzFreeContext">
+            <Param Type="AUTHZ_CLIENT_CONTEXT_HANDLE" Name="AuthzClientContext" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AuthzFreeHandle">
+            <Param Type="AUTHZ_ACCESS_CHECK_RESULTS_HANDLE" Name="AuthzHandle" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AuthzFreeResourceManager">
+            <Param Type="AUTHZ_RESOURCE_MANAGER_HANDLE" Name="AuthzResourceManager" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AuthzGetInformationFromContext">
+            <Param Type="AUTHZ_CLIENT_CONTEXT_HANDLE" Name="hAuthzClientContext" />
+            <Param Type="AUTHZ_CONTEXT_INFORMATION_CLASS" Name="InfoClass" />
+            <Param Type="DWORD" Name="BufferSize" />
+            <Param Type="PDWORD" Name="pSizeRequired" />
+            <Param Type="PVOID" Name="Buffer" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AuthzInitializeContextFromAuthzContext">
+            <Param Type="DWORD" Name="flags" />
+            <Param Type="AUTHZ_CLIENT_CONTEXT_HANDLE" Name="AuthzHandle" />
+            <Param Type="PLARGE_INTEGER" Name="ExpirationTime" />
+            <Param Type="LUID" Name="Identifier" />
+            <Param Type="PVOID" Name="DynamicGroupArgs" />
+            <Param Type="PAUTHZ_CLIENT_CONTEXT_HANDLE" Name="phNewAuthzHandle" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AuthzInitializeContextFromSid">
+            <Param Type="[AuthzInitContextFlags]" Name="Flags" />
+            <Param Type="PSID" Name="UserSid" />
+            <Param Type="AUTHZ_RESOURCE_MANAGER_HANDLE" Name="hAuthzResourceManager" />
+            <Param Type="PLARGE_INTEGER" Name="pExpirationTime" />
+            <Param Type="LUID" Name="Identifier" />
+            <Param Type="PVOID" Name="DynamicGroupArgs" />
+            <Param Type="PAUTHZ_CLIENT_CONTEXT_HANDLE" Name="pAuthzClientContext" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AuthzInitializeContextFromToken">
+            <Param Type="DWORD" Name="Flags" />
+            <Param Type="HANDLE" Name="TokenHandle" />
+            <Param Type="AUTHZ_RESOURCE_MANAGER_HANDLE" Name="AuthzResourceManager" />
+            <Param Type="PLARGE_INTEGER" Name="pExpirationTime" />
+            <Param Type="LUID" Name="Identifier" />
+            <Param Type="PVOID" Name="DynamicGroupArgs" />
+            <Param Type="PAUTHZ_CLIENT_CONTEXT_HANDLE" Name="pAuthzClientContext" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AuthzInitializeObjectAccessAuditEvent" VarArgs="True">
+            <Param Type="DWORD" Name="Flags" />
+            <Param Type="AUTHZ_AUDIT_EVENT_TYPE_HANDLE" Name="hAuditEventType" />
+            <Param Type="PWSTR" Name="szOperationType" />
+            <Param Type="PWSTR" Name="szObjectType" />
+            <Param Type="PWSTR" Name="szObjectName" />
+            <Param Type="PWSTR" Name="szAdditionalInfo" />
+            <Param Type="PAUTHZ_AUDIT_EVENT_HANDLE" Name="phAuditEvent" />
+            <Param Type="DWORD" Name="dwAdditionalParamCount" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AuthzInitializeObjectAccessAuditEvent2" VarArgs="True">
+            <Param Type="[AUTHZ_INITOBJAUDITEVENT_FLAGS]" Name="Flags" />
+            <Param Type="AUTHZ_AUDIT_EVENT_TYPE_HANDLE" Name="hAuditEventType" />
+            <Param Type="PWSTR" Name="szOperationType" />
+            <Param Type="PWSTR" Name="szObjectType" />
+            <Param Type="PWSTR" Name="szObjectName" />
+            <Param Type="PWSTR" Name="szAdditionalInfo" />
+            <Param Type="PWSTR" Name="szAdditionalInfo2" />
+            <Param Type="PAUTHZ_AUDIT_EVENT_HANDLE" Name="phAuditEvent" />
+            <Param Type="DWORD" Name="dwAdditionalParameterCount" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AuthzInitializeRemoteResourceManager">
+            <Param Type="PAUTHZ_RPC_INIT_INFO_CLIENT" Name="pRpcInitInfo" />
+            <Param Type="PAUTHZ_RESOURCE_MANAGER_HANDLE" Name="phAuthzResourceManager" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AuthzInitializeResourceManager">
+            <Param Type="[AuthzInitRMFlags]" Name="flags" />
+            <Param Type="PFN_AUTHZ_DYNAMIC_ACCESS_CHECK" Name="pfnAccessCheck" />
+            <Param Type="PFN_AUTHZ_COMPUTE_DYNAMIC_GROUPS" Name="pfnComputeDynamicGroups" />
+            <Param Type="PFN_AUTHZ_FREE_DYNAMIC_GROUPS" Name="pfnFreeDynamicGroups" />
+            <Param Type="PCWSTR" Name="ResourceManagerName" />
+            <Param Type="PAUTHZ_RESOURCE_MANAGER_HANDLE" Name="pAuthzResourceManager" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AuthzInitializeResourceManagerEx">
+            <Param Type="DWORD" Name="Flags" />
+            <Param Type="PVOID" Name="pAuthzInitInfo" />
+            <Param Type="PAUTHZ_RESOURCE_MANAGER_HANDLE" Name="phAuthzResourceManager" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AuthzOpenObjectAudit">
+            <Param Type="DWORD" Name="Flags" />
+            <Param Type="AUTHZ_CLIENT_CONTEXT_HANDLE" Name="hAuthzClientContext" />
+            <Param Type="PAUTHZ_ACCESS_REQUEST" Name="pRequest" />
+            <Param Type="AUTHZ_AUDIT_EVENT_HANDLE" Name="hAuditEvent" />
+            <Param Type="PSECURITY_DESCRIPTOR" Name="pSecurityDescriptor" />
+            <Param Type="PSECURITY_DESCRIPTOR*" Name="SecurityDescriptorArray" />
+            <Param Type="DWORD" Name="SecurityDescriptorCount" />
+            <Param Type="PAUTHZ_ACCESS_REPLY" Name="pReply" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AuthzRegisterSecurityEventSource">
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="PCWSTR" Name="szEventSourceName" />
+            <Param Type="PAUTHZ_SECURITY_EVENT_PROVIDER_HANDLE" Name="phEventProvider" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AuthzReportSecurityEvent" VarArgs="True">
+            <Param Type="[APF_TYPE]" Name="dwFlags" />
+            <Param Type="AUTHZ_SECURITY_EVENT_PROVIDER_HANDLE" Name="hEventProvider" />
+            <Param Type="DWORD" Name="dwAuditId" />
+            <Param Type="PSID" Name="pUserSid" />
+            <Param Type="DWORD" Name="dwCount" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AuthzReportSecurityEventFromParams">
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="AUTHZ_SECURITY_EVENT_PROVIDER_HANDLE" Name="hEventProvider" />
+            <Param Type="DWORD" Name="dwAuditId" />
+            <Param Type="PSID" Name="pUserSid" />
+            <Param Type="PAUDIT_PARAMS" Name="pParams" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AuthzInstallSecurityEventSource">
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="PAUTHZ_SOURCE_SCHEMA_REGISTRATION" Name="pRegistration" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AuthzUninstallSecurityEventSource">
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="PCWSTR" Name="szEventSourceName" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AuthzUnregisterSecurityEventSource">
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="PAUTHZ_SECURITY_EVENT_PROVIDER_HANDLE" Name="phEventProvider" />
+            <Return Type="BOOL" />
+        </Api>
+        
+        <!-- Authorization -->
+        <Category Name="Security and Identity/Authorization" />
+        <Api Name="AuthzModifySecurityAttributes">
+            <Param Type="AUTHZ_CLIENT_CONTEXT_HANDLE" Name="AuthzClientContext" />
+            <Param Type="PAUTHZ_SECURITY_ATTRIBUTE_OPERATION" Name="pOperations" />
+            <Param Type="PAUTHZ_SECURITY_ATTRIBUTES_INFORMATION" Name="pAttributes" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AuthzFreeCentralAccessPolicyCache">
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AuthzInitializeCompoundContext">
+            <Param Type="AUTHZ_CLIENT_CONTEXT_HANDLE" Name="UserContext" />
+            <Param Type="AUTHZ_CLIENT_CONTEXT_HANDLE" Name="DeviceContext" />
+            <Param Type="PAUTHZ_CLIENT_CONTEXT_HANDLE" Name="phCompoundContext" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AuthzModifyClaims">
+            <Param Type="AUTHZ_CLIENT_CONTEXT_HANDLE" Name="hAuthzClientContext" />
+            <Param Type="AUTHZ_CONTEXT_INFORMATION_CLASS" Name="ClaimClass" />
+            <Param Type="PAUTHZ_SECURITY_ATTRIBUTE_OPERATION" Name="pClaimOperations" />
+            <Param Type="PAUTHZ_SECURITY_ATTRIBUTES_INFORMATION" Name="pClaims" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AuthzModifySids">
+            <Param Type="AUTHZ_CLIENT_CONTEXT_HANDLE" Name="hAuthzClientContext" />
+            <Param Type="AUTHZ_CONTEXT_INFORMATION_CLASS" Name="SidClass" />
+            <Param Type="PAUTHZ_SID_OPERATION" Name="pSidOperations" />
+            <Param Type="PTOKEN_GROUPS" Name="pSids" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AuthzRegisterCapChangeNotification">
+            <Param Type="PAUTHZ_CAP_CHANGE_SUBSCRIPTION_HANDLE" Name="phCapChangeSubscription" />
+            <Param Type="LPTHREAD_START_ROUTINE" Name="pfnCapChangeCallback" />
+            <Param Type="PVOID" Name="pCallbackContext" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AuthzSetAppContainerInformation">
+            <Param Type="AUTHZ_CLIENT_CONTEXT_HANDLE" Name="hAuthzClientContext" />
+            <Param Type="PSID" Name="pAppContainerSid" />
+            <Param Type="DWORD" Name="CapabilityCount" />
+            <Param Type="PSID_AND_ATTRIBUTES" Name="pCapabilitySids" Count="CapabilityCount" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="AuthzUnregisterCapChangeNotification">
+            <Param Type="AUTHZ_CAP_CHANGE_SUBSCRIPTION_HANDLE" Name="hCapChangeSubscription" />
+            <Return Type="BOOL" />
+        </Api>
+
+    </Module>
+</ApiMonitor>

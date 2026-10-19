@@ -1,0 +1,27 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="ITypeComp" Id="{00020403-0000-0000-C000-000000000046}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Component Object Model (COM)/Automation/Type Description">
+        <!-- Methods -->
+        <Api Name="Bind">
+            <Param Type="LPOLESTR" Name="szName" />
+            <Param Type="ULONG" Name="lHashVal" />
+            <Param Type="WORD" Name="wFlags" />
+            <Param Type="ITypeInfo**" Name="ppTInfo" />
+            <Param Type="DESCKIND*" Name="pDescKind" />
+            <Param Type="BINDPTR*" Name="pBindPtr" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="BindType">
+            <Param Type="LPOLESTR" Name="szName" />
+            <Param Type="ULONG" Name="lHashVal" />
+            <Param Type="ITypeInfo**" Name="ppTInfo" />
+            <Param Type="ITypeComp**" Name="ppTComp" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

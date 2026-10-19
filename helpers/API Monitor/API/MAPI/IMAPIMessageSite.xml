@@ -1,0 +1,74 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Include Filename="MAPI\mapi.h.xml" />
+    <Interface Name="IMAPIMessageSite" Id="{00020370-0000-0000-C000-000000000046}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Office Development/Microsoft Office/Outlook/Outlook MAPI/Interfaces">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="GetLastError">
+            <Param Type="HRESULT" Name="hResult" />
+            <Param Type="ULONG" Name="ulFlags" />
+            <Param Type="LPMAPIERROR*" Name="lppMAPIError" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetSession">
+            <Param Type="LPMAPISESSION*" Name="ppSession" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetStore">
+            <Param Type="LPMDB*" Name="ppStore" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetFolder">
+            <Param Type="LPMAPIFOLDER*" Name="ppFolder" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetMessage">
+            <Param Type="LPMESSAGE*" Name="ppmsg" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetFormManager">
+            <Param Type="LPMAPIFORMMGR*" Name="ppFormMgr" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="NewMessage">
+            <Param Type="ULONG" Name="fComposeInFolder" />
+            <Param Type="LPMAPIFOLDER" Name="pFolderFocus" />
+            <Param Type="LPPERSISTMESSAGE" Name="pPersistMessage" />
+            <Param Type="LPMESSAGE*" Name="ppMessage" />
+            <Param Type="LPMAPIMESSAGESITE*" Name="ppMessageSite" />
+            <Param Type="LPMAPIVIEWCONTEXT*" Name="ppViewContext" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CopyMessage">
+            <Param Type="LPMAPIFOLDER" Name="pFolderDestination" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MoveMessage">
+            <Param Type="LPMAPIFOLDER" Name="pFolderDestination" />
+            <Param Type="LPMAPIVIEWCONTEXT" Name="pViewContext" />
+            <Param Type="LPCRECT" Name="prcPosRect" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DeleteMessage">
+            <Param Type="LPMAPIVIEWCONTEXT" Name="pViewContext" />
+            <Param Type="LPCRECT" Name="prcPosRect" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SaveMessage">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SubmitMessage">
+            <Param Type="ULONG" Name="ulFlags" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetSiteStatus">
+            <Param Type="LPULONG" Name="lpulStatus" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

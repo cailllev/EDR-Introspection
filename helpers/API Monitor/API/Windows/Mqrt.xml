@@ -1,0 +1,320 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Include Filename="Headers\ole.h.xml" />
+    
+    <Module Name="Mqrt.dll" CallingConvention="STDCALL" ErrorFunc="HRESULT" OnlineHelp="MSDN">
+        
+        <!-- Variables -->
+        <Variable Name="ITransaction"               Type="Interface" />
+        <Variable Name="QUEUEHANDLE"                Type="Alias"    Base="HANDLE" />
+        <Variable Name="QUEUEHANDLE*"               Type="Pointer"  Base="QUEUEHANDLE" />
+        <Variable Name="QUEUEPROPID"                Type="Alias"    Base="PROPID" />
+        <Variable Name="QUEUEPROPID*"               Type="Pointer"  Base="QUEUEPROPID" />
+        <Variable Name="QMPROPID"                   Type="Alias"    Base="PROPID" />
+        <Variable Name="QMPROPID*"                  Type="Pointer"  Base="QMPROPID" />
+        <Variable Name="MGMTPROPID"                 Type="Alias"    Base="PROPID" />
+        <Variable Name="MGMTPROPID*"                Type="Pointer"  Base="MGMTPROPID" />
+        <Variable Name="MSGPROPID"                  Type="Alias"    Base="PROPID" />
+        <Variable Name="MSGPROPID*"                 Type="Pointer"  Base="MSGPROPID" />
+        <Variable Name="PMQRECEIVECALLBACK"         Type="Alias"    Base="LPVOID" />
+        <Variable Name="MQPROPVARIANT"              Type="Alias"    Base="PROPVARIANT" />
+        <Variable Name="MQPROPVARIANT*"             Type="Pointer"  Base="MQPROPVARIANT" />
+        <Variable Name="MQPROPVARIANT[]"            Type="Pointer"  Base="MQPROPVARIANT" />
+
+        <!-- [MQPR_Rel] -->
+        <Variable Name="[MQPR_Rel]" Type="Alias" Base="ULONG">
+            <Display Name="ULONG" />
+            <Flag>
+                <Set Name="PRLT"    Value="0" />
+                <Set Name="PRLE"    Value="1" />
+                <Set Name="PRGT"    Value="2" />
+                <Set Name="PRGE"    Value="3" />
+                <Set Name="PREQ"    Value="4" />
+                <Set Name="PRNE"    Value="5" />
+            </Flag>
+        </Variable>
+
+        <!-- MQPROPERTYRESTRICTION -->
+        <Variable Name="MQPROPERTYRESTRICTION" Type="Struct">
+            <Field Type="[MQPR_Rel]"        Name="rel" />
+            <Field Type="PROPID"            Name="prop" />
+            <Field Type="MQPROPVARIANT"     Name="prval" />
+        </Variable>
+        <Variable Name="MQPROPERTYRESTRICTION*" Type="Pointer" Base="MQPROPERTYRESTRICTION" />
+
+        <!-- MQQUEUEPROPS -->
+        <Variable Name="MQQUEUEPROPS" Type="Struct">
+            <Field Type="DWORD"           	Name="cProp" />
+            <Field Type="QUEUEPROPID*"    	Name="aPropID" />
+            <Field Type="MQPROPVARIANT*"  	Name="aPropVar" />
+            <Field Type="HRESULT*"          Name="aStatus" />
+        </Variable>
+        <Variable Name="MQQUEUEPROPS*" Type="Pointer" Base="MQQUEUEPROPS" />
+
+        <!-- MQQMPROPS -->
+        <Variable Name="MQQMPROPS" Type="Struct">
+            <Field Type="DWORD"           	Name="cProp" />
+            <Field Type="QMPROPID*"         Name="aPropID" />
+            <Field Type="MQPROPVARIANT*"  	Name="aPropVar" />
+            <Field Type="HRESULT*"          Name="aStatus" />
+        </Variable>
+        <Variable Name="MQQMPROPS*" Type="Pointer" Base="MQQMPROPS" />
+
+        <!-- MQPRIVATEPROPS -->
+        <Variable Name="MQPRIVATEPROPS" Type="Struct">
+            <Field Type="DWORD"           	Name="cProp" />
+            <Field Type="QMPROPID*"         Name="aPropID" />
+            <Field Type="MQPROPVARIANT*"  	Name="aPropVar" />
+            <Field Type="HRESULT*"          Name="aStatus" />
+        </Variable>
+        <Variable Name="MQPRIVATEPROPS*" Type="Pointer" Base="MQPRIVATEPROPS" />
+
+        <!-- MQRESTRICTION -->
+        <Variable Name="MQRESTRICTION" Type="Struct">
+            <Field Type="ULONG" 	                Name="cRes" />
+            <Field Type="MQPROPERTYRESTRICTION*" 	Name="paPropRes" />
+        </Variable>
+        <Variable Name="MQRESTRICTION*" Type="Pointer" Base="MQRESTRICTION" />
+
+        <!-- MQCOLUMNSET -->
+        <Variable Name="MQCOLUMNSET" Type="Struct">
+            <Field Type="ULONG" 	Name="cCol" />
+            <Field Type="PROPID*" 	Name="aCol" />
+        </Variable>
+        <Variable Name="MQCOLUMNSET*" Type="Pointer" Base="MQCOLUMNSET" />
+
+        <!-- MQSORTKEY -->
+        <Variable Name="MQSORTKEY" Type="Struct">
+            <Field Type="PROPID" 	Name="propColumn" />
+            <Field Type="ULONG" 	Name="dwOrder" />
+        </Variable>
+        <Variable Name="MQSORTKEY*" Type="Pointer" Base="MQSORTKEY" />
+
+        <!-- MQSORTSET -->
+        <Variable Name="MQSORTSET" Type="Struct">
+            <Field Type="ULONG" 	Name="cCol" />
+            <Field Type="MQSORTKEY*" 	Name="aCol" />
+        </Variable>
+        <Variable Name="MQSORTSET*" Type="Pointer" Base="MQSORTSET" />
+
+        <!-- MQMGMTPROPS -->
+        <Variable Name="MQMGMTPROPS" Type="Struct">
+            <Field Type="DWORD" 	        Name="cProp" />
+            <Field Type="MGMTPROPID*" 	    Name="aPropID" />
+            <Field Type="MQPROPVARIANT*" 	Name="aPropVar" />
+            <Field Type="HRESULT*" 	        Name="aStatus" />
+        </Variable>
+        <Variable Name="MQMGMTPROPS*" Type="Pointer" Base="MQMGMTPROPS" />
+
+        <!-- MQMSGPROPS -->
+        <Variable Name="MQMSGPROPS" Type="Struct">
+            <Field Type="DWORD"           	Name="cProp" />
+            <Field Type="MSGPROPID*"      	Name="aPropID" />
+            <Field Type="MQPROPVARIANT*"  	Name="aPropVar" />
+            <Field Type="HRESULT*"        	Name="aStatus" />
+        </Variable>
+        <Variable Name="MQMSGPROPS*" Type="Pointer" Base="MQMSGPROPS" />
+
+        <!-- Message Queuing (MSMQ) -->
+        <Category Name="Networking/Message Queuing (MSMQ)" />
+        <Api Name="MQADsPathToFormatName">
+            <Param Type="LPCWSTR" Name="lpwcsADsPath" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MQBeginTransaction">
+            <Param Type="ITransaction**" Name="ppTransaction" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MQCloseCursor">
+            <Param Type="HANDLE" Name="hCursor" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MQCloseQueue">
+            <Param Type="QUEUEHANDLE" Name="hQueue" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MQCreateCursor">
+            <Param Type="QUEUEHANDLE" Name="hQueue" />
+            <Param Type="PHANDLE" Name="phCursor" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MQCreateQueue">
+            <Param Type="PSECURITY_DESCRIPTOR" Name="pSecurityDescriptor" />
+            <Param Type="MQQUEUEPROPS*" Name="pQueueProps" />
+            <Param Type="LPWSTR" Name="lpwcsFormatName" />
+            <Param Type="LPDWORD" Name="lpdwFormatNameLength" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MQDeleteQueue">
+            <Param Type="LPCWSTR" Name="lpwcsFormatName" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MQFreeMemory">
+            <Param Type="PVOID" Name="pvMemory" />
+            <Return Type="VOID" />
+        </Api>
+        <Api Name="MQFreeSecurityContext">
+            <Param Type="HANDLE" Name="hSecurityContext" />
+            <Return Type="VOID" />
+        </Api>
+        <Api Name="MQGetMachineProperties">
+            <Param Type="LPCWSTR" Name="lpwcsMachineName" />
+            <Param Type="const GUID*" Name="pguidMachineID" />
+            <Param Type="MQQMPROPS*" Name="pQMProps" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MQGetOverlappedResult">
+            <Param Type="LPOVERLAPPED" Name="lpOverlapped" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MQGetPrivateComputerInformation">
+            <Param Type="LPCWSTR" Name="lpwcsComputerName" />
+            <Param Type="MQPRIVATEPROPS*" Name="pPrivateProps" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MQGetQueueProperties">
+            <Param Type="LPCWSTR" Name="lpwcsFormatName" />
+            <Param Type="MQQUEUEPROPS*" Name="pQueueProps" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MQGetQueueSecurity">
+            <Param Type="LPCWSTR" Name="lpwcsFormatName" />
+            <Param Type="SECURITY_INFORMATION" Name="SecurityInformation" />
+            <Param Type="PSECURITY_DESCRIPTOR" Name="pSecurityDescriptor" />
+            <Param Type="DWORD" Name="nLength" />
+            <Param Type="LPDWORD" Name="lpnLengthNeeded" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MQGetSecurityContext">
+            <Param Type="LPVOID" Name="lpCertBuffer" />
+            <Param Type="DWORD" Name="dwCertBufferLength" />
+            <Param Type="HANDLE*" Name="phSecurityContext" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MQGetSecurityContextEx">
+            <Param Type="LPVOID" Name="lpCertBuffer" />
+            <Param Type="DWORD" Name="dwCertBufferLength" />
+            <Param Type="HANDLE*" Name="phSecurityContext" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MQHandleToFormatName">
+            <Param Type="QUEUEHANDLE" Name="hQueue" />
+            <Param Type="LPWSTR" Name="lpwcsFormatName" />
+            <Param Type="LPDWORD" Name="lpdwCount" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MQInstanceToFormatName">
+            <Param Type="GUID*" Name="pGUID" />
+            <Param Type="LPWSTR" Name="lpwcsFormatName" />
+            <Param Type="LPDWORD" Name="lpdwCount" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MQLocateBegin">
+            <Param Type="LPCWSTR" Name="lpwcsContext" />
+            <Param Type="MQRESTRICTION*" Name="pRestriction" />
+            <Param Type="MQCOLUMNSET*" Name="pColumns" />
+            <Param Type="MQSORTSET*" Name="pSort" />
+            <Param Type="PHANDLE" Name="phEnum" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MQLocateEnd">
+            <Param Type="HANDLE" Name="hEnum" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MQLocateNext">
+            <Param Type="HANDLE" Name="hEnum" />
+            <Param Type="DWORD*" Name="pcProps" />
+            <Param Type="MQPROPVARIANT[]" Name="aPropVar" Count="pcProps" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MQMarkMessageRejected">
+            <Param Type="QUEUEHANDLE" Name="hQueue" />
+            <Param Type="ULONGLONG" Name="ullLookupId" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MQMgmtAction">
+            <Param Type="LPCWSTR" Name="pMachineName" />
+            <Param Type="LPCWSTR" Name="pObjectName" />
+            <Param Type="LPCWSTR" Name="pAction" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MQMgmtGetInfo">
+            <Param Type="LPCWSTR" Name="pMachineName" />
+            <Param Type="LPCWSTR" Name="pObjectName" />
+            <Param Type="MQMGMTPROPS*" Name="pMgmtProps" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MQMoveMessage">
+            <Param Type="QUEUEHANDLE" Name="sourceQueue" />
+            <Param Type="QUEUEHANDLE" Name="targetQueue" />
+            <Param Type="ULONGLONG" Name="lookupID" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MQOpenQueue">
+            <Param Type="LPCWSTR" Name="lpwcsFormatName" />
+            <Param Type="DWORD" Name="dwAccess" />
+            <Param Type="DWORD" Name="dwShareMode" />
+            <Param Type="QUEUEHANDLE*" Name="phQueue" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MQPathNameToFormatName">
+            <Param Type="LPCWSTR" Name="lpwcsPathName" />
+            <Param Type="LPWSTR" Name="lpwcsFormatName" />
+            <Param Type="LPDWORD" Name="lpdwCount" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MQPurgeQueue">
+            <Param Type="HANDLE" Name="hQueue" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MQReceiveMessage">
+            <Param Type="QUEUEHANDLE" Name="hSource" />
+            <Param Type="DWORD" Name="dwTimeout" />
+            <Param Type="DWORD" Name="dwAction" />
+            <Param Type="MQMSGPROPS*" Name="pMessageProps" />
+            <Param Type="LPOVERLAPPED" Name="lpOverlapped" />
+            <Param Type="PMQRECEIVECALLBACK" Name="fnReceiveCallback" />
+            <Param Type="HANDLE" Name="hCursor" />
+            <Param Type="ITransaction*" Name="pTransaction" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MQReceiveMessageByLookupId">
+            <Param Type="QUEUEHANDLE" Name="hSource" />
+            <Param Type="ULONGLONG" Name="ullLookupId" />
+            <Param Type="DWORD" Name="dwLookupAction" />
+            <Param Type="MQMSGPROPS*" Name="pMessageProps" />
+            <Param Type="LPOVERLAPPED" Name="lpOverlapped" />
+            <Param Type="PMQRECEIVECALLBACK" Name="fnReceiveCallback" />
+            <Param Type="ITransaction*" Name="pTransaction" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MQRegisterCertificate">
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="PVOID" Name="lpCertBuffer" />
+            <Param Type="DWORD" Name="dwCertBufferLength" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MQSendMessage">
+            <Param Type="QUEUEHANDLE" Name="hDestinationQueue" />
+            <Param Type="MQMSGPROPS*" Name="pMessageProps" />
+            <Param Type="ITransaction*" Name="pTransaction" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MQSetQueueProperties">
+            <Param Type="LPCWSTR" Name="lpwcsFormatName" />
+            <Param Type="MQQUEUEPROPS*" Name="pQueueProps" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MQSetQueueSecurity">
+            <Param Type="LPCWSTR" Name="lpwcsFormatName" />
+            <Param Type="SECURITY_INFORMATION" Name="SecurityInformation" />
+            <Param Type="PSECURITY_DESCRIPTOR" Name="pSecurityDescriptor" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Module>
+</ApiMonitor>

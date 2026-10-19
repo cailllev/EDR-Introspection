@@ -1,0 +1,24 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IDirectSoundCapture" Id="{b0210781-89cd-11d0-af08-00a0c925cd16}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/Legacy Audio and Video/DirectSound">
+        <Api Name="CreateCaptureBuffer">
+            <Param Type="LPCDSCBUFFERDESC" Name="pcDSCBufferDesc" />
+            <Param Type="LPDIRECTSOUNDCAPTUREBUFFER*" Name="ppDSCBuffer" />
+            <Param Type="LPUNKNOWN" Name="pUnkOuter" />
+            <Return Type="[DS_HRESULT]" />
+        </Api>
+        <Api Name="GetCaps">
+            <Param Type="LPDSCCAPS" Name="pDSCCaps" />
+            <Return Type="[DS_HRESULT]" />
+        </Api>
+        <Api Name="Initialize">
+            <Param Type="LPCGUID" Name="pcGuidDevice" />
+            <Return Type="[DS_HRESULT]" />
+        </Api>
+    </Interface>
+</ApiMonitor>

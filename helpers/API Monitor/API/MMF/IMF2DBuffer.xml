@@ -1,0 +1,42 @@
+<!--
+    API Monitor Definitions
+    (c) 2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="MMF\mmfdefs.h.xml" />
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IMF2DBuffer" Id="{7DC9D5F9-9ED9-44ec-9BBF-0600BB589FBB}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/Microsoft Media Foundation/Interfaces">
+        <Api Name="Lock2D">
+            <Param Type="BYTE**" Name="pbScanline0" />
+            <Param Type="LONG*" Name="plPitch" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Unlock2D">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetScanline0AndPitch">
+            <Param Type="BYTE**" Name="pbScanline0" />
+            <Param Type="LONG*" Name="plPitch" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="IsContiguousFormat">
+            <Param Type="BOOL*" Name="pfIsContiguous" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetContiguousLength">
+            <Param Type="DWORD*" Name="pcbLength" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ContiguousCopyTo">
+            <Param Type="BYTE*" Name="pbDestBuffer" />
+            <Param Type="DWORD" Name="cbDestBuffer" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ContiguousCopyFrom">
+            <Param Type="const BYTE*" Name="pbSrcBuffer" />
+            <Param Type="DWORD" Name="cbSrcBuffer" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

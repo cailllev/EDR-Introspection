@@ -1,0 +1,28 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IExplorerBrowserEvents" Id="{361bbdc7-e6ee-4e13-be58-58e2240c810f}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Windows Environment Development/Windows Shell/Interfaces">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="OnNavigationPending">
+            <Param Type="PCIDLIST_ABSOLUTE" Name="pidlFolder" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="OnViewCreated">
+            <Param Type="IShellView*" Name="psv" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="OnNavigationComplete">
+            <Param Type="PCIDLIST_ABSOLUTE" Name="pidlFolder" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="OnNavigationFailed">
+            <Param Type="PCIDLIST_ABSOLUTE" Name="pidlFolder" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

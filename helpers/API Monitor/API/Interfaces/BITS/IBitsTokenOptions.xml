@@ -1,0 +1,30 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IBitsTokenOptions" Id="{9a2584c3-f7d2-457a-9a5e-22b67bffc7d2}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Data Access and Storage/Background Intelligent Transfer Service (BITS)">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="SetHelperTokenFlags">
+            <Param Type="DWORD" Name="UsageFlags" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetHelperTokenFlags">
+            <Param Type="DWORD*" Name="pFlags" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetHelperToken">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ClearHelperToken">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetHelperTokenSid">
+            <Param Type="LPWSTR*" Name="pSid" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

@@ -1,0 +1,1315 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\ole.h.xml" />
+    <Include Filename="Headers\windows.h.xml" />
+    <Headers>
+
+        <!-- Variables -->
+        <Variable Name="HICON"                  Type="Alias"    Base="HANDLE" />
+        <Variable Name="HICON*"                 Type="Pointer"  Base="HICON" />
+        <Variable Name="HMENU"                  Type="Alias"    Base="HANDLE" />
+        <Variable Name="HMENU*"                 Type="Pointer"  Base="HMENU" />
+        <Variable Name="HDC"                    Type="Alias"    Base="HANDLE" />
+        <Variable Name="CONST HDC"              Type="Alias"    Base="HANDLE" />
+        <Variable Name="const HDC"              Type="Alias"    Base="HANDLE" />
+        <Variable Name="HDC*"                   Type="Pointer"  Base="HDC" />
+        <Variable Name="HPALETTE"               Type="Alias"    Base="HANDLE" />
+        <Variable Name="HCURSOR"                Type="Alias"    Base="HICON" />
+        <Variable Name="HMONITOR"               Type="Alias"    Base="HANDLE" />
+        <Variable Name="HIMAGELIST"             Type="Alias"    Base="LPVOID" />
+        <Variable Name="HIMAGELIST*"            Type="Pointer"  Base="HIMAGELIST" />
+        <Variable Name="HRGN"                   Type="Alias"    Base="HANDLE" />
+        <Variable Name="HRGN*"                  Type="Pointer"  Base="HRGN" />
+        <Variable Name="HMETAFILE"              Type="Alias"    Base="HANDLE" />
+        <Variable Name="HBRUSH"                 Type="Alias"    Base="HANDLE" />
+        <Variable Name="HFONT"                  Type="Alias"    Base="HANDLE" />
+        <Variable Name="HFONT*"                 Type="Pointer"  Base="HFONT" />
+        <Variable Name="LPCCHOOKPROC"           Type="Alias"    Base="LPVOID" />
+        <Variable Name="LPCFHOOKPROC"           Type="Alias"    Base="LPVOID" />
+        <Variable Name="LPPAGESETUPHOOK"        Type="Alias"    Base="LPVOID" />
+        <Variable Name="LPPAGEPAINTHOOK"        Type="Alias"    Base="LPVOID" />
+        <Variable Name="LPFRHOOKPROC"           Type="Alias"    Base="LPVOID" />
+        <Variable Name="LPPRINTHOOKPROC"        Type="Alias"    Base="LPVOID" />
+        <Variable Name="LPSETUPHOOKPROC"        Type="Alias"    Base="LPVOID" />
+        <Variable Name="REFERENCE_TIME"         Type="Alias"    Base="LONGLONG" />
+        <Variable Name="REFERENCE_TIME*"        Type="Pointer"  Base="REFERENCE_TIME" />
+        <Variable Name="const REFERENCE_TIME*"  Type="Alias"    Base="REFERENCE_TIME*" />
+        <Variable Name="HPROFILE"               Type="Alias"    Base="HANDLE" />
+        <Variable Name="PHPROFILE"              Type="Pointer"  Base="HPROFILE" />
+        <Variable Name="FXPT2DOT30"             Type="Alias"    Base="long" />
+        <Variable Name="PBMCALLBACKFN"          Type="Alias"    Base="LPVOID" />
+        <Variable Name="LPBMCALLBACKFN"         Type="Alias"    Base="PBMCALLBACKFN" />
+        <Variable Name="DLGPROC"                Type="Alias"    Base="LPVOID" />
+
+        <!-- Arrays -->
+        <Variable Name="TCHAR [LF_FACESIZE]"        Type="Array"    Base="TCHAR"        Count="32" />
+        <Variable Name="WCHAR [LF_FACESIZE]"        Type="Array"    Base="WCHAR"        Count="32" />
+        <Variable Name="COLOR_NAME"                 Type="Array"    Base="char"         Count="32" />
+        <Variable Name="PCOLOR_NAME"                Type="Pointer"  Base="COLOR_NAME" />
+        <Variable Name="BYTE [MAX_COLOR_CHANNELS]"  Type="Array"    Base="BYTE"         Count="8" />
+
+        <!-- RGBQUAD -->
+        <Variable Name="RGBQUAD" Type="Struct">
+            <Field Type="BYTE"      Name="rgbBlue" />
+            <Field Type="BYTE"      Name="rgbGreen" />
+            <Field Type="BYTE"      Name="rgbRed" />
+            <Field Type="BYTE"      Name="rgbReserved" />
+        </Variable>
+        <Variable Name="const RGBQUAD*"     Type="Pointer"  Base="RGBQUAD" />
+        <Variable Name="RGBQUAD*"           Type="Pointer"  Base="RGBQUAD" />
+        <Variable Name="RGBQUAD**"          Type="Pointer"  Base="RGBQUAD*" />
+        <Variable Name="RGBQUAD [1]"        Type="Array"    Base="RGBQUAD"  Count="1" />
+
+        <!-- [RegionType]-->
+        <Variable Name="[RegionType]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="RDH_RECTANGLES" Value="1" />
+            </Enum>
+        </Variable>
+
+        <!-- RGNDATAHEADER -->
+        <Variable Name="RGNDATAHEADER" Type="Struct">
+            <Field Type="DWORD"         Name="dwSize" />
+            <Field Type="[RegionType]"  Name="iType" />
+            <Field Type="DWORD"         Name="nCount" />
+            <Field Type="DWORD"         Name="nRgnSize" />
+            <Field Type="RECT"          Name="rcBound" />
+        </Variable>
+
+        <!-- RGNDATA -->
+        <Variable Name="RGNDATA" Type="Struct">
+            <Field Type="RGNDATAHEADER"     Name="rdh" />
+            <Field Type="char"              Name="Buffer" Display="char [1]" />
+        </Variable>
+        <Variable Name="RGNDATA*"           Type="Pointer"  Base="RGNDATA" />
+        <Variable Name="RGNDATA**"          Type="Pointer"  Base="RGNDATA*" />
+        <Variable Name="CONST RGNDATA*"     Type="Pointer"  Base="RGNDATA" />
+        <Variable Name="const RGNDATA*"     Type="Pointer"  Base="RGNDATA" />
+        <Variable Name="LPRGNDATA"          Type="Pointer"  Base="RGNDATA" />
+
+        <!-- COLORREF -->
+        <Variable Name="COLORREF" Type="Alias" Base="DWORD">
+            <Enum>
+                <Set Name="CLR_INVALID" Value="0xFFFFFFFF" />
+            </Enum>
+        </Variable>
+        <Variable Name="COLORREF*"       Type="Pointer" Base="COLORREF" />
+        <Variable Name="LPCOLORREF"      Type="Pointer" Base="COLORREF" />
+        <Variable Name="const COLORREF*" Type="Pointer" Base="COLORREF" />
+
+        <!-- SIZE -->
+        <Variable Name="SIZE" Type="Struct">
+            <Field Type="LONG" Name="cx" />
+            <Field Type="LONG" Name="cy" />
+        </Variable>
+        <Variable Name="SIZE*"              Type="Pointer"  Base="SIZE" />
+        <Variable Name="LPSIZE"             Type="Alias"    Base="SIZE*" />
+        <Variable Name="const SIZE*"        Type="Alias"    Base="SIZE*" />
+        <Variable Name="PSIZE"              Type="Alias"    Base="SIZE*" />
+
+        <!-- SIZEL-->
+        <Variable Name="SIZEL"              Type="Alias"    Base="SIZE" />
+        <Variable Name="SIZEL*"             Type="Pointer"  Base="SIZEL" />
+        <Variable Name="LPSIZEL"            Type="Pointer"  Base="SIZEL" />
+
+        <!-- [ChooseColorFlags] -->
+        <Variable Name="[ChooseColorFlags]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="CC_RGBINIT"               Value="0x00000001" />
+                <Set Name="CC_FULLOPEN"              Value="0x00000002" />
+                <Set Name="CC_PREVENTFULLOPEN"       Value="0x00000004" />
+                <Set Name="CC_SHOWHELP"              Value="0x00000008" />
+                <Set Name="CC_ENABLEHOOK"            Value="0x00000010" />
+                <Set Name="CC_ENABLETEMPLATE"        Value="0x00000020" />
+                <Set Name="CC_ENABLETEMPLATEHANDLE"  Value="0x00000040" />
+                <Set Name="CC_SOLIDCOLOR"            Value="0x00000080" />
+                <Set Name="CC_ANYCOLOR"              Value="0x00000100" />
+            </Flag>
+        </Variable>
+
+        <!-- CHOOSECOLOR -->
+        <Variable Name="CHOOSECOLOR" Type="Struct">
+            <Field Type="DWORD"        	        Name="lStructSize" />
+            <Field Type="HWND"         	        Name="hwndOwner" />
+            <Field Type="HWND"         	        Name="hInstance" />
+            <Field Type="COLORREF"     	        Name="rgbResult" />
+            <Field Type="COLORREF*"    	        Name="lpCustColors" />
+            <Field Type="[ChooseColorFlags]"    Name="Flags" />
+            <Field Type="LPARAM"       	        Name="lCustData" />
+            <Field Type="LPCCHOOKPROC" 	        Name="lpfnHook" />
+            <Field Type="LPCTSTR"               Name="lpTemplateName" />
+        </Variable>
+        <Variable Name="LPCHOOSECOLOR"  Type="Pointer" Base="CHOOSECOLOR" />
+
+        <!-- [ChoooseFontFlags] -->
+        <Variable Name="[ChoooseFontFlags]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="CF_SCREENFONTS"            Value="0x00000001" />
+                <Set Name="CF_PRINTERFONTS"           Value="0x00000002" />
+                <Set Name="CF_BOTH"                   Value="0x00000003" />
+                <Set Name="CF_SHOWHELP"               Value="0x00000004" />
+                <Set Name="CF_ENABLEHOOK"             Value="0x00000008" />
+                <Set Name="CF_ENABLETEMPLATE"         Value="0x00000010" />
+                <Set Name="CF_ENABLETEMPLATEHANDLE"   Value="0x00000020" />
+                <Set Name="CF_INITTOLOGFONTSTRUCT"    Value="0x00000040" />
+                <Set Name="CF_USESTYLE"               Value="0x00000080" />
+                <Set Name="CF_EFFECTS"                Value="0x00000100" />
+                <Set Name="CF_APPLY"                  Value="0x00000200" />
+                <Set Name="CF_ANSIONLY"               Value="0x00000400" />
+                <Set Name="CF_NOVECTORFONTS"          Value="0x00000800" />
+                <Set Name="CF_NOSIMULATIONS"          Value="0x00001000" />
+                <Set Name="CF_LIMITSIZE"              Value="0x00002000" />
+                <Set Name="CF_FIXEDPITCHONLY"         Value="0x00004000" />
+                <Set Name="CF_WYSIWYG"                Value="0x00008000" />
+                <Set Name="CF_FORCEFONTEXIST"         Value="0x00010000" />
+                <Set Name="CF_SCALABLEONLY"           Value="0x00020000" />
+                <Set Name="CF_TTONLY"                 Value="0x00040000" />
+                <Set Name="CF_NOFACESEL"              Value="0x00080000" />
+                <Set Name="CF_NOSTYLESEL"             Value="0x00100000" />
+                <Set Name="CF_NOSIZESEL"              Value="0x00200000" />
+                <Set Name="CF_SELECTSCRIPT"           Value="0x00400000" />
+                <Set Name="CF_NOSCRIPTSEL"            Value="0x00800000" />
+                <Set Name="CF_NOVERTFONTS"            Value="0x01000000" />
+                <Set Name="CF_INACTIVEFONTS"          Value="0x02000000" />
+            </Flag>
+        </Variable>
+
+        <!-- [FontType] -->
+        <Variable Name="[FontType]" Type="Alias" Base="WORD">
+            <Display Name="WORD" />
+            <Flag>
+                <Set Name="SIMULATED_FONTTYPE"    Value="0x8000" />
+                <Set Name="PRINTER_FONTTYPE"      Value="0x4000" />
+                <Set Name="SCREEN_FONTTYPE"       Value="0x2000" />
+                <Set Name="BOLD_FONTTYPE"         Value="0x0100" />
+                <Set Name="ITALIC_FONTTYPE"       Value="0x0200" />
+                <Set Name="REGULAR_FONTTYPE"      Value="0x0400" />
+            </Flag>
+        </Variable>
+
+        <!-- [FontWeight] -->
+        <Variable Name="[FontWeight]" Type="Alias" Base="LONG">
+            <Display Name="LONG" />
+            <Enum>
+                <Set Name="FW_DONTCARE"     Value="0" />
+                <Set Name="FW_THIN"         Value="100" />
+                <Set Name="FW_EXTRALIGHT"   Value="200" />
+                <Set Name="FW_LIGHT"        Value="300" />
+                <Set Name="FW_NORMAL"       Value="400" />
+                <Set Name="FW_MEDIUM"       Value="500" />
+                <Set Name="FW_SEMIBOLD"     Value="600" />
+                <Set Name="FW_BOLD"         Value="700" />
+                <Set Name="FW_EXTRABOLD"    Value="800" />
+                <Set Name="FW_HEAVY"        Value="900" />
+            </Enum>
+        </Variable>
+
+        <!-- [FontCharset] -->
+        <Variable Name="[FontCharset]" Type="Alias" Base="BYTE">
+            <Display Name="BYTE" />
+            <Enum>
+                <Set Name="ANSI_CHARSET"          Value="0" />
+                <Set Name="DEFAULT_CHARSET"       Value="1" />
+                <Set Name="SYMBOL_CHARSET"        Value="2" />
+                <Set Name="SHIFTJIS_CHARSET"      Value="128" />
+                <Set Name="HANGEUL_CHARSET"       Value="129" />
+                <Set Name="HANGUL_CHARSET"        Value="129" />
+                <Set Name="GB2312_CHARSET"        Value="134" />
+                <Set Name="CHINESEBIG5_CHARSET"   Value="136" />
+                <Set Name="OEM_CHARSET"           Value="255" />
+                <Set Name="JOHAB_CHARSET"         Value="130" />
+                <Set Name="HEBREW_CHARSET"        Value="177" />
+                <Set Name="ARABIC_CHARSET"        Value="178" />
+                <Set Name="GREEK_CHARSET"         Value="161" />
+                <Set Name="TURKISH_CHARSET"       Value="162" />
+                <Set Name="VIETNAMESE_CHARSET"    Value="163" />
+                <Set Name="THAI_CHARSET"          Value="222" />
+                <Set Name="EASTEUROPE_CHARSET"    Value="238" />
+                <Set Name="RUSSIAN_CHARSET"       Value="204" />
+                <Set Name="MAC_CHARSET"           Value="77" />
+                <Set Name="BALTIC_CHARSET"        Value="186" />
+            </Enum>
+        </Variable>
+
+        <!-- [FontOutputPrecision] -->
+        <Variable Name="[FontOutputPrecision]" Type="Alias" Base="BYTE">
+            <Display Name="BYTE" />
+            <Enum>
+                <Set Name="OUT_DEFAULT_PRECIS"          Value="0" />
+                <Set Name="OUT_STRING_PRECIS"           Value="1" />
+                <Set Name="OUT_CHARACTER_PRECIS"        Value="2" />
+                <Set Name="OUT_STROKE_PRECIS"           Value="3" />
+                <Set Name="OUT_TT_PRECIS"               Value="4" />
+                <Set Name="OUT_DEVICE_PRECIS"           Value="5" />
+                <Set Name="OUT_RASTER_PRECIS"           Value="6" />
+                <Set Name="OUT_TT_ONLY_PRECIS"          Value="7" />
+                <Set Name="OUT_OUTLINE_PRECIS"          Value="8" />
+                <Set Name="OUT_SCREEN_OUTLINE_PRECIS"   Value="9" />
+                <Set Name="OUT_PS_ONLY_PRECIS"          Value="10" />
+            </Enum>
+        </Variable>
+
+        <!-- [FontClipPrecision] -->
+        <Variable Name="[FontClipPrecision]" Type="Alias" Base="BYTE">
+            <Display Name="BYTE" />
+            <Enum>
+                <Set Name="CLIP_DEFAULT_PRECIS"     	Value="0" />
+                <Set Name="CLIP_CHARACTER_PRECIS"   	Value="1" />
+                <Set Name="CLIP_STROKE_PRECIS"      	Value="2" />
+                <Set Name="CLIP_MASK"               	Value="0xf" />
+                <Set Name="CLIP_LH_ANGLES"          	Value="0x10" />
+                <Set Name="CLIP_TT_ALWAYS"          	Value="0x20" />
+                <Set Name="CLIP_DFA_DISABLE"            Value="0x40" />
+                <Set Name="CLIP_EMBEDDED"           	Value="0x80" />
+            </Enum>
+        </Variable>
+
+        <!-- [FontQuality] -->
+        <Variable Name="[FontQuality]" Type="Alias" Base="BYTE">
+            <Display Name="BYTE" />
+            <Enum>
+                <Set Name="DEFAULT_QUALITY"         	Value="0" />
+                <Set Name="DRAFT_QUALITY"           	Value="1" />
+                <Set Name="PROOF_QUALITY"           	Value="2" />
+                <Set Name="NONANTIALIASED_QUALITY"  	Value="3" />
+                <Set Name="ANTIALIASED_QUALITY"     	Value="4" />
+                <Set Name="CLEARTYPE_QUALITY"       	Value="5" />
+                <Set Name="CLEARTYPE_NATURAL_QUALITY"   Value="6" />
+            </Enum>
+        </Variable>
+
+        <!-- [FontPitchAndFamily] -->
+        <Variable Name="[FontPitchAndFamily]" Type="Alias" Base="BYTE">
+            <Display Name="BYTE" />
+            <Flag>
+                <Set Name="DEFAULT_PITCH"       Value="0" />
+                <Set Name="FIXED_PITCH"         Value="1" />
+                <Set Name="VARIABLE_PITCH"      Value="2" />
+                <Set Name="FF_DONTCARE"         Value="0" />
+                <Set Name="FF_ROMAN"            Value="0x10" />
+                <Set Name="FF_SWISS"            Value="0x20" />
+                <Set Name="FF_MODERN"           Value="0x30" />
+                <Set Name="FF_SCRIPT"           Value="0x40" />
+                <Set Name="FF_DECORATIVE"       Value="0x50" />
+            </Flag>
+        </Variable>
+
+        <!-- LOGFONT -->
+        <Variable Name="LOGFONT" Type="Struct">
+            <Field Type="LONG"                  Name="lfHeight" />
+            <Field Type="LONG"                  Name="lfWidth" />
+            <Field Type="LONG"                  Name="lfEscapement" />
+            <Field Type="LONG"                  Name="lfOrientation" />
+            <Field Type="[FontWeight]"          Name="lfWeight" />
+            <Field Type="BYTE"                  Name="lfItalic" />
+            <Field Type="BYTE"                  Name="lfUnderline" />
+            <Field Type="BYTE"                  Name="lfStrikeOut" />
+            <Field Type="[FontCharset]"         Name="lfCharSet" />
+            <Field Type="[FontOutputPrecision]" Name="lfOutPrecision" />
+            <Field Type="[FontClipPrecision]"   Name="lfClipPrecision" />
+            <Field Type="[FontQuality]"         Name="lfQuality" />
+            <Field Type="[FontPitchAndFamily]"  Name="lfPitchAndFamily" />
+            <Field Type="TCHAR [LF_FACESIZE]"   Name="lfFaceName" />
+        </Variable>
+        <Variable Name="LPLOGFONT"      Type="Pointer" Base="LOGFONT" />
+        <Variable Name="const LOGFONT*" Type="Pointer" Base="LOGFONT" />
+
+        <!-- LOGFONTW -->
+        <Variable Name="LOGFONTW" Type="Struct">
+            <Field Type="LONG"                  Name="lfHeight" />
+            <Field Type="LONG"                  Name="lfWidth" />
+            <Field Type="LONG"                  Name="lfEscapement" />
+            <Field Type="LONG"                  Name="lfOrientation" />
+            <Field Type="[FontWeight]"          Name="lfWeight" Display="LONG" />
+            <Field Type="BYTE"                  Name="lfItalic" />
+            <Field Type="BYTE"                  Name="lfUnderline" />
+            <Field Type="BYTE"                  Name="lfStrikeOut" />
+            <Field Type="[FontCharset]"         Name="lfCharSet" />
+            <Field Type="[FontOutputPrecision]" Name="lfOutPrecision" />
+            <Field Type="[FontClipPrecision]"   Name="lfClipPrecision" />
+            <Field Type="[FontQuality]"         Name="lfQuality" />
+            <Field Type="[FontPitchAndFamily]"  Name="lfPitchAndFamily" />
+            <Field Type="WCHAR [LF_FACESIZE]"   Name="lfFaceName" />
+        </Variable>
+        <Variable Name="LOGFONTW*"          Type="Pointer" Base="LOGFONTW" />
+        <Variable Name="const LOGFONTW*"    Type="Pointer" Base="LOGFONTW" />
+
+        <!-- CHOOSEFONT -->
+        <Variable Name="CHOOSEFONT" Type="Struct">
+            <Field Type="DWORD"           	    Name="lStructSize" />
+            <Field Type="HWND"            	    Name="hwndOwner" />
+            <Field Type="HDC"             	    Name="hDC" />
+            <Field Type="LPLOGFONT"      	    Name="lpLogFont" />
+            <Field Type="INT"             	    Name="iPointSize" />
+            <Field Type="[ChoooseFontFlags]"    Name="Flags" />
+            <Field Type="COLORREF"        	    Name="rgbColors" />
+            <Field Type="LPARAM"          	    Name="lCustData" />
+            <Field Type="LPCFHOOKPROC"    	    Name="lpfnHook" />
+            <Field Type="LPCTSTR"          	    Name="lpTemplateName" />
+            <Field Type="HINSTANCE"       	    Name="hInstance" />
+            <Field Type="LPTSTR"           	    Name="lpszStyle" />
+            <Field Type="[FontType]"            Name="nFontType" />
+            <Field Type="WORD"            	    Name="___MISSING_ALIGNMENT__" />
+            <Field Type="INT"             	    Name="nSizeMin" />
+            <Field Type="INT"             	    Name="nSizeMax" />
+        </Variable>
+        <Variable Name="LPCHOOSEFONT" Type="Pointer" Base="CHOOSEFONT" />
+
+        <!-- [FindReplaceFlags] -->
+        <Variable Name="[FindReplaceFlags]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="FR_DOWN"                    Value="0x00000001" />
+                <Set Name="FR_WHOLEWORD"               Value="0x00000002" />
+                <Set Name="FR_MATCHCASE"               Value="0x00000004" />
+                <Set Name="FR_FINDNEXT"                Value="0x00000008" />
+                <Set Name="FR_REPLACE"                 Value="0x00000010" />
+                <Set Name="FR_REPLACEALL"              Value="0x00000020" />
+                <Set Name="FR_DIALOGTERM"              Value="0x00000040" />
+                <Set Name="FR_SHOWHELP"                Value="0x00000080" />
+                <Set Name="FR_ENABLEHOOK"              Value="0x00000100" />
+                <Set Name="FR_ENABLETEMPLATE"          Value="0x00000200" />
+                <Set Name="FR_NOUPDOWN"                Value="0x00000400" />
+                <Set Name="FR_NOMATCHCASE"             Value="0x00000800" />
+                <Set Name="FR_NOWHOLEWORD"             Value="0x00001000" />
+                <Set Name="FR_ENABLETEMPLATEHANDLE"    Value="0x00002000" />
+                <Set Name="FR_HIDEUPDOWN"              Value="0x00004000" />
+                <Set Name="FR_HIDEMATCHCASE"           Value="0x00008000" />
+                <Set Name="FR_HIDEWHOLEWORD"           Value="0x00010000" />
+                <Set Name="FR_RAW"                     Value="0x00020000" />
+                <Set Name="FR_MATCHDIAC"               Value="0x20000000" />
+                <Set Name="FR_MATCHKASHIDA"            Value="0x40000000" />
+                <Set Name="FR_MATCHALEFHAMZA"          Value="0x80000000" />
+            </Flag>
+        </Variable>
+
+        <!-- FINDREPLACE -->
+        <Variable Name="FINDREPLACE" Type="Struct">
+            <Field Type="DWORD"        	        Name="lStructSize" />
+            <Field Type="HWND"         	        Name="hwndOwner" />
+            <Field Type="HINSTANCE"    	        Name="hInstance" />
+            <Field Type="[FindReplaceFlags]"    Name="Flags" />
+            <Field Type="LPTSTR"                Name="lpstrFindWhat" />
+            <Field Type="LPTSTR"                Name="lpstrReplaceWith" />
+            <Field Type="WORD"         	        Name="wFindWhatLen" />
+            <Field Type="WORD"         	        Name="wReplaceWithLen" />
+            <Field Type="LPARAM"       	        Name="lCustData" />
+            <Field Type="LPFRHOOKPROC" 	        Name="lpfnHook" />
+            <Field Type="LPCTSTR"               Name="lpTemplateName" />
+        </Variable>
+        <Variable Name="LPFINDREPLACE" Type="Pointer" Base="FINDREPLACE" />
+
+        <!-- OpenFileName -->
+        <Variable Name="[OfnFlags]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="OFN_READONLY"                 	Value="0x00000001" />
+                <Set Name="OFN_OVERWRITEPROMPT"          	Value="0x00000002" />
+                <Set Name="OFN_HIDEREADONLY"             	Value="0x00000004" />
+                <Set Name="OFN_NOCHANGEDIR"              	Value="0x00000008" />
+                <Set Name="OFN_SHOWHELP"                 	Value="0x00000010" />
+                <Set Name="OFN_ENABLEHOOK"               	Value="0x00000020" />
+                <Set Name="OFN_ENABLETEMPLATE"           	Value="0x00000040" />
+                <Set Name="OFN_ENABLETEMPLATEHANDLE"     	Value="0x00000080" />
+                <Set Name="OFN_NOVALIDATE"               	Value="0x00000100" />
+                <Set Name="OFN_ALLOWMULTISELECT"         	Value="0x00000200" />
+                <Set Name="OFN_EXTENSIONDIFFERENT"       	Value="0x00000400" />
+                <Set Name="OFN_PATHMUSTEXIST"            	Value="0x00000800" />
+                <Set Name="OFN_FILEMUSTEXIST"            	Value="0x00001000" />
+                <Set Name="OFN_CREATEPROMPT"             	Value="0x00002000" />
+                <Set Name="OFN_SHAREAWARE"               	Value="0x00004000" />
+                <Set Name="OFN_NOREADONLYRETURN"         	Value="0x00008000" />
+                <Set Name="OFN_NOTESTFILECREATE"         	Value="0x00010000" />
+                <Set Name="OFN_NONETWORKBUTTON"          	Value="0x00020000" />
+                <Set Name="OFN_NOLONGNAMES"              	Value="0x00040000" />
+                <Set Name="OFN_EXPLORER"                 	Value="0x00080000" />
+                <Set Name="OFN_NODEREFERENCELINKS"       	Value="0x00100000" />
+                <Set Name="OFN_LONGNAMES"                	Value="0x00200000" />
+                <Set Name="OFN_ENABLEINCLUDENOTIFY"         Value="0x00400000" />
+                <Set Name="OFN_ENABLESIZING"             	Value="0x00800000" />
+                <Set Name="OFN_DONTADDTORECENT"          	Value="0x02000000" />
+                <Set Name="OFN_FORCESHOWHIDDEN"          	Value="0x10000000" />
+            </Flag>
+        </Variable>
+
+        <Variable Name="[OfnFlagsEx]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="OFN_EX_NOPLACESBAR"              Value="0x00000001" />
+            </Flag>
+        </Variable>
+
+        <!-- OPENFILENAME -->
+        <Variable Name="OPENFILENAME" Type="Struct">
+            <Field Type="DWORD"         Name="lStructSize" />
+            <Field Type="HWND"          Name="hwndOwner" />
+            <Field Type="HINSTANCE"     Name="hInstance" />
+            <Field Type="LPCTSTR"       Name="lpstrFilter" />
+            <Field Type="LPTSTR"        Name="lpstrCustomFilter" />
+            <Field Type="DWORD"         Name="nMaxCustFilter" />
+            <Field Type="DWORD"         Name="nFilterIndex" />
+            <Field Type="LPTSTR"        Name="lpstrFile" />
+            <Field Type="DWORD"         Name="nMaxFile" />
+            <Field Type="LPTSTR"        Name="lpstrFileTitle" OutputOnly="True" />
+            <Field Type="DWORD"         Name="nMaxFileTitle" />
+            <Field Type="LPCTSTR"       Name="lpstrInitialDir" />
+            <Field Type="LPCTSTR"       Name="lpstrTitle" />
+            <Field Type="[OfnFlags]"    Name="Flags" />
+            <Field Type="WORD"          Name="nFileOffset" />
+            <Field Type="WORD"          Name="nFileExtension" />
+            <Field Type="LPCTSTR"       Name="lpstrDefExt" />
+            <Field Type="LPARAM"        Name="lCustData" />
+            <Field Type="LPVOID"        Name="lpfnHook" />
+            <Field Type="LPCTSTR"       Name="lpTemplateName" />
+            <Field Type="void*"         Name="pvReserved" />
+            <Field Type="DWORD"         Name="dwReserved" />
+            <Field Type="[OfnFlagsEx]"  Name="FlagsEx" />
+        </Variable>
+        <Variable Name="OPENFILENAME*"      Type="Pointer"  Base="OPENFILENAME" />
+        <Variable Name="LPOPENFILENAME"     Type="Pointer"  Base="OPENFILENAME" />
+
+        <!-- [PageSetupDialogFlags] -->
+        <Variable Name="[PageSetupDialogFlags]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="PSD_DEFAULTMINMARGINS"             	Value="0x00000000" />
+                <Set Name="PSD_INWININIINTLMEASURE"           	Value="0x00000000" />
+                <Set Name="PSD_MINMARGINS"                    	Value="0x00000001" />
+                <Set Name="PSD_MARGINS"                       	Value="0x00000002" />
+                <Set Name="PSD_INTHOUSANDTHSOFINCHES"         	Value="0x00000004" />
+                <Set Name="PSD_INHUNDREDTHSOFMILLIMETERS"     	Value="0x00000008" />
+                <Set Name="PSD_DISABLEMARGINS"                	Value="0x00000010" />
+                <Set Name="PSD_DISABLEPRINTER"                	Value="0x00000020" />
+                <Set Name="PSD_NOWARNING"                     	Value="0x00000080" />
+                <Set Name="PSD_DISABLEORIENTATION"            	Value="0x00000100" />
+                <Set Name="PSD_RETURNDEFAULT"                 	Value="0x00000400" />
+                <Set Name="PSD_DISABLEPAPER"                  	Value="0x00000200" />
+                <Set Name="PSD_SHOWHELP"                      	Value="0x00000800" />
+                <Set Name="PSD_ENABLEPAGESETUPHOOK"           	Value="0x00002000" />
+                <Set Name="PSD_ENABLEPAGESETUPTEMPLATE"       	Value="0x00008000" />
+                <Set Name="PSD_ENABLEPAGESETUPTEMPLATEHANDLE" 	Value="0x00020000" />
+                <Set Name="PSD_ENABLEPAGEPAINTHOOK"           	Value="0x00040000" />
+                <Set Name="PSD_DISABLEPAGEPAINTING"           	Value="0x00080000" />
+                <Set Name="PSD_NONETWORKBUTTON"               	Value="0x00200000" />
+            </Flag>
+        </Variable>
+
+        <!-- PAGESETUPDLG -->
+        <Variable Name="PAGESETUPDLG" Type="Struct">
+            <Field Type="DWORD"           	        Name="lStructSize" />
+            <Field Type="HWND"            	        Name="hwndOwner" />
+            <Field Type="HGLOBAL"         	        Name="hDevMode" />
+            <Field Type="HGLOBAL"         	        Name="hDevNames" />
+            <Field Type="[PageSetupDialogFlags]"    Name="Flags" />
+            <Field Type="POINT"           	        Name="ptPaperSize" />
+            <Field Type="RECT"            	        Name="rtMinMargin" />
+            <Field Type="RECT"            	        Name="rtMargin" />
+            <Field Type="HINSTANCE"       	        Name="hInstance" />
+            <Field Type="LPARAM"          	        Name="lCustData" />
+            <Field Type="LPPAGESETUPHOOK" 	        Name="lpfnPageSetupHook" />
+            <Field Type="LPPAGEPAINTHOOK" 	        Name="lpfnPagePaintHook" />
+            <Field Type="LPCTSTR"          	        Name="lpPageSetupTemplateName" />
+            <Field Type="HGLOBAL"         	        Name="hPageSetupTemplate" />
+        </Variable>
+        <Variable Name="LPPAGESETUPDLG" Type="Pointer" Base="PAGESETUPDLG" />
+
+        <!-- [PrintDlgFlags] -->
+        <Variable Name="[PrintDlgFlags]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="PD_ALLPAGES"                    Value="0x00000000" />
+                <Set Name="PD_SELECTION"                   Value="0x00000001" />
+                <Set Name="PD_PAGENUMS"                    Value="0x00000002" />
+                <Set Name="PD_NOSELECTION"                 Value="0x00000004" />
+                <Set Name="PD_NOPAGENUMS"                  Value="0x00000008" />
+                <Set Name="PD_COLLATE"                     Value="0x00000010" />
+                <Set Name="PD_PRINTTOFILE"                 Value="0x00000020" />
+                <Set Name="PD_PRINTSETUP"                  Value="0x00000040" />
+                <Set Name="PD_NOWARNING"                   Value="0x00000080" />
+                <Set Name="PD_RETURNDC"                    Value="0x00000100" />
+                <Set Name="PD_RETURNIC"                    Value="0x00000200" />
+                <Set Name="PD_RETURNDEFAULT"               Value="0x00000400" />
+                <Set Name="PD_SHOWHELP"                    Value="0x00000800" />
+                <Set Name="PD_ENABLEPRINTHOOK"             Value="0x00001000" />
+                <Set Name="PD_ENABLESETUPHOOK"             Value="0x00002000" />
+                <Set Name="PD_ENABLEPRINTTEMPLATE"         Value="0x00004000" />
+                <Set Name="PD_ENABLESETUPTEMPLATE"         Value="0x00008000" />
+                <Set Name="PD_ENABLEPRINTTEMPLATEHANDLE"   Value="0x00010000" />
+                <Set Name="PD_ENABLESETUPTEMPLATEHANDLE"   Value="0x00020000" />
+                <Set Name="PD_USEDEVMODECOPIES"            Value="0x00040000" />
+                <Set Name="PD_USEDEVMODECOPIESANDCOLLATE"  Value="0x00040000" />
+                <Set Name="PD_DISABLEPRINTTOFILE"          Value="0x00080000" />
+                <Set Name="PD_HIDEPRINTTOFILE"             Value="0x00100000" />
+                <Set Name="PD_NONETWORKBUTTON"             Value="0x00200000" />
+                <Set Name="PD_CURRENTPAGE"                 Value="0x00400000" />
+                <Set Name="PD_NOCURRENTPAGE"               Value="0x00800000" />
+                <Set Name="PD_EXCLUSIONFLAGS"              Value="0x01000000" />
+                <Set Name="PD_USELARGETEMPLATE"            Value="0x10000000" />
+            </Flag>
+        </Variable>
+
+        <!-- PRINTDLG -->
+        <Variable Name="PRINTDLG" Type="Struct" Pack32="1">
+            <Field Type="DWORD"            	Name="lStructSize" />
+            <Field Type="HWND"             	Name="hwndOwner" />
+            <Field Type="HGLOBAL"          	Name="hDevMode" />
+            <Field Type="HGLOBAL"          	Name="hDevNames" />
+            <Field Type="HDC"              	Name="hDC" />
+            <Field Type="[PrintDlgFlags]"   Name="Flags" />
+            <Field Type="WORD"             	Name="nFromPage" />
+            <Field Type="WORD"             	Name="nToPage" />
+            <Field Type="WORD"             	Name="nMinPage" />
+            <Field Type="WORD"             	Name="nMaxPage" />
+            <Field Type="WORD"             	Name="nCopies" />
+            <Field Type="HINSTANCE"        	Name="hInstance" />
+            <Field Type="LPARAM"           	Name="lCustData" />
+            <Field Type="LPPRINTHOOKPROC"  	Name="lpfnPrintHook" />
+            <Field Type="LPSETUPHOOKPROC"  	Name="lpfnSetupHook" />
+            <Field Type="LPCTSTR"           Name="lpPrintTemplateName" />
+            <Field Type="LPCTSTR"           Name="lpSetupTemplateName" />
+            <Field Type="HGLOBAL"          	Name="hPrintTemplate" />
+            <Field Type="HGLOBAL"          	Name="hSetupTemplate" />
+        </Variable>
+        <Variable Name="LPPRINTDLG" Type="Pointer" Base="PRINTDLG" />
+
+        <!-- PRINTPAGERANGE -->
+        <Variable Name="PRINTPAGERANGE" Type="Struct">
+            <Field Type="DWORD"  	Name="nFromPage" />
+            <Field Type="DWORD"     Name="nToPage" />
+        </Variable>
+        <Variable Name="LPPRINTPAGERANGE" Type="Pointer" Base="PRINTPAGERANGE" />
+
+        <!-- PRINTDLGEX -->
+        <Variable Name="PRINTDLGEX" Type="Struct">
+            <Field Type="DWORD"                Name="lStructSize" />
+            <Field Type="HWND"                 Name="hwndOwner" />
+            <Field Type="HGLOBAL"              Name="hDevMode" />
+            <Field Type="HGLOBAL"              Name="hDevNames" />
+            <Field Type="HDC"                  Name="hDC" />
+            <Field Type="[PrintDlgFlags]"      Name="Flags" />
+            <Field Type="DWORD"                Name="Flags2" />
+            <Field Type="DWORD"                Name="ExclusionFlags" />
+            <Field Type="DWORD"                Name="nPageRanges" />
+            <Field Type="DWORD"                Name="nMaxPageRanges" />
+            <Field Type="LPPRINTPAGERANGE"     Name="lpPageRanges" />
+            <Field Type="DWORD"                Name="nMinPage" />
+            <Field Type="DWORD"                Name="nMaxPage" />
+            <Field Type="DWORD"                Name="nCopies" />
+            <Field Type="HINSTANCE"            Name="hInstance" />
+            <Field Type="LPCTSTR"              Name="lpPrintTemplateName" />
+            <Field Type="LPUNKNOWN"            Name="lpCallback" />
+            <Field Type="DWORD"                Name="nPropertyPages" />
+            <Field Type="HPROPSHEETPAGE*"      Name="lphPropertyPages" />
+            <Field Type="DWORD"                Name="nStartPage" />
+            <Field Type="DWORD"                Name="dwResultAction" />
+        </Variable>
+        <Variable Name="LPPRINTDLGEX" Type="Pointer" Base="PRINTDLGEX" />
+
+        <!-- DRAWTEXTPARAMS -->
+        <Variable Name="DRAWTEXTPARAMS" Type="Struct">
+            <Field Type="UINT"    	Name="cbSize" />
+            <Field Type="int"     	Name="iTabLength" />
+            <Field Type="int"     	Name="iLeftMargin" />
+            <Field Type="int"     	Name="iRightMargin" />
+            <Field Type="UINT"    	Name="uiLengthDrawn" />
+        </Variable>
+        <Variable Name="LPDRAWTEXTPARAMS" Type="Pointer" Base="DRAWTEXTPARAMS" />
+
+        <!-- [TRACKMOUSEEVENT_Flags] -->
+        <Variable Name="[TRACKMOUSEEVENT_Flags]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="TME_HOVER"       Value="0x00000001" />
+                <Set Name="TME_LEAVE"       Value="0x00000002" />
+                <Set Name="TME_NONCLIENT"   Value="0x00000010" />
+                <Set Name="TME_QUERY"       Value="0x40000000" />
+                <Set Name="TME_CANCEL"      Value="0x80000000" />
+            </Flag>
+        </Variable>
+
+        <!-- TRACKMOUSEEVENT -->
+        <Variable Name="TRACKMOUSEEVENT" Type="Struct">
+            <Field Type="DWORD" 	                Name="cbSize" />
+            <Field Type="[TRACKMOUSEEVENT_Flags]" 	Name="dwFlags" />
+            <Field Type="HWND"  	                Name="hwndTrack" />
+            <Field Type="DWORD" 	                Name="dwHoverTime" />
+        </Variable>
+        <Variable Name="LPTRACKMOUSEEVENT" Type="Pointer" Base="TRACKMOUSEEVENT" />
+
+        <!-- [SCROLLINFO_Flags] -->
+        <Variable Name="[SCROLLINFO_Flags]" Type="Alias" Base="UINT">
+            <Display Name="UINT" />
+            <Flag>
+                <Set Name="SIF_RANGE"           Value="0x0001" />
+                <Set Name="SIF_PAGE"            Value="0x0002" />
+                <Set Name="SIF_POS"             Value="0x0004" />
+                <Set Name="SIF_DISABLENOSCROLL" Value="0x0008" />
+                <Set Name="SIF_TRACKPOS"        Value="0x0010" />
+                <Set Name="SIF_ALL"             Value="0x0017" />
+            </Flag>
+        </Variable>
+
+        <!-- SCROLLINFO -->
+        <Variable Name="SCROLLINFO" Type="Struct">
+            <Field Type="UINT"    	            Name="cbSize" />
+            <Field Type="[SCROLLINFO_Flags]"    Name="fMask" />
+            <Field Type="int"     	            Name="nMin" />
+            <Field Type="int"     	            Name="nMax" />
+            <Field Type="UINT"    	            Name="nPage" />
+            <Field Type="int"     	            Name="nPos" />
+            <Field Type="int"     	            Name="nTrackPos" />
+        </Variable>
+        <Variable Name="LPSCROLLINFO"  Type="Pointer" Base="SCROLLINFO" />
+        <Variable Name="LPCSCROLLINFO" Type="Pointer" Base="SCROLLINFO" />
+
+        <!-- MARGINS -->
+        <Variable Name="MARGINS" Type="Struct">
+            <Field Type="int" 	Name="cxLeftWidth" />
+            <Field Type="int" 	Name="cxRightWidth" />
+            <Field Type="int" 	Name="cyTopHeight" />
+            <Field Type="int" 	Name="cyBottomHeight" />
+        </Variable>
+        <Variable Name="MARGINS*"       Type="Pointer" Base="MARGINS" />
+        <Variable Name="const MARGINS*" Type="Pointer" Base="MARGINS" />
+
+        <!-- BLENDFUNCTION -->
+        <Variable Name="BLENDFUNCTION" Type="Struct">
+            <Field Type="BYTE"   	Name="BlendOp" />
+            <Field Type="BYTE"   	Name="BlendFlags" />
+            <Field Type="BYTE"   	Name="SourceConstantAlpha" />
+            <Field Type="BYTE"   	Name="AlphaFormat" />
+        </Variable>
+        <Variable Name="BLENDFUNCTION*"         Type="Pointer" Base="BLENDFUNCTION" />
+        <Variable Name="const BLENDFUNCTION*"   Type="Pointer" Base="BLENDFUNCTION" />
+
+        <!-- BITMAPINFOHEADER -->
+        <Variable Name="BITMAPINFOHEADER" Type="Struct">
+            <Field Type="DWORD"      	Name="biSize" />
+            <Field Type="LONG"       	Name="biWidth" />
+            <Field Type="LONG"       	Name="biHeight" />
+            <Field Type="WORD"       	Name="biPlanes" />
+            <Field Type="WORD"       	Name="biBitCount" />
+            <Field Type="DWORD"      	Name="biCompression" />
+            <Field Type="DWORD"      	Name="biSizeImage" />
+            <Field Type="LONG"       	Name="biXPelsPerMeter" />
+            <Field Type="LONG"       	Name="biYPelsPerMeter" />
+            <Field Type="DWORD"      	Name="biClrUsed" />
+            <Field Type="DWORD"      	Name="biClrImportant" />
+        </Variable>
+        <Variable Name="const BITMAPINFOHEADER*" Type="Pointer" Base="BITMAPINFOHEADER" />
+        <Variable Name="LPBITMAPINFOHEADER"      Type="Pointer" Base="BITMAPINFOHEADER" />
+
+        <!-- BITMAPINFO -->
+        <Variable Name="BITMAPINFO" Type="Struct">
+            <Field Type="BITMAPINFOHEADER"  Name="bmiHeader" />
+            <Field Type="RGBQUAD [1]"       Name="bmiColors" />
+        </Variable>
+        <Variable Name="LPBITMAPINFO"       Type="Pointer" Base="BITMAPINFO" />
+        <Variable Name="const BITMAPINFO*"  Type="Pointer" Base="BITMAPINFO" />
+
+        <!-- [TEXTMETRIC_Pitch] -->
+        <Variable Name="[TEXTMETRIC_Pitch]" Type="Alias" Base="BYTE">
+            <Display Name="BYTE" />
+            <Flag>
+                <Set Name="TMPF_FIXED_PITCH"        Value="0x01" />
+                <Set Name="TMPF_VECTOR"             Value="0x02" />
+                <Set Name="TMPF_TRUETYPE"           Value="0x04" />
+                <Set Name="TMPF_DEVICE"             Value="0x08" />
+                <Set Name="FF_DONTCARE"             Value="0" />
+                <Set Name="FF_ROMAN"                Value="0x10" />
+                <Set Name="FF_SWISS"                Value="0x20" />
+                <Set Name="FF_MODERN"               Value="0x30" />
+                <Set Name="FF_SCRIPT"               Value="0x40" />
+                <Set Name="FF_DECORATIVE"           Value="0x50" />
+            </Flag>
+        </Variable>
+
+        <!-- TEXTMETRIC -->
+        <Variable Name="TEXTMETRIC" Type="Struct" Pack="4">
+            <Field Type="LONG"                  Name="tmHeight" />
+            <Field Type="LONG"                  Name="tmAscent" />
+            <Field Type="LONG"                  Name="tmDescent" />
+            <Field Type="LONG"                  Name="tmInternalLeading" />
+            <Field Type="LONG"                  Name="tmExternalLeading" />
+            <Field Type="LONG"                  Name="tmAveCharWidth" />
+            <Field Type="LONG"                  Name="tmMaxCharWidth" />
+            <Field Type="LONG"                  Name="tmWeight" />
+            <Field Type="LONG"                  Name="tmOverhang" />
+            <Field Type="LONG"                  Name="tmDigitizedAspectX" />
+            <Field Type="LONG"                  Name="tmDigitizedAspectY" />
+            <Field Type="TCHAR"                 Name="tmFirstChar" />
+            <Field Type="TCHAR"                 Name="tmLastChar" />
+            <Field Type="TCHAR"                 Name="tmDefaultChar" />
+            <Field Type="TCHAR"                 Name="tmBreakChar" />
+            <Field Type="BYTE"                  Name="tmItalic" />
+            <Field Type="BYTE"                  Name="tmUnderlined" />
+            <Field Type="BYTE"                  Name="tmStruckOut" />
+            <Field Type="[TEXTMETRIC_Pitch]"    Name="tmPitchAndFamily" />
+            <Field Type="[FontCharset]"         Name="tmCharSet" />
+        </Variable>
+        <Variable Name="TEXTMETRIC*"  Type="Pointer" Base="TEXTMETRIC" />
+        <Variable Name="LPTEXTMETRIC" Type="Pointer" Base="TEXTMETRIC" />
+
+        <!-- [MONITORINFO_Flags] -->
+        <Variable Name="[MONITORINFO_Flags]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="MONITORINFOF_PRIMARY" Value="0x00000001" />
+            </Flag>
+        </Variable>
+
+        <!-- VIDEOINFOHEADER -->
+        <Variable Name="VIDEOINFOHEADER" Type="Struct">
+            <Field Type="RECT"                  Name="rcSource" />
+            <Field Type="RECT"                  Name="rcTarget" />
+            <Field Type="DWORD"                 Name="dwBitRate" />
+            <Field Type="DWORD"                 Name="dwBitErrorRate" />
+            <Field Type="REFERENCE_TIME"        Name="AvgTimePerFrame" />
+            <Field Type="BITMAPINFOHEADER"      Name="bmiHeader" />
+        </Variable>
+        <Variable Name="const VIDEOINFOHEADER*" Type="Pointer" Base="VIDEOINFOHEADER" />
+
+        <!-- [AMINTERLACE_FLAGS] -->
+        <Variable Name="[AMINTERLACE_FLAGS]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="AMINTERLACE_IsInterlaced"                Value="0x00000001" />
+                <Set Name="AMINTERLACE_1FieldPerSample"             Value="0x00000002" />
+                <Set Name="AMINTERLACE_Field1First"                 Value="0x00000004" />
+                <Set Name="AMINTERLACE_FieldPatField1Only"          Value="0x00000000" />
+                <Set Name="AMINTERLACE_FieldPatField2Only"          Value="0x00000010" />
+                <Set Name="AMINTERLACE_FieldPatBothRegular"         Value="0x00000020" />
+                <Set Name="AMINTERLACE_FieldPatBothIrregular"       Value="0x00000030" />
+                <Set Name="AMINTERLACE_DisplayModeBobOnly"          Value="0x00000000" />
+                <Set Name="AMINTERLACE_DisplayModeWeaveOnly"        Value="0x00000040" />
+                <Set Name="AMINTERLACE_DisplayModeBobOrWeave"       Value="0x00000080" />
+            </Flag>
+        </Variable>
+
+        <!-- [AMCOPYPROTECT_FLAGS] -->
+        <Variable Name="[AMCOPYPROTECT_FLAGS]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="AMCOPYPROTECT_RestrictDuplication" Value="0x00000001" />
+            </Flag>
+        </Variable>
+
+        <!-- [AMCONTROL_FLAGS] -->
+        <Variable Name="[AMCONTROL_FLAGS]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="AMCONTROL_USED"                  Value="0x00000001" />
+                <Set Name="AMCONTROL_PAD_TO_4x3"            Value="0x00000002" />
+                <Set Name="AMCONTROL_PAD_TO_16x9"           Value="0x00000004" />
+                <Set Name="AMCONTROL_COLORINFO_PRESENT"     Value="0x00000080" />
+            </Flag>
+        </Variable>
+
+        <!-- VIDEOINFOHEADER2 -->
+        <Variable Name="VIDEOINFOHEADER2" Type="Struct">
+            <Field Type="RECT"                      Name="rcSource" />
+            <Field Type="RECT"                      Name="rcTarget" />
+            <Field Type="DWORD"                     Name="dwBitRate" />
+            <Field Type="DWORD"                     Name="dwBitErrorRate" />
+            <Field Type="REFERENCE_TIME"            Name="AvgTimePerFrame" />
+            <Field Type="[AMINTERLACE_FLAGS]"       Name="dwInterlaceFlags" />
+            <Field Type="[AMCOPYPROTECT_FLAGS]"     Name="dwCopyProtectFlags" />
+            <Field Type="DWORD"                     Name="dwPictAspectRatioX" />
+            <Field Type="DWORD"                     Name="dwPictAspectRatioY" />
+            <Field Type="[AMCONTROL_FLAGS]"         Name="dwControlFlags" />
+            <Field Type="DWORD"                     Name="dwReserved2" />
+            <Field Type="BITMAPINFOHEADER"          Name="bmiHeader" />
+        </Variable>
+        <Variable Name="const VIDEOINFOHEADER2*" Type="Pointer" Base="VIDEOINFOHEADER2" />
+
+        <!-- PixelFormat -->
+        <Variable Name="PixelFormat" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="PixelFormat4bppIndexed"      Value="0x30402" />
+                <Set Name="PixelFormat8bppIndexed"      Value="0x30803" />
+                <Set Name="PixelFormat16bppGrayScale"   Value="0x101004" />
+                <Set Name="PixelFormat16bppRGB555"      Value="0x21005" />
+                <Set Name="PixelFormat16bppRGB565"      Value="0x21006" />
+                <Set Name="PixelFormat16bppARGB1555"    Value="0x61007" />
+                <Set Name="PixelFormat24bppRGB"         Value="0x21808" />
+                <Set Name="PixelFormat32bppRGB"         Value="0x22009" />
+                <Set Name="PixelFormat32bppARGB"        Value="0x26200a" />
+                <Set Name="PixelFormat32bppPARGB"       Value="0xe200b" />
+                <Set Name="PixelFormat48bppRGB"         Value="0x10300c" />
+                <Set Name="PixelFormat64bppARGB"        Value="0x34400d" />
+                <Set Name="PixelFormat64bppPARGB"       Value="0x1c400e" />
+                <Set Name="PixelFormat32bppCMYK"        Value="0x200f" />
+            </Enum>
+        </Variable>
+        <Variable Name="PixelFormat*" Type="Pointer" Base="PixelFormat" />
+
+        <!-- InterpolationMode -->
+        <Variable Name="InterpolationMode" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="InterpolationModeInvalid"                Value="-1" />
+                <Set Name="InterpolationModeDefault"                Value="0" />
+                <Set Name="InterpolationModeLowQuality"             Value="1" />
+                <Set Name="InterpolationModeHighQuality"            Value="2" />
+                <Set Name="InterpolationModeBilinear"               Value="3" />
+                <Set Name="InterpolationModeBicubic"                Value="4" />
+                <Set Name="InterpolationModeNearestNeighbor"        Value="5" />
+                <Set Name="InterpolationModeHighQualityBilinear"    Value="6" />
+                <Set Name="InterpolationModeHighQualityBicubic"     Value="7" />
+            </Enum>
+        </Variable>
+        <Variable Name="InterpolationMode*" Type="Pointer" Base="InterpolationMode" />
+
+        <!-- EncoderParameterValueType -->
+        <Variable Name="EncoderParameterValueType" Type="Alias" Base="ULONG">
+            <Display Name="ULONG" />
+            <Enum>
+                <Set Name="EncoderParameterValueTypeByte"           Value="1" />
+                <Set Name="EncoderParameterValueTypeASCII"          Value="2" />
+                <Set Name="EncoderParameterValueTypeShort"          Value="3" />
+                <Set Name="EncoderParameterValueTypeLong"           Value="4" />
+                <Set Name="EncoderParameterValueTypeRational"       Value="5" />
+                <Set Name="EncoderParameterValueTypeLongRange"      Value="6" />
+                <Set Name="EncoderParameterValueTypeUndefined"      Value="7" />
+                <Set Name="EncoderParameterValueTypeRationalRange"  Value="8" />
+                <Set Name="EncoderParameterValueTypePointer"        Value="9" />
+            </Enum>
+        </Variable>
+
+        <!-- EncoderParameter -->
+        <Variable Name="EncoderParameter" Type="Struct">
+            <Field Type="GUID"                          Name="Guid" />
+            <Field Type="ULONG"                         Name="NumberOfValues" />
+            <Field Type="EncoderParameterValueType"     Name="Type" />
+            <Field Type="VOID*"                         Name="Value" />
+        </Variable>
+        <Variable Name="EncoderParameter [1]" Type="Array" Base="EncoderParameter" Count="1" />
+
+        <!-- EncoderParameters -->
+        <Variable Name="EncoderParameters" Type="Struct">
+            <Field Type="UINT"                  Name="Count" />
+            <Field Type="EncoderParameter [1]"  Name="Parameter" Count="Count" />
+        </Variable>
+        <Variable Name="EncoderParameters*"             Type="Pointer" Base="EncoderParameters" />
+        <Variable Name="EncoderParameters**"            Type="Pointer" Base="EncoderParameters*" />
+
+        <!-- ABC -->
+        <Variable Name="ABC" Type="Struct">
+            <Field Type="int"     	Name="abcA" />
+            <Field Type="UINT"    	Name="abcB" />
+            <Field Type="int"     	Name="abcC" />
+        </Variable>
+        <Variable Name="ABC*"  Type="Pointer" Base="ABC" />
+        <Variable Name="LPABC" Type="Pointer" Base="ABC" />
+
+        <!-- LCSCSTYPE -->
+        <Variable Name="LCSCSTYPE" Type="Alias" Base="LONG">
+            <Enum>
+                <Set Name="LCS_sRGB"                    Value="0x73524742" />
+                <Set Name="LCS_WINDOWS_COLOR_SPACE"     Value="0x57696e20" />
+                <Set Name="LCS_CALIBRATED_RGB"          Value="0x00000000" />
+            </Enum>
+        </Variable>
+
+        <!-- [LCSCSTYPE_DWORD] -->
+        <Variable Name="[LCSCSTYPE_DWORD]" Type="Alias" Base="LCSCSTYPE">
+            <Display Name="DWORD" />
+        </Variable>
+
+        <!-- LCSGAMUTMATCH -->
+        <Variable Name="LCSGAMUTMATCH" Type="Alias" Base="LONG">
+            <Enum>
+                <Set Name="LCS_GM_BUSINESS"             Value="0x00000001" />
+                <Set Name="LCS_GM_GRAPHICS"             Value="0x00000002" />
+                <Set Name="LCS_GM_IMAGES"               Value="0x00000004" />
+                <Set Name="LCS_GM_ABS_COLORIMETRIC"     Value="0x00000008" />
+            </Enum>
+        </Variable>
+
+        <!-- CIEXYZ -->
+        <Variable Name="CIEXYZ" Type="Struct">
+            <Field Type="FXPT2DOT30"        Name="ciexyzX" />
+            <Field Type="FXPT2DOT30"        Name="ciexyzY" />
+            <Field Type="FXPT2DOT30"        Name="ciexyzZ" />
+        </Variable>
+
+        <!-- CIEXYZTRIPLE -->
+        <Variable Name="CIEXYZTRIPLE" Type="Struct">
+            <Field Type="CIEXYZ"        Name="ciexyzRed" />
+            <Field Type="CIEXYZ"        Name="ciexyzGreen" />
+            <Field Type="CIEXYZ"        Name="ciexyzBlue" />
+        </Variable>
+
+        <!-- LOGCOLORSPACE -->
+        <Variable Name="LOGCOLORSPACE" Type="Struct">
+            <Field Type="DWORD"             Name="lcsSignature" />
+            <Field Type="DWORD"             Name="lcsVersion" />
+            <Field Type="DWORD"             Name="lcsSize" />
+            <Field Type="LCSCSTYPE"         Name="lcsCSType" />
+            <Field Type="LCSGAMUTMATCH"     Name="lcsIntent" />
+            <Field Type="CIEXYZTRIPLE"      Name="lcsEndpoints" />
+            <Field Type="DWORD"             Name="lcsGammaRed" />
+            <Field Type="DWORD"             Name="lcsGammaGreen" />
+            <Field Type="DWORD"             Name="lcsGammaBlue" />
+            <Field Type="TCHAR [MAX_PATH]"  Name="lcsFilename" />
+        </Variable>
+        <Variable Name="LPLOGCOLORSPACE" Type="Pointer" Base="LOGCOLORSPACE" />
+
+        <!-- BMFORMAT -->
+        <Variable Name="BMFORMAT" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="BM_x555RGB"              	Value="0x0000" />
+                <Set Name="BM_x555XYZ"              	Value="0x0101" />
+                <Set Name="BM_x555Yxy"        	        Value="0x0102" />
+                <Set Name="BM_x555Lab"        	        Value="0x0103" />
+                <Set Name="BM_x555G3CH"        	        Value="0x0104" />
+                <Set Name="BM_RGBTRIPLETS"          	Value="0x0002" />
+                <Set Name="BM_BGRTRIPLETS"          	Value="0x0004" />
+                <Set Name="BM_XYZTRIPLETS"          	Value="0x0201" />
+                <Set Name="BM_YxyTRIPLETS"        	    Value="0x0202" />
+                <Set Name="BM_LabTRIPLETS"        	    Value="0x0203" />
+                <Set Name="BM_G3CHTRIPLETS"        	    Value="0x0204" />
+                <Set Name="BM_5CHANNEL"        	        Value="0x0205" />
+                <Set Name="BM_6CHANNEL"        	        Value="0x0206" />
+                <Set Name="BM_7CHANNEL"        	        Value="0x0207" />
+                <Set Name="BM_8CHANNEL"        	        Value="0x0208" />
+                <Set Name="BM_GRAY"        	            Value="0x0209" />
+                <Set Name="BM_xRGBQUADS"            	Value="0x0008" />
+                <Set Name="BM_xBGRQUADS"            	Value="0x0010" />
+                <Set Name="BM_xG3CHQUADS"           	Value="0x0304" />
+                <Set Name="BM_KYMCQUADS"        	    Value="0x0305" />
+                <Set Name="BM_CMYKQUADS"            	Value="0x0020" />
+                <Set Name="BM_10b_RGB"              	Value="0x0009" />
+                <Set Name="BM_10b_XYZ"              	Value="0x0401" />
+                <Set Name="BM_10b_Yxy"        	        Value="0x0402" />
+                <Set Name="BM_10b_Lab"        	        Value="0x0403" />
+                <Set Name="BM_10b_G3CH"        	        Value="0x0404" />
+                <Set Name="BM_NAMED_INDEX"        	    Value="0x0405" />
+                <Set Name="BM_16b_RGB"              	Value="0x000A" />
+                <Set Name="BM_16b_XYZ"              	Value="0x0501" />
+                <Set Name="BM_16b_Yxy"        	        Value="0x0502" />
+                <Set Name="BM_16b_Lab"        	        Value="0x0503" />
+                <Set Name="BM_16b_G3CH"        	        Value="0x0504" />
+                <Set Name="BM_16b_GRAY"        	        Value="0x0505" />
+                <Set Name="BM_565RGB"               	Value="0x0001" />
+                <Set Name="BM_32b_scRGB"                Value="0x0601" />
+                <Set Name="BM_32b_scARGB"               Value="0x0602" />
+                <Set Name="BM_S2DOT13FIXED_scRGB"       Value="0x0603" />
+                <Set Name="BM_S2DOT13FIXED_scARGB"      Value="0x0604" />
+                <Set Name="BM_R10G10B10A2"              Value="0x0701" />
+                <Set Name="BM_R10G10B10A2_XR"           Value="0x0702" />
+                <Set Name="BM_R16G16B16A16_FLOAT"       Value="0x0703" />
+            </Enum>
+        </Variable>
+
+        <!-- NAMED_PROFILE_INFO -->
+        <Variable Name="NAMED_PROFILE_INFO" Type="Struct">
+            <Field Type="DWORD"             Name="dwFlags" />
+            <Field Type="DWORD"             Name="dwCount" />
+            <Field Type="DWORD"             Name="dwCountDevCoordinates" />
+            <Field Type="COLOR_NAME"        Name="szPrefix" />
+            <Field Type="COLOR_NAME"        Name="szSuffix" />
+        </Variable>
+        <Variable Name="PNAMED_PROFILE_INFO" Type="Pointer" Base="NAMED_PROFILE_INFO" />
+
+        <!-- GRAYCOLOR -->
+        <Variable Name="GRAYCOLOR" Type="Struct">
+            <Field Type="WORD"      Name="gray" />
+        </Variable>
+
+        <!-- RGBCOLOR -->
+        <Variable Name="RGBCOLOR" Type="Struct">
+            <Field Type="WORD"      Name="red" />
+            <Field Type="WORD"      Name="green" />
+            <Field Type="WORD"      Name="blue" />
+        </Variable>
+
+        <!-- CMYKCOLOR -->
+        <Variable Name="CMYKCOLOR" Type="Struct">
+            <Field Type="WORD"      Name="cyan" />
+            <Field Type="WORD"      Name="magenta" />
+            <Field Type="WORD"      Name="yellow" />
+            <Field Type="WORD"      Name="black" />
+        </Variable>
+
+        <!-- XYZCOLOR -->
+        <Variable Name="XYZCOLOR" Type="Struct">
+            <Field Type="WORD"      Name="X" />
+            <Field Type="WORD"      Name="Y" />
+            <Field Type="WORD"      Name="Z" />
+        </Variable>
+
+        <!-- YxyCOLOR -->
+        <Variable Name="YxyCOLOR" Type="Struct">
+            <Field Type="WORD"      Name="Y" />
+            <Field Type="WORD"      Name="x" />
+            <Field Type="WORD"      Name="y" />
+        </Variable>
+
+        <!-- LabCOLOR -->
+        <Variable Name="LabCOLOR" Type="Struct">
+            <Field Type="WORD"      Name="L" />
+            <Field Type="WORD"      Name="a" />
+            <Field Type="WORD"      Name="b" />
+        </Variable>
+
+        <!-- GENERIC3CHANNEL -->
+        <Variable Name="GENERIC3CHANNEL" Type="Struct">
+            <Field Type="WORD"      Name="ch1" />
+            <Field Type="WORD"      Name="ch2" />
+            <Field Type="WORD"      Name="ch3" />
+        </Variable>
+
+        <!-- NAMEDCOLOR -->
+        <Variable Name="NAMEDCOLOR" Type="Struct">
+            <Field Type="DWORD"     Name="dwIndex" />
+        </Variable>
+
+        <!-- HiFiCOLOR -->
+        <Variable Name="HiFiCOLOR" Type="Struct">
+            <Field Type="BYTE [MAX_COLOR_CHANNELS]" Name="channel" />
+        </Variable>
+
+        <!-- [COLOR_s] -->
+        <Variable Name="[COLOR_s]" Type="Struct">
+            <Display Name="struct" />
+            <Field Type="DWORD"     Name="reserved1" />
+            <Field Type="VOID*"     Name="reserved2" />
+        </Variable>
+
+        <!-- COLOR -->
+        <Variable Name="COLOR" Type="Union">
+            <Field Type="GRAYCOLOR"         Name="gray" />
+            <Field Type="RGBCOLOR"          Name="rgb" />
+            <Field Type="CMYKCOLOR"         Name="cmyk" />
+            <Field Type="XYZCOLOR"          Name="XYZ" />
+            <Field Type="YxyCOLOR"          Name="Yxy" />
+            <Field Type="LabCOLOR"          Name="Lab" />
+            <Field Type="GENERIC3CHANNEL"   Name="gen3ch" />
+            <Field Type="NAMEDCOLOR"        Name="named" />
+            <Field Type="HiFiCOLOR"         Name="hifi" />
+            <Field Type="[COLOR_s]"         Name="" />
+        </Variable>
+        <Variable Name="PCOLOR"  Type="Pointer" Base="COLOR" />
+        <Variable Name="LPCOLOR" Type="Pointer" Base="COLOR" />
+
+        <!-- COLORDATATYPE -->
+        <Variable Name="COLORDATATYPE" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="COLOR_BYTE"                  Value="1" />
+                <Set Name="COLOR_WORD"                  Value="2" />
+                <Set Name="COLOR_FLOAT"                 Value="3" />
+                <Set Name="COLOR_S2DOT13FIXED"          Value="4" />
+                <Set Name="COLOR_10b_R10G10B10A2"       Value="5" />
+                <Set Name="COLOR_10b_R10G10B10A2_XR"    Value="6" />
+                <Set Name="COLOR_FLOAT16"               Value="7" />
+            </Enum>
+        </Variable>
+
+        <!-- [ENUMTYPE_FIELDS] -->
+        <Variable Name="[ENUMTYPE_FIELDS]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="ET_DEVICENAME"           Value="0x00000001" />
+                <Set Name="ET_MEDIATYPE"            Value="0x00000002" />
+                <Set Name="ET_DITHERMODE"           Value="0x00000004" />
+                <Set Name="ET_RESOLUTION"           Value="0x00000008" />
+                <Set Name="ET_CMMTYPE"              Value="0x00000010" />
+                <Set Name="ET_CLASS"                Value="0x00000020" />
+                <Set Name="ET_DATACOLORSPACE"       Value="0x00000040" />
+                <Set Name="ET_CONNECTIONSPACE"      Value="0x00000080" />
+                <Set Name="ET_SIGNATURE"            Value="0x00000100" />
+                <Set Name="ET_PLATFORM"             Value="0x00000200" />
+                <Set Name="ET_PROFILEFLAGS"         Value="0x00000400" />
+                <Set Name="ET_MANUFACTURER"         Value="0x00000800" />
+                <Set Name="ET_MODEL"                Value="0x00001000" />
+                <Set Name="ET_ATTRIBUTES"           Value="0x00002000" />
+                <Set Name="ET_RENDERINGINTENT"      Value="0x00004000" />
+                <Set Name="ET_CREATOR"              Value="0x00008000" />
+                <Set Name="ET_DEVICECLASS"          Value="0x00010000" />
+            </Flag>
+        </Variable>
+
+        <!-- [PROFILE_CLASS] -->
+        <Variable Name="[PROFILE_CLASS]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="CLASS_MONITOR"       Value="0x6d6e7472" />
+                <Set Name="CLASS_PRINTER"       Value="0x70727472" />
+                <Set Name="CLASS_SCANNER"       Value="0x73636e72" />
+                <Set Name="CLASS_LINK"          Value="0x6c696e6b" />
+                <Set Name="CLASS_ABSTRACT"      Value="0x61627374" />
+                <Set Name="CLASS_COLORSPACE"    Value="0x73706163" />
+                <Set Name="CLASS_NAMED"         Value="0x6e6d636c" />
+                <Set Name="CLASS_CAMP"          Value="0x63616d70" />
+                <Set Name="CLASS_GMMP"          Value="0x676d6d70" />
+            </Enum>
+        </Variable>
+
+        <!-- [DEVICE_CLASS] -->
+        <Variable Name="[DEVICE_CLASS]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="CLASS_MONITOR"       Value="0x6d6e7472" />
+                <Set Name="CLASS_PRINTER"       Value="0x70727472" />
+                <Set Name="CLASS_SCANNER"       Value="0x73636e72" />
+            </Enum>
+        </Variable>
+
+        <!-- [COLOR_SPACE] -->
+        <Variable Name="[COLOR_SPACE]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="SPACE_XYZ"           Value="0x58595A20" />
+                <Set Name="SPACE_Lab"           Value="0x4C616220" />
+                <Set Name="SPACE_Luv"           Value="0x4C757620" />
+                <Set Name="SPACE_YCbCr"         Value="0x59436272" />
+                <Set Name="SPACE_Yxy"           Value="0x59787920" />
+                <Set Name="SPACE_RGB"           Value="0x52474220" />
+                <Set Name="SPACE_GRAY"          Value="0x47524159" />
+                <Set Name="SPACE_HSV"           Value="0x48535620" />
+                <Set Name="SPACE_HLS"           Value="0x484C5320" />
+                <Set Name="SPACE_CMYK"          Value="0x434D594B" />
+                <Set Name="SPACE_CMY"           Value="0x434D5920" />
+                <Set Name="SPACE_2_CHANNEL"     Value="0x32434C52" />
+                <Set Name="SPACE_3_CHANNEL"     Value="0x33434C52" />
+                <Set Name="SPACE_4_CHANNEL"     Value="0x34434C52" />
+                <Set Name="SPACE_5_CHANNEL"     Value="0x35434C52" />
+                <Set Name="SPACE_6_CHANNEL"     Value="0x36434C52" />
+                <Set Name="SPACE_7_CHANNEL"     Value="0x37434C52" />
+                <Set Name="SPACE_8_CHANNEL"     Value="0x38434C52" />
+            </Enum>
+        </Variable>
+
+        <!-- [CONNECTION_SPACE] -->
+        <Variable Name="[CONNECTION_SPACE]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="SPACE_XYZ"           Value="0x58595A20" />
+                <Set Name="SPACE_Lab"           Value="0x4C616220" />
+            </Enum>
+        </Variable>
+
+        <!-- [PROFILE_FLAG] -->
+        <Variable Name="[PROFILE_FLAG]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="FLAG_EMBEDDEDPROFILE"                Value="0x00000001" />
+                <Set Name="FLAG_DEPENDENTONDATA"                Value="0x00000002" />
+                <Set Name="FLAG_ENABLE_CHROMATIC_ADAPTATION"    Value="0x02000000" />
+            </Flag>
+        </Variable>
+
+        <!-- [PROFILE_ATTRIBUTES] -->
+        <Variable Name="[PROFILE_ATTRIBUTES]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="ATTRIB_TRANSPARENCY"     Value="0x00000001" />
+                <Set Name="ATTRIB_MATTE"            Value="0x00000002" />
+            </Flag>
+        </Variable>
+
+        <!-- [RENDERING_INTENT] -->
+        <Variable Name="[RENDERING_INTENT]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="INTENT_PERCEPTUAL"               Value="0" />
+                <Set Name="INTENT_RELATIVE_COLORIMETRIC"    Value="1" />
+                <Set Name="INTENT_SATURATION"               Value="2" />
+                <Set Name="INTENT_ABSOLUTE_COLORIMETRIC"    Value="3" />
+            </Enum>
+        </Variable>
+        <Variable Name="[RENDERING_INTENT*]" Type="Pointer" Base="[RENDERING_INTENT]">
+            <Display Name="PDWORD" />
+        </Variable>
+
+        <!-- ENUMTYPE -->
+        <Variable Name="ENUMTYPE" Type="Struct">
+            <Field Type="DWORD"                 Name="dwSize" />
+            <Field Type="DWORD"                 Name="dwVersion" />
+            <Field Type="[ENUMTYPE_FIELDS]"     Name="dwFields" />
+            <Field Type="PCTSTR"                Name="pDeviceName" />
+            <Field Type="DWORD"                 Name="dwMediaType" />
+            <Field Type="DWORD"                 Name="dwDitheringMode" />
+            <Field Type="DWORD [2]"             Name="dwResolution" />
+            <Field Type="DWORD"                 Name="dwCMMType" />
+            <Field Type="[PROFILE_CLASS]"       Name="dwClass" />
+            <Field Type="[COLOR_SPACE]"         Name="dwDataColorSpace" />
+            <Field Type="[CONNECTION_SPACE]"    Name="dwConnectionSpace" />
+            <Field Type="DWORD"                 Name="dwSignature" />
+            <Field Type="DWORD"                 Name="dwPlatform" />
+            <Field Type="[PROFILE_FLAG]"        Name="dwProfileFlags" />
+            <Field Type="DWORD"                 Name="dwManufacturer" />
+            <Field Type="DWORD"                 Name="dwModel" />
+            <!-- TODO: dwAttributes are of type [PROFILE_ATTRIBUTES] -->
+            <Field Type="DWORD [2]"             Name="dwAttributes" />
+            <Field Type="[RENDERING_INTENT]"    Name="dwRenderingIntent" />
+            <Field Type="DWORD"                 Name="dwCreator" />
+            <Field Type="[DEVICE_CLASS]"        Name="dwDeviceClass" />
+        </Variable>
+        <Variable Name="PENUMTYPE" Type="Pointer" Base="ENUMTYPE" />
+
+        <!-- ENUMTYPEW -->
+        <Variable Name="ENUMTYPEW" Type="Struct">
+            <Field Type="DWORD"                 Name="dwSize" />
+            <Field Type="DWORD"                 Name="dwVersion" />
+            <Field Type="[ENUMTYPE_FIELDS]"     Name="dwFields" />
+            <Field Type="PCWSTR"                Name="pDeviceName" />
+            <Field Type="DWORD"                 Name="dwMediaType" />
+            <Field Type="DWORD"                 Name="dwDitheringMode" />
+            <Field Type="DWORD [2]"             Name="dwResolution" />
+            <Field Type="DWORD"                 Name="dwCMMType" />
+            <Field Type="[PROFILE_CLASS]"       Name="dwClass" />
+            <Field Type="[COLOR_SPACE]"         Name="dwDataColorSpace" />
+            <Field Type="[CONNECTION_SPACE]"    Name="dwConnectionSpace" />
+            <Field Type="DWORD"                 Name="dwSignature" />
+            <Field Type="DWORD"                 Name="dwPlatform" />
+            <Field Type="[PROFILE_FLAG]"        Name="dwProfileFlags" />
+            <Field Type="DWORD"                 Name="dwManufacturer" />
+            <Field Type="DWORD"                 Name="dwModel" />
+            <!-- TODO: dwAttributes are of type [PROFILE_ATTRIBUTES] -->
+            <Field Type="DWORD [2]"             Name="dwAttributes" />
+            <Field Type="[RENDERING_INTENT]"    Name="dwRenderingIntent" />
+            <Field Type="DWORD"                 Name="dwCreator" />
+            <Field Type="[DEVICE_CLASS]"        Name="dwDeviceClass" />
+        </Variable>
+        <Variable Name="PENUMTYPEW" Type="Pointer" Base="ENUMTYPEW" />
+
+        <!-- [CCT_FLAGS] -->
+        <Variable Name="[CCT_FLAGS]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="PROOF_MODE"                      Value="0x00000001" />
+                <Set Name="NORMAL_MODE"                     Value="0x00000002" />
+                <Set Name="BEST_MODE"                       Value="0x00000003" />
+                <Set Name="ENABLE_GAMUT_CHECKING"           Value="0x00010000" />
+                <Set Name="USE_RELATIVE_COLORIMETRIC"       Value="0x00020000" />
+                <Set Name="FAST_TRANSLATE"                  Value="0x00040000" />
+                <Set Name="PRESERVEBLACK"                   Value="0x00100000" />
+                <Set Name="WCS_ALWAYS"                      Value="0x00200000" />
+                <Set Name="SEQUENTIAL_TRANSFORM"            Value="0x80800000" />
+            </Flag>
+        </Variable>
+
+        <!-- [CMM_INFO] -->
+        <Variable Name="[CMM_INFO]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="CMM_WIN_VERSION"         Value="0" />
+                <Set Name="CMM_IDENT"               Value="1" />
+                <Set Name="CMM_DRIVER_VERSION"      Value="2" />
+                <Set Name="CMM_DLL_VERSION"         Value="3" />
+                <Set Name="CMM_VERSION"             Value="4" />
+                <Set Name="CMM_DESCRIPTION"         Value="5" />
+                <Set Name="CMM_LOGOICON"            Value="6" />
+            </Enum>
+        </Variable>
+
+    </Headers>
+</ApiMonitor>

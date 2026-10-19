@@ -1,0 +1,1584 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2012, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Include Filename="Headers\directx.h.xml" />
+    <Include Filename="Headers\ddraw.h.xml" />
+    <Include Filename="Headers\multimedia.h.xml" />
+
+    <ErrorLookupModule Name="Quartz.dll" />
+    <Interface Name="IFilterGraph" Id="{56a8689f-0ad4-11ce-b03a-0020af0ba770}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/DirectShow">
+
+        <!-- Forward Interface Declarations -->
+        <Variable Name="IAMAnalogVideoDecoder"                      Type="Interface" />
+        <Variable Name="IAMAnalogVideoEncoder"                      Type="Interface" />
+        <Variable Name="IAMAsyncReaderTimestampScaling"             Type="Interface" />
+        <Variable Name="IAMAudioInputMixer"                         Type="Interface" />
+        <Variable Name="IAMAudioRendererStats"                      Type="Interface" />
+        <Variable Name="IAMBufferNegotiation"                       Type="Interface" />
+        <Variable Name="IAMCameraControl"                           Type="Interface" />
+        <Variable Name="IAMCertifiedOutputProtection"               Type="Interface" />
+        <Variable Name="IAMClockAdjust"                             Type="Interface" />
+        <Variable Name="IAMClockSlave"                              Type="Interface" />
+        <Variable Name="IAMCopyCaptureFileProgress"                 Type="Interface" />
+        <Variable Name="IAMCrossbar"                                Type="Interface" />
+        <Variable Name="IAMDecoderCaps"                             Type="Interface" />
+        <Variable Name="IAMDeviceRemoval"                           Type="Interface" />
+        <Variable Name="IAMDevMemoryAllocator"                      Type="Interface" />
+        <Variable Name="IAMDevMemoryControl"                        Type="Interface" />
+        <Variable Name="IAMDroppedFrames"                           Type="Interface" />
+        <Variable Name="IAMExtDevice"                               Type="Interface" />
+        <Variable Name="IAMExtTransport"                            Type="Interface" />
+        <Variable Name="IAMFilterMiscFlags"                         Type="Interface" />
+        <Variable Name="IAMGraphBuilderCallback"                    Type="Interface" />
+        <Variable Name="IAMGraphStreams"                            Type="Interface" />
+        <Variable Name="IAMLatency"                                 Type="Interface" />
+        <Variable Name="IAMOpenProgress"                            Type="Interface" />
+        <Variable Name="IAMOverlayFX"                               Type="Interface" />
+        <Variable Name="IAMovieSetup"                               Type="Interface" />
+        <Variable Name="IAMPhysicalPinInfo"                         Type="Interface" />
+        <Variable Name="IAMPluginControl"                           Type="Interface" />
+        <Variable Name="IAMPushSource"                              Type="Interface" />
+        <Variable Name="IAMResourceControl"                         Type="Interface" />
+        <Variable Name="IAMStreamConfig"                            Type="Interface" />
+        <Variable Name="IAMStreamControl"                           Type="Interface" />
+        <Variable Name="IAMStreamSelect"                            Type="Interface" />
+        <Variable Name="IAMTimecodeDisplay"                         Type="Interface" />
+        <Variable Name="IAMTimecodeGenerator"                       Type="Interface" />
+        <Variable Name="IAMTimecodeReader"                          Type="Interface" />
+        <Variable Name="IAMTuner"                                   Type="Interface" />
+        <Variable Name="IAMTunerNotification"                       Type="Interface" />
+        <Variable Name="IAMTVAudio"                                 Type="Interface" />
+        <Variable Name="IAMTVAudioNotification"                     Type="Interface" />
+        <Variable Name="IAMTVTuner"                                 Type="Interface" />
+        <Variable Name="IAMVfwCaptureDialogs"                       Type="Interface" />
+        <Variable Name="IAMVfwCompressDialogs"                      Type="Interface" />
+        <Variable Name="IAMVideoCompression"                        Type="Interface" />
+        <Variable Name="IAMVideoControl"                            Type="Interface" />
+        <Variable Name="IAMVideoDecimationProperties"               Type="Interface" />
+        <Variable Name="IAMVideoProcAmp"                            Type="Interface" />
+        <Variable Name="IAsyncReader"                               Type="Interface" />
+        <Variable Name="IBaseFilter"                                Type="Interface" />
+        <Variable Name="IBPCSatelliteTuner"                         Type="Interface" />
+        <Variable Name="ICaptureGraphBuilder"                       Type="Interface" />
+        <Variable Name="ICaptureGraphBuilder2"                      Type="Interface" />
+        <Variable Name="ICodecAPI"                                  Type="Interface" />
+        <Variable Name="IConfigAviMux"                              Type="Interface" />
+        <Variable Name="IConfigInterleaving"                        Type="Interface" />
+        <Variable Name="ICreateDevEnum"                             Type="Interface" />
+        <Variable Name="IDDrawExclModeVideo"                        Type="Interface" />
+        <Variable Name="IDDrawExclModeVideoCallback"                Type="Interface" />
+        <Variable Name="IDecimateVideoImage"                        Type="Interface" />
+        <Variable Name="IDistributorNotify"                         Type="Interface" />
+        <Variable Name="IDrawVideoImage"                            Type="Interface" />
+        <Variable Name="IDvdCmd"                                    Type="Interface" />
+        <Variable Name="IDvdControl"                                Type="Interface" />
+        <Variable Name="IDvdControl2"                               Type="Interface" />
+        <Variable Name="IDvdGraphBuilder"                           Type="Interface" />
+        <Variable Name="IDvdInfo"                                   Type="Interface" />
+        <Variable Name="IDvdInfo2"                                  Type="Interface" />
+        <Variable Name="IDvdState"                                  Type="Interface" />
+        <Variable Name="IDVEnc"                                     Type="Interface" />
+        <Variable Name="IDVRGB219"                                  Type="Interface" />
+        <Variable Name="IDVSplitter"                                Type="Interface" />
+        <Variable Name="IEncoderAPI"                                Type="Interface" />
+        <Variable Name="IEnumFilters"                               Type="Interface" />
+        <Variable Name="IEnumMediaTypes"                            Type="Interface" />
+        <Variable Name="IEnumPins"                                  Type="Interface" />
+        <Variable Name="IEnumRegFilters"                            Type="Interface" />
+        <Variable Name="IEnumStreamIdMap"                           Type="Interface" />
+        <Variable Name="IFileSinkFilter"                            Type="Interface" />
+        <Variable Name="IFileSinkFilter2"                           Type="Interface" />
+        <Variable Name="IFileSourceFilter"                          Type="Interface" />
+        <Variable Name="IFilterChain"                               Type="Interface" />
+        <Variable Name="IFilterGraph2"                              Type="Interface" />
+        <Variable Name="IFilterGraph3"                              Type="Interface" />
+        <Variable Name="IFilterMapper"                              Type="Interface" />
+        <Variable Name="IFilterMapper2"                             Type="Interface" />
+        <Variable Name="IFilterMapper3"                             Type="Interface" />
+        <Variable Name="IGetCapabilitiesKey"                        Type="Interface" />
+        <Variable Name="IGraphBuilder"                              Type="Interface" />
+        <Variable Name="IGraphConfig"                               Type="Interface" />
+        <Variable Name="IGraphConfigCallback"                       Type="Interface" />
+        <Variable Name="IGraphVersion"                              Type="Interface" />
+        <Variable Name="IIPDVDec"                                   Type="Interface" />
+        <Variable Name="IKsPropertySet"                             Type="Interface" />
+        <Variable Name="IMediaEventSink"                            Type="Interface" />
+        <Variable Name="IMediaFilter"                               Type="Interface" />
+        <Variable Name="IMediaPropertyBag"                          Type="Interface" />
+        <Variable Name="IMediaSample"                               Type="Interface" />
+        <Variable Name="IMediaSample2"                              Type="Interface" />
+        <Variable Name="IMediaSample2Config"                        Type="Interface" />
+        <Variable Name="IMediaSeeking"                              Type="Interface" />
+        <Variable Name="IMemAllocator"                              Type="Interface" />
+        <Variable Name="IMemAllocatorCallbackTemp"                  Type="Interface" />
+        <Variable Name="IMemAllocatorNotifyCallbackTemp"			Type="Interface" />
+        <Variable Name="IMemInputPin"                               Type="Interface" />
+        <Variable Name="IMpeg2Demultiplexer"                        Type="Interface" />
+        <Variable Name="IMPEG2StreamIdMap"                          Type="Interface" />
+        <Variable Name="IOverlay"                                   Type="Interface" />
+        <Variable Name="IOverlayNotify"                             Type="Interface" />
+        <Variable Name="IOverlayNotify2"                            Type="Interface" />
+        <Variable Name="IPersistMediaPropertyBag"                   Type="Interface" />
+        <Variable Name="IPin"                                       Type="Interface" />
+        <Variable Name="IPinConnection"                             Type="Interface" />
+        <Variable Name="IPinFlowControl"                            Type="Interface" />
+        <Variable Name="IQualityControl"                            Type="Interface" />
+        <Variable Name="IReferenceClock"                            Type="Interface" />
+        <Variable Name="IReferenceClock2"                           Type="Interface" />
+        <Variable Name="IReferenceClockTimerControl"                Type="Interface" />
+        <Variable Name="IRegisterServiceProvider"                   Type="Interface" />
+        <Variable Name="IResourceConsumer"                          Type="Interface" />
+        <Variable Name="IResourceManager"                           Type="Interface" />
+        <Variable Name="ISeekingPassThru"                           Type="Interface" />
+        <Variable Name="IStreamBuilder"                             Type="Interface" />
+        <Variable Name="IVideoEncoder"                              Type="Interface" />
+        <Variable Name="IVideoFrameStep"                            Type="Interface" />
+        <Variable Name="IVMRAspectRatioControl"                     Type="Interface" />
+        <Variable Name="IVMRAspectRatioControl9"                    Type="Interface" />
+        <Variable Name="IVMRDeinterlaceControl"                     Type="Interface" />
+        <Variable Name="IVMRDeinterlaceControl9"                    Type="Interface" />
+        <Variable Name="IVMRFilterConfig"                           Type="Interface" />
+        <Variable Name="IVMRFilterConfig9"                          Type="Interface" />
+        <Variable Name="IVMRImageCompositor"                        Type="Interface" />
+        <Variable Name="IVMRImageCompositor9"                       Type="Interface" />
+        <Variable Name="IVMRImagePresenter"                         Type="Interface" />
+        <Variable Name="IVMRImagePresenter9"                        Type="Interface" />
+        <Variable Name="IVMRImagePresenterConfig"                   Type="Interface" />
+        <Variable Name="IVMRImagePresenterConfig9"                  Type="Interface" />
+        <Variable Name="IVMRImagePresenterExclModeConfig"           Type="Interface" />
+        <Variable Name="IVMRMixerBitmap"                            Type="Interface" />
+        <Variable Name="IVMRMixerBitmap9"                           Type="Interface" />
+        <Variable Name="IVMRMixerControl"                           Type="Interface" />
+        <Variable Name="IVMRMixerControl9"                          Type="Interface" />
+        <Variable Name="IVMRMonitorConfig"                          Type="Interface" />
+        <Variable Name="IVMRMonitorConfig9"                         Type="Interface" />
+        <Variable Name="IVMRSurface"                                Type="Interface" />
+        <Variable Name="IVMRSurface9"                               Type="Interface" />
+        <Variable Name="IVMRSurfaceAllocator"                       Type="Interface" />
+        <Variable Name="IVMRSurfaceAllocator9"                      Type="Interface" />
+        <Variable Name="IVMRSurfaceAllocatorEx9"                    Type="Interface" />
+        <Variable Name="IVMRSurfaceAllocatorNotify"                 Type="Interface" />
+        <Variable Name="IVMRSurfaceAllocatorNotify9"                Type="Interface" />
+        <Variable Name="IVMRVideoStreamControl"                     Type="Interface" />
+        <Variable Name="IVMRVideoStreamControl9"                    Type="Interface" />
+        <Variable Name="IVMRWindowlessControl"                      Type="Interface" />
+        <Variable Name="IVMRWindowlessControl9"                     Type="Interface" />
+        <Variable Name="IVPManager"                                 Type="Interface" />
+
+        <!-- External Interfaces -->
+        <Variable Name="IDirect3DSurface9"                          Type="Interface" />
+        <Variable Name="IDirect3DDevice9"                           Type="Interface" />
+
+        <!-- Variables -->
+        <Variable Name="HEVENT"                                     Type="Alias"    Base="DWORD_PTR" />
+        <Variable Name="HEVENT*"                                    Type="Pointer"  Base="HEVENT" />
+        <Variable Name="HSEMAPHORE"                                 Type="Alias"    Base="DWORD_PTR" />
+        <Variable Name="REFTIME"                                    Type="Alias"    Base="double" />
+        <Variable Name="REFTIME*"                                   Type="Pointer"  Base="REFTIME" />
+        <Variable Name="OAHWND"                                     Type="Alias"    Base="LONG_PTR" />
+        <Variable Name="OAHWND*"                                    Type="Pointer"  Base="OAHWND" />
+        <Variable Name="OAEVENT*"                                   Type="Pointer"  Base="LONG_PTR" />
+        <Variable Name="DVD_SubpictureATR"                          Type="Alias"    Base="BYTE [6]" />
+        <Variable Name="DVD_SubpictureATR*"                         Type="Pointer"  Base="DVD_SubpictureATR" />
+        <Variable Name="DVD_AudioATR"                               Type="Alias"    Base="BYTE [8]" />
+        <Variable Name="DVD_AudioATR*"                              Type="Pointer"  Base="DVD_AudioATR" />
+        <Variable Name="DVD_VideoATR"                               Type="Alias"    Base="BYTE [2]" />
+        <Variable Name="DVD_VideoATR*"                              Type="Pointer"  Base="DVD_VideoATR" />
+        <Variable Name="DVD_REGISTER"                               Type="Alias"    Base="WORD" />
+
+        <!-- Arrays -->
+        <Variable Name="BOOL [8]"                                   Type="Array"    Base="BOOL"         Count="8" />
+        <Variable Name="BYTE [256]"                                 Type="Array"    Base="BYTE"         Count="256" />
+        <Variable Name="BYTE [768]"                                 Type="Array"    Base="BYTE"         Count="768" />
+        <Variable Name="BYTE [4076]"                                Type="Array"    Base="BYTE"         Count="4076" />
+        <Variable Name="BYTE [4056]"                                Type="Array"    Base="BYTE"         Count="4056" />
+        <Variable Name="wchar_t [32]"                               Type="Array"    Base="wchar_t"      Count="32" />
+        <Variable Name="wchar_t [256]"                              Type="Array"    Base="wchar_t"      Count="256" />
+        <Variable Name="wchar_t [512]"                              Type="Array"    Base="wchar_t"      Count="512" />
+        <Variable Name="GPRMARRAY"                                  Type="Array"    Base="DVD_REGISTER" Count="16" />
+        <Variable Name="GPRMARRAY*"                                 Type="Pointer"  Base="GPRMARRAY" />
+        <Variable Name="SPRMARRAY"                                  Type="Array"    Base="DVD_REGISTER" Count="24" />
+        <Variable Name="SPRMARRAY*"                                 Type="Pointer"  Base="SPRMARRAY" />
+
+        <!-- DVD_AUDIO_LANG_EXT -->
+        <Variable Name="DVD_AUDIO_LANG_EXT" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="DVD_AUD_EXT_NotSpecified"			Value="0" />
+                <Set Name="DVD_AUD_EXT_Captions"				Value="1" />
+                <Set Name="DVD_AUD_EXT_VisuallyImpaired"		Value="2" />
+                <Set Name="DVD_AUD_EXT_DirectorComments1"		Value="3" />
+                <Set Name="DVD_AUD_EXT_DirectorComments2"		Value="4" />
+            </Enum>
+        </Variable>
+        <Variable Name="DVD_AUDIO_LANG_EXT*" Type="Pointer" Base="DVD_AUDIO_LANG_EXT" />
+
+        <!-- DVD_VIDEO_COMPRESSION -->
+        <Variable Name="DVD_VIDEO_COMPRESSION" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="DVD_VideoCompression_Other"      Value="0" />
+                <Set Name="DVD_VideoCompression_MPEG1"      Value="1" />
+                <Set Name="DVD_VideoCompression_MPEG2"      Value="2" />
+            </Enum>
+        </Variable>
+
+        <!-- DVD_VideoAttributes -->
+        <Variable Name="DVD_VideoAttributes" Type="Struct">
+            <Field Type="BOOL"                      Name="fPanscanPermitted" />
+            <Field Type="BOOL"                      Name="fLetterboxPermitted" />
+            <Field Type="ULONG"                     Name="ulAspectX" />
+            <Field Type="ULONG"                     Name="ulAspectY" />
+            <Field Type="ULONG"                     Name="ulFrameRate" />
+            <Field Type="ULONG"                     Name="ulFrameHeight" />
+            <Field Type="DVD_VIDEO_COMPRESSION"     Name="Compression" />
+            <Field Type="BOOL"                      Name="fLine21Field1InGOP" />
+            <Field Type="BOOL"                      Name="fLine21Field2InGOP" />
+            <Field Type="ULONG"                     Name="ulSourceResolutionX" />
+            <Field Type="ULONG"                     Name="ulSourceResolutionY" />
+            <Field Type="BOOL"                      Name="fIsSourceLetterboxed" />
+            <Field Type="BOOL"                      Name="fIsFilmMode" />
+        </Variable>
+        <Variable Name="DVD_VideoAttributes*" Type="Pointer" Base="DVD_VideoAttributes" />
+
+        <!-- DVD_AUDIO_APPMODE -->
+        <Variable Name="DVD_AUDIO_APPMODE" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="DVD_AudioMode_None"          Value="0" />
+                <Set Name="DVD_AudioMode_Karaoke"       Value="1" />
+                <Set Name="DVD_AudioMode_Surround"      Value="2" />
+                <Set Name="DVD_AudioMode_Other"         Value="3" />
+            </Enum>
+        </Variable>
+
+        <!-- DVD_AUDIO_FORMAT -->
+        <Variable Name="DVD_AUDIO_FORMAT" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="DVD_AudioFormat_AC3"             Value="0" />
+                <Set Name="DVD_AudioFormat_MPEG1"           Value="1" />
+                <Set Name="DVD_AudioFormat_MPEG1_DRC"       Value="2" />
+                <Set Name="DVD_AudioFormat_MPEG2"           Value="3" />
+                <Set Name="DVD_AudioFormat_MPEG2_DRC"       Value="4" />
+                <Set Name="DVD_AudioFormat_LPCM"            Value="5" />
+                <Set Name="DVD_AudioFormat_DTS"             Value="6" />
+                <Set Name="DVD_AudioFormat_SDDS"            Value="7" />
+                <Set Name="DVD_AudioFormat_Other"           Value="8" />
+            </Enum>
+        </Variable>
+
+        <!-- DVD_AudioAttributes -->
+        <Variable Name="DVD_AudioAttributes" Type="Struct">
+            <Field Type="DVD_AUDIO_APPMODE"     Name="AppMode" />
+            <Field Type="BYTE"                  Name="AppModeData" />
+            <Field Type="DVD_AUDIO_FORMAT"      Name="AudioFormat" />
+            <Field Type="LCID"                  Name="Language" />
+            <Field Type="DVD_AUDIO_LANG_EXT"    Name="LanguageExtension" />
+            <Field Type="BOOL"                  Name="fHasMultichannelInfo" />
+            <Field Type="DWORD"                 Name="dwFrequency" />
+            <Field Type="BYTE"                  Name="bQuantization" />
+            <Field Type="BYTE"                  Name="bNumberOfChannels" />
+            <Field Type="DWORD [2]"             Name="dwReserved" />
+        </Variable>
+        <Variable Name="DVD_AudioAttributes*" Type="Pointer" Base="DVD_AudioAttributes" />
+        <Variable Name="DVD_AudioAttributes [8]" Type="Array" Base="DVD_AudioAttributes" Count="8" />
+
+        <!-- DVD_HMSF_TIMECODE -->
+        <Variable Name="DVD_HMSF_TIMECODE" Type="Struct">
+            <Field Type="BYTE" 	Name="bHours" />
+            <Field Type="BYTE" 	Name="bMinutes" />
+            <Field Type="BYTE" 	Name="bSeconds" />
+            <Field Type="BYTE" 	Name="bFrames" />
+        </Variable>
+        <Variable Name="DVD_HMSF_TIMECODE*" Type="Pointer" Base="DVD_HMSF_TIMECODE" />
+
+        <!-- DVD_SUBPICTURE_TYPE -->
+        <Variable Name="DVD_SUBPICTURE_TYPE" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="DVD_SPType_NotSpecified" Value="0" />
+                <Set Name="DVD_SPType_Language"     Value="1" />
+                <Set Name="DVD_SPType_Other"        Value="2" />
+            </Enum>
+        </Variable>
+
+        <!-- DVD_SUBPICTURE_CODING -->
+        <Variable Name="DVD_SUBPICTURE_CODING" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="DVD_SPCoding_RunLength"  Value="0" />
+                <Set Name="DVD_SPCoding_Extended"   Value="1" />
+                <Set Name="DVD_SPCoding_Other"      Value="2" />
+            </Enum>
+        </Variable>
+
+        <!-- DVD_SUBPICTURE_LANG_EXT -->
+        <Variable Name="DVD_SUBPICTURE_LANG_EXT" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="DVD_SP_EXT_NotSpecified"                 Value="0" />
+                <Set Name="DVD_SP_EXT_Caption_Normal"               Value="1" />
+                <Set Name="DVD_SP_EXT_Caption_Big"                  Value="2" />
+                <Set Name="DVD_SP_EXT_Caption_Children"             Value="3" />
+                <Set Name="DVD_SP_EXT_CC_Normal"                    Value="5" />
+                <Set Name="DVD_SP_EXT_CC_Big"                       Value="6" />
+                <Set Name="DVD_SP_EXT_CC_Children"                  Value="7" />
+                <Set Name="DVD_SP_EXT_Forced"                       Value="9" />
+                <Set Name="DVD_SP_EXT_DirectorComments_Normal"      Value="13" />
+                <Set Name="DVD_SP_EXT_DirectorComments_Big"         Value="14" />
+                <Set Name="DVD_SP_EXT_DirectorComments_Children"    Value="15" />
+            </Enum>
+        </Variable>
+        <Variable Name="DVD_SUBPICTURE_LANG_EXT*" Type="Pointer" Base="DVD_SUBPICTURE_LANG_EXT" />
+
+        <!-- DVD_SubpictureAttributes -->
+        <Variable Name="DVD_SubpictureAttributes" Type="Struct">
+            <Field Type="DVD_SUBPICTURE_TYPE"       Name="Type" />
+            <Field Type="DVD_SUBPICTURE_CODING"     Name="CodingMode" />
+            <Field Type="LCID"                      Name="Language" />
+            <Field Type="DVD_SUBPICTURE_LANG_EXT"   Name="LanguageExtension" />
+        </Variable>
+        <Variable Name="DVD_SubpictureAttributes*" Type="Pointer" Base="DVD_SubpictureAttributes" />
+        <Variable Name="DVD_SubpictureAttributes [32]" Type="Array" Base="DVD_SubpictureAttributes" Count="32" />
+
+        <!-- REGPINTYPES -->
+        <Variable Name="REGPINTYPES" Type="Struct">
+            <Field Type="const CLSID*"  Name="clsMajorType" />
+            <Field Type="const CLSID*"  Name="clsMinorType" />
+        </Variable>
+        <Variable Name="const REGPINTYPES*" Type="Pointer" Base="REGPINTYPES" />
+
+        <!-- REGFILTERPINS -->
+        <Variable Name="REGFILTERPINS" Type="Struct">
+            <Field Type="LPWSTR"                Name="strName" />
+            <Field Type="BOOL"                  Name="bRendered" />
+            <Field Type="BOOL"                  Name="bOutput" />
+            <Field Type="BOOL"                  Name="bZero" />
+            <Field Type="BOOL"                  Name="bMany" />
+            <Field Type="const CLSID*"          Name="clsConnectsToFilter" />
+            <Field Type="const WCHAR*"          Name="strConnectsToPin" />
+            <Field Type="UINT"                  Name="nMediaTypes" />
+            <Field Type="const REGPINTYPES*"    Name="lpMediaType" Count="nMediaTypes" />
+        </Variable>
+        <Variable Name="const REGFILTERPINS*" Type="Pointer" Base="REGFILTERPINS" />
+
+        <!-- REGPINMEDIUM -->
+        <Variable Name="REGPINMEDIUM" Type="Struct">
+            <Field Type="CLSID" 	Name="clsMedium" />
+            <Field Type="DWORD" 	Name="dw1" />
+            <Field Type="DWORD" 	Name="dw2" />
+        </Variable>
+        <Variable Name="const REGPINMEDIUM*" Type="Pointer" Base="REGPINMEDIUM" />
+
+        <!-- REGFILTERPINS2 -->
+        <Variable Name="REGFILTERPINS2" Type="Struct">
+            <Field Type="DWORD"                 Name="dwFlags" />
+            <Field Type="UINT"                  Name="cInstances" />
+            <Field Type="UINT"                  Name="nMediaTypes" />
+            <Field Type="const REGPINTYPES*"    Name="lpMediaType" Count="nMediaTypes" />
+            <Field Type="UINT"                  Name="nMediums" />
+            <Field Type="const REGPINMEDIUM*"   Name="lpMedium" Count="nMediums" />
+            <Field Type="const CLSID*"          Name="clsPinCategory" />
+        </Variable>
+        <Variable Name="const REGFILTERPINS2*" Type="Pointer" Base="REGFILTERPINS2" />
+
+        <!-- [REGFILTER2_u_s1] -->
+        <Variable Name="[REGFILTER2_u_s1]" Type="Struct">
+            <Display Name="struct" />
+            <Field Type="ULONG"                 Name="cPins" />
+            <Field Type="const REGFILTERPINS*"  Name="rgPins" Count="cPins" />
+        </Variable>
+
+        <!-- [REGFILTER2_u_s2] -->
+        <Variable Name="[REGFILTER2_u_s2]" Type="Struct">
+            <Display Name="struct" />
+            <Field Type="ULONG"                 Name="cPins2" />
+            <Field Type="const REGFILTERPINS2*" Name="rgPins2" Count="cPins2" />
+        </Variable>
+
+        <!-- [REGFILTER2_u] -->
+        <Variable Name="[REGFILTER2_u]" Type="Union">
+            <Display Name="union" />
+            <Field Type="[REGFILTER2_u_s1]" Name="" />
+            <Field Type="[REGFILTER2_u_s2]" Name="" />
+        </Variable>
+
+        <!-- [FILTER_MERIT] -->
+        <Variable Name="[FILTER_MERIT]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="MERIT_PREFERRED"         Value="0x800000" />
+                <Set Name="MERIT_NORMAL"            Value="0x600000" />
+                <Set Name="MERIT_UNLIKELY"          Value="0x400000" />
+                <Set Name="MERIT_DO_NOT_USE"        Value="0x200000" />
+                <Set Name="MERIT_SW_COMPRESSOR"     Value="0x100000" />
+                <Set Name="MERIT_HW_COMPRESSOR"     Value="0x100050" />
+            </Enum>
+        </Variable>
+
+        <!-- REGFILTER2 -->
+        <Variable Name="REGFILTER2" Type="Struct">
+            <Field Type="DWORD"                 Name="dwVersion" />
+            <Field Type="[FILTER_MERIT]"        Name="dwMerit" />
+            <Field Type="[REGFILTER2_u]"        Name="" />
+        </Variable>
+        <Variable Name="const REGFILTER2*" Type="Pointer" Base="REGFILTER2" />
+
+        <!-- DVINFO -->
+        <Variable Name="DVINFO" Type="Struct">
+            <Field Type="DWORD"         Name="dwDVAAuxSrc" />
+            <Field Type="DWORD"         Name="dwDVAAuxCtl" />
+            <Field Type="DWORD"         Name="dwDVAAuxSrc1" />
+            <Field Type="DWORD"         Name="dwDVAAuxCtl1" />
+            <Field Type="DWORD"         Name="dwDVVAuxSrc" />
+            <Field Type="DWORD"         Name="dwDVVAuxCtl" />
+            <Field Type="DWORD [2]"     Name="dwDVReserved" />
+        </Variable>
+        <Variable Name="DVINFO*" Type="Pointer" Base="DVINFO" />
+
+        <!-- VMR9MonitorInfo -->
+        <Variable Name="VMR9MonitorInfo" Type="Struct">
+            <Field Type="UINT"                  Name="uDevID" />
+            <Field Type="RECT"                  Name="rcMonitor" />
+            <Field Type="HMONITOR"              Name="hMon" />
+            <Field Type="[MONITORINFO_Flags]"   Name="dwFlags" />
+            <Field Type="wchar_t [32]"          Name="szDevice" />
+            <Field Type="wchar_t [512]"         Name="szDescription" />
+            <Field Type="LARGE_INTEGER"         Name="liDriverVersion" />
+            <Field Type="DWORD"                 Name="dwVendorId" />
+            <Field Type="DWORD"                 Name="dwDeviceId" />
+            <Field Type="DWORD"                 Name="dwSubSysId" />
+            <Field Type="DWORD"                 Name="dwRevision" />
+        </Variable>
+        <Variable Name="VMR9MonitorInfo*" Type="Pointer" Base="VMR9MonitorInfo" />
+
+        <!-- PIN_DIRECTION -->
+        <Variable Name="PIN_DIRECTION" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="PINDIR_INPUT"    Value="0" />
+                <Set Name="PINDIR_OUTPUT"   Value="1" />
+            </Enum>
+        </Variable>
+        <Variable Name="PIN_DIRECTION*" Type="Pointer" Base="PIN_DIRECTION" />
+
+        <!-- PIN_INFO -->
+        <Variable Name="PIN_INFO" Type="Struct">
+            <Field Type="IBaseFilter*"      Name="pFilter" />
+            <Field Type="PIN_DIRECTION"     Name="dir" />
+            <Field Type="WCHAR [128]"       Name="achName" />
+        </Variable>
+        <Variable Name="PIN_INFO*" Type="Pointer" Base="PIN_INFO" />
+
+        <!-- AMCOPPCommand -->
+        <Variable Name="AMCOPPCommand" Type="Struct">
+            <Field Type="GUID"          Name="macKDI" />
+            <Field Type="GUID"          Name="guidCommandID" />
+            <Field Type="DWORD"         Name="dwSequence" />
+            <Field Type="DWORD"         Name="cbSizeData" />
+            <Field Type="BYTE [4056]"   Name="CommandData" Count="cbSizeData" />
+        </Variable>
+        <Variable Name="const AMCOPPCommand*" Type="Pointer" Base="AMCOPPCommand" />
+
+        <!-- AMCOPPSignature -->
+        <Variable Name="AMCOPPSignature" Type="Struct">
+            <Field Type="BYTE [256]" Name="Signature" />
+        </Variable>
+        <Variable Name="AMCOPPSignature*" Type="Pointer" Base="AMCOPPSignature" />
+
+        <!-- AMCOPPStatusInput -->
+        <Variable Name="AMCOPPStatusInput" Type="Struct">
+            <Field Type="GUID"          Name="rApp" />
+            <Field Type="GUID"          Name="guidStatusRequestID" />
+            <Field Type="DWORD"         Name="dwSequence" />
+            <Field Type="DWORD"         Name="cbSizeData" />
+            <Field Type="BYTE [4056]"   Name="StatusData" Count="cbSizeData" />
+        </Variable>
+        <Variable Name="const AMCOPPStatusInput*" Type="Pointer" Base="AMCOPPStatusInput" />
+
+        <!-- VMRGUID -->
+        <Variable Name="VMRGUID" Type="Struct">
+            <Field Type="GUID*"	Name="pGUID" />
+            <Field Type="GUID"	Name="GUID" />
+        </Variable>
+        <Variable Name="VMRGUID*"       Type="Pointer" Base="VMRGUID" />
+        <Variable Name="const VMRGUID*" Type="Pointer" Base="VMRGUID" />
+
+        <!-- VMRMONITORINFO -->
+        <Variable Name="VMRMONITORINFO" Type="Struct">
+            <Field Type="VMRGUID"               Name="guid" />
+            <Field Type="RECT"                  Name="rcMonitor" />
+            <Field Type="HMONITOR"              Name="hMon" />
+            <Field Type="[MONITORINFO_Flags]"   Name="dwFlags" />
+            <Field Type="wchar_t [32]"          Name="szDevice" />
+            <Field Type="wchar_t [256]"         Name="szDescription" />
+            <Field Type="LARGE_INTEGER"         Name="liDriverVersion" />
+            <Field Type="DWORD"                 Name="dwVendorId" />
+            <Field Type="DWORD"                 Name="dwDeviceId" />
+            <Field Type="DWORD"                 Name="dwSubSysId" />
+            <Field Type="DWORD"                 Name="dwRevision" />
+        </Variable>
+        <Variable Name="VMRMONITORINFO*" Type="Pointer" Base="VMRMONITORINFO" />
+
+        <!-- AMCOPPStatusOutput -->
+        <Variable Name="AMCOPPStatusOutput" Type="Struct">
+            <Field Type="GUID"          Name="macKDI" />
+            <Field Type="DWORD"         Name="cbSizeData" />
+            <Field Type="BYTE [4076]"   Name="COPPStatus" Count="cbSizeData" />
+        </Variable>
+        <Variable Name="AMCOPPStatusOutput*" Type="Pointer" Base="AMCOPPStatusOutput" />
+
+        <!-- DVD_ATR -->
+        <Variable Name="DVD_ATR" Type="Struct">
+            <Field Type="ULONG"         Name="ulCAT" />
+            <Field Type="BYTE [768]"    Name="pbATRI" />
+        </Variable>
+        <Variable Name="DVD_ATR*" Type="Pointer" Base="DVD_ATR" />
+
+        <!-- DVD_MenuAttributes -->
+        <Variable Name="DVD_MenuAttributes" Type="Struct">
+            <Field Type="BOOL [8]"                  Name="fCompatibleRegion" />
+            <Field Type="DVD_VideoAttributes"       Name="VideoAttributes" />
+            <Field Type="BOOL"                      Name="fAudioPresent" />
+            <Field Type="DVD_AudioAttributes"       Name="AudioAttributes" />
+            <Field Type="BOOL"                      Name="fSubpicturePresent" />
+            <Field Type="DVD_SubpictureAttributes"  Name="SubpictureAttributes" />
+        </Variable>
+        <Variable Name="DVD_MenuAttributes*" Type="Pointer" Base="DVD_MenuAttributes" />
+
+        <!-- DVD_MUA_MixingInfo -->
+        <Variable Name="DVD_MUA_MixingInfo" Type="Struct">
+            <Field Type="BOOL"                  Name="fMixTo0" />
+            <Field Type="BOOL"                  Name="fMixTo1" />
+            <Field Type="BOOL"                  Name="fMix0InPhase" />
+            <Field Type="BOOL"                  Name="fMix1InPhase" />
+            <Field Type="[SPEAKER_POSITION]"    Name="dwSpeakerPosition" />
+        </Variable>
+        <Variable Name="DVD_MUA_MixingInfo [8]" Type="Array" Base="DVD_MUA_MixingInfo" Count="8" />
+
+        <!-- DVD_MUA_Coeff -->
+        <Variable Name="DVD_MUA_Coeff" Type="Struct">
+            <Field Type="double"    Name="log2_alpha" />
+            <Field Type="double"    Name="log2_beta" />
+        </Variable>
+        <Variable Name="DVD_MUA_Coeff [8]" Type="Array" Base="DVD_MUA_Coeff" Count="8" />
+
+        <!-- DVD_MultichannelAudioAttributes -->
+        <Variable Name="DVD_MultichannelAudioAttributes" Type="Struct">
+            <Field Type="DVD_MUA_MixingInfo [8]"    Name="Info" />
+            <Field Type="DVD_MUA_Coeff [8]"         Name="Coeff" />
+        </Variable>
+        <Variable Name="DVD_MultichannelAudioAttributes [8]" Type="Array" Base="DVD_MultichannelAudioAttributes" Count="8" />
+
+        <!-- DVD_TITLE_APPMODE -->
+        <Variable Name="DVD_TITLE_APPMODE" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="DVD_AppMode_Not_Specified"   Value="0" />
+                <Set Name="DVD_AppMode_Karaoke"         Value="1" />
+                <Set Name="DVD_AppMode_Other"           Value="3" />
+            </Enum>
+        </Variable>
+
+        <!-- [DVD_TitleAttributes_u] -->
+        <Variable Name="[DVD_TitleAttributes_u]" Type="Union">
+            <Display Name="union" />
+            <Field Type="DVD_TITLE_APPMODE"     Name="AppMode" />
+            <Field Type="DVD_HMSF_TIMECODE"     Name="TitleLength" />
+        </Variable>
+
+        <!-- DVD_TitleAttributes -->
+        <Variable Name="DVD_TitleAttributes" Type="Struct">
+            <Field Type="[DVD_TitleAttributes_u]"               Name="" />
+            <Field Type="DVD_VideoAttributes"                   Name="VideoAttributes" />
+            <Field Type="ULONG"                                 Name="ulNumberOfAudioStreams" />
+            <Field Type="DVD_AudioAttributes [8]"               Name="AudioAttributes" />
+            <Field Type="DVD_MultichannelAudioAttributes [8]"   Name="MultichannelAudioAttributes" />
+            <Field Type="ULONG"                                 Name="ulNumberOfSubpictureStreams" />
+            <Field Type="DVD_SubpictureAttributes [32]"         Name="SubpictureAttributes" />
+        </Variable>
+        <Variable Name="DVD_TitleAttributes*" Type="Pointer" Base="DVD_TitleAttributes" />
+
+        <!-- DVD_KARAOKE_ASSIGNMENT -->
+        <Variable Name="DVD_KARAOKE_ASSIGNMENT" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="DVD_Assignment_reserved0"        Value="0" />
+                <Set Name="DVD_Assignment_reserved1"        Value="1" />
+                <Set Name="DVD_Assignment_LR"               Value="2" />
+                <Set Name="DVD_Assignment_LRM"              Value="3" />
+                <Set Name="DVD_Assignment_LR1"              Value="4" />
+                <Set Name="DVD_Assignment_LRM1"             Value="5" />
+                <Set Name="DVD_Assignment_LR12"             Value="6" />
+                <Set Name="DVD_Assignment_LRM12"            Value="7" />
+            </Enum>
+        </Variable>
+
+        <!-- DVD_KARAOKE_CONTENTS -->
+        <Variable Name="DVD_KARAOKE_CONTENTS" Type="Alias" Base="WORD">
+            <Display Name="WORD" />
+            <Flag>
+                <Set Name="DVD_Karaoke_GuideVocal1"         Value="0x1" />
+                <Set Name="DVD_Karaoke_GuideVocal2"         Value="0x2" />
+                <Set Name="DVD_Karaoke_GuideMelody1"        Value="0x4" />
+                <Set Name="DVD_Karaoke_GuideMelody2"        Value="0x8" />
+                <Set Name="DVD_Karaoke_GuideMelodyA"        Value="0x10" />
+                <Set Name="DVD_Karaoke_GuideMelodyB"        Value="0x20" />
+                <Set Name="DVD_Karaoke_SoundEffectA"        Value="0x40" />
+                <Set Name="DVD_Karaoke_SoundEffectB"        Value="0x80" />
+            </Flag>
+        </Variable>
+        <Variable Name="DVD_KARAOKE_CONTENTS [8]" Type="Array" Base="DVD_KARAOKE_CONTENTS" Count="8">
+            <Display Name="WORD [8]" />
+        </Variable>
+
+        <!-- DVD_KaraokeAttributes -->
+        <Variable Name="DVD_KaraokeAttributes" Type="Struct">
+            <Field Type="BYTE"                      Name="bVersion" />
+            <Field Type="BOOL"                      Name="fMasterOfCeremoniesInGuideVocal1" />
+            <Field Type="BOOL"                      Name="fDuet" />
+            <Field Type="DVD_KARAOKE_ASSIGNMENT"    Name="ChannelAssignment" />
+            <Field Type="DVD_KARAOKE_CONTENTS [8]"  Name="wChannelContents" />
+        </Variable>
+        <Variable Name="DVD_KaraokeAttributes*" Type="Pointer" Base="DVD_KaraokeAttributes" />
+
+        <!-- FILTER_INFO -->
+        <Variable Name="FILTER_INFO" Type="Struct">
+            <Field Type="WCHAR [128]"       Name="achName" />
+            <Field Type="IFilterGraph*"     Name="pGraph" />
+        </Variable>
+        <Variable Name="FILTER_INFO*" Type="Pointer" Base="FILTER_INFO" />
+
+        <!-- ALLOCATOR_PROPERTIES -->
+        <Variable Name="ALLOCATOR_PROPERTIES" Type="Struct">
+            <Field Type="long" 	Name="cBuffers" />
+            <Field Type="long" 	Name="cbBuffer" />
+            <Field Type="long" 	Name="cbAlign" />
+            <Field Type="long" 	Name="cbPrefix" />
+        </Variable>
+        <Variable Name="ALLOCATOR_PROPERTIES*"          Type="Pointer" Base="ALLOCATOR_PROPERTIES" />
+        <Variable Name="const ALLOCATOR_PROPERTIES*"    Type="Pointer" Base="ALLOCATOR_PROPERTIES" />
+
+        <!-- TIMECODE -->
+        <Variable Name="TIMECODE" Type="Struct">
+            <Field Type="WORD"   	Name="wFrameRate" />
+            <Field Type="WORD"   	Name="wFrameFract" />
+            <Field Type="DWORD"  	Name="dwFrames" />
+        </Variable>
+
+        <!-- [TIMECODE_SAMPLE_FLAGS] -->
+        <Variable Name="[TIMECODE_SAMPLE_FLAGS]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <!-- TODO: Need to find values -->
+                <!--
+                <Set Name="AM_TIMECODE_FLAG_FCM"                Value="" />
+                <Set Name="AM_TIMECODE_FLAG_CF"                 Value="" />
+                <Set Name="AM_TIMECODE_FLAG_FIELD"              Value="" />
+                <Set Name="AM_TIMECODE_FLAG_DF"                 Value="" />
+                <Set Name="AM_TIMECODE_COLORFRAME"              Value="" />
+                <Set Name="AM_TIMECODE_COLORSEQUENCE"           Value="" />
+                <Set Name="AM_TIMECODE_FILMSEQUENCE_TYPE"       Value="" />
+                -->
+                <Set Name="ED_DEVCAP_TIMECODE_READ"             Value="4121" />
+                <Set Name="ED_DEVCAP_ATN_READ"                  Value="5047" />
+                <Set Name="ED_DEVCAP_RTC_READ"                  Value="5050" />
+            </Enum>
+        </Variable>
+
+        <!-- TIMECODE_SAMPLE -->
+        <Variable Name="TIMECODE_SAMPLE" Type="Struct">
+            <Field Type="LONGLONG" 	                Name="qwTick" />
+            <Field Type="TIMECODE" 	                Name="timecode" />
+            <Field Type="DWORD" 	                Name="dwUser" />
+            <Field Type="[TIMECODE_SAMPLE_FLAGS]" 	Name="dwFlags" />
+        </Variable>
+        <Variable Name="PTIMECODE_SAMPLE"   Type="Pointer" Base="TIMECODE_SAMPLE" />
+
+        <!-- AM_DVD_STREAM_FLAGS -->
+        <Variable Name="AM_DVD_STREAM_FLAGS" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="AM_DVD_STREAM_VIDEO"     Value="0x1" />
+                <Set Name="AM_DVD_STREAM_AUDIO"		Value="0x2" />
+                <Set Name="AM_DVD_STREAM_SUBPIC"	Value="0x4" />
+            </Enum>
+        </Variable>
+
+        <!-- AM_DVD_RENDERSTATUS -->
+        <Variable Name="AM_DVD_RENDERSTATUS" Type="Struct">
+            <Field Type="HRESULT" 	            Name="hrVPEStatus" />
+            <Field Type="BOOL" 	                Name="bDvdVolInvalid" />
+            <Field Type="BOOL" 	                Name="bDvdVolUnknown" />
+            <Field Type="BOOL" 	                Name="bNoLine21In" />
+            <Field Type="BOOL" 	                Name="bNoLine21Out" />
+            <Field Type="int" 	                Name="iNumStreams" />
+            <Field Type="int" 	                Name="iNumStreamsFailed" />
+            <Field Type="AM_DVD_STREAM_FLAGS" 	Name="dwFailedStreamsFlag" />
+        </Variable>
+        <Variable Name="AM_DVD_RENDERSTATUS*" Type="Pointer" Base="AM_DVD_RENDERSTATUS" />
+
+        <!-- REGFILTER -->
+        <Variable Name="REGFILTER" Type="Struct">
+            <Field Type="CLSID" 	Name="Clsid" />
+            <Field Type="LPWSTR" 	Name="Name" />
+        </Variable>
+        <Variable Name="REGFILTER*"     Type="Pointer" Base="REGFILTER" />
+        <Variable Name="REGFILTER**"    Type="Pointer" Base="REGFILTER*" />
+
+        <!-- [MediaContent] -->
+        <Variable Name="[MediaContent]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="MPEG2_PROGRAM_STREAM_MAP"            Value="0x00000000" />
+                <Set Name="MPEG2_PROGRAM_ELEMENTARY_STREAM"     Value="0x00000001" />
+                <Set Name="MPEG2_PROGRAM_DIRECTORY_PES_PACKET"  Value="0x00000002" />
+                <Set Name="MPEG2_PROGRAM_PACK_HEADER"           Value="0x00000003" />
+                <Set Name="MPEG2_PROGRAM_PES_STREAM"            Value="0x00000004" />
+                <Set Name="MPEG2_PROGRAM_SYSTEM_HEADER"         Value="0x00000005" />
+            </Enum>
+        </Variable>
+
+        <!-- STREAM_ID_MAP -->
+        <Variable Name="STREAM_ID_MAP" Type="Struct">
+            <Field Type="ULONG" 	        Name="stream_id" />
+            <Field Type="[MediaContent]" 	Name="dwMediaSampleContent" />
+            <Field Type="ULONG" 	        Name="ulSubstreamFilterValue" />
+            <Field Type="int" 	            Name="iDataOffset" />
+        </Variable>
+        <Variable Name="STREAM_ID_MAP*" Type="Pointer" Base="STREAM_ID_MAP" />
+
+        <!-- [COLORKEY_Type] -->
+        <Variable Name="[COLORKEY_Type]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="CK_NOCOLORKEY"   Value="0" />
+                <Set Name="CK_INDEX"		Value="0x1" />
+                <Set Name="CK_RGB"			Value="0x2" />
+            </Flag>
+        </Variable>
+
+        <!-- COLORKEY -->
+        <Variable Name="COLORKEY" Type="Struct">
+            <Field Type="[COLORKEY_Type]"   Name="KeyType" />
+            <Field Type="DWORD" 	        Name="PaletteIndex" />
+            <Field Type="COLORREF"      	Name="LowColorValue" />
+            <Field Type="COLORREF" 	        Name="HighColorValue" />
+        </Variable>
+        <Variable Name="COLORKEY*"          Type="Pointer" Base="COLORKEY" />
+        <Variable Name="const COLORKEY*"    Type="Pointer" Base="COLORKEY" />
+
+        <!-- DVD_PLAYBACK_LOCATION -->
+        <Variable Name="DVD_PLAYBACK_LOCATION" Type="Struct">
+            <Field Type="ULONG" 	Name="TitleNum" />
+            <Field Type="ULONG" 	Name="ChapterNum" />
+            <Field Type="ULONG" 	Name="TimeCode" />
+        </Variable>
+        <Variable Name="DVD_PLAYBACK_LOCATION*" Type="Pointer" Base="DVD_PLAYBACK_LOCATION" />
+
+        <!-- DVD_TIMECODE_FLAGS -->
+        <Variable Name="DVD_TIMECODE_FLAGS" Type="Alias" Base="ULONG">
+            <Display Name="ULONG" />
+            <Flag>
+                <Set Name="DVD_TC_FLAG_25fps"           Value="0x1" />
+                <Set Name="DVD_TC_FLAG_30fps"           Value="0x2" />
+                <Set Name="DVD_TC_FLAG_DropFrame"       Value="0x4" />
+                <Set Name="DVD_TC_FLAG_Interpolated"    Value="0x8" />
+            </Flag>
+        </Variable>
+
+        <!-- DVD_PLAYBACK_LOCATION2 -->
+        <Variable Name="DVD_PLAYBACK_LOCATION2" Type="Struct">
+            <Field Type="ULONG" 	            Name="TitleNum" />
+            <Field Type="ULONG" 	            Name="ChapterNum" />
+            <Field Type="DVD_HMSF_TIMECODE" 	Name="TimeCode" />
+            <Field Type="DVD_TIMECODE_FLAGS"    Name="TimeCodeFlags" />
+        </Variable>
+        <Variable Name="DVD_PLAYBACK_LOCATION2*" Type="Pointer" Base="DVD_PLAYBACK_LOCATION2" />
+
+        <!-- VMRPresentationFlags -->
+        <Variable Name="VMRPresentationFlags" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="VMRSample_SyncPoint"         Value="0x1" />
+                <Set Name="VMRSample_Preroll"           Value="0x2" />
+                <Set Name="VMRSample_Discontinuity"     Value="0x4" />
+                <Set Name="VMRSample_TimeValid"         Value="0x8" />
+                <Set Name="VMRSample_SrcDstRectsValid"  Value="0x10" />
+            </Flag>
+        </Variable>
+
+        <!-- [AM_VIDEO_FLAG] -->
+        <Variable Name="[AM_VIDEO_FLAG]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="AM_VIDEO_FLAG_INTERLEAVED_FRAME"     Value="0x0000" />
+                <Set Name="AM_VIDEO_FLAG_FIELD1"                Value="0x0001" />
+                <Set Name="AM_VIDEO_FLAG_FIELD2"                Value="0x0002" />
+                <Set Name="AM_VIDEO_FLAG_FIELD1FIRST"           Value="0x0004" />
+                <Set Name="AM_VIDEO_FLAG_WEAVE"                 Value="0x0008" />
+                <Set Name="AM_VIDEO_FLAG_REPEAT_FIELD"          Value="0x0040" />
+            </Flag>
+        </Variable>
+
+        <!-- VMRPRESENTATIONINFO -->
+        <Variable Name="VMRPRESENTATIONINFO" Type="Struct">
+            <Field Type="VMRPresentationFlags"  Name="dwFlags" />
+            <Field Type="LPDIRECTDRAWSURFACE7" 	Name="lpSurf" />
+            <Field Type="REFERENCE_TIME" 	    Name="rtStart" />
+            <Field Type="REFERENCE_TIME" 	    Name="rtEnd" />
+            <Field Type="SIZE" 	                Name="szAspectRatio" />
+            <Field Type="RECT" 	                Name="rcSrc" />
+            <Field Type="RECT" 	                Name="rcDst" />
+            <Field Type="[AM_VIDEO_FLAG]"       Name="dwTypeSpecificFlags" />
+            <Field Type="[AMINTERLACE_FLAGS]"   Name="dwInterlaceFlags" />
+        </Variable>
+        <Variable Name="VMRPRESENTATIONINFO*" Type="Pointer" Base="VMRPRESENTATIONINFO" />
+
+        <!-- VMR9PresentationInfo -->
+        <Variable Name="VMR9PresentationInfo" Type="Struct">
+            <Field Type="VMRPresentationFlags"  Name="dwFlags" />
+            <Field Type="IDirect3DSurface9*"    Name="lpSurf" />
+            <Field Type="REFERENCE_TIME" 	    Name="rtStart" />
+            <Field Type="REFERENCE_TIME" 	    Name="rtEnd" />
+            <Field Type="SIZE" 	                Name="szAspectRatio" />
+            <Field Type="RECT" 	                Name="rcSrc" />
+            <Field Type="RECT" 	                Name="rcDst" />
+            <Field Type="DWORD" 	            Name="dwReserved1" />
+            <Field Type="DWORD" 	            Name="dwReserved2" />
+        </Variable>
+        <Variable Name="VMR9PresentationInfo*" Type="Pointer" Base="VMR9PresentationInfo" />
+
+        <!-- [VMRALPHABITMAP_Flags] -->
+        <Variable Name="[VMRALPHABITMAP_Flags]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="VMRBITMAP_DISABLE"       Value="0x00000001" />
+                <Set Name="VMRBITMAP_HDC"           Value="0x00000002" />
+                <Set Name="VMRBITMAP_ENTIREDDS"     Value="0x00000004" />
+                <Set Name="VMRBITMAP_SRCCOLORKEY"   Value="0x00000008" />
+                <Set Name="VMRBITMAP_SRCRECT"       Value="0x00000010" />
+            </Flag>
+        </Variable>
+
+        <!-- NORMALIZEDRECT -->
+        <Variable Name="NORMALIZEDRECT" Type="Struct">
+            <Field Type="float" 	Name="left" />
+            <Field Type="float" 	Name="top" />
+            <Field Type="float" 	Name="right" />
+            <Field Type="float" 	Name="bottom" />
+        </Variable>
+        <Variable Name="NORMALIZEDRECT*"        Type="Pointer" Base="NORMALIZEDRECT" />
+        <Variable Name="const NORMALIZEDRECT*"  Type="Pointer" Base="NORMALIZEDRECT" />
+
+        <!-- VMRALPHABITMAP -->
+        <Variable Name="VMRALPHABITMAP" Type="Struct">
+            <Field Type="[VMRALPHABITMAP_Flags]"    Name="dwFlags" />
+            <Field Type="HDC" 	                    Name="hdc" />
+            <Field Type="LPDIRECTDRAWSURFACE7" 	    Name="pDDS" />
+            <Field Type="RECT" 	                    Name="rSrc" />
+            <Field Type="NORMALIZEDRECT" 	        Name="rDest" />
+            <Field Type="FLOAT" 	                Name="fAlpha" />
+            <Field Type="COLORREF" 	                Name="clrSrcKey" />
+        </Variable>
+        <Variable Name="const VMRALPHABITMAP*" Type="Pointer" Base="VMRALPHABITMAP" />
+        <Variable Name="PVMRALPHABITMAP"       Type="Pointer" Base="VMRALPHABITMAP" />
+
+        <!-- [VMR9AlphaBitmap_Flags] -->
+        <Variable Name="[VMR9AlphaBitmap_Flags]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="VMR9AlphaBitmap_Disable"         Value="0x1" />
+                <Set Name="VMR9AlphaBitmap_hDC"             Value="0x2" />
+                <Set Name="VMR9AlphaBitmap_EntireDDS"       Value="0x4" />
+                <Set Name="VMR9AlphaBitmap_SrcColorKey"     Value="0x8" />
+                <Set Name="VMR9AlphaBitmap_SrcRect"         Value="0x10" />
+                <Set Name="VMR9AlphaBitmap_FilterMode"      Value="0x20" />
+            </Flag>
+        </Variable>
+
+        <!-- VMR9NormalizedRect -->
+        <Variable Name="VMR9NormalizedRect" Type="Struct">
+            <Field Type="float" 	Name="left" />
+            <Field Type="float" 	Name="top" />
+            <Field Type="float" 	Name="right" />
+            <Field Type="float" 	Name="bottom" />
+        </Variable>
+        <Variable Name="VMR9NormalizedRect*"        Type="Pointer" Base="VMR9NormalizedRect" />
+        <Variable Name="const VMR9NormalizedRect*"  Type="Pointer" Base="VMR9NormalizedRect" />
+
+        <!-- VMR9MixerPrefs -->
+        <Variable Name="VMR9MixerPrefs" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="MixerPref9_NoDecimation"                 Value="0x1" />
+                <Set Name="MixerPref9_DecimateOutput"               Value="0x2" />
+                <Set Name="MixerPref9_ARAdjustXorY"                 Value="0x4" />
+                <Set Name="MixerPref9_NonSquareMixing"              Value="0x8" />
+                <Set Name="MixerPref9_DecimateMask"                 Value="0xf" />
+                <Set Name="MixerPref9_BiLinearFiltering"            Value="0x10" />
+                <Set Name="MixerPref9_PointFiltering"               Value="0x20" />
+                <Set Name="MixerPref9_AnisotropicFiltering"         Value="0x40" />
+                <Set Name="MixerPref9_PyramidalQuadFiltering"       Value="0x80" />
+                <Set Name="MixerPref9_GaussianQuadFiltering"        Value="0x100" />
+                <Set Name="MixerPref9_FilteringReserved"            Value="0xe00" />
+                <Set Name="MixerPref9_FilteringMask"                Value="0xff0" />
+                <Set Name="MixerPref9_RenderTargetRGB"              Value="0x1000" />
+                <Set Name="MixerPref9_RenderTargetYUV"              Value="0x2000" />
+                <Set Name="MixerPref9_RenderTargetReserved"         Value="0xfc000" />
+                <Set Name="MixerPref9_RenderTargetMask"             Value="0xff000" />
+                <Set Name="MixerPref9_DynamicSwitchToBOB"           Value="0x100000" />
+                <Set Name="MixerPref9_DynamicDecimateBy2"           Value="0x200000" />
+                <Set Name="MixerPref9_DynamicReserved"              Value="0xc00000" />
+                <Set Name="MixerPref9_DynamicMask"                  Value="0xf00000" />
+            </Flag>
+        </Variable>
+
+        <!-- VMR9AlphaBitmap -->
+        <Variable Name="VMR9AlphaBitmap" Type="Struct">
+            <Field Type="[VMR9AlphaBitmap_Flags]"   Name="dwFlags" />
+            <Field Type="HDC" 	                    Name="hdc" />
+            <Field Type="IDirect3DSurface9*" 	    Name="pDDS" />
+            <Field Type="RECT" 	                    Name="rSrc" />
+            <Field Type="VMR9NormalizedRect" 	    Name="rDest" />
+            <Field Type="FLOAT" 	                Name="fAlpha" />
+            <Field Type="COLORREF" 	                Name="clrSrcKey" />
+            <Field Type="VMR9MixerPrefs"            Name="dwFilterMode" />
+        </Variable>
+        <Variable Name="VMR9AlphaBitmap*"       Type="Pointer" Base="VMR9AlphaBitmap" />
+        <Variable Name="const VMR9AlphaBitmap*" Type="Pointer" Base="VMR9AlphaBitmap" />
+
+        <!-- VMRSurfaceAllocationFlags -->
+        <Variable Name="VMRSurfaceAllocationFlags" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="AMAP_PIXELFORMAT_VALID"  Value="0x1" />
+                <Set Name="AMAP_3D_TARGET"          Value="0x2" />
+                <Set Name="AMAP_ALLOW_SYSMEM"       Value="0x4" />
+                <Set Name="AMAP_FORCE_SYSMEM"       Value="0x8" />
+                <Set Name="AMAP_DIRECTED_FLIP"      Value="0x10" />
+                <Set Name="AMAP_DXVA_TARGET"        Value="0x20" />
+            </Flag>
+        </Variable>
+
+        <!-- VMRALLOCATIONINFO -->
+        <Variable Name="VMRALLOCATIONINFO" Type="Struct">
+            <Field Type="VMRSurfaceAllocationFlags" Name="dwFlags" />
+            <Field Type="LPBITMAPINFOHEADER" 	    Name="lpHdr" />
+            <Field Type="LPDDPIXELFORMAT" 	        Name="lpPixFmt" />
+            <Field Type="SIZE" 	                    Name="szAspectRatio" />
+            <Field Type="DWORD" 	                Name="dwMinBuffers" />
+            <Field Type="DWORD" 	                Name="dwMaxBuffers" />
+            <Field Type="[AMINTERLACE_FLAGS]"       Name="dwInterlaceFlags" />
+            <Field Type="SIZE" 	                    Name="szNativeSize" />
+        </Variable>
+        <Variable Name="VMRALLOCATIONINFO*" Type="Pointer" Base="VMRALLOCATIONINFO" />
+
+        <!-- VMR9SurfaceAllocationFlags -->
+        <Variable Name="VMR9SurfaceAllocationFlags" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="VMR9AllocFlag_3DRenderTarget"        Value="0x1" />
+                <Set Name="VMR9AllocFlag_DXVATarget"            Value="0x2" />
+                <Set Name="VMR9AllocFlag_TextureSurface"        Value="0x4" />
+                <Set Name="VMR9AllocFlag_OffscreenSurface"      Value="0x8" />
+                <Set Name="VMR9AllocFlag_RGBDynamicSwitch"      Value="0x10" />
+                <Set Name="VMR9AllocFlag_UsageReserved"         Value="0xe0" />
+                <Set Name="VMR9AllocFlag_UsageMask"             Value="0xff" />
+            </Flag>
+        </Variable>
+
+        <!-- VMR9AllocationInfo -->
+        <Variable Name="VMR9AllocationInfo" Type="Struct">
+            <Field Type="VMR9SurfaceAllocationFlags" 	Name="dwFlags" />
+            <Field Type="DWORD" 	                    Name="dwWidth" />
+            <Field Type="DWORD" 	                    Name="dwHeight" />
+            <Field Type="D3DFORMAT"                     Name="Format" />
+            <Field Type="D3DPOOL" 	                    Name="Pool" />
+            <Field Type="DWORD" 	                    Name="MinBuffers" />
+            <Field Type="SIZE" 	                        Name="szAspectRatio" />
+            <Field Type="SIZE" 	                        Name="szNativeSize" />
+        </Variable>
+        <Variable Name="VMR9AllocationInfo*" Type="Pointer" Base="VMR9AllocationInfo" />
+
+        <!-- AM_STREAM_INFO_FLAGS -->
+        <Variable Name="AM_STREAM_INFO_FLAGS" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="AM_STREAM_INFO_START_DEFINED"    Value="0x1" />
+                <Set Name="AM_STREAM_INFO_STOP_DEFINED"     Value="0x2" />
+                <Set Name="AM_STREAM_INFO_DISCARDING"       Value="0x4" />
+                <Set Name="AM_STREAM_INFO_STOP_SEND_EXTRA"  Value="0x10" />
+            </Flag>
+        </Variable>
+
+        <!-- AM_STREAM_INFO -->
+        <Variable Name="AM_STREAM_INFO" Type="Struct">
+            <Field Type="REFERENCE_TIME" 	    Name="tStart" />
+            <Field Type="REFERENCE_TIME" 	    Name="tStop" />
+            <Field Type="DWORD" 	            Name="dwStartCookie" />
+            <Field Type="DWORD" 	            Name="dwStopCookie" />
+            <Field Type="AM_STREAM_INFO_FLAGS"  Name="dwFlags" />
+        </Variable>
+        <Variable Name="AM_STREAM_INFO*" Type="Pointer" Base="AM_STREAM_INFO" />
+
+        <!-- VMRFrequency -->
+        <Variable Name="VMRFrequency" Type="Struct">
+            <Field Type="DWORD"     Name="dwNumerator" />
+            <Field Type="DWORD"     Name="dwDenominator" />
+        </Variable>
+
+        <!-- VMRVideoDesc -->
+        <Variable Name="VMRVideoDesc" Type="Struct">
+            <Field Type="DWORD"             Name="dwSize" />
+            <Field Type="DWORD"             Name="dwSampleWidth" />
+            <Field Type="DWORD"             Name="dwSampleHeight" />
+            <Field Type="BOOL"              Name="SingleFieldPerSample" />
+            <Field Type="DWORD"             Name="dwFourCC" />
+            <Field Type="VMRFrequency"      Name="InputSampleFreq" />
+            <Field Type="VMRFrequency"      Name="OutputFrameFreq" />
+        </Variable>
+        <Variable Name="VMRVideoDesc*" Type="Pointer" Base="VMRVideoDesc" />
+
+        <!-- VMRVIDEOSTREAMINFO -->
+        <Variable Name="VMRVIDEOSTREAMINFO" Type="Struct">
+            <Field Type="LPDIRECTDRAWSURFACE7"  Name="pddsVideoSurface" />
+            <Field Type="DWORD"                 Name="dwWidth" />
+            <Field Type="DWORD"                 Name="dwHeight" />
+            <Field Type="DWORD"                 Name="dwStrmID" />
+            <Field Type="FLOAT"                 Name="fAlpha" />
+            <Field Type="DDCOLORKEY"            Name="ddClrKey" />
+            <Field Type="NORMALIZEDRECT"        Name="rNormal" />
+        </Variable>
+        <Variable Name="VMRVIDEOSTREAMINFO*" Type="Pointer" Base="VMRVIDEOSTREAMINFO" />
+
+        <!-- VMRDeinterlaceTech -->
+        <Variable Name="VMRDeinterlaceTech" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="DeinterlaceTech_Unknown"                 Value="0" />
+                <Set Name="DeinterlaceTech_BOBLineReplicate"        Value="0x1" />
+                <Set Name="DeinterlaceTech_BOBVerticalStretch"      Value="0x2" />
+                <Set Name="DeinterlaceTech_MedianFiltering"         Value="0x4" />
+                <Set Name="DeinterlaceTech_EdgeFiltering"           Value="0x10" />
+                <Set Name="DeinterlaceTech_FieldAdaptive"           Value="0x20" />
+                <Set Name="DeinterlaceTech_PixelAdaptive"           Value="0x40" />
+                <Set Name="DeinterlaceTech_MotionVectorSteered"     Value="0x80" />
+            </Enum>
+        </Variable>
+
+        <!-- VMRDeinterlaceCaps -->
+        <Variable Name="VMRDeinterlaceCaps" Type="Struct">
+            <Field Type="DWORD"                 Name="dwSize" />
+            <Field Type="DWORD"                 Name="dwNumPreviousOutputFrames" />
+            <Field Type="DWORD"                 Name="dwNumForwardRefSamples" />
+            <Field Type="DWORD"                 Name="dwNumBackwardRefSamples" />
+            <Field Type="VMRDeinterlaceTech"    Name="DeinterlaceTechnology" />
+        </Variable>
+        <Variable Name="VMRDeinterlaceCaps*" Type="Pointer" Base="VMRDeinterlaceCaps" />
+
+        <!-- VMR9Frequency -->
+        <Variable Name="VMR9Frequency" Type="Struct">
+            <Field Type="DWORD"     Name="dwNumerator" />
+            <Field Type="DWORD"     Name="dwDenominator" />
+        </Variable>
+
+        <!-- VMR9_SampleFormat -->
+        <Variable Name="VMR9_SampleFormat" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="VMR9_SampleReserved"                     Value="1" />
+                <Set Name="VMR9_SampleProgressiveFrame"             Value="2" />
+                <Set Name="VMR9_SampleFieldInterleavedEvenFirst"    Value="3" />
+                <Set Name="VMR9_SampleFieldInterleavedOddFirst"     Value="4" />
+                <Set Name="VMR9_SampleFieldSingleEven"              Value="5" />
+                <Set Name="VMR9_SampleFieldSingleOdd"               Value="6" />
+            </Enum>
+        </Variable>
+
+        <!-- VMR9VideoDesc -->
+        <Variable Name="VMR9VideoDesc" Type="Struct">
+            <Field Type="DWORD"             Name="dwSize" />
+            <Field Type="DWORD"             Name="dwSampleWidth" />
+            <Field Type="DWORD"             Name="dwSampleHeight" />
+            <Field Type="VMR9_SampleFormat" Name="SampleFormat" />
+            <Field Type="DWORD"             Name="dwFourCC" />
+            <Field Type="VMR9Frequency"     Name="InputSampleFreq" />
+            <Field Type="VMR9Frequency"     Name="OutputFrameFreq" />
+        </Variable>
+        <Variable Name="VMR9VideoDesc*" Type="Pointer" Base="VMR9VideoDesc" />
+
+        <!-- VMR9DeinterlaceTech -->
+        <Variable Name="VMR9DeinterlaceTech" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="DeinterlaceTech9_Unknown"                    Value="0" />
+                <Set Name="DeinterlaceTech9_BOBLineReplicate"           Value="0x1" />
+                <Set Name="DeinterlaceTech9_BOBVerticalStretch"         Value="0x2" />
+                <Set Name="DeinterlaceTech9_MedianFiltering"            Value="0x4" />
+                <Set Name="DeinterlaceTech9_EdgeFiltering"              Value="0x10" />
+                <Set Name="DeinterlaceTech9_FieldAdaptive"              Value="0x20" />
+                <Set Name="DeinterlaceTech9_PixelAdaptive"              Value="0x40" />
+                <Set Name="DeinterlaceTech9_MotionVectorSteered"        Value="0x80" />
+            </Enum>
+        </Variable>
+
+        <!-- VMR9DeinterlaceCaps -->
+        <Variable Name="VMR9DeinterlaceCaps" Type="Struct">
+            <Field Type="DWORD"                 Name="dwSize" />
+            <Field Type="DWORD"                 Name="dwNumPreviousOutputFrames" />
+            <Field Type="DWORD"                 Name="dwNumForwardRefSamples" />
+            <Field Type="DWORD"                 Name="dwNumBackwardRefSamples" />
+            <Field Type="VMR9DeinterlaceTech"   Name="DeinterlaceTechnology" />
+        </Variable>
+        <Variable Name="VMR9DeinterlaceCaps*" Type="Pointer" Base="VMR9DeinterlaceCaps" />
+
+        <!-- VMR9VideoStreamInfo -->
+        <Variable Name="VMR9VideoStreamInfo" Type="Struct">
+            <Field Type="IDirect3DSurface9*"    Name="pddsVideoSurface" />
+            <Field Type="DWORD"                 Name="dwWidth" />
+            <Field Type="DWORD"                 Name="dwHeight" />
+            <Field Type="DWORD"                 Name="dwStrmID" />
+            <Field Type="FLOAT"                 Name="fAlpha" />
+            <Field Type="VMR9NormalizedRect"    Name="rNormal" />
+            <Field Type="REFERENCE_TIME"        Name="rtStart" />
+            <Field Type="REFERENCE_TIME"        Name="rtEnd" />
+            <Field Type="VMR9_SampleFormat"     Name="SampleFormat" />
+        </Variable>
+        <Variable Name="VMR9VideoStreamInfo*" Type="Pointer" Base="VMR9VideoStreamInfo" />
+
+        <!-- VMR9ProcAmpControlFlags -->
+        <Variable Name="VMR9ProcAmpControlFlags" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="ProcAmpControl9_Brightness"      Value="0x1" />
+                <Set Name="ProcAmpControl9_Contrast"        Value="0x2" />
+                <Set Name="ProcAmpControl9_Hue"             Value="0x4" />
+                <Set Name="ProcAmpControl9_Saturation"      Value="0x8" />
+            </Flag>
+        </Variable>
+
+        <!-- VMR9ProcAmpControl -->
+        <Variable Name="VMR9ProcAmpControl" Type="Struct">
+            <Field Type="DWORD"     Name="dwSize" />
+            <Field Type="DWORD"     Name="dwFlags" />
+            <Field Type="float"     Name="Brightness" />
+            <Field Type="float"     Name="Contrast" />
+            <Field Type="float"     Name="Hue" />
+            <Field Type="float"     Name="Saturation" />
+        </Variable>
+        <Variable Name="VMR9ProcAmpControl*" Type="Pointer" Base="VMR9ProcAmpControl" />
+
+        <!-- VMR9ProcAmpControlRange -->
+        <Variable Name="VMR9ProcAmpControlRange" Type="Struct">
+            <Field Type="DWORD" 	                Name="dwSize" />
+            <Field Type="VMR9ProcAmpControlFlags" 	Name="dwProperty" />
+            <Field Type="float" 	                Name="MinValue" />
+            <Field Type="float" 	                Name="MaxValue" />
+            <Field Type="float" 	                Name="DefaultValue" />
+            <Field Type="float" 	                Name="StepSize" />
+        </Variable>
+        <Variable Name="VMR9ProcAmpControlRange*" Type="Pointer" Base="VMR9ProcAmpControlRange" />
+
+        <!-- [DVD_AUDIO_CAPS] -->
+        <Variable Name="[DVD_AUDIO_CAPS]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="DVD_AUDIO_CAPS_AC3"      Value="0x00000001" />
+                <Set Name="DVD_AUDIO_CAPS_MPEG2"    Value="0x00000002" />
+                <Set Name="DVD_AUDIO_CAPS_LPCM"     Value="0x00000004" />
+                <Set Name="DVD_AUDIO_CAPS_DTS"      Value="0x00000008" />
+                <Set Name="DVD_AUDIO_CAPS_SDDS"     Value="0x00000010" />
+            </Flag>
+        </Variable>
+
+        <!-- DVD_DECODER_CAPS -->
+        <Variable Name="DVD_DECODER_CAPS" Type="Struct">
+            <Field Type="DWORD" 	        Name="dwSize" />
+            <Field Type="[DVD_AUDIO_CAPS]" 	Name="dwAudioCaps" />
+            <Field Type="double" 	        Name="dFwdMaxRateVideo" />
+            <Field Type="double" 	        Name="dFwdMaxRateAudio" />
+            <Field Type="double" 	        Name="dFwdMaxRateSP" />
+            <Field Type="double" 	        Name="dBwdMaxRateVideo" />
+            <Field Type="double" 	        Name="dBwdMaxRateAudio" />
+            <Field Type="double" 	        Name="dBwdMaxRateSP" />
+            <Field Type="DWORD" 	        Name="dwRes1" />
+            <Field Type="DWORD" 	        Name="dwRes2" />
+            <Field Type="DWORD" 	        Name="dwRes3" />
+            <Field Type="DWORD" 	        Name="dwRes4" />
+        </Variable>
+        <Variable Name="DVD_DECODER_CAPS*" Type="Pointer" Base="DVD_DECODER_CAPS" />
+
+        <!-- VALID_UOP_SOMTHING_OR_OTHER -->
+        <Variable Name="VALID_UOP_SOMTHING_OR_OTHER" Type="Alias" Base="DWORD">
+            <Enum>
+                <Set Name="UOP_FLAG_Play_Title_Or_AtTime"           		    Value="0x00000001" />
+                <Set Name="UOP_FLAG_Play_Chapter"                   		    Value="0x00000002" />
+                <Set Name="UOP_FLAG_Play_Title"                     		    Value="0x00000004" />
+                <Set Name="UOP_FLAG_Stop"                           		    Value="0x00000008" />
+                <Set Name="UOP_FLAG_ReturnFromSubMenu"              		    Value="0x00000010" />
+                <Set Name="UOP_FLAG_Play_Chapter_Or_AtTime"         		    Value="0x00000020" />
+                <Set Name="UOP_FLAG_PlayPrev_Or_Replay_Chapter"     		    Value="0x00000040" />
+                <Set Name="UOP_FLAG_PlayNext_Chapter"               		    Value="0x00000080" />
+                <Set Name="UOP_FLAG_Play_Forwards"                  		    Value="0x00000100" />
+                <Set Name="UOP_FLAG_Play_Backwards"                 		    Value="0x00000200" />
+                <Set Name="UOP_FLAG_ShowMenu_Title"                 		    Value="0x00000400" />
+                <Set Name="UOP_FLAG_ShowMenu_Root"                  		    Value="0x00000800" />
+                <Set Name="UOP_FLAG_ShowMenu_SubPic"                		    Value="0x00001000" />
+                <Set Name="UOP_FLAG_ShowMenu_Audio"                 		    Value="0x00002000" />
+                <Set Name="UOP_FLAG_ShowMenu_Angle"                 		    Value="0x00004000" />
+                <Set Name="UOP_FLAG_ShowMenu_Chapter"               		    Value="0x00008000" />
+                <Set Name="UOP_FLAG_Resume"                         		    Value="0x00010000" />
+                <Set Name="UOP_FLAG_Select_Or_Activate_Button"      		    Value="0x00020000" />
+                <Set Name="UOP_FLAG_Still_Off"                      		    Value="0x00040000" />
+                <Set Name="UOP_FLAG_Pause_On"                       		    Value="0x00080000" />
+                <Set Name="UOP_FLAG_Select_Audio_Stream"            		    Value="0x00100000" />
+                <Set Name="UOP_FLAG_Select_SubPic_Stream"           		    Value="0x00200000" />
+                <Set Name="UOP_FLAG_Select_Angle"                   		    Value="0x00400000" />
+                <Set Name="UOP_FLAG_Select_Karaoke_Audio_Presentation_Mode"     Value="0x00800000" />
+                <Set Name="UOP_FLAG_Select_Video_Mode_Preference"               Value="0x01000000" />
+            </Enum>
+        </Variable>
+        <Variable Name="VALID_UOP_SOMTHING_OR_OTHER*" Type="Pointer" Base="VALID_UOP_SOMTHING_OR_OTHER" />
+
+
+        <!-- VideoProcAmpProperty -->
+        <Variable Name="VideoProcAmpProperty" Type="Alias" Base="long">
+            <Display Name="long" />
+            <Enum>
+                <Set Name="VideoProcAmp_Brightness"				Value="0" />
+                <Set Name="VideoProcAmp_Contrast"				Value="1" />
+                <Set Name="VideoProcAmp_Hue"					Value="2" />
+                <Set Name="VideoProcAmp_Saturation"				Value="3" />
+                <Set Name="VideoProcAmp_Sharpness"				Value="4" />
+                <Set Name="VideoProcAmp_Gamma"					Value="5" />
+                <Set Name="VideoProcAmp_ColorEnable"			Value="6" />
+                <Set Name="VideoProcAmp_WhiteBalance"			Value="7" />
+                <Set Name="VideoProcAmp_BacklightCompensation"	Value="8" />
+                <Set Name="VideoProcAmp_Gain"                   Value="9" />
+            </Enum>
+        </Variable>
+
+        <!-- VideoProcAmpFlags -->
+        <Variable Name="VideoProcAmpFlags" Type="Alias" Base="long">
+            <Display Name="long" />
+            <Enum>
+                <Set Name="VideoProcAmp_Flags_Auto"             Value="0x1" />
+                <Set Name="VideoProcAmp_Flags_Manual"			Value="0x2" />
+            </Enum>
+        </Variable>
+        <Variable Name="VideoProcAmpFlags*" Type="Pointer" Base="VideoProcAmpFlags">
+            <Display Name="long*" />
+        </Variable>
+
+        <Variable Name="[MediaEventCode]" Type="Alias" Base="long">
+            <Display Name="long" />
+            <Enum>
+                <Set Name="EC_COMPLETE"                     Value="0x01" />
+                <Set Name="EC_USERABORT"                    Value="0x02" />
+                <Set Name="EC_ERRORABORT"                   Value="0x03" />
+                <Set Name="EC_TIME"                         Value="0x04" />
+                <Set Name="EC_REPAINT"                      Value="0x05" />
+                <Set Name="EC_STREAM_ERROR_STOPPED"         Value="0x06" />
+                <Set Name="EC_STREAM_ERROR_STILLPLAYING"    Value="0x07" />
+                <Set Name="EC_ERROR_STILLPLAYING"           Value="0x08" />
+                <Set Name="EC_PALETTE_CHANGED"              Value="0x09" />
+                <Set Name="EC_VIDEO_SIZE_CHANGED"           Value="0x0A" />
+                <Set Name="EC_QUALITY_CHANGE"               Value="0x0B" />
+                <Set Name="EC_SHUTTING_DOWN"                Value="0x0C" />
+                <Set Name="EC_CLOCK_CHANGED"                Value="0x0D" />
+                <Set Name="EC_PAUSED"                       Value="0x0E" />
+                <Set Name="EC_OPENING_FILE"                 Value="0x10" />
+                <Set Name="EC_BUFFERING_DATA"               Value="0x11" />
+                <Set Name="EC_FULLSCREEN_LOST"              Value="0x12" />
+                <Set Name="EC_ACTIVATE"                     Value="0x13" />
+                <Set Name="EC_NEED_RESTART"                 Value="0x14" />
+                <Set Name="EC_WINDOW_DESTROYED"             Value="0x15" />
+                <Set Name="EC_DISPLAY_CHANGED"              Value="0x16" />
+                <Set Name="EC_STARVATION"                   Value="0x17" />
+                <Set Name="EC_OLE_EVENT"                    Value="0x18" />
+                <Set Name="EC_NOTIFY_WINDOW"                Value="0x19" />
+                <Set Name="EC_STREAM_CONTROL_STOPPED"       Value="0x1A" />
+                <Set Name="EC_STREAM_CONTROL_STARTED"       Value="0x1B" />
+                <Set Name="EC_END_OF_SEGMENT"               Value="0x1C" />
+                <Set Name="EC_SEGMENT_STARTED"              Value="0x1D" />
+                <Set Name="EC_LENGTH_CHANGED"               Value="0x1E" />
+                <Set Name="EC_DEVICE_LOST"                  Value="0x1f" />
+                <Set Name="EC_SAMPLE_NEEDED"                Value="0x20" />
+                <Set Name="EC_PROCESSING_LATENCY"           Value="0x21" />
+                <Set Name="EC_SAMPLE_LATENCY"               Value="0x22" />
+                <Set Name="EC_SCRUB_TIME"                   Value="0x23" />
+                <Set Name="EC_STEP_COMPLETE"                Value="0x24" />
+                <Set Name="EC_SKIP_FRAMES"                  Value="0x25" />
+                <Set Name="EC_TIMECODE_AVAILABLE"           Value="0x30" />
+                <Set Name="EC_EXTDEVICE_MODE_CHANGE"        Value="0x31" />
+                <Set Name="EC_STATE_CHANGE"                 Value="0x32" />
+                <Set Name="EC_PLEASE_REOPEN"            	Value="0x40" />
+                <Set Name="EC_STATUS"                    	Value="0x41" />
+                <Set Name="EC_MARKER_HIT"                	Value="0x42" />
+                <Set Name="EC_LOADSTATUS"                	Value="0x43" />
+                <Set Name="EC_FILE_CLOSED"                	Value="0x44" />
+                <Set Name="EC_ERRORABORTEX"                	Value="0x45" />
+                <Set Name="EC_EOS_SOON"                    	Value="0x46" />
+                <Set Name="EC_CONTENTPROPERTY_CHANGED"  	Value="0x47" />
+                <Set Name="EC_BANDWIDTHCHANGE"            	Value="0x48" />
+                <Set Name="EC_VIDEOFRAMEREADY"            	Value="0x49" />
+                <Set Name="EC_GRAPH_CHANGED"                Value="0x50" />
+                <Set Name="EC_CLOCK_UNSET"                  Value="0x51" />
+                <Set Name="EC_VMR_RENDERDEVICE_SET"         Value="0x53" />
+                <Set Name="EC_VMR_SURFACE_FLIPPED"          Value="0x54" />
+                <Set Name="EC_VMR_RECONNECTION_FAILED"      Value="0x55" />
+                <Set Name="EC_PREPROCESS_COMPLETE"          Value="0x56" />
+                <Set Name="EC_CODECAPI_EVENT"               Value="0x57" />
+                <Set Name="EC_WMT_INDEX_EVENT"              Value="0x0251" />
+                <Set Name="EC_WMT_EVENT"                    Value="0x0252" />
+                <Set Name="EC_BUILT"                        Value="0x300" />
+                <Set Name="EC_UNBUILT"                      Value="0x301" />
+            </Enum>
+        </Variable>
+        <Variable Name="[MediaEventCode*]" Type="Pointer" Base="[MediaEventCode]">
+            <Display Name="long*" />
+        </Variable>
+
+        <!-- AMTunerModeType -->
+        <Variable Name="AMTunerModeType" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="AMTUNER_MODE_DEFAULT"		Value="0" />
+                <Set Name="AMTUNER_MODE_TV"				Value="0x1" />
+                <Set Name="AMTUNER_MODE_FM_RADIO"		Value="0x2" />
+                <Set Name="AMTUNER_MODE_AM_RADIO"		Value="0x4" />
+                <Set Name="AMTUNER_MODE_DSS"            Value="0x8" />
+            </Enum>
+        </Variable>
+        <Variable Name="AMTunerModeType*" Type="Pointer" Base="AMTunerModeType" />
+
+        <!-- AMTunerEventType -->
+        <Variable Name="AMTunerEventType" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="AMTUNER_EVENT_CHANGED"		Value="0x1" />
+            </Enum>
+        </Variable>
+
+        <!-- AMTVAudioEventType -->
+        <Variable Name="AMTVAudioEventType" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="AMTVAUDIO_EVENT_CHANGED"		Value="0x1" />
+            </Enum>
+        </Variable>
+
+        <!-- DECIMATION_USAGE -->
+        <Variable Name="DECIMATION_USAGE" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="DECIMATION_LEGACY"               Value="0" />
+                <Set Name="DECIMATION_USE_DECODER_ONLY"		Value="1" />
+                <Set Name="DECIMATION_USE_VIDEOPORT_ONLY"	Value="2" />
+                <Set Name="DECIMATION_USE_OVERLAY_ONLY"		Value="3" />
+                <Set Name="DECIMATION_DEFAULT"				Value="4" />
+            </Enum>
+        </Variable>
+        <Variable Name="DECIMATION_USAGE*" Type="Pointer" Base="DECIMATION_USAGE" />
+
+        <!-- DVD_MENU_ID -->
+        <Variable Name="DVD_MENU_ID" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="DVD_MENU_Title"					Value="2" />
+                <Set Name="DVD_MENU_Root"					Value="3" />
+                <Set Name="DVD_MENU_Subpicture"				Value="4" />
+                <Set Name="DVD_MENU_Audio"					Value="5" />
+                <Set Name="DVD_MENU_Angle"					Value="6" />
+                <Set Name="DVD_MENU_Chapter"				Value="7" />
+            </Enum>
+        </Variable>
+
+        <!-- DVD_DOMAIN -->
+        <Variable Name="DVD_DOMAIN" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="DVD_DOMAIN_FirstPlay"			Value="1" />
+                <Set Name="DVD_DOMAIN_VideoManagerMenu"		Value="2" />
+                <Set Name="DVD_DOMAIN_VideoTitleSetMenu"	Value="3" />
+                <Set Name="DVD_DOMAIN_Title"				Value="4" />
+                <Set Name="DVD_DOMAIN_Stop"					Value="5" />
+            </Enum>
+        </Variable>
+        <Variable Name="DVD_DOMAIN*" Type="Pointer" Base="DVD_DOMAIN" />
+
+        <!-- InterleavingMode -->
+        <Variable Name="InterleavingMode" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="INTERLEAVE_NONE"             Value="0" />
+                <Set Name="INTERLEAVE_CAPTURE"			Value="1" />
+                <Set Name="INTERLEAVE_FULL"				Value="2" />
+                <Set Name="INTERLEAVE_NONE_BUFFERED"	Value="3" />
+            </Enum>
+        </Variable>
+        <Variable Name="InterleavingMode*" Type="Pointer" Base="InterleavingMode" />
+
+        <!-- DVD_RELATIVE_BUTTON -->
+        <Variable Name="DVD_RELATIVE_BUTTON" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="DVD_Relative_Upper"			Value="1" />
+                <Set Name="DVD_Relative_Lower"			Value="2" />
+                <Set Name="DVD_Relative_Left"			Value="3" />
+                <Set Name="DVD_Relative_Right"			Value="4" />
+            </Enum>
+        </Variable>
+
+        <!-- TunerInputType -->
+        <Variable Name="TunerInputType" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="TunerInputCable"				Value="0" />
+                <Set Name="TunerInputAntenna"			Value="1" />
+            </Enum>
+        </Variable>
+        <Variable Name="TunerInputType*" Type="Pointer" Base="TunerInputType" />
+
+        <!-- DVD_DISC_SIDE -->
+        <Variable Name="DVD_DISC_SIDE" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="DVD_SIDE_A"					Value="1" />
+                <Set Name="DVD_SIDE_B"					Value="2" />
+            </Enum>
+        </Variable>
+        <Variable Name="DVD_DISC_SIDE*" Type="Pointer" Base="DVD_DISC_SIDE" />
+
+        <!-- DVD_TextCharSet -->
+        <Variable Name="DVD_TextCharSet" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="DVD_CharSet_Unicode"                         Value="0" />
+                <Set Name="DVD_CharSet_ISO646"					        Value="1" />
+                <Set Name="DVD_CharSet_JIS_Roman_Kanji"				    Value="2" />
+                <Set Name="DVD_CharSet_ISO8859_1"					    Value="3" />
+                <Set Name="DVD_CharSet_ShiftJIS_Kanji_Roman_Katakana"	Value="4" />
+            </Enum>
+        </Variable>
+        <Variable Name="enum DVD_TextCharSet*" Type="Pointer" Base="DVD_TextCharSet" />
+
+        <!-- DVD_TextStringType -->
+        <Variable Name="DVD_TextStringType" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="DVD_Struct_Volume"                   Value="0x1" />
+                <Set Name="DVD_Struct_Title"					Value="0x2" />
+                <Set Name="DVD_Struct_ParentalID"				Value="0x3" />
+                <Set Name="DVD_Struct_PartOfTitle"				Value="0x4" />
+                <Set Name="DVD_Struct_Cell"					    Value="0x5" />
+                <Set Name="DVD_Stream_Audio"					Value="0x10" />
+                <Set Name="DVD_Stream_Subpicture"				Value="0x11" />
+                <Set Name="DVD_Stream_Angle"					Value="0x12" />
+                <Set Name="DVD_Channel_Audio"					Value="0x20" />
+                <Set Name="DVD_General_Name"					Value="0x30" />
+                <Set Name="DVD_General_Comments"				Value="0x31" />
+                <Set Name="DVD_Title_Series"					Value="0x38" />
+                <Set Name="DVD_Title_Movie"					    Value="0x39" />
+                <Set Name="DVD_Title_Video"					    Value="0x3a" />
+                <Set Name="DVD_Title_Album"					    Value="0x3b" />
+                <Set Name="DVD_Title_Song"					    Value="0x3c" />
+                <Set Name="DVD_Title_Other"					    Value="0x3f" />
+                <Set Name="DVD_Title_Sub_Series"				Value="0x40" />
+                <Set Name="DVD_Title_Sub_Movie"					Value="0x41" />
+                <Set Name="DVD_Title_Sub_Video"					Value="0x42" />
+                <Set Name="DVD_Title_Sub_Album"					Value="0x43" />
+                <Set Name="DVD_Title_Sub_Song"					Value="0x44" />
+                <Set Name="DVD_Title_Sub_Other"					Value="0x47" />
+                <Set Name="DVD_Title_Orig_Series"				Value="0x48" />
+                <Set Name="DVD_Title_Orig_Movie"				Value="0x49" />
+                <Set Name="DVD_Title_Orig_Video"				Value="0x4a" />
+                <Set Name="DVD_Title_Orig_Album"				Value="0x4b" />
+                <Set Name="DVD_Title_Orig_Song"					Value="0x4c" />
+                <Set Name="DVD_Title_Orig_Other"				Value="0x4f" />
+                <Set Name="DVD_Other_Scene"					    Value="0x50" />
+                <Set Name="DVD_Other_Cut"					    Value="0x51" />
+                <Set Name="DVD_Other_Take"					    Value="0x52" />
+            </Enum>
+        </Variable>
+        <Variable Name="enum DVD_TextStringType*" Type="Pointer" Base="DVD_TextStringType" />
+
+        <!-- DVD_OPTION_FLAG -->
+        <Variable Name="DVD_OPTION_FLAG" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="DVD_ResetOnStop"					    Value="1" />
+                <Set Name="DVD_NotifyParentalLevelChange"		Value="2" />
+                <Set Name="DVD_HMSF_TimeCodeEvents"				Value="3" />
+                <Set Name="DVD_AudioDuringFFwdRew"				Value="4" />
+                <Set Name="DVD_EnableNonblockingAPIs"			Value="5" />
+                <Set Name="DVD_CacheSizeInMB"					Value="6" />
+                <Set Name="DVD_EnablePortableBookmarks"			Value="7" />
+                <Set Name="DVD_EnableExtendedCopyProtectErrors"	Value="8" />
+                <Set Name="DVD_NotifyPositionChange"			Value="9" />
+                <Set Name="DVD_IncreaseOutputControl"			Value="10" />
+                <Set Name="DVD_EnableStreaming"					Value="11" />
+                <Set Name="DVD_EnableESOutput"					Value="12" />
+                <Set Name="DVD_EnableTitleLength"				Value="13" />
+                <Set Name="DVD_DisableStillThrottle"			Value="14" />
+                <Set Name="DVD_EnableLoggingEvents"				Value="15" />
+                <Set Name="DVD_MaxReadBurstInKB"				Value="16" />
+                <Set Name="DVD_ReadBurstPeriodInMS"				Value="17" />
+            </Enum>
+        </Variable>
+
+        <!-- FILTER_STATE -->
+        <Variable Name="FILTER_STATE" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="State_Stopped"       Value="0" />
+                <Set Name="State_Paused"		Value="1" />
+                <Set Name="State_Running"		Value="2" />
+            </Enum>
+        </Variable>
+        <Variable Name="FILTER_STATE*"  Type="Pointer"  Base="FILTER_STATE" />
+        <Variable Name="OAFilterState"  Type="Alias"    Base="FILTER_STATE" />
+        <Variable Name="OAFilterState*" Type="Pointer"  Base="OAFilterState" />
+
+        <!-- QualityMessageType -->
+        <Variable Name="QualityMessageType" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="Famine"  Value="0" />
+                <Set Name="Flood"   Value="1" />
+            </Enum>
+        </Variable>
+
+        <!-- Quality -->
+        <Variable Name="Quality" Type="Struct">
+            <Field Type="QualityMessageType"    Name="Type" />
+            <Field Type="long"                  Name="Proportion" />
+            <Field Type="REFERENCE_TIME"        Name="Late" />
+            <Field Type="REFERENCE_TIME"        Name="TimeStamp" />
+        </Variable>
+
+        <!-- AM_FILTER_MISC_FLAGS -->
+        <Variable Name="AM_FILTER_MISC_FLAGS" Type="Alias" Base="ULONG">
+            <Display Name="ULONG" />
+            <Flag>
+                <Set Name="AM_FILTER_MISC_FLAGS_IS_RENDERER"    Value="0x1" />
+                <Set Name="AM_FILTER_MISC_FLAGS_IS_SOURCE"      Value="0x2" />
+            </Flag>
+        </Variable>
+
+        <!-- Methods -->
+        <Api Name="AddFilter">
+            <Param Type="IBaseFilter*" Name="pFilter" />
+            <Param Type="LPCWSTR" Name="pName" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="RemoveFilter">
+            <Param Type="IBaseFilter*" Name="pFilter" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="EnumFilters">
+            <Param Type="IEnumFilters**" Name="ppEnum" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="FindFilterByName">
+            <Param Type="LPCWSTR" Name="pName" />
+            <Param Type="IBaseFilter**" Name="ppFilter" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ConnectDirect">
+            <Param Type="IPin*" Name="ppinOut" />
+            <Param Type="IPin*" Name="ppinIn" />
+            <Param Type="const AM_MEDIA_TYPE*" Name="pmt" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Reconnect">
+            <Param Type="IPin*" Name="ppin" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Disconnect">
+            <Param Type="IPin*" Name="ppin" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetDefaultSyncSource">
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

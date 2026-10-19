@@ -1,0 +1,1151 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2012, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    
+    <Headers>
+
+        <!-- TODO: Structures (Different Versions) -->
+        <Variable Name="LPCPROPSHEETPAGE"               Type="Alias"    Base="LPVOID" />
+        <Variable Name="PROPSHEETHEADER*"               Type="Alias"    Base="LPVOID" />
+        <Variable Name="LPCPROPSHEETHEADER"             Type="Alias"    Base="LPVOID" />
+        <Variable Name="LPPROPSHEETHEADER"              Type="Alias"    Base="LPVOID" />
+
+        <!-- Interfaces -->
+        <Variable Name="IUnknown"                       Type="Interface" />
+        <Variable Name="IStream"                        Type="Interface" />
+        <Variable Name="IPropertySetStorage"            Type="Interface" />
+        <Variable Name="AsyncIAdviseSink"               Type="Interface" />
+        <Variable Name="AsyncIAdviseSink2"              Type="Interface" />
+        <Variable Name="AsyncIMultiQI"                  Type="Interface" />
+        <Variable Name="AsyncIPipeByte"                 Type="Interface" />
+        <Variable Name="AsyncIPipeDouble"               Type="Interface" />
+        <Variable Name="AsyncIPipeLong"                 Type="Interface" />
+        <Variable Name="IAddrExclusionControl"          Type="Interface" />
+        <Variable Name="IAddrTrackingControl"           Type="Interface" />
+        <Variable Name="IAdviseSink"                    Type="Interface" />
+        <Variable Name="IAdviseSink2"                   Type="Interface" />
+        <Variable Name="IAsyncManager"                  Type="Interface" />
+        <Variable Name="IAsyncRpcChannelBuffer"         Type="Interface" />
+        <Variable Name="IBindCtx"                       Type="Interface" />
+        <Variable Name="IBlockingLock"                  Type="Interface" />
+        <Variable Name="ICallFactory"                   Type="Interface" />
+        <Variable Name="ICancelMethodCalls"             Type="Interface" />
+        <Variable Name="IChannelHook"                   Type="Interface" />
+        <Variable Name="IClassActivator"                Type="Interface" />
+        <Variable Name="IClientSecurity"                Type="Interface" />
+        <Variable Name="IComThreadingInfo"              Type="Interface" />
+        <Variable Name="IContext"                       Type="Interface" />
+        <Variable Name="IContinue"                      Type="Interface" />
+        <Variable Name="IDataAdviseHolder"              Type="Interface" />
+        <Variable Name="IDataObject"                    Type="Interface" />
+        <Variable Name="IDirectWriterLock"              Type="Interface" />
+        <Variable Name="IDropSource"                    Type="Interface" />
+        <Variable Name="IDropSourceNotify"              Type="Interface" />
+        <Variable Name="IDropTarget"                    Type="Interface" />
+        <Variable Name="IDummyHICONIncluder"            Type="Interface" />
+        <Variable Name="IEnumContextProps"              Type="Interface" />
+        <Variable Name="IEnumFORMATETC"                 Type="Interface" />
+        <Variable Name="IEnumMoniker"                   Type="Interface" />
+        <Variable Name="IEnumOLEVERB"                   Type="Interface" />
+        <Variable Name="IEnumSTATDATA"                  Type="Interface" />
+        <Variable Name="IEnumSTATSTG"                   Type="Interface" />
+        <Variable Name="IEnumString"                    Type="Interface" />
+        <Variable Name="IEnumUnknown"                   Type="Interface" />
+        <Variable Name="IExternalConnection"            Type="Interface" />
+        <Variable Name="IFillLockBytes"                 Type="Interface" />
+        <Variable Name="IForegroundTransfer"            Type="Interface" />
+        <Variable Name="IGlobalInterfaceTable"          Type="Interface" />
+        <Variable Name="IGlobalOptions"                 Type="Interface" />
+        <Variable Name="IInitializeSpy"                 Type="Interface" />
+        <Variable Name="IInternalUnknown"               Type="Interface" />
+        <Variable Name="ILayoutStorage"                 Type="Interface" />
+        <Variable Name="ILockBytes"                     Type="Interface" />
+        <Variable Name="IMalloc"                        Type="Interface" />
+        <Variable Name="IMallocSpy"                     Type="Interface" />
+        <Variable Name="IMarshal"                       Type="Interface" />
+        <Variable Name="IMarshal2"                      Type="Interface" />
+        <Variable Name="IMessageFilter"                 Type="Interface" />
+        <Variable Name="IMoniker"                       Type="Interface" />
+        <Variable Name="IMultiQI"                       Type="Interface" />
+        <Variable Name="IObjContext"                    Type="Interface" />
+        <Variable Name="IOleAdviseHolder"               Type="Interface" />
+        <Variable Name="IOleCache"                      Type="Interface" />
+        <Variable Name="IOleCache2"                     Type="Interface" />
+        <Variable Name="IOleCacheControl"               Type="Interface" />
+        <Variable Name="IOleClientSite"                 Type="Interface" />
+        <Variable Name="IOleContainer"                  Type="Interface" />
+        <Variable Name="IOleInPlaceActiveObject"        Type="Interface" />
+        <Variable Name="IOleInPlaceFrame"               Type="Interface" />
+        <Variable Name="IOleInPlaceObject"              Type="Interface" />
+        <Variable Name="IOleInPlaceSite"                Type="Interface" />
+        <Variable Name="IOleInPlaceUIWindow"            Type="Interface" />
+        <Variable Name="IOleItemContainer"              Type="Interface" />
+        <Variable Name="IOleLink"                       Type="Interface" />
+        <Variable Name="IOleObject"                     Type="Interface" />
+        <Variable Name="IOleWindow"                     Type="Interface" />
+        <Variable Name="IOplockStorage"                 Type="Interface" />
+        <Variable Name="IParseDisplayName"              Type="Interface" />
+        <Variable Name="IPersist"                       Type="Interface" />
+        <Variable Name="IPersistFile"                   Type="Interface" />
+        <Variable Name="IPersistStorage"                Type="Interface" />
+        <Variable Name="IPersistStream"                 Type="Interface" />
+        <Variable Name="IPipeByte"                      Type="Interface" />
+        <Variable Name="IPipeDouble"                    Type="Interface" />
+        <Variable Name="IPipeLong"                      Type="Interface" />
+        <Variable Name="IProcessInitControl"            Type="Interface" />
+        <Variable Name="IProcessLock"                   Type="Interface" />
+        <Variable Name="IProgressNotify"                Type="Interface" />
+        <Variable Name="IPSFactoryBuffer"               Type="Interface" />
+        <Variable Name="IReleaseMarshalBuffers"         Type="Interface" />
+        <Variable Name="IRootStorage"                   Type="Interface" />
+        <Variable Name="IROTData"                       Type="Interface" />
+        <Variable Name="IRpcChannelBuffer"              Type="Interface" />
+        <Variable Name="IRpcChannelBuffer2"             Type="Interface" />
+        <Variable Name="IRpcChannelBuffer3"             Type="Interface" />
+        <Variable Name="IRpcHelper"                     Type="Interface" />
+        <Variable Name="IRpcOptions"                    Type="Interface" />
+        <Variable Name="IRpcProxyBuffer"                Type="Interface" />
+        <Variable Name="IRpcStubBuffer"                 Type="Interface" />
+        <Variable Name="IRpcSyntaxNegotiate"            Type="Interface" />
+        <Variable Name="IRunnableObject"                Type="Interface" />
+        <Variable Name="IRunningObjectTable"            Type="Interface" />
+        <Variable Name="ISequentialStream"              Type="Interface" />
+        <Variable Name="IServerSecurity"                Type="Interface" />
+        <Variable Name="IStdMarshalInfo"                Type="Interface" />
+        <Variable Name="IStorage"                       Type="Interface" />
+        <Variable Name="IStream"                        Type="Interface" />
+        <Variable Name="ISurrogate"                     Type="Interface" />
+        <Variable Name="ISurrogateService"              Type="Interface" />
+        <Variable Name="ISynchronize"                   Type="Interface" />
+        <Variable Name="ISynchronizeContainer"          Type="Interface" />
+        <Variable Name="ISynchronizeEvent"              Type="Interface" />
+        <Variable Name="ISynchronizeHandle"             Type="Interface" />
+        <Variable Name="ISynchronizeMutex"              Type="Interface" />
+        <Variable Name="IThumbnailExtractor"            Type="Interface" />
+        <Variable Name="ITimeAndNoticeControl"          Type="Interface" />
+        <Variable Name="IUrlMon"                        Type="Interface" />
+        <Variable Name="IViewObject"                    Type="Interface" />
+        <Variable Name="IViewObject2"                   Type="Interface" />
+        <Variable Name="IWaitMultiple"                  Type="Interface" />
+        <Variable Name="IContinueCallback"              Type="Interface" />
+        <Variable Name="IEnumOleDocumentViews"          Type="Interface" />
+        <Variable Name="IOleCommandTarget"              Type="Interface" />
+        <Variable Name="IOleDocument"                   Type="Interface" />
+        <Variable Name="IOleDocumentSite"               Type="Interface" />
+        <Variable Name="IOleDocumentView"               Type="Interface" />
+        <Variable Name="IPrint"                         Type="Interface" />
+        <Variable Name="IProtectedModeMenuServices"     Type="Interface" />
+        <Variable Name="IProtectFocus"                  Type="Interface" />
+        <Variable Name="IZoomEvents"                    Type="Interface" />
+        <Variable Name="IPropertyStorage"               Type="Interface" />
+        <Variable Name="IClassFactory"                  Type="Interface" />
+        <Variable Name="IRecordInfo"                    Type="Interface" />
+        <Variable Name="IEnumSTATPROPSTG"               Type="Interface" />
+        <Variable Name="IEnumSTATPROPSETSTG"            Type="Interface" />
+
+        <!-- Forward declaration for IDispatch -->
+        <Variable Name="IDispatch"                      Type="Interface" />
+        <Variable Name="LPDISPATCH"                     Type="Alias"    Base="IDispatch*" />
+        <Variable Name="LPDISPATCH*"                    Type="Pointer"  Base="LPDISPATCH" />
+
+        <!-- Variables -->
+        <Variable Name="WINOLEAPI"                      Type="Alias"    Base="STDAPI" />
+        <Variable Name="HPROPSHEETPAGE"                 Type="Alias"    Base="LPVOID" />
+        <Variable Name="HPROPSHEETPAGE*"                Type="Pointer"  Base="HPROPSHEETPAGE" />
+        <Variable Name="LPCOLESTR"                      Type="Alias"    Base="LPCWSTR" />
+        <Variable Name="LPOLESTR"                       Type="Alias"    Base="LPCWSTR" />
+        <Variable Name="LPOLESTR*"                      Type="Pointer"  Base="LPOLESTR" />
+        <Variable Name="LPOLESTR**"                     Type="Pointer"  Base="LPOLESTR*" />
+        <Variable Name="const LPOLESTR"                 Type="Alias"    Base="LPOLESTR" />
+        <Variable Name="LPOLESTR []"                    Type="Pointer"  Base="LPOLESTR" />
+        <Variable Name="const LPOLESTR []"              Type="Pointer"  Base="LPOLESTR" />
+        <Variable Name="OLECHAR"                        Type="Alias"    Base="WCHAR" />
+        <Variable Name="OLECHAR*"                       Type="Pointer"  Base="OLECHAR" />
+        <Variable Name="const OLECHAR*"                 Type="Alias"    Base="OLECHAR*" />
+        <Variable Name="OLECHAR**"                      Type="Pointer"  Base="OLECHAR*" />
+        <Variable Name="PROPID"                         Type="Alias"    Base="ULONG" />
+        <Variable Name="PROPID*"                        Type="Pointer"  Base="PROPID" />
+        <Variable Name="const PROPID []"                Type="Pointer"  Base="PROPID" />
+        <Variable Name="LPOLEOBJECT"                    Type="Alias"    Base="IOleObject*" />
+        <Variable Name="LPMALLOC"                       Type="Alias"    Base="IMalloc*" />
+        <Variable Name="LPMALLOC*"                      Type="Pointer"  Base="LPMALLOC" />
+        <Variable Name="FMTID"                          Type="Alias"    Base="GUID" />
+        <Variable Name="FMTID*"                         Type="Pointer"  Base="FMTID" />
+        <Variable Name="const FMTID*"                   Type="Pointer"  Base="FMTID" />
+        <Variable Name="REFFMTID"                       Type="Pointer"  Base="FMTID" />
+        <Variable Name="CLIPFORMAT"                     Type="Alias"    Base="WORD" />
+        <Variable Name="CLIPFORMAT*"                    Type="Pointer"  Base="CLIPFORMAT" />
+        <Variable Name="LPBC"                           Type="Alias"    Base="IBindCtx*" />
+        <Variable Name="LPBC*"                          Type="Pointer"  Base="LPBC" />
+        <Variable Name="LPBINDCTX"                      Type="Alias"    Base="IBindCtx*" />
+        <Variable Name="LPCLASSFACTORY"                 Type="Alias"    Base="IClassFactory*" />
+        <Variable Name="LPCLASSFACTORY*"                Type="Pointer"  Base="LPCLASSFACTORY" />
+        <Variable Name="LPSTORAGE"                      Type="Alias"    Base="IStorage*" />
+        <Variable Name="LPOLECLIENTSITE"                Type="Alias"    Base="IOleClientSite*" />
+        <Variable Name="LPMONIKER"                      Type="Alias"    Base="IMoniker*" />
+        <Variable Name="LPMONIKER*"                     Type="Pointer"  Base="LPMONIKER" />
+        <Variable Name="LPSTREAM"                       Type="Alias"    Base="IStream*" />
+        <Variable Name="LPSTREAM*"                      Type="Pointer"  Base="LPSTREAM" />
+        <Variable Name="LPDATAOBJECT"                   Type="Alias"    Base="IDataObject*" />
+        <Variable Name="LPDATAOBJECT*"                  Type="Pointer"  Base="LPDATAOBJECT" />
+        <Variable Name="struct IStorage*"               Type="Alias"    Base="IStorage*" />
+        <Variable Name="CPFLAGS"                        Type="Alias"    Base="DWORD" />
+        <Variable Name="CPFLAGS*"                       Type="Pointer"  Base="CPFLAGS" />
+        <Variable Name="SNB"                            Type="Alias"    Base="LPOLESTR*" />
+        <Variable Name="ALLOCATEMORE*"                  Type="Alias"    Base="LPVOID" />
+        <Variable Name="HTASK"                          Type="Alias"    Base="HANDLE" />
+        <Variable Name="LPCBORDERWIDTHS"                Type="Alias"    Base="LPCRECT" />
+        <Variable Name="HOLEMENU"                       Type="Alias"    Base="HGLOBAL" />
+        <Variable Name="RPCOLEDATAREP"                  Type="Alias"    Base="unsigned long" />
+        <Variable Name="HMETAFILEPICT"                  Type="Alias"    Base="HANDLE" />
+
+        <!-- Arrays -->
+        <Variable Name="void* [5]"                      Type="Array"    Base="void*"    Count="5" />
+        <Variable Name="LONG [6]"                       Type="Array"    Base="LONG"     Count="6" />
+
+        <!-- VARIANT_BOOL -->
+        <Variable Name="VARIANT_BOOL" Type="Alias" Base="short">
+            <Enum>
+                <Set Name="VARIANT_TRUE"    Value="-1" />
+                <Set Name="VARIANT_FALSE"   Value="0" />
+            </Enum>
+        </Variable>
+        <Variable Name="VARIANT_BOOL*" Type="Pointer" Base="VARIANT_BOOL" />
+
+        <!-- MSHLFLAGS -->
+        <Variable Name="MSHLFLAGS" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="MSHLFLAGS_NORMAL"        Value="0" />
+                <Set Name="MSHLFLAGS_TABLESTRONG"   Value="1" />
+                <Set Name="MSHLFLAGS_TABLEWEAK"     Value="2" />
+                <Set Name="MSHLFLAGS_NOPING"        Value="4" />
+                <Set Name="MSHLFLAGS_RESERVED1"     Value="8" />
+                <Set Name="MSHLFLAGS_RESERVED2"     Value="16" />
+                <Set Name="MSHLFLAGS_RESERVED3"     Value="32" />
+                <Set Name="MSHLFLAGS_RESERVED4"     Value="64" />
+            </Enum>
+        </Variable>
+
+        <!-- DVTARGETDEVICE -->
+        <Variable Name="DVTARGETDEVICE" Type="Struct">
+            <Field Type="DWORD"     Name="tdSize" />
+            <Field Type="WORD"      Name="tdDriverNameOffset" />
+            <Field Type="WORD"      Name="tdDeviceNameOffset" />
+            <Field Type="WORD"      Name="tdPortNameOffset" />
+            <Field Type="WORD"      Name="tdExtDevmodeOffset" />
+            <Field Type="BYTE [1]"  Name="tdData" />
+        </Variable>
+        <Variable Name="DVTARGETDEVICE*"        Type="Pointer"  Base="DVTARGETDEVICE" />
+        <Variable Name="DVTARGETDEVICE**"       Type="Pointer"  Base="DVTARGETDEVICE*" />
+        <Variable Name="const DVTARGETDEVICE*"  Type="Pointer"  Base="DVTARGETDEVICE" />
+
+        <!-- SERIALIZEDPROPERTYVALUE -->
+        <Variable Name="SERIALIZEDPROPERTYVALUE" Type="Struct">
+            <Field Type="DWORD"     Name="dwType" />
+            <Field Type="BYTE [1]"  Name="rgb" />
+        </Variable>
+        <Variable Name="SERIALIZEDPROPERTYVALUE*"   Type="Pointer" Base="SERIALIZEDPROPERTYVALUE" />
+        <Variable Name="SERIALIZEDPROPERTYVALUE**"  Type="Pointer" Base="SERIALIZEDPROPERTYVALUE*" />
+
+        <!-- RPCOLEMESSAGE -->
+        <Variable Name="RPCOLEMESSAGE" Type="Struct">
+            <Field Type="void*"             Name="reserved1" />
+            <Field Type="RPCOLEDATAREP"     Name="dataRepresentation" />
+            <Field Type="void*"             Name="Buffer" Length="cbBuffer" />
+            <Field Type="ULONG"             Name="cbBuffer" />
+            <Field Type="ULONG"             Name="iMethod" />
+            <Field Type="void* [5]"         Name="reserved2" />
+            <Field Type="ULONG"             Name="rpcFlags" />
+        </Variable>
+        <Variable Name="RPCOLEMESSAGE*" Type="Pointer" Base="RPCOLEMESSAGE" />
+
+        <!-- OLEMENUGROUPWIDTHS -->
+        <Variable Name="OLEMENUGROUPWIDTHS" Type="Struct">
+            <Field Type="LONG [6]" Name="width" />
+        </Variable>
+        <Variable Name="LPOLEMENUGROUPWIDTHS" Type="Pointer" Base="OLEMENUGROUPWIDTHS" />
+
+        <!-- [PALETTEENTRY_Flags] -->
+        <Variable Name="[PALETTEENTRY_Flags]" Type="Alias" Base="BYTE">
+            <Display Name="BYTE" />
+            <Flag>
+                <Set Name="PC_RESERVED"     Value="0x01" />
+                <Set Name="PC_EXPLICIT"     Value="0x02" />
+                <Set Name="PC_NOCOLLAPSE"   Value="0x04" />
+            </Flag>
+        </Variable>
+
+        <!-- PALETTEENTRY -->
+        <Variable Name="PALETTEENTRY" Type="Struct">
+            <Field Type="BYTE"                  Name="peRed" />
+            <Field Type="BYTE"                  Name="peGreen" />
+            <Field Type="BYTE"                  Name="peBlue" />
+            <Field Type="[PALETTEENTRY_Flags]"  Name="peFlags" />
+        </Variable>
+        <Variable Name="PALETTEENTRY*"          Type="Pointer"  Base="PALETTEENTRY" />
+        <Variable Name="LPPALETTEENTRY"         Type="Pointer"  Base="PALETTEENTRY" />
+        <Variable Name="CONST PALETTEENTRY*"    Type="Pointer"  Base="PALETTEENTRY" />
+        <Variable Name="const PALETTEENTRY*"    Type="Pointer"  Base="PALETTEENTRY" />
+        <Variable Name="PALETTEENTRY [1]"       Type="Array"    Base="PALETTEENTRY" Count="1" />
+
+        <!-- LOGPALETTE -->
+        <Variable Name="LOGPALETTE" Type="Struct">
+            <Field Type="WORD"              Name="palVersion" />
+            <Field Type="WORD"              Name="palNumEntries" />
+            <Field Type="PALETTEENTRY [1]"  Name="palPalEntry" Count="palNumEntries" />
+        </Variable>
+        <Variable Name="LOGPALETTE*"        Type="Pointer" Base="LOGPALETTE" />
+        <Variable Name="LOGPALETTE**"       Type="Pointer" Base="LOGPALETTE*" />
+        <Variable Name="const LOGPALETTE*"  Type="Pointer" Base="LOGPALETTE*" />
+
+        <!-- VARTYPE -->
+        <Variable Name="VARTYPE" Type="Alias" Base="unsigned short">
+            <Flag>
+                <Set Name="VT_EMPTY"                Value="0" />
+                <Set Name="VT_NULL"                 Value="1" />
+                <Set Name="VT_I2"                   Value="2" />
+                <Set Name="VT_I4"                   Value="3" />
+                <Set Name="VT_R4"                   Value="4" />
+                <Set Name="VT_R8"                   Value="5" />
+                <Set Name="VT_CY"                   Value="6" />
+                <Set Name="VT_DATE"                 Value="7" />
+                <Set Name="VT_BSTR"                 Value="8" />
+                <Set Name="VT_DISPATCH"             Value="9" />
+                <Set Name="VT_ERROR"                Value="10" />
+                <Set Name="VT_BOOL"                 Value="11" />
+                <Set Name="VT_VARIANT"              Value="12" />
+                <Set Name="VT_UNKNOWN"              Value="13" />
+                <Set Name="VT_DECIMAL"              Value="14" />
+                <Set Name="VT_I1"                   Value="16" />
+                <Set Name="VT_UI1"                  Value="17" />
+                <Set Name="VT_UI2"                  Value="18" />
+                <Set Name="VT_UI4"                  Value="19" />
+                <Set Name="VT_I8"                   Value="20" />
+                <Set Name="VT_UI8"                  Value="21" />
+                <Set Name="VT_INT"                  Value="22" />
+                <Set Name="VT_UINT"                 Value="23" />
+                <Set Name="VT_VOID"                 Value="24" />
+                <Set Name="VT_HRESULT"              Value="25" />
+                <Set Name="VT_PTR"                  Value="26" />
+                <Set Name="VT_SAFEARRAY"            Value="27" />
+                <Set Name="VT_CARRAY"               Value="28" />
+                <Set Name="VT_USERDEFINED"          Value="29" />
+                <Set Name="VT_LPSTR"                Value="30" />
+                <Set Name="VT_LPWSTR"               Value="31" />
+                <Set Name="VT_RECORD"               Value="36" />
+                <Set Name="VT_INT_PTR"              Value="37" />
+                <Set Name="VT_UINT_PTR"             Value="38" />
+                <Set Name="VT_FILETIME"             Value="64" />
+                <Set Name="VT_BLOB"                 Value="65" />
+                <Set Name="VT_STREAM"               Value="66" />
+                <Set Name="VT_STORAGE"              Value="67" />
+                <Set Name="VT_STREAMED_OBJECT"      Value="68" />
+                <Set Name="VT_STORED_OBJECT"        Value="69" />
+                <Set Name="VT_BLOB_OBJECT"          Value="70" />
+                <Set Name="VT_CF"                   Value="71" />
+                <Set Name="VT_CLSID"                Value="72" />
+                <Set Name="VT_VERSIONED_STREAM"     Value="73" />
+                <Set Name="VT_BSTR_BLOB"            Value="0xfff" />
+                <Set Name="VT_VECTOR"               Value="0x1000" />
+                <Set Name="VT_ARRAY"                Value="0x2000" />
+                <Set Name="VT_BYREF"                Value="0x4000" />
+                <Set Name="VT_RESERVED"             Value="0x8000" />
+            </Flag>
+        </Variable>
+        <Variable Name="VARTYPE*" Type="Pointer" Base="VARTYPE" />
+
+        <!-- [BRECORD] -->
+        <Variable Name="[BRECORD]" Type="Struct">
+            <Display Name="struct" />
+            <Field Type="PVOID*"        Name="pvRecord" />
+            <Field Type="IRecordInfo*"  Name="pRecInfo" />
+        </Variable>
+
+        <!-- [VARIANT_s_u] -->
+        <Variable Name="[VARIANT_s_u]" Type="Union">
+            <!-- TODO: Temporary definition until conditional unions are supported -->
+            <Display Name="union" />
+            <Field Type="LONG"          Name="lVal" />
+            <Field Type="[BRECORD]"     Name="" />
+        </Variable>
+
+        <!-- [VARIANT_s] -->
+        <Variable Name="[VARIANT_s]" Type="Struct">
+            <Display Name="struct" />
+            <Field Type="VARTYPE"           Name="vt" />
+            <Field Type="WORD"              Name="wReserved1" />
+            <Field Type="WORD"              Name="wReserved2" />
+            <Field Type="WORD"              Name="wReserved3" />
+            <Field Type="[VARIANT_s_u]"     Name="" />
+        </Variable>
+
+        <!-- VARIANT -->
+        <Variable Name="VARIANT" Type="Union">
+            <Field Type="[VARIANT_s]"   Name="" />
+            <Field Type="ULONGLONG"     Name="[Other values are currently unsupported]" />
+        </Variable>
+        <Variable Name="VARIANT*"       Type="Pointer" Base="VARIANT" />
+        <Variable Name="VARIANT**"      Type="Pointer" Base="VARIANT*" />
+        <Variable Name="const VARIANT*" Type="Pointer" Base="VARIANT" />
+        <Variable Name="LPVARIANT"      Type="Pointer" Base="VARIANT" />
+
+        <!-- VARIANTARG -->
+        <Variable Name="VARIANTARG"         Type="Alias"    Base="VARIANT" />
+        <Variable Name="VARIANTARG*"        Type="Pointer"  Base="VARIANTARG" />
+        <Variable Name="VARIANTARG**"       Type="Pointer"  Base="VARIANTARG*" />
+        <Variable Name="const VARIANTARG*"  Type="Pointer"  Base="VARIANTARG" />
+
+        <!-- PROPVARIANT -->
+        <Variable Name="PROPVARIANT"            Type="Alias"    Base="VARIANT" />
+        <Variable Name="PROPVARIANT*"           Type="Pointer"  Base="PROPVARIANT" />
+        <Variable Name="PROPVARIANT**"          Type="Pointer"  Base="PROPVARIANT*" />
+        <Variable Name="const PROPVARIANT*"     Type="Alias"    Base="PROPVARIANT*" />
+        <Variable Name="REFPROPVARIANT"         Type="Alias"    Base="PROPVARIANT*" />
+        <Variable Name="PROPVARIANT []"         Type="Pointer"  Base="PROPVARIANT" />
+        <Variable Name="const PROPVARIANT []"   Type="Pointer"  Base="PROPVARIANT" />
+
+        <!-- TYMED -->
+        <Variable Name="TYMED" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="TYMED_HGLOBAL"       Value="1" />
+                <Set Name="TYMED_FILE"          Value="2" />
+                <Set Name="TYMED_ISTREAM"       Value="4" />
+                <Set Name="TYMED_ISTORAGE"      Value="8" />
+                <Set Name="TYMED_GDI"           Value="16" />
+                <Set Name="TYMED_MFPICT"        Value="32" />
+                <Set Name="TYMED_ENHMF"         Value="64" />
+                <Set Name="TYMED_NULL"          Value="0" />
+            </Enum>
+        </Variable>
+
+        <!-- DVASPECT -->
+        <Variable Name="DVASPECT" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="DVASPECT_CONTENT"        Value="1" />
+                <Set Name="DVASPECT_THUMBNAIL"      Value="2" />
+                <Set Name="DVASPECT_ICON"           Value="4" />
+                <Set Name="DVASPECT_DOCPRINT"       Value="8" />
+            </Flag>
+        </Variable>
+
+        <!-- FORMATETC -->
+        <Variable Name="FORMATETC" Type="Struct">
+            <Field Type="CLIPFORMAT"        Name="cfFormat" />
+            <Field Type="DVTARGETDEVICE*"   Name="ptd" />
+            <Field Type="DVASPECT"          Name="dwAspect" />
+            <Field Type="LONG"              Name="lindex" />
+            <Field Type="TYMED"             Name="tymed" />
+        </Variable>
+        <Variable Name="FORMATETC*"         Type="Pointer" Base="FORMATETC" />
+        <Variable Name="LPFORMATETC"        Type="Pointer" Base="FORMATETC" />
+        <Variable Name="const FORMATETC []" Type="Pointer" Base="FORMATETC" />
+
+        <!-- GETPROPERTYSTOREFLAGS -->
+        <Variable Name="GETPROPERTYSTOREFLAGS" Type="Alias" Base="UINT">
+            <Flag>
+                <Set Name="GPS_DEFAULT"                 Value="0" />
+                <Set Name="GPS_HANDLERPROPERTIESONLY"   Value="0x1" />
+                <Set Name="GPS_READWRITE"               Value="0x2" />
+                <Set Name="GPS_TEMPORARY"               Value="0x4" />
+                <Set Name="GPS_FASTPROPERTIESONLY"      Value="0x8" />
+                <Set Name="GPS_OPENSLOWITEM"            Value="0x10" />
+                <Set Name="GPS_DELAYCREATION"           Value="0x20" />
+                <Set Name="GPS_BESTEFFORT"              Value="0x40" />
+                <Set Name="GPS_NO_OPLOCK"               Value="0x80" />
+                <Set Name="GPS_MASK_VALID"              Value="0xff" />
+            </Flag>
+        </Variable>
+
+        <!-- PROPERTYKEY -->
+        <Variable Name="PROPERTYKEY" Type="Struct">
+            <Field Type="GUID"      Name="fmtid" />
+            <Field Type="DWORD"     Name="pid" />
+        </Variable>
+        <Variable Name="PROPERTYKEY*"       Type="Pointer"  Base="PROPERTYKEY" />
+        <Variable Name="REFPROPERTYKEY"     Type="Pointer"  Base="PROPERTYKEY" />
+        <Variable Name="const PROPERTYKEY"  Type="Alias"    Base="PROPERTYKEY" />
+        <Variable Name="const PROPERTYKEY*" Type="Pointer"  Base="const PROPERTYKEY" />
+
+        <!-- CSPLATFORM -->
+        <Variable Name="CSPLATFORM" Type="Struct">
+            <Field Type="DWORD"     Name="dwPlatformId" />
+            <Field Type="DWORD"     Name="dwVersionHi" />
+            <Field Type="DWORD"     Name="dwVersionLo" />
+            <Field Type="DWORD"     Name="dwProcessorArch" />
+        </Variable>
+        
+        <!-- QUERYCONTEXT -->
+        <Variable Name="QUERYCONTEXT" Type="Struct">
+            <Field Type="DWORD"         Name="dwContext" />
+            <Field Type="CSPLATFORM"    Name="Platform" />
+            <Field Type="LCID"          Name="Locale" />
+            <Field Type="DWORD"         Name="dwVersionHi" />
+            <Field Type="DWORD"         Name="dwVersionLo" />
+        </Variable>
+        <Variable Name="QUERYCONTEXT*" Type="Pointer" Base="QUERYCONTEXT" />
+
+        <!-- MULTI_QI -->
+        <Variable Name="MULTI_QI" Type="Struct">
+            <Field Type="const IID*"    Name="pIID" />
+            <Field Type="IUnknown*"     Name="pItf" />
+            <Field Type="HRESULT"       Name="hr" />
+        </Variable>
+        <Variable Name="MULTI_QI*" Type="Pointer" Base="MULTI_QI" />
+
+        <!-- [STGM_FLAGS]-->
+        <Variable Name="[STGM_FLAGS]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="STGM_DIRECT"             Value="0x00000000" />
+                <Set Name="STGM_TRANSACTED"         Value="0x00010000" />
+                <Set Name="STGM_SIMPLE"             Value="0x08000000" />
+                <Set Name="STGM_READ"               Value="0x00000000" />
+                <Set Name="STGM_WRITE"              Value="0x00000001" />
+                <Set Name="STGM_READWRITE"          Value="0x00000002" />
+                <Set Name="STGM_SHARE_DENY_NONE"    Value="0x00000040" />
+                <Set Name="STGM_SHARE_DENY_READ"    Value="0x00000030" />
+                <Set Name="STGM_SHARE_DENY_WRITE"   Value="0x00000020" />
+                <Set Name="STGM_SHARE_EXCLUSIVE"    Value="0x00000010" />
+                <Set Name="STGM_PRIORITY"           Value="0x00040000" />
+                <Set Name="STGM_DELETEONRELEASE"    Value="0x04000000" />
+                <Set Name="STGM_NOSCRATCH"          Value="0x00100000" />
+                <Set Name="STGM_CREATE"             Value="0x00001000" />
+                <Set Name="STGM_CONVERT"            Value="0x00020000" />
+                <Set Name="STGM_FAILIFTHERE"        Value="0x00000000" />
+                <Set Name="STGM_NOSNAPSHOT"         Value="0x00200000" />
+                <Set Name="STGM_DIRECT_SWMR"        Value="0x00400000" />
+            </Flag>
+        </Variable>
+
+        <!-- THDTYPE -->
+        <Variable Name="THDTYPE" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="THDTYPE_BLOCKMESSAGES"       Value="0" />
+                <Set Name="THDTYPE_PROCESSMESSAGES"        Value="1" />
+            </Enum>
+        </Variable>
+        <Variable Name="THDTYPE*" Type="Pointer" Base="THDTYPE" />
+
+        <!-- GLOBALOPT_PROPERTIES -->
+        <Variable Name="GLOBALOPT_PROPERTIES" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="COMGLB_EXCEPTION_HANDLING"       Value="1" />
+                <Set Name="COMGLB_APPID"                    Value="2" />
+                <Set Name="COMGLB_RPC_THREADPOOL_SETTING"   Value="3" />
+            </Enum>
+        </Variable>
+
+        <!-- RPCOPT_PROPERTIES-->
+        <Variable Name="RPCOPT_PROPERTIES" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="COMBND_RPCTIMEOUT"       Value="0x1" />
+                <Set Name="COMBND_SERVER_LOCALITY"  Value="0x2" />
+            </Enum>
+        </Variable>
+
+        <!-- ApplicationType -->
+        <Variable Name="ApplicationType" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="ServerApplication"   Value="0" />
+                <Set Name="LibraryApplication"  Value="1" />
+            </Enum>
+        </Variable>
+
+        <!-- ShutdownType -->
+        <Variable Name="ShutdownType" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="IdleShutdown"    Value="0" />
+                <Set Name="ForcedShutdown"  Value="1" />
+            </Enum>
+        </Variable>
+
+        <!-- LOCKTYPE -->
+        <Variable Name="LOCKTYPE" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="LOCK_WRITE"      Value="1" />
+                <Set Name="LOCK_EXCLUSIVE"  Value="2" />
+                <Set Name="LOCK_ONLYONCE"   Value="4" />
+            </Flag>
+        </Variable>
+
+        <!-- ADVF -->
+        <Variable Name="ADVF" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="ADVF_NODATA"                 Value="1" />
+                <Set Name="ADVF_PRIMEFIRST"             Value="2" />
+                <Set Name="ADVF_ONLYONCE"               Value="4" />
+                <Set Name="ADVF_DATAONSTOP"             Value="64" />
+                <Set Name="ADVFCACHE_NOHANDLER"         Value="8" />
+                <Set Name="ADVFCACHE_FORCEBUILTIN"      Value="16" />
+                <Set Name="ADVFCACHE_ONSAVE"            Value="32" />
+            </Flag>
+        </Variable>
+        <Variable Name="ADVF*" Type="Pointer" Base="ADVF">
+            <Display Name="DWORD*" />
+        </Variable>
+
+        <!-- APTTYPE -->
+        <Variable Name="APTTYPE" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="APTTYPE_CURRENT"     Value="-1" />
+                <Set Name="APTTYPE_STA"         Value="0" />
+                <Set Name="APTTYPE_MTA"         Value="1" />
+                <Set Name="APTTYPE_NA"          Value="2" />
+                <Set Name="APTTYPE_MAINSTA"     Value="3" />
+            </Enum>
+        </Variable>
+        <Variable Name="APTTYPE*" Type="Pointer" Base="APTTYPE" />
+
+        <!-- APTTYPEQUALIFIER -->
+        <Variable Name="APTTYPEQUALIFIER" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="APTTYPEQUALIFIER_NONE"               Value="0" />
+                <Set Name="APTTYPEQUALIFIER_IMPLICIT_MTA"       Value="1" />
+                <Set Name="APTTYPEQUALIFIER_NA_ON_MTA"          Value="2" />
+                <Set Name="APTTYPEQUALIFIER_NA_ON_STA"          Value="3" />
+                <Set Name="APTTYPEQUALIFIER_NA_ON_IMPLICIT_MTA" Value="4" />
+                <Set Name="APTTYPEQUALIFIER_NA_ON_MAINSTA"      Value="5" />
+            </Enum>
+        </Variable>
+        <Variable Name="APTTYPEQUALIFIER*" Type="Pointer" Base="APTTYPEQUALIFIER" />
+
+        <!-- DISPID -->
+        <Variable Name="DISPID" Type="Alias" Base="LONG">
+            <Enum>
+                <Set Name="DISPID_UNKNOWN"                          Value="-1" />
+                <Set Name="DISPID_VALUE"                            Value="0" />
+                <Set Name="DISPID_PROPERTYPUT"                      Value="-3" />
+                <Set Name="DISPID_NEWENUM"                          Value="-4" />
+                <Set Name="DISPID_EVALUATE"                         Value="-5" />
+                <Set Name="DISPID_CONSTRUCTOR"                      Value="-6" />
+                <Set Name="DISPID_DESTRUCTOR"                       Value="-7" />
+                <Set Name="DISPID_COLLECT"                          Value="-8" />
+                <Set Name="DISPID_AUTOSIZE"                         Value="-500" />
+                <Set Name="DISPID_BACKCOLOR"                        Value="-501" />
+                <Set Name="DISPID_BACKSTYLE"                        Value="-502" />
+                <Set Name="DISPID_BORDERCOLOR"                      Value="-503" />
+                <Set Name="DISPID_BORDERSTYLE"                      Value="-504" />
+                <Set Name="DISPID_BORDERWIDTH"                      Value="-505" />
+                <Set Name="DISPID_DRAWMODE"                         Value="-507" />
+                <Set Name="DISPID_DRAWSTYLE"                        Value="-508" />
+                <Set Name="DISPID_DRAWWIDTH"                        Value="-509" />
+                <Set Name="DISPID_FILLCOLOR"                        Value="-510" />
+                <Set Name="DISPID_FILLSTYLE"                        Value="-511" />
+                <Set Name="DISPID_FONT"                             Value="-512" />
+                <Set Name="DISPID_FORECOLOR"                        Value="-513" />
+                <Set Name="DISPID_ENABLED"                          Value="-514" />
+                <Set Name="DISPID_HWND"                             Value="-515" />
+                <Set Name="DISPID_TABSTOP"                          Value="-516" />
+                <Set Name="DISPID_TEXT"                             Value="-517" />
+                <Set Name="DISPID_CAPTION"                          Value="-518" />
+                <Set Name="DISPID_BORDERVISIBLE"                    Value="-519" />
+                <Set Name="DISPID_APPEARANCE"                       Value="-520" />
+                <Set Name="DISPID_MOUSEPOINTER"                     Value="-521" />
+                <Set Name="DISPID_MOUSEICON"                        Value="-522" />
+                <Set Name="DISPID_PICTURE"                          Value="-523" />
+                <Set Name="DISPID_VALID"                            Value="-524" />
+                <Set Name="DISPID_READYSTATE"                       Value="-525" />
+                <Set Name="DISPID_LISTINDEX"                        Value="-526" />
+                <Set Name="DISPID_SELECTED"                         Value="-527" />
+                <Set Name="DISPID_LIST"                             Value="-528" />
+                <Set Name="DISPID_COLUMN"                           Value="-529" />
+                <Set Name="DISPID_LISTCOUNT"                        Value="-531" />
+                <Set Name="DISPID_MULTISELECT"                      Value="-532" />
+                <Set Name="DISPID_MAXLENGTH"                        Value="-533" />
+                <Set Name="DISPID_PASSWORDCHAR"                     Value="-534" />
+                <Set Name="DISPID_SCROLLBARS"                       Value="-535" />
+                <Set Name="DISPID_WORDWRAP"                         Value="-536" />
+                <Set Name="DISPID_MULTILINE"                        Value="-537" />
+                <Set Name="DISPID_NUMBEROFROWS"                     Value="-538" />
+                <Set Name="DISPID_NUMBEROFCOLUMNS"                  Value="-539" />
+                <Set Name="DISPID_DISPLAYSTYLE"                     Value="-540" />
+                <Set Name="DISPID_GROUPNAME"                        Value="-541" />
+                <Set Name="DISPID_IMEMODE"                          Value="-542" />
+                <Set Name="DISPID_ACCELERATOR"                      Value="-543" />
+                <Set Name="DISPID_ENTERKEYBEHAVIOR"                 Value="-544" />
+                <Set Name="DISPID_TABKEYBEHAVIOR"                   Value="-545" />
+                <Set Name="DISPID_SELTEXT"                          Value="-546" />
+                <Set Name="DISPID_SELSTART"                         Value="-547" />
+                <Set Name="DISPID_SELLENGTH"                        Value="-548" />
+                <Set Name="DISPID_REFRESH"                          Value="-550" />
+                <Set Name="DISPID_DOCLICK"                          Value="-551" />
+                <Set Name="DISPID_ABOUTBOX"                         Value="-552" />
+                <Set Name="DISPID_ADDITEM"                          Value="-553" />
+                <Set Name="DISPID_CLEAR"                            Value="-554" />
+                <Set Name="DISPID_REMOVEITEM"                       Value="-555" />
+                <Set Name="DISPID_CLICK"                            Value="-600" />
+                <Set Name="DISPID_DBLCLICK"                         Value="-601" />
+                <Set Name="DISPID_KEYDOWN"                          Value="-602" />
+                <Set Name="DISPID_KEYPRESS"                         Value="-603" />
+                <Set Name="DISPID_KEYUP"                            Value="-604" />
+                <Set Name="DISPID_MOUSEDOWN"                        Value="-605" />
+                <Set Name="DISPID_MOUSEMOVE"                        Value="-606" />
+                <Set Name="DISPID_MOUSEUP"                          Value="-607" />
+                <Set Name="DISPID_ERROREVENT"                       Value="-608" />
+                <Set Name="DISPID_READYSTATECHANGE"                 Value="-609" />
+                <Set Name="DISPID_CLICK_VALUE"                      Value="-610" />
+                <Set Name="DISPID_RIGHTTOLEFT"                      Value="-611" />
+                <Set Name="DISPID_TOPTOBOTTOM"                      Value="-612" />
+                <Set Name="DISPID_THIS"                             Value="-613" />
+                <Set Name="DISPID_AMBIENT_BACKCOLOR"                Value="-701" />
+                <Set Name="DISPID_AMBIENT_DISPLAYNAME"              Value="-702" />
+                <Set Name="DISPID_AMBIENT_FONT"                     Value="-703" />
+                <Set Name="DISPID_AMBIENT_FORECOLOR"                Value="-704" />
+                <Set Name="DISPID_AMBIENT_LOCALEID"                 Value="-705" />
+                <Set Name="DISPID_AMBIENT_MESSAGEREFLECT"           Value="-706" />
+                <Set Name="DISPID_AMBIENT_SCALEUNITS"               Value="-707" />
+                <Set Name="DISPID_AMBIENT_TEXTALIGN"                Value="-708" />
+                <Set Name="DISPID_AMBIENT_USERMODE"                 Value="-709" />
+                <Set Name="DISPID_AMBIENT_UIDEAD"                   Value="-710" />
+                <Set Name="DISPID_AMBIENT_SHOWGRABHANDLES"          Value="-711" />
+                <Set Name="DISPID_AMBIENT_SHOWHATCHING"             Value="-712" />
+                <Set Name="DISPID_AMBIENT_DISPLAYASDEFAULT"         Value="-713" />
+                <Set Name="DISPID_AMBIENT_SUPPORTSMNEMONICS"        Value="-714" />
+                <Set Name="DISPID_AMBIENT_AUTOCLIP"                 Value="-715" />
+                <Set Name="DISPID_AMBIENT_APPEARANCE"               Value="-716" />
+                <Set Name="DISPID_AMBIENT_CODEPAGE"                 Value="-725" />
+                <Set Name="DISPID_AMBIENT_PALETTE"                  Value="-726" />
+                <Set Name="DISPID_AMBIENT_CHARSET"                  Value="-727" />
+                <Set Name="DISPID_AMBIENT_TRANSFERPRIORITY"         Value="-728" />
+                <Set Name="DISPID_AMBIENT_RIGHTTOLEFT"              Value="-732" />
+                <Set Name="DISPID_AMBIENT_TOPTOBOTTOM"              Value="-733" />
+                <Set Name="DISPID_Name"                             Value="-800" />
+                <Set Name="DISPID_Delete"                           Value="-801" />
+                <Set Name="DISPID_Object"                           Value="-802" />
+                <Set Name="DISPID_Parent"                           Value="-803" />
+            </Enum>
+        </Variable>
+        <Variable Name="DISPID*" Type="Pointer" Base="DISPID" />
+
+        <!-- BIND_FLAGS -->
+        <Variable Name="BIND_FLAGS" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="BIND_MAYBOTHERUSER"      Value="1" />
+                <Set Name="BIND_JUSTTESTEXISTENCE"  Value="2" />
+            </Flag>
+        </Variable>
+
+        <!-- BIND_OPTS -->
+        <Variable Name="BIND_OPTS" Type="Struct">
+            <Field Type="DWORD"         Name="cbStruct" />
+            <Field Type="BIND_FLAGS"    Name="grfFlags" />
+            <Field Type="[STGM_FLAGS]"  Name="grfMode" />
+            <Field Type="DWORD"         Name="dwTickCountDeadline" />
+        </Variable>
+        <Variable Name="BIND_OPTS*" Type="Pointer" Base="BIND_OPTS" />
+
+        <!-- STATSTG -->
+        <Variable Name="STATSTG" Type="Struct">
+            <Field Type="LPOLESTR"          Name="pwcsName" />
+            <Field Type="DWORD"             Name="type" />
+            <Field Type="ULARGE_INTEGER"    Name="cbSize" />
+            <Field Type="FILETIME"          Name="mtime" />
+            <Field Type="FILETIME"          Name="ctime" />
+            <Field Type="FILETIME"          Name="atime" />
+            <Field Type="[STGM_FLAGS]"      Name="grfMode" />
+            <Field Type="LOCKTYPE"          Name="grfLocksSupported" />
+            <Field Type="CLSID"             Name="clsid" />
+            <Field Type="DWORD"             Name="grfStateBits" />
+            <Field Type="DWORD"             Name="reserved" />
+        </Variable>
+        <Variable Name="STATSTG*" Type="Pointer" Base="STATSTG" />
+
+        <!-- INTERFACEINFO -->
+        <Variable Name="INTERFACEINFO" Type="Struct">
+            <Field Type="IUnknown*"     Name="pUnk" />
+            <Field Type="IID"           Name="iid" />
+            <Field Type="WORD"          Name="wMethod" />
+        </Variable>
+        <Variable Name="LPINTERFACEINFO" Type="Pointer" Base="INTERFACEINFO" />
+
+        <!-- OLEINPLACEFRAMEINFO -->
+        <Variable Name="OLEINPLACEFRAMEINFO" Type="Struct">
+            <Field Type="UINT"      Name="cb" />
+            <Field Type="BOOL"      Name="fMDIApp" />
+            <Field Type="HWND"      Name="hwndFrame" />
+            <Field Type="HACCEL"    Name="haccel" />
+            <Field Type="UINT"      Name="cAccelEntries" />
+        </Variable>
+        <Variable Name="LPOLEINPLACEFRAMEINFO" Type="Pointer" Base="OLEINPLACEFRAMEINFO" />
+
+        <!-- OLEVERB -->
+        <Variable Name="OLEVERB" Type="Struct">
+            <Field Type="LONG"          Name="lVerb" />
+            <Field Type="LPOLESTR"      Name="lpszVerbName" />
+            <Field Type="DWORD"         Name="fuFlags" />
+            <Field Type="DWORD"         Name="grfAttribs" />
+        </Variable>
+        <Variable Name="LPOLEVERB" Type="Pointer" Base="OLEVERB" />
+
+        <!-- STATDATA -->
+        <Variable Name="STATDATA" Type="Struct">
+            <Field Type="FORMATETC"     Name="formatetc" />
+            <Field Type="DWORD"         Name="advf" />
+            <Field Type="IAdviseSink*"  Name="pAdvSink" />
+            <Field Type="DWORD"         Name="dwConnection" />
+        </Variable>
+        <Variable Name="STATDATA*" Type="Pointer" Base="STATDATA" />
+
+        <!-- ContextProperty -->
+        <Variable Name="ContextProperty" Type="Struct">
+            <Field Type="GUID"          Name="policyId" />
+            <Field Type="CPFLAGS"       Name="flags" />
+            <Field Type="IUnknown*"     Name="pUnk" />
+        </Variable>
+        <Variable Name="ContextProperty*" Type="Pointer" Base="ContextProperty" />
+
+        <!-- StorageLayout -->
+        <Variable Name="StorageLayout" Type="Struct">
+            <Field Type="DWORD"             Name="LayoutType" />
+            <Field Type="OLECHAR*"          Name="pwcsElementName" />
+            <Field Type="LARGE_INTEGER"     Name="cOffset" />
+            <Field Type="LARGE_INTEGER"     Name="cBytes" />
+        </Variable>
+        <Variable Name="StorageLayout*" Type="Pointer" Base="StorageLayout" />
+
+        <!-- OLECMDF -->
+        <Variable Name="OLECMDF" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="OLECMDF_SUPPORTED"           Value="0x1" />
+                <Set Name="OLECMDF_ENABLED"             Value="0x2" />
+                <Set Name="OLECMDF_LATCHED"             Value="0x4" />
+                <Set Name="OLECMDF_NINCHED"             Value="0x8" />
+                <Set Name="OLECMDF_INVISIBLE"           Value="0x10" />
+                <Set Name="OLECMDF_DEFHIDEONCTXTMENU"   Value="0x20" />
+            </Flag>
+        </Variable>
+        <Variable Name="OLECMDF*" Type="Pointer" Base="OLECMDF" />
+
+        <!-- PROPBAG2_TYPE -->
+        <Variable Name="PROPBAG2_TYPE" Type="Alias" Base="UINT">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="PROPBAG2_TYPE_UNDEFINED"     Value="0" />
+                <Set Name="PROPBAG2_TYPE_DATA"          Value="1" />
+                <Set Name="PROPBAG2_TYPE_URL"           Value="2" />
+                <Set Name="PROPBAG2_TYPE_OBJECT"        Value="3" />
+                <Set Name="PROPBAG2_TYPE_STREAM"        Value="4" />
+                <Set Name="PROPBAG2_TYPE_STORAGE"       Value="5" />
+                <Set Name="PROPBAG2_TYPE_MONIKER"       Value="6" />
+            </Enum>
+        </Variable>
+
+        <!-- PROPBAG2 -->
+        <Variable Name="PROPBAG2" Type="Struct">
+            <Field Type="PROPBAG2_TYPE"     Name="dwType" />
+            <Field Type="VARTYPE"           Name="vt" />
+            <Field Type="CLIPFORMAT"        Name="cfType" />
+            <Field Type="DWORD"             Name="dwHint" />
+            <Field Type="LPOLESTR"          Name="pstrName" />
+            <Field Type="CLSID"             Name="clsid" />
+        </Variable>
+        <Variable Name="PROPBAG2*" Type="Pointer" Base="PROPBAG2" />
+
+        <Variable Name="[CLSCTX]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="CLSCTX_INPROC_SERVER"            Value="0x1" />
+                <Set Name="CLSCTX_INPROC_HANDLER"           Value="0x2" />
+                <Set Name="CLSCTX_LOCAL_SERVER"             Value="0x4" />
+                <Set Name="CLSCTX_INPROC_SERVER16"          Value="0x8" />
+                <Set Name="CLSCTX_REMOTE_SERVER"            Value="0x10" />
+                <Set Name="CLSCTX_INPROC_HANDLER16"         Value="0x20" />
+                <Set Name="CLSCTX_RESERVED1"                Value="0x40" />
+                <Set Name="CLSCTX_RESERVED2"                Value="0x80" />
+                <Set Name="CLSCTX_RESERVED3"                Value="0x100" />
+                <Set Name="CLSCTX_RESERVED4"                Value="0x200" />
+                <Set Name="CLSCTX_NO_CODE_DOWNLOAD"         Value="0x400" />
+                <Set Name="CLSCTX_RESERVED5"                Value="0x800" />
+                <Set Name="CLSCTX_NO_CUSTOM_MARSHAL"        Value="0x1000" />
+                <Set Name="CLSCTX_ENABLE_CODE_DOWNLOAD"     Value="0x2000" />
+                <Set Name="CLSCTX_NO_FAILURE_LOG"           Value="0x4000" />
+                <Set Name="CLSCTX_DISABLE_AAA"              Value="0x8000" />
+                <Set Name="CLSCTX_ENABLE_AAA"               Value="0x10000" />
+                <Set Name="CLSCTX_FROM_DEFAULT_CONTEXT"     Value="0x20000" />
+                <Set Name="CLSCTX_ACTIVATE_32_BIT_SERVER"   Value="0x40000" />
+                <Set Name="CLSCTX_ACTIVATE_64_BIT_SERVER"   Value="0x80000" />
+                <Set Name="CLSCTX_ENABLE_CLOAKING"          Value="0x100000" />
+                <Set Name="CLSCTX_PS_DLL"                   Value="0x80000000" />
+            </Flag>
+        </Variable>
+
+        <!-- [uCLSSPEC_u_s1] -->
+        <Variable Name="[uCLSSPEC_u_s1]" Type="Struct">
+            <Display Name="struct" />
+            <Field Type="LPOLESTR"  Name="pPackageName" />
+            <Field Type="GUID"      Name="PolicyId" />
+        </Variable>
+
+        <!-- [uCLSSPEC_u_s2] -->
+        <Variable Name="[uCLSSPEC_u_s2]" Type="Struct">
+            <Display Name="struct" />
+            <Field Type="GUID"      Name="ObjectId" />
+            <Field Type="GUID"      Name="PolicyId" />
+        </Variable>
+
+        <!-- [uCLSSPEC_u] -->
+        <Variable Name="[uCLSSPEC_u]" Type="Union">
+            <Display Name="union" />
+            <Field Type="CLSID"             Name="clsid" />
+            <Field Type="LPOLESTR"          Name="pFileExt" />
+            <Field Type="LPOLESTR"          Name="pMimeType" />
+            <Field Type="LPOLESTR"          Name="pProgId" />
+            <Field Type="LPOLESTR"          Name="pFileName" />
+            <Field Type="[uCLSSPEC_u_s1]"   Name="ByName" />
+            <Field Type="[uCLSSPEC_u_s2]"   Name="ByObjectId" />
+        </Variable>
+
+        <!-- TYSPEC -->
+        <Variable Name="TYSPEC" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="TYSPEC_CLSID"            Value="0" />
+                <Set Name="TYSPEC_FILEEXT"          Value="1" />
+                <Set Name="TYSPEC_MIMETYPE"         Value="2" />
+                <Set Name="TYSPEC_FILENAME"         Value="3" />
+                <Set Name="TYSPEC_PROGID"           Value="4" />
+                <Set Name="TYSPEC_PACKAGENAME"      Value="5" />
+                <Set Name="TYSPEC_OBJECTID"         Value="6" />
+            </Enum>
+        </Variable>
+
+        <!-- uCLSSPEC -->
+        <Variable Name="uCLSSPEC" Type="Struct">
+            <Field Type="TYSPEC"        Name="tyspec" />
+            <Field Type="[uCLSSPEC_u]"  Name="tagged_union" />
+        </Variable>
+        <Variable Name="uCLSSPEC*" Type="Pointer" Base="uCLSSPEC" />
+
+        <!-- [STGMEDIUM_u] -->
+        <Variable Name="[STGMEDIUM_u]" Type="Union">
+            <Display Name="union" />
+            <Field Type="HBITMAP"           Name="hBitmap" />
+            <Field Type="HMETAFILEPICT"     Name="hMetaFilePict" />
+            <Field Type="HENHMETAFILE"      Name="hEnhMetaFile" />
+            <Field Type="HGLOBAL"           Name="hGlobal" />
+            <Field Type="LPOLESTR"          Name="lpszFileName" />
+            <Field Type="IStream*"          Name="pstm" />
+            <Field Type="IStorage*"         Name="pstg" />
+        </Variable>
+
+        <!-- STGMEDIUM -->
+        <Variable Name="STGMEDIUM" Type="Struct">
+            <Field Type="TYMED"             Name="tymed" />
+            <Field Type="[STGMEDIUM_u]"     Name="u" />
+            <Field Type="IUnknown*"         Name="pUnkForRelease" />
+        </Variable>
+        <Variable Name="STGMEDIUM*"         Type="Pointer" Base="STGMEDIUM" />
+        <Variable Name="const STGMEDIUM*"   Type="Pointer" Base="STGMEDIUM" />
+        <Variable Name="LPSTGMEDIUM"        Type="Pointer" Base="STGMEDIUM" />
+
+        <!-- [COINIT_FLAG] -->
+        <Variable Name="[COINIT_FLAG]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="COINIT_APARTMENTTHREADED" Value="0x2" />
+                <Set Name="COINIT_MULTITHREADED" Value="0x0" />
+                <Set Name="COINIT_DISABLE_OLE1DDE" Value="0x4" />
+                <Set Name="COINIT_SPEED_OVER_MEMORY" Value="0x8" />
+            </Flag>
+        </Variable>
+
+        <!-- [FADF_FLAGS] -->
+        <Variable Name="[FADF_FLAGS]" Type="Alias" Base="USHORT">
+            <Display Name="USHORT" />
+            <Flag>
+                <Set Name="FADF_AUTO"           Value="0x1" />
+                <Set Name="FADF_STATIC"         Value="0x2" />
+                <Set Name="FADF_EMBEDDED"       Value="0x4" />
+                <Set Name="FADF_FIXEDSIZE"      Value="0x10" />
+                <Set Name="FADF_RECORD"         Value="0x20" />
+                <Set Name="FADF_HAVEIID"        Value="0x40" />
+                <Set Name="FADF_HAVEVARTYPE"    Value="0x80" />
+                <Set Name="FADF_BSTR"           Value="0x100" />
+                <Set Name="FADF_UNKNOWN"        Value="0x200" />
+                <Set Name="FADF_DISPATCH"       Value="0x400" />
+                <Set Name="FADF_VARIANT"        Value="0x800" />
+                <Set Name="FADF_RESERVED"       Value="0xf008" />
+            </Flag>
+        </Variable>
+
+        <!-- SAFEARRAYBOUND -->
+        <Variable Name="SAFEARRAYBOUND" Type="Struct">
+            <Field Type="ULONG"     Name="cElements" />
+            <Field Type="LONG"      Name="lLbound" />
+        </Variable>
+        <Variable Name="SAFEARRAYBOUND*"    Type="Pointer" Base="SAFEARRAYBOUND" />
+        <Variable Name="SAFEARRAYBOUND [1]" Type="Array"   Base="SAFEARRAYBOUND" Count="1" />
+
+        <!-- SAFEARRAY -->
+        <Variable Name="SAFEARRAY" Type="Struct">
+            <Field Type="USHORT"                Name="cDims" />
+            <Field Type="[FADF_FLAGS]"          Name="fFeatures" />
+            <Field Type="ULONG"                 Name="cbElements" />
+            <Field Type="ULONG"                 Name="cLocks" />
+            <Field Type="PVOID"                 Name="pvData" />
+            <Field Type="SAFEARRAYBOUND [1]"    Name="rgsabound" Count="cDims" />
+        </Variable>
+        <Variable Name="SAFEARRAY*"     Type="Pointer" Base="SAFEARRAY" />
+        <Variable Name="SAFEARRAY**"    Type="Pointer" Base="SAFEARRAY*" />
+        <Variable Name="LPSAFEARRAY"    Type="Pointer" Base="SAFEARRAY" />
+        <Variable Name="LPSAFEARRAY*"   Type="Pointer" Base="LPSAFEARRAY" />
+
+        <!-- CUSTDATAITEM -->
+        <Variable Name="CUSTDATAITEM" Type="Struct">
+            <Field Type="GUID"          Name="guid" />
+            <Field Type="VARIANTARG"    Name="varValue" />
+        </Variable>
+        <Variable Name="LPCUSTDATAITEM" Type="Pointer" Base="CUSTDATAITEM" />
+
+        <!-- CUSTDATA -->
+        <Variable Name="CUSTDATA" Type="Struct">
+            <Field Type="DWORD"             Name="cCustData" />
+            <Field Type="LPCUSTDATAITEM"    Name="prgCustData" />
+        </Variable>
+        <Variable Name="CUSTDATA*"  Type="Pointer" Base="CUSTDATA" />
+        <Variable Name="LPCUSTDATA" Type="Pointer" Base="CUSTDATA" />
+
+        <!-- [InvokeFlags] -->
+        <Variable Name="[InvokeFlags]" Type="Alias" Base="WORD">
+            <Display Name="WORD" />
+            <Flag>
+                <Set Name="DISPATCH_METHOD"             Value="0x1" />
+                <Set Name="DISPATCH_PROPERTYGET"        Value="0x2" />
+                <Set Name="DISPATCH_PROPERTYPUT"        Value="0x4" />
+                <Set Name="DISPATCH_PROPERTYPUTREF"     Value="0x8" />
+            </Flag>
+        </Variable>
+
+        <!-- CALLCONV -->
+        <Variable Name="CALLCONV" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="CC_FASTCALL"         Value="0" />
+                <Set Name="CC_CDECL"            Value="1" />
+                <Set Name="CC_PASCAL"           Value="2" />
+                <Set Name="CC_MACPASCAL"        Value="3" />
+                <Set Name="CC_STDCALL"          Value="4" />
+                <Set Name="CC_FPFASTCALL"       Value="5" />
+                <Set Name="CC_SYSCALL"          Value="6" />
+                <Set Name="CC_MPWCDECL"         Value="7" />
+                <Set Name="CC_MPWPASCAL"        Value="8" />
+            </Enum>
+        </Variable>
+
+        <!-- STATFLAG -->
+        <Variable Name="STATFLAG" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="STATFLAG_DEFAULT"    Value="0" />
+                <Set Name="STATFLAG_NONAME"     Value="1" />
+                <Set Name="STATFLAG_NOOPEN"     Value="2" />
+            </Enum>
+        </Variable>
+
+        <!-- STGC -->
+        <Variable Name="STGC" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="STGC_DEFAULT"                                Value="0" />
+                <Set Name="STGC_OVERWRITE"                              Value="1" />
+                <Set Name="STGC_ONLYIFCURRENT"                          Value="2" />
+                <Set Name="STGC_DANGEROUSLYCOMMITMERELYTODISKCACHE"     Value="4" />
+                <Set Name="STGC_CONSOLIDATE"                            Value="8" />
+            </Flag>
+        </Variable>
+
+        <!-- DBKIND -->
+        <Variable Name="DBKIND" Type="Alias" Base="DWORD">
+            <Enum>
+                <Set Name="DBKIND_GUID_NAME"        Value="0" />
+                <Set Name="DBKIND_GUID_PROPID"      Value="1" />
+                <Set Name="DBKIND_NAME"             Value="2" />
+                <Set Name="DBKIND_PGUID_NAME"       Value="3" />
+                <Set Name="DBKIND_PGUID_PROPID"     Value="4" />
+                <Set Name="DBKIND_PROPID"           Value="5" />
+                <Set Name="DBKIND_GUID"             Value="6" />
+            </Enum>
+        </Variable>
+
+        <!-- [DBID_u1] -->
+        <Variable Name="[DBID_u1]" Type="Union">
+            <Display Name="union" />
+            <Field Type="GUID"  Name="guid" />
+            <Field Type="GUID*" Name="pguid" />
+        </Variable>
+
+        <!-- [DBID_u2] -->
+        <Variable Name="[DBID_u2]" Type="Union">
+            <Display Name="union" />
+            <Field Type="LPOLESTR"  Name="pwszName" />
+            <Field Type="ULONG"     Name="ulPropid" />
+        </Variable>
+
+        <!-- DBID -->
+        <Variable Name="DBID" Type="Struct" Pack32="2">
+            <Field Type="[DBID_u1]"     Name="uGuid" />
+            <Field Type="DBKIND"        Name="eKind" />
+            <Field Type="[DBID_u2]"     Name="uName" />
+        </Variable>
+        <Variable Name="DBID*"          Type="Pointer" Base="DBID" />
+        <Variable Name="DBID**"         Type="Pointer" Base="DBID*" />
+        <Variable Name="const DBID []"  Type="Pointer" Base="DBID" />
+
+        <!-- [PROPSETFLAG] -->
+        <Variable Name="[PROPSETFLAG]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="PROPSETFLAG_DEFAULT"         Value="0" />
+                <Set Name="PROPSETFLAG_NONSIMPLE"       Value="1" />
+                <Set Name="PROPSETFLAG_ANSI"            Value="2" />
+                <Set Name="PROPSETFLAG_UNBUFFERED"      Value="4" />
+                <Set Name="PROPSETFLAG_CASE_SENSITIVE"  Value="8" />
+            </Flag>
+        </Variable>
+
+        <!-- STATPROPSETSTG -->
+        <Variable Name="STATPROPSETSTG" Type="Struct">
+            <Field Type="FMTID"             Name="fmtid" />
+            <Field Type="CLSID"             Name="clsid" />
+            <Field Type="[PROPSETFLAG]"     Name="grfFlags" />
+            <Field Type="FILETIME"          Name="mtime" />
+            <Field Type="FILETIME"          Name="ctime" />
+            <Field Type="FILETIME"          Name="atime" />
+            <Field Type="DWORD"             Name="dwOSVersion" />
+        </Variable>
+        <Variable Name="STATPROPSETSTG*" Type="Pointer" Base="STATPROPSETSTG" />
+
+        <!-- STATPROPSTG -->
+        <Variable Name="STATPROPSTG" Type="Struct">
+            <Field Type="LPOLESTR"      Name="lpwstrName" />
+            <Field Type="PROPID"        Name="propid" />
+            <Field Type="VARTYPE"       Name="vt" />
+        </Variable>
+        <Variable Name="STATPROPSTG*" Type="Pointer" Base="STATPROPSTG" />
+
+        <!-- IMPLTYPEFLAGS -->
+        <Variable Name="IMPLTYPEFLAGS" Type="Alias" Base="UINT">
+            <Display Name="INT" />
+            <Flag>
+                <Set Name="IMPLTYPEFLAG_FDEFAULT"           Value="0x1"  />
+                <Set Name="IMPLTYPEFLAG_FSOURCE"            Value="0x2"  />
+                <Set Name="IMPLTYPEFLAG_FRESTRICTED"        Value="0x4"  />
+                <Set Name="IMPLTYPEFLAG_FDEFAULTVTABLE"     Value="0x8"  />
+            </Flag>
+        </Variable>
+        <Variable Name="IMPLTYPEFLAGS*" Type="Pointer" Base="IMPLTYPEFLAGS">
+            <Display Name="INT*" />
+        </Variable>
+
+    </Headers>
+</ApiMonitor>

@@ -1,0 +1,53 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IMarshal" Id="{00000003-0000-0000-C000-000000000046}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Component Object Model (COM)/COM Fundamentals/Interfaces">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="GetUnmarshalClass">
+            <Param Type="REFIID" Name="riid" />
+            <Param Type="void*" Name="pv" />
+            <Param Type="DWORD" Name="dwDestContext" />
+            <Param Type="void*" Name="pvDestContext" />
+            <Param Type="MSHLFLAGS" Name="mshlflags" />
+            <Param Type="CLSID*" Name="pCid" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetMarshalSizeMax">
+            <Param Type="REFIID" Name="riid" />
+            <Param Type="void*" Name="pv" />
+            <Param Type="DWORD" Name="dwDestContext" />
+            <Param Type="void*" Name="pvDestContext" />
+            <Param Type="MSHLFLAGS" Name="mshlflags" />
+            <Param Type="DWORD*" Name="pSize" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MarshalInterface">
+            <Param Type="IStream*" Name="pStm" />
+            <Param Type="REFIID" Name="riid" />
+            <Param Type="void*" Name="pv" />
+            <Param Type="DWORD" Name="dwDestContext" />
+            <Param Type="void*" Name="pvDestContext" />
+            <Param Type="MSHLFLAGS" Name="mshlflags" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="UnmarshalInterface">
+            <Param Type="IStream*" Name="pStm" />
+            <Param Type="REFIID" Name="riid" />
+            <Param Type="void**" Name="ppv" InterfaceId="riid" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ReleaseMarshalData">
+            <Param Type="IStream*" Name="pStm" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DisconnectObject">
+            <Param Type="DWORD" Name="dwReserved" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

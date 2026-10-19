@@ -1,0 +1,34 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2012, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IExternalConnection" Id="{00000019-0000-0000-C000-000000000046}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Component Object Model (COM)/COM Fundamentals/Interfaces">
+        <!-- Variables -->
+        
+        <!-- EXTCONN -->
+        <Variable Name="EXTCONN" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="EXTCONN_STRONG"      Value="0x1" />
+                <Set Name="EXTCONN_WEAK"        Value="0x2" />
+                <Set Name="EXTCONN_CALLABLE"    Value="0x4" />
+            </Flag>
+        </Variable>
+
+        <!-- Methods -->
+        <Api Name="AddConnection">
+            <Param Type="EXTCONN" Name="extconn" />
+            <Param Type="DWORD" Name="reserved" />
+            <Return Type="DWORD" />
+        </Api>
+        <Api Name="ReleaseConnection">
+            <Param Type="EXTCONN" Name="extconn" />
+            <Param Type="DWORD" Name="reserved" />
+            <Param Type="BOOL" Name="fLastReleaseCloses" />
+            <Return Type="DWORD" />
+        </Api>
+    </Interface>
+</ApiMonitor>

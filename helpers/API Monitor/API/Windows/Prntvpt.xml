@@ -1,0 +1,94 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Include Filename="Headers\ole.h.xml" />
+    
+    <Module Name="Prntvpt.dll" CallingConvention="STDCALL" ErrorFunc="GetLastError" OnlineHelp="MSDN">
+        <!-- Variables -->
+        <Variable Name="HPTPROVIDER"    Type="Alias"    Base="HANDLE" />
+        <Variable Name="HPTPROVIDER*"   Type="Pointer"  Base="HPTPROVIDER" />
+
+        <Variable Name="EDefaultDevmodeType" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="kUserDefaultDevmode"     Value="0" />
+                <Set Name="kPrinterDefaultDevmode"  Value="1" />
+            </Enum>
+        </Variable>
+        
+        <Variable Name="EPrintTicketScope" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="kPTPageScope"        Value="0" />
+                <Set Name="kPTDocumentScope"    Value="1" />
+                <Set Name="kPTJobScope"         Value="3" />
+            </Enum>
+        </Variable>
+        
+        <!-- Printing and Print Spooler -->
+        <Category Name="Documents and Printing/Printing/Print Ticket" />
+        <Api Name="PTConvertPrintTicketToDevMode" Ordinal="8">
+            <Param Type="HPTPROVIDER" Name="hProvider" />
+            <Param Type="IStream*" Name="pPrintTicket" />
+            <Param Type="EDefaultDevmodeType" Name="baseDevmodeType" />
+            <Param Type="EPrintTicketScope" Name="scope" />
+            <Param Type="ULONG*" Name="pcbDevmode" />
+            <Param Type="PDEVMODE*" Name="ppDevmode" />
+            <Param Type="BSTR*" Name="pbstrErrorMessage" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="PTConvertDevModeToPrintTicket" Ordinal="9">
+            <Param Type="HPTPROVIDER" Name="hProvider" />
+            <Param Type="ULONG" Name="cbDevmode" />
+            <Param Type="PDEVMODE" Name="pDevmode" />
+            <Param Type="EPrintTicketScope" Name="scope" />
+            <Param Type="IStream*" Name="pPrintTicket" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="PTReleaseMemory" Ordinal="10">
+            <Param Type="PVOID" Name="pBuffer" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="PTMergeAndValidatePrintTicket" Ordinal="7">
+            <Param Type="HPTPROVIDER" Name="hProvider" />
+            <Param Type="IStream*" Name="pBaseTicket" />
+            <Param Type="IStream*" Name="pDeltaTicket" />
+            <Param Type="EPrintTicketScope" Name="scope" />
+            <Param Type="IStream*" Name="pResultTicket" />
+            <Param Type="BSTR*" Name="pbstrErrorMessage" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="PTGetPrintCapabilities" Ordinal="6">
+            <Param Type="HPTPROVIDER" Name="hProvider" />
+            <Param Type="IStream*" Name="pPrintTicket" />
+            <Param Type="IStream*" Name="pCapabilities" />
+            <Param Type="BSTR*" Name="pbstrErrorMessage" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="PTOpenProvider" Ordinal="2">
+            <Param Type="PCWSTR" Name="pszPrinterName" />
+            <Param Type="DWORD" Name="version" />
+            <Param Type="HPTPROVIDER*" Name="phProvider" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="PTOpenProviderEx" Ordinal="3">
+            <Param Type="PCWSTR" Name="pszPrinterName" />
+            <Param Type="DWORD" Name="maxVersion" />
+            <Param Type="DWORD" Name="prefVersion" />
+            <Param Type="HPTPROVIDER*" Name="phProvider" />
+            <Param Type="DWORD*" Name="usedVersion" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="PTCloseProvider" Ordinal="4">
+            <Param Type="HPTPROVIDER" Name="hProvider" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="PTQuerySchemaVersionSupport" Ordinal="1">
+            <Param Type="PCWSTR" Name="pszPrinterName" />
+            <Param Type="DWORD*" Name="pMaxVersion" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Module>
+</ApiMonitor>

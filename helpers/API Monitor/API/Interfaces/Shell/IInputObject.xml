@@ -1,0 +1,24 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IInputObject" Id="{68284fAA-6A48-11D0-8c78-00C04fd918b4}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Windows Environment Development/Windows Shell/Interfaces">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="UIActivateIO">
+            <Param Type="BOOL" Name="fActivate" />
+            <Param Type="MSG*" Name="pMsg" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="HasFocusIO">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="TranslateAcceleratorIO">
+            <Param Type="MSG*" Name="pMsg" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

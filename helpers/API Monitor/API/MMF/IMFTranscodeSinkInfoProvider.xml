@@ -1,0 +1,27 @@
+<!--
+    API Monitor Definitions
+    (c) 2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="MMF\mmfdefs.h.xml" />
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IMFTranscodeSinkInfoProvider" Id="{8CFFCD2E-5A03-4a3a-AFF7-EDCD107C620E}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/Microsoft Media Foundation/Interfaces">
+        <Api Name="SetOutputFile">
+            <Param Type="LPCWSTR" Name="pwszFileName" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetOutputByteStream">
+            <Param Type="IMFActivate*" Name="pByteStreamActivate" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetProfile">
+            <Param Type="IMFTranscodeProfile*" Name="pProfile" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetSinkInfo">
+            <Param Type="MF_TRANSCODE_SINK_INFO*" Name="pSinkInfo" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

@@ -1,0 +1,118 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+
+    <Interface Name="ITypeInfo" Id="{00020401-0000-0000-C000-000000000046}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Component Object Model (COM)/Automation/Type Description">
+        <!-- Methods -->
+        <Api Name="GetTypeAttr">
+            <Param Type="TYPEATTR**" Name="ppTypeAttr" OutputOnly="True" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetTypeComp">
+            <Param Type="ITypeComp**" Name="ppTComp" OutputOnly="True" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetFuncDesc">
+            <Param Type="UINT" Name="index" />
+            <Param Type="FUNCDESC**" Name="ppFuncDesc" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetVarDesc">
+            <Param Type="UINT" Name="index" />
+            <Param Type="VARDESC**" Name="ppVarDesc" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetNames">
+            <Param Type="MEMBERID" Name="memid" />
+            <Param Type="BSTR*" Name="rgBstrNames" PostCount="pcNames" />
+            <Param Type="UINT" Name="cMaxNames" />
+            <Param Type="UINT*" Name="pcNames" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetRefTypeOfImplType">
+            <Param Type="UINT" Name="index" />
+            <Param Type="HREFTYPE*" Name="pRefType" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetImplTypeFlags">
+            <Param Type="UINT" Name="index" />
+            <Param Type="IMPLTYPEFLAGS*" Name="pImplTypeFlags" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetIDsOfNames">
+            <Param Type="LPOLESTR*" Name="rgszNames" Count="cNames" />
+            <Param Type="UINT" Name="cNames" />
+            <Param Type="MEMBERID*" Name="pMemId" PostCount="cNames" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Invoke">
+            <Param Type="PVOID" Name="pvInstance" />
+            <Param Type="MEMBERID" Name="memid" />
+            <Param Type="[InvokeFlags]" Name="wFlags" />
+            <Param Type="DISPPARAMS*" Name="pDispParams" />
+            <Param Type="VARIANT*" Name="pVarResult" />
+            <Param Type="EXCEPINFO*" Name="pExcepInfo" />
+            <Param Type="UINT*" Name="puArgErr" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetDocumentation">
+            <Param Type="MEMBERID" Name="memid" />
+            <Param Type="BSTR*" Name="pBstrName" />
+            <Param Type="BSTR*" Name="pBstrDocString" />
+            <Param Type="DWORD*" Name="pdwHelpContext" />
+            <Param Type="BSTR*" Name="pBstrHelpFile" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetDllEntry">
+            <Param Type="MEMBERID" Name="memid" />
+            <Param Type="INVOKEKIND" Name="invKind" />
+            <Param Type="BSTR*" Name="pBstrDllName" />
+            <Param Type="BSTR*" Name="pBstrName" />
+            <Param Type="WORD*" Name="pwOrdinal" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetRefTypeInfo">
+            <Param Type="HREFTYPE" Name="hRefType" />
+            <Param Type="ITypeInfo**" Name="ppTInfo" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="AddressOfMember">
+            <Param Type="MEMBERID" Name="memid" />
+            <Param Type="INVOKEKIND" Name="invKind" />
+            <Param Type="PVOID*" Name="ppv" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CreateInstance">
+            <Param Type="IUnknown*" Name="pUnkOuter" />
+            <Param Type="REFIID" Name="riid" />
+            <Param Type="PVOID*" Name="ppvObj" InterfaceId="riid" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetMops">
+            <Param Type="MEMBERID" Name="memid" />
+            <Param Type="BSTR*" Name="pBstrMops" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetContainingTypeLib">
+            <Param Type="ITypeLib**" Name="ppTLib" />
+            <Param Type="UINT*" Name="pIndex" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ReleaseTypeAttr">
+            <Param Type="TYPEATTR*" Name="pTypeAttr" />
+            <Return Type="void" />
+        </Api>
+        <Api Name="ReleaseFuncDesc">
+            <Param Type="FUNCDESC*" Name="pFuncDesc" />
+            <Return Type="void" />
+        </Api>
+        <Api Name="ReleaseVarDesc">
+            <Param Type="VARDESC*" Name="pVarDesc" />
+            <Return Type="void" />
+        </Api>
+    </Interface>
+</ApiMonitor>

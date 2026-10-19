@@ -1,0 +1,15 @@
+<!--
+    API Monitor Definitions
+    (c) 2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Include Filename="Interfaces\CoreAudio\coreaudio.h.xml" />
+    <Interface Name="IKsJackSinkInformation" Id="{D9BD72ED-290F-4581-9FF3-61027A8FE532}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/Core Audio/Device Topology">
+        <Api Name="GetJackSinkInformation">
+            <Param Type="KSJACK_SINK_INFORMATION*" Name="pJackSinkInformation" />
+            <Return Type="[AUDCLNT_HRESULT]" />
+        </Api>
+    </Interface>
+</ApiMonitor>

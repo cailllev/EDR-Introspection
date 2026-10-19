@@ -1,0 +1,44 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2012, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Module Name="cscapi.dll" CallingConvention="STDCALL" ErrorFunc="HRESULT" OnlineHelp="MSDN">
+        
+        <!-- TODO: Interfaces -->
+        <Variable Name="CCscSearchApiInterface" Type="Interface" />
+
+        <!-- Shell -->
+        <Category Name="Windows Environment Development/Windows Shell" />
+        <Api Name="CscSearchApiGetInterface">
+            <Param Type="ULONG" Name="Version" />
+            <Param Type="ULONG" Name="Cookie" />
+            <Param Type="CCscSearchApiInterface**" Name="Interface" />
+            <Return Type="NTSTATUS" />
+        </Api>
+        <!-- Offline Files -->
+        <Category Name="Data Access and Storage/Offline Files" />
+        <Api Name="OfflineFilesEnable">
+            <Param Type="BOOL" Name="bEnable" />
+            <Param Type="BOOL*" Name="pbRebootRequired" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="OfflineFilesQueryStatus">
+            <Param Type="BOOL*" Name="pbActive" />
+            <Param Type="BOOL*" Name="pbEnabled" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="OfflineFilesQueryStatusEx">
+            <Param Type="BOOL*" Name="pbActive" />
+            <Param Type="BOOL*" Name="pbEnabled" />
+            <Param Type="BOOL*" Name="pbAvailable" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="OfflineFilesStart">
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+
+    </Module>
+</ApiMonitor>

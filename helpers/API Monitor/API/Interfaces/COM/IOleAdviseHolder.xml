@@ -1,0 +1,35 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IOleAdviseHolder" Id="{00000111-0000-0000-C000-000000000046}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Component Object Model (COM)/OLE and Data Transfer/Interfaces">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="Advise">
+            <Param Type="IAdviseSink*" Name="pAdvise" />
+            <Param Type="DWORD*" Name="pdwConnection" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Unadvise">
+            <Param Type="DWORD" Name="dwConnection" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="EnumAdvise">
+            <Param Type="IEnumSTATDATA**" Name="ppenumAdvise" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SendOnRename">
+            <Param Type="IMoniker*" Name="pmk" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SendOnSave">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SendOnClose">
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

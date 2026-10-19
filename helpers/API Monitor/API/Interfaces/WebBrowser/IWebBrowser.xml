@@ -1,0 +1,310 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IDispatch.xml" />
+    <Include Filename="Headers\internet.h.xml" />
+    <Interface Name="IWebBrowser" Id="{EAB22AC1-30C1-11CF-A7EB-0000C05BAE0B}" BaseInterface="IDispatch" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Web Development/Internet Explorer Development/Hosting and Reuse/WebBrowser Control/Interfaces">
+        <!-- Forward Interface Declarations -->
+        <!--
+        <Variable Name="DShellNameSpaceEvents"          Type="Interface" />
+        -->
+        <Variable Name="DShellWindowsEvents"            Type="Interface" />
+        <Variable Name="DWebBrowserEvents"              Type="Interface" />
+        <Variable Name="DWebBrowserEvents2"             Type="Interface" />
+        <Variable Name="IClassFactoryEx"                Type="Interface" />
+        <Variable Name="ICustomDoc"                     Type="Interface" />
+        <Variable Name="IDocHostShowUI"                 Type="Interface" />
+        <Variable Name="IDocHostUIHandler"              Type="Interface" />
+        <Variable Name="IDocHostUIHandler2"             Type="Interface" />
+        <Variable Name="IDocObjectService"              Type="Interface" />
+        <Variable Name="IEnumSTATURL"                   Type="Interface" />
+        <Variable Name="IHostDialogHelper"              Type="Interface" />
+        <Variable Name="IHTMLOMWindowServices"          Type="Interface" />
+        <Variable Name="IScriptErrorList"               Type="Interface" />
+        <Variable Name="IShellFavoritesNameSpace"       Type="Interface" />
+        <Variable Name="IShellNameSpace"                Type="Interface" />
+        <Variable Name="IShellUIHelper"                 Type="Interface" />
+        <Variable Name="IShellUIHelper2"                Type="Interface" />
+        <Variable Name="IShellUIHelper3"                Type="Interface" />
+        <Variable Name="IShellWindows"                  Type="Interface" />
+        <Variable Name="IUrlHistoryNotify"              Type="Interface" />
+        <Variable Name="IUrlHistoryStg"                 Type="Interface" />
+        <Variable Name="IUrlHistoryStg2"                Type="Interface" />
+        <Variable Name="IWebBrowser2"                   Type="Interface" />
+        <Variable Name="IWebBrowserApp"                 Type="Interface" />
+        <Variable Name="IWebBrowserEventsService"       Type="Interface" />
+        <Variable Name="IWebBrowserEventsUrlService"    Type="Interface" />
+        <Variable Name="IPrivacyServices"               Type="Interface" />
+        <!-- TODO: Interface definitions for IHTMLWindow2 etc -->
+        <Variable Name="IHTMLWindow2"                   Type="Interface" />
+        <Variable Name="IHTMLElement"                   Type="Interface" />
+        
+        <!-- Variables -->
+        <Variable Name="SHANDLE_PTR"                    Type="Alias"    Base="INT64" />
+        <Variable Name="SHANDLE_PTR*"                   Type="Pointer"  Base="SHANDLE_PTR" />
+
+        <!-- OLECMDID -->
+        <Variable Name="OLECMDID" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="OLECMDID_OPEN"                               Value="1" />
+                <Set Name="OLECMDID_NEW"                                Value="2" />
+                <Set Name="OLECMDID_SAVE"                               Value="3" />
+                <Set Name="OLECMDID_SAVEAS"                             Value="4" />
+                <Set Name="OLECMDID_SAVECOPYAS"                         Value="5" />
+                <Set Name="OLECMDID_PRINT"                              Value="6" />
+                <Set Name="OLECMDID_PRINTPREVIEW"                       Value="7" />
+                <Set Name="OLECMDID_PAGESETUP"                          Value="8" />
+                <Set Name="OLECMDID_SPELL"                              Value="9" />
+                <Set Name="OLECMDID_PROPERTIES"                         Value="10" />
+                <Set Name="OLECMDID_CUT"                                Value="11" />
+                <Set Name="OLECMDID_COPY"                               Value="12" />
+                <Set Name="OLECMDID_PASTE"                              Value="13" />
+                <Set Name="OLECMDID_PASTESPECIAL"                       Value="14" />
+                <Set Name="OLECMDID_UNDO"                               Value="15" />
+                <Set Name="OLECMDID_REDO"                               Value="16" />
+                <Set Name="OLECMDID_SELECTALL"                          Value="17" />
+                <Set Name="OLECMDID_CLEARSELECTION"                     Value="18" />
+                <Set Name="OLECMDID_ZOOM"                               Value="19" />
+                <Set Name="OLECMDID_GETZOOMRANGE"                       Value="20" />
+                <Set Name="OLECMDID_UPDATECOMMANDS"                     Value="21" />
+                <Set Name="OLECMDID_REFRESH"                            Value="22" />
+                <Set Name="OLECMDID_STOP"                               Value="23" />
+                <Set Name="OLECMDID_HIDETOOLBARS"                       Value="24" />
+                <Set Name="OLECMDID_SETPROGRESSMAX"                     Value="25" />
+                <Set Name="OLECMDID_SETPROGRESSPOS"                     Value="26" />
+                <Set Name="OLECMDID_SETPROGRESSTEXT"                    Value="27" />
+                <Set Name="OLECMDID_SETTITLE"                           Value="28" />
+                <Set Name="OLECMDID_SETDOWNLOADSTATE"                   Value="29" />
+                <Set Name="OLECMDID_STOPDOWNLOAD"                       Value="30" />
+                <Set Name="OLECMDID_ONTOOLBARACTIVATED"                 Value="31" />
+                <Set Name="OLECMDID_FIND"                               Value="32" />
+                <Set Name="OLECMDID_DELETE"                             Value="33" />
+                <Set Name="OLECMDID_HTTPEQUIV"                          Value="34" />
+                <Set Name="OLECMDID_HTTPEQUIV_DONE"                     Value="35" />
+                <Set Name="OLECMDID_ENABLE_INTERACTION"                 Value="36" />
+                <Set Name="OLECMDID_ONUNLOAD"                           Value="37" />
+                <Set Name="OLECMDID_PROPERTYBAG2"                       Value="38" />
+                <Set Name="OLECMDID_PREREFRESH"                         Value="39" />
+                <Set Name="OLECMDID_SHOWSCRIPTERROR"                    Value="40" />
+                <Set Name="OLECMDID_SHOWMESSAGE"                        Value="41" />
+                <Set Name="OLECMDID_SHOWFIND"                           Value="42" />
+                <Set Name="OLECMDID_SHOWPAGESETUP"                      Value="43" />
+                <Set Name="OLECMDID_SHOWPRINT"                          Value="44" />
+                <Set Name="OLECMDID_CLOSE"                              Value="45" />
+                <Set Name="OLECMDID_ALLOWUILESSSAVEAS"                  Value="46" />
+                <Set Name="OLECMDID_DONTDOWNLOADCSS"                    Value="47" />
+                <Set Name="OLECMDID_UPDATEPAGESTATUS"                   Value="48" />
+                <Set Name="OLECMDID_PRINT2"                             Value="49" />
+                <Set Name="OLECMDID_PRINTPREVIEW2"                      Value="50" />
+                <Set Name="OLECMDID_SETPRINTTEMPLATE"                   Value="51" />
+                <Set Name="OLECMDID_GETPRINTTEMPLATE"                   Value="52" />
+                <Set Name="OLECMDID_PAGEACTIONBLOCKED"                  Value="55" />
+                <Set Name="OLECMDID_PAGEACTIONUIQUERY"                  Value="56" />
+                <Set Name="OLECMDID_FOCUSVIEWCONTROLS"                  Value="57" />
+                <Set Name="OLECMDID_FOCUSVIEWCONTROLSQUERY"             Value="58" />
+                <Set Name="OLECMDID_SHOWPAGEACTIONMENU"                 Value="59" />
+                <Set Name="OLECMDID_ADDTRAVELENTRY"                     Value="60" />
+                <Set Name="OLECMDID_UPDATETRAVELENTRY"                  Value="61" />
+                <Set Name="OLECMDID_UPDATEBACKFORWARDSTATE"             Value="62" />
+                <Set Name="OLECMDID_OPTICAL_ZOOM"                       Value="63" />
+                <Set Name="OLECMDID_OPTICAL_GETZOOMRANGE"               Value="64" />
+                <Set Name="OLECMDID_WINDOWSTATECHANGED"                 Value="65" />
+                <Set Name="OLECMDID_ACTIVEXINSTALLSCOPE"                Value="66" />
+                <Set Name="OLECMDID_UPDATETRAVELENTRY_DATARECOVERY"     Value="67" />
+            </Enum>
+        </Variable>
+
+        <!-- OLECMDEXECOPT -->
+        <Variable Name="OLECMDEXECOPT" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="OLECMDEXECOPT_DODEFAULT"         Value="0" />
+                <Set Name="OLECMDEXECOPT_PROMPTUSER"        Value="1" />
+                <Set Name="OLECMDEXECOPT_DONTPROMPTUSER"    Value="2" />
+                <Set Name="OLECMDEXECOPT_SHOWHELP"          Value="3" />
+            </Enum>
+        </Variable>
+
+        <!-- DOCHOSTUIDBLCLK -->
+        <Variable Name="DOCHOSTUIDBLCLK" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="DOCHOSTUIDBLCLK_DEFAULT"    		Value="0" />
+                <Set Name="DOCHOSTUIDBLCLK_SHOWPROPERTIES"  Value="1" />
+                <Set Name="DOCHOSTUIDBLCLK_SHOWCODE"    	Value="2" />
+            </Flag>
+        </Variable>
+
+        <!-- DOCHOSTUIFLAG -->
+        <Variable Name="DOCHOSTUIFLAG" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="DOCHOSTUIFLAG_DIALOG"    					    Value="0x1" />
+                <Set Name="DOCHOSTUIFLAG_DISABLE_HELP_MENU"    				Value="0x2" />
+                <Set Name="DOCHOSTUIFLAG_NO3DBORDER"    					Value="0x4" />
+                <Set Name="DOCHOSTUIFLAG_SCROLL_NO"    					    Value="0x8" />
+                <Set Name="DOCHOSTUIFLAG_DISABLE_SCRIPT_INACTIVE"    		Value="0x10" />
+                <Set Name="DOCHOSTUIFLAG_OPENNEWWIN"    					Value="0x20" />
+                <Set Name="DOCHOSTUIFLAG_DISABLE_OFFSCREEN"    				Value="0x40" />
+                <Set Name="DOCHOSTUIFLAG_FLAT_SCROLLBAR"    				Value="0x80" />
+                <Set Name="DOCHOSTUIFLAG_DIV_BLOCKDEFAULT"    				Value="0x100" />
+                <Set Name="DOCHOSTUIFLAG_ACTIVATE_CLIENTHIT_ONLY"    		Value="0x200" />
+                <Set Name="DOCHOSTUIFLAG_OVERRIDEBEHAVIORFACTORY"    		Value="0x400" />
+                <Set Name="DOCHOSTUIFLAG_CODEPAGELINKEDFONTS"    			Value="0x800" />
+                <Set Name="DOCHOSTUIFLAG_URL_ENCODING_DISABLE_UTF8"    		Value="0x1000" />
+                <Set Name="DOCHOSTUIFLAG_URL_ENCODING_ENABLE_UTF8"    		Value="0x2000" />
+                <Set Name="DOCHOSTUIFLAG_ENABLE_FORMS_AUTOCOMPLETE"    		Value="0x4000" />
+                <Set Name="DOCHOSTUIFLAG_ENABLE_INPLACE_NAVIGATION"         Value="0x10000" />
+                <Set Name="DOCHOSTUIFLAG_IME_ENABLE_RECONVERSION"    		Value="0x20000" />
+                <Set Name="DOCHOSTUIFLAG_THEME"    					        Value="0x40000" />
+                <Set Name="DOCHOSTUIFLAG_NOTHEME"    					    Value="0x80000" />
+                <Set Name="DOCHOSTUIFLAG_NOPICS"    					    Value="0x100000" />
+                <Set Name="DOCHOSTUIFLAG_NO3DOUTERBORDER"    				Value="0x200000" />
+                <Set Name="DOCHOSTUIFLAG_DISABLE_EDIT_NS_FIXUP"    			Value="0x400000" />
+                <Set Name="DOCHOSTUIFLAG_LOCAL_MACHINE_ACCESS_CHECK"    	Value="0x800000" />
+                <Set Name="DOCHOSTUIFLAG_DISABLE_UNTRUSTEDPROTOCOL"    		Value="0x1000000" />
+                <Set Name="DOCHOSTUIFLAG_HOST_NAVIGATES"    				Value="0x2000000" />
+                <Set Name="DOCHOSTUIFLAG_ENABLE_REDIRECT_NOTIFICATION"    	Value="0x4000000" />
+                <Set Name="DOCHOSTUIFLAG_USE_WINDOWLESS_SELECTCONTROL"    	Value="0x8000000" />
+                <Set Name="DOCHOSTUIFLAG_USE_WINDOWED_SELECTCONTROL"    	Value="0x10000000" />
+                <Set Name="DOCHOSTUIFLAG_ENABLE_ACTIVEX_INACTIVATE_MODE"    Value="0x20000000" />
+                <Set Name="DOCHOSTUIFLAG_DPI_AWARE"    					    Value="0x40000000" />
+            </Flag>
+        </Variable>
+
+        <!-- DOCHOSTUIINFO -->
+        <Variable Name="DOCHOSTUIINFO" Type="Struct">
+            <Field Type="ULONG"             Name="cbSize" />
+            <Field Type="DOCHOSTUIFLAG"     Name="dwFlags" />
+            <Field Type="DOCHOSTUIDBLCLK"   Name="dwDoubleClick" />
+            <Field Type="OLECHAR*"          Name="pchHostCss" />
+            <Field Type="OLECHAR*"          Name="pchHostNS" />
+        </Variable>
+        <Variable Name="DOCHOSTUIINFO*" Type="Pointer" Base="DOCHOSTUIINFO" />
+
+        <!-- [STATURL_QUERYFLAG] -->
+        <Variable Name="[STATURL_QUERYFLAG]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="STATURL_QUERYFLAG_ISCACHED"      Value="0x00010000" />
+                <Set Name="STATURL_QUERYFLAG_NOURL"         Value="0x00020000" />
+                <Set Name="STATURL_QUERYFLAG_NOTITLE"       Value="0x00040000" />
+                <Set Name="STATURL_QUERYFLAG_TOPLEVEL"      Value="0x00080000" />
+            </Flag>
+        </Variable>
+
+        <!-- STATURL -->
+        <Variable Name="STATURL" Type="Struct">
+            <Field Type="DWORD"                 Name="cbSize" />
+            <Field Type="LPWSTR"                Name="pwcsUrl" />
+            <Field Type="LPWSTR"                Name="pwcsTitle" />
+            <Field Type="FILETIME"              Name="ftLastVisited" />
+            <Field Type="FILETIME"              Name="ftLastUpdated" />
+            <Field Type="FILETIME"              Name="ftExpires" />
+            <Field Type="[STATURL_QUERYFLAG]"   Name="dwFlags" />
+        </Variable>
+        <Variable Name="LPSTATURL" Type="Pointer" Base="STATURL" />
+        
+        <!-- Methods -->
+        <Api Name="GoBack">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GoForward">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GoHome">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GoSearch">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Navigate">
+            <Param Type="BSTR" Name="URL" />
+            <Param Type="VARIANT*" Name="Flags" />
+            <Param Type="VARIANT*" Name="TargetFrameName" />
+            <Param Type="VARIANT*" Name="PostData" />
+            <Param Type="VARIANT*" Name="Headers" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Refresh">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Refresh2">
+            <Param Type="VARIANT*" Name="Level" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Stop">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="get_Application">
+            <Param Type="IDispatch**" Name="ppDisp" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="get_Parent">
+            <Param Type="IDispatch**" Name="ppDisp" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="get_Container">
+            <Param Type="IDispatch**" Name="ppDisp" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="get_Document">
+            <Param Type="IDispatch**" Name="ppDisp" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="get_TopLevelContainer">
+            <Param Type="VARIANT_BOOL*" Name="pBool" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="get_Type">
+            <Param Type="BSTR*" Name="Type" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="get_Left">
+            <Param Type="long*" Name="pl" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="put_Left">
+            <Param Type="long" Name="Left" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="get_Top">
+            <Param Type="long*" Name="pl" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="put_Top">
+            <Param Type="long" Name="Top" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="get_Width">
+            <Param Type="long*" Name="pl" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="put_Width">
+            <Param Type="long" Name="Width" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="get_Height">
+            <Param Type="long*" Name="pl" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="put_Height">
+            <Param Type="long" Name="Height" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="get_LocationName">
+            <Param Type="BSTR*" Name="LocationName" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="get_LocationURL">
+            <Param Type="BSTR*" Name="LocationURL" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="get_Busy">
+            <Param Type="VARIANT_BOOL*" Name="pBool" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

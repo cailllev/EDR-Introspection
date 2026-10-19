@@ -1,0 +1,33 @@
+<!--
+    API Monitor Definitions
+    (c) 2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\WIC\IWICMetadataBlockReader.xml" />
+    <Interface Name="IWICMetadataBlockWriter" Id="{08FB9676-B444-41E8-8DBE-6A53A542BFF1}" BaseInterface="IWICMetadataBlockReader" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Graphics and Gaming/Windows Imaging Component (WIC)">
+        <!-- Methods -->
+        <Api Name="InitializeFromBlockReader">
+            <Param Type="IWICMetadataBlockReader*" Name="pIMDBlockReader" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="GetWriterByIndex">
+            <Param Type="UINT" Name="nIndex" />
+            <Param Type="IWICMetadataWriter**" Name="ppIMetadataWriter" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="AddWriter">
+            <Param Type="IWICMetadataWriter*" Name="pIMetadataWriter" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="SetWriterByIndex">
+            <Param Type="UINT" Name="nIndex" />
+            <Param Type="IWICMetadataWriter*" Name="pIMetadataWriter" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="RemoveWriterByIndex">
+            <Param Type="UINT" Name="nIndex" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+    </Interface>
+</ApiMonitor>

@@ -1,0 +1,15 @@
+<!--
+    API Monitor Definitions
+    (c) 2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Include Filename="Interfaces\CoreAudio\coreaudio.h.xml" />
+    <Interface Name="IMMEndpoint" Id="{1BE09788-6894-4089-8586-9A2A6C265AC5}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/Core Audio/Windows Multimedia Device">
+        <Api Name="GetDataFlow">
+            <Param Type="EDataFlow*" Name="pDataFlow" />
+            <Return Type="[AUDCLNT_HRESULT]" />
+        </Api>
+    </Interface>
+</ApiMonitor>

@@ -1,0 +1,26 @@
+<!--
+    API Monitor Definitions
+    (c) 2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\Windows.h.xml" />
+    <Module Name="mscorpe.dll" CallingConvention="STDCALL" ErrorFunc="HRESULT" OnlineHelp="MSDN">
+        
+        <!-- TODO: Interfaces -->
+        <Variable Name="ICeeFileGen" Type="Interface" />
+
+        <!-- .NET Framework/Unmanaged/Hosting -->
+        <Category Name="Microsoft .NET/Unmanaged/Hosting" />
+
+        <Api Name="CreateICeeFileGen">
+            <Param Type="ICeeFileGen**" Name="ceeFileGen" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DestroyICeeFileGen">
+            <Param Type="ICeeFileGen**" Name="ceeFileGen" />
+            <Return Type="HRESULT" />
+        </Api>
+
+    </Module>
+</ApiMonitor>

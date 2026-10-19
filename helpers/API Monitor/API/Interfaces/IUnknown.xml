@@ -1,0 +1,357 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2012, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Include Filename="Headers\ole.h.xml" />
+    <Include Filename="Headers\shell.h.xml" />
+
+    <Interface Name="IUnknown" Id="{00000000-0000-0000-C000-000000000046}" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Component Object Model (COM)/COM Fundamentals/Interfaces">
+
+        <!-- Forward Interface Declarations -->
+        <Variable Name="ITypeComp"      Type="Interface" />
+        <Variable Name="ITypeLib"       Type="Interface" />
+
+        <!-- Variables-->
+        <Variable Name="MEMBERID"       Type="Alias"    Base="DISPID" />
+        <Variable Name="MEMBERID*"      Type="Pointer"  Base="MEMBERID" />
+        <Variable Name="HREFTYPE"       Type="Alias"    Base="DWORD" />
+        <Variable Name="HREFTYPE*"      Type="Pointer"  Base="HREFTYPE" />
+
+        <!-- [IDLFLAG] -->
+        <Variable Name="[IDLFLAG]" Type="Alias" Base="USHORT">
+            <Display Name="USHORT" />
+            <Flag>
+                <Set Name="IDLFLAG_NONE"     	Value="0" />
+                <Set Name="IDLFLAG_FIN"     	Value="0x1" />
+                <Set Name="IDLFLAG_FOUT"     	Value="0x2" />
+                <Set Name="IDLFLAG_FLCID"     	Value="0x4" />
+                <Set Name="IDLFLAG_FRETVAL"     Value="0x8" />
+            </Flag>
+        </Variable>
+
+        <!-- IDLDESC -->
+        <Variable Name="IDLDESC" Type="Struct">
+            <Field Type="ULONG_PTR"     Name="dwReserved" />
+            <Field Type="[IDLFLAG]"     Name="wIDLFlags" />
+        </Variable>
+        <Variable Name="IDLDESC*" Type="Pointer" Base="IDLDESC" />
+
+        <!-- PARAMDESCEX -->
+        <Variable Name="PARAMDESCEX" Type="Struct">
+            <Field Type="ULONG"         Name="cBytes" />
+            <Field Type="VARIANTARG"    Name="varDefaultValue" />
+        </Variable>
+        <Variable Name="LPPARAMDESCEX" Type="Pointer" Base="PARAMDESCEX" />
+
+        <!-- PARAMDESC -->
+        <Variable Name="PARAMDESC" Type="Struct">
+            <Field Type="LPPARAMDESCEX"     Name="pparamdescex" />
+            <Field Type="USHORT"            Name="wParamFlags" />
+        </Variable>
+
+        <!-- [ELEMDESC_u] -->
+        <Variable Name="[ELEMDESC_u]" Type="Union">
+            <Display Name="union" />
+            <Field Type="IDLDESC"       Name="idldesc" />
+            <Field Type="PARAMDESC"     Name="paramdesc" />
+        </Variable>
+
+        <!-- [TYPEDESC_u] -->
+        <Variable Name="[TYPEDESC_u]" Type="Union">
+            <Display Name="union" />
+            <!-- TODO: Self-Referencing Parent - lptdesc is TYPEDESC* -->
+            <Field Type="LPVOID"        Name="lptdesc" Display="TYPEDESC*" />
+            <!-- TODO: ARRAYDESC* is a structure but contains a field of this structure type -->
+            <Field Type="LPVOID"        Name="lpadesc" Display="ARRAYDESC*" />
+            <Field Type="HREFTYPE"      Name="hreftype" />
+        </Variable>
+
+        <!-- TYPEDESC -->
+        <Variable Name="TYPEDESC" Type="Struct">
+            <Field Type="[TYPEDESC_u]"  Name="" />
+            <Field Type="VARTYPE"       Name="vt" />
+        </Variable>
+        <Variable Name="TYPEDESC*" Type="Pointer" Base="TYPEDESC" />
+
+        <!-- ELEMDESC -->
+        <Variable Name="ELEMDESC" Type="Struct">
+            <Field Type="TYPEDESC"      Name="tdesc" />
+            <Field Type="[ELEMDESC_u]"  Name="" />
+        </Variable>
+        <Variable Name="ELEMDESC*" Type="Pointer" Base="ELEMDESC" />
+
+        <!-- FUNCKIND -->
+        <Variable Name="FUNCKIND" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="FUNC_VIRTUAL"        Value="0" />
+                <Set Name="FUNC_PUREVIRTUAL"    Value="1" />
+                <Set Name="FUNC_NONVIRTUAL"     Value="2" />
+                <Set Name="FUNC_STATIC"         Value="3" />
+                <Set Name="FUNC_DISPATCH"       Value="4" />
+            </Enum>
+        </Variable>
+
+        <!-- INVOKEKIND -->
+        <Variable Name="INVOKEKIND" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="INVOKE_FUNC"             Value="1" />
+                <Set Name="INVOKE_PROPERTYGET"      Value="2" />
+                <Set Name="INVOKE_PROPERTYPUT"      Value="4" />
+                <Set Name="INVOKE_PROPERTYPUTREF"   Value="8" />
+            </Enum>
+        </Variable>
+
+        <!-- FUNCFLAGS -->
+        <Variable Name="FUNCFLAGS" Type="Alias" Base="WORD">
+            <Display Name="WORD" />
+            <Flag>
+                <Set Name="FUNCFLAG_FRESTRICTED"            Value="0x1" />
+                <Set Name="FUNCFLAG_FSOURCE"                Value="0x2" />
+                <Set Name="FUNCFLAG_FBINDABLE"              Value="0x4" />
+                <Set Name="FUNCFLAG_FREQUESTEDIT"           Value="0x8" />
+                <Set Name="FUNCFLAG_FDISPLAYBIND"           Value="0x10" />
+                <Set Name="FUNCFLAG_FDEFAULTBIND"           Value="0x20" />
+                <Set Name="FUNCFLAG_FHIDDEN"                Value="0x40" />
+                <Set Name="FUNCFLAG_FUSESGETLASTERROR"      Value="0x80" />
+                <Set Name="FUNCFLAG_FDEFAULTCOLLELEM"       Value="0x100" />
+                <Set Name="FUNCFLAG_FUIDEFAULT"             Value="0x200" />
+                <Set Name="FUNCFLAG_FNONBROWSABLE"          Value="0x400" />
+                <Set Name="FUNCFLAG_FREPLACEABLE"           Value="0x800" />
+                <Set Name="FUNCFLAG_FIMMEDIATEBIND"         Value="0x1000" />
+            </Flag>
+        </Variable>
+
+        <!-- FUNCDESC -->
+        <Variable Name="FUNCDESC" Type="Struct">
+            <Field Type="MEMBERID"      Name="memid" />
+            <Field Type="SCODE*"        Name="lprgscode" />
+            <Field Type="ELEMDESC*"     Name="lprgelemdescParam" />
+            <Field Type="FUNCKIND"      Name="funckind" />
+            <Field Type="INVOKEKIND"    Name="invkind" />
+            <Field Type="CALLCONV"      Name="callconv" />
+            <Field Type="SHORT"         Name="cParams" />
+            <Field Type="SHORT"         Name="cParamsOpt" />
+            <Field Type="SHORT"         Name="oVft" />
+            <Field Type="SHORT"         Name="cScodes" />
+            <Field Type="ELEMDESC"      Name="elemdescFunc" />
+            <Field Type="FUNCFLAGS"     Name="wFuncFlags" />
+        </Variable>
+        <Variable Name="FUNCDESC*"  Type="Pointer" Base="FUNCDESC" />
+        <Variable Name="FUNCDESC**" Type="Pointer" Base="FUNCDESC*" />
+
+        <!-- [VARDESC_u] -->
+        <Variable Name="[VARDESC_u]" Type="Union">
+            <Display Name="union" />
+            <Field Type="ULONG"     Name="oInst" />
+            <Field Type="VARIANT*"  Name="lpvarValue" />
+        </Variable>
+
+        <!-- VARKIND -->
+        <Variable Name="VARKIND" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="VAR_PERINSTANCE"     Value="0" />
+                <Set Name="VAR_STATIC"          Value="1" />
+                <Set Name="VAR_CONST"           Value="2" />
+                <Set Name="VAR_DISPATCH"        Value="3" />
+            </Enum>
+        </Variable>
+
+        <!-- VARFLAGS -->
+        <Variable Name="VARFLAGS" Type="Alias" Base="WORD">
+            <Display Name="WORD" />
+            <Flag>
+                <Set Name="VARFLAG_FREADONLY"           Value="0x1" />
+                <Set Name="VARFLAG_FSOURCE"             Value="0x2" />
+                <Set Name="VARFLAG_FBINDABLE"           Value="0x4" />
+                <Set Name="VARFLAG_FREQUESTEDIT"        Value="0x8" />
+                <Set Name="VARFLAG_FDISPLAYBIND"        Value="0x10" />
+                <Set Name="VARFLAG_FDEFAULTBIND"        Value="0x20" />
+                <Set Name="VARFLAG_FHIDDEN"             Value="0x40" />
+                <Set Name="VARFLAG_FRESTRICTED"         Value="0x80" />
+                <Set Name="VARFLAG_FDEFAULTCOLLELEM"    Value="0x100" />
+                <Set Name="VARFLAG_FUIDEFAULT"          Value="0x200" />
+                <Set Name="VARFLAG_FNONBROWSABLE"       Value="0x400" />
+                <Set Name="VARFLAG_FREPLACEABLE"        Value="0x800" />
+                <Set Name="VARFLAG_FIMMEDIATEBIND"      Value="0x1000" />
+            </Flag>
+        </Variable>
+
+        <!-- VARDESC -->
+        <Variable Name="VARDESC" Type="Struct">
+            <Field Type="MEMBERID"      Name="memid" />
+            <Field Type="LPOLESTR"      Name="lpstrSchema" />
+            <Field Type="[VARDESC_u]"   Name="" />
+            <Field Type="ELEMDESC"      Name="elemdescVar" />
+            <Field Type="VARFLAGS"      Name="wVarFlags" />
+            <Field Type="VARKIND"       Name="varkind" />
+        </Variable>
+        <Variable Name="VARDESC*"   Type="Pointer" Base="VARDESC" />
+        <Variable Name="VARDESC**"  Type="Pointer" Base="VARDESC*" />
+
+        <!-- TYPEKIND -->
+        <Variable Name="TYPEKIND" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="TKIND_ENUM"		    Value="0" />
+                <Set Name="TKIND_RECORD" 		Value="1" />
+                <Set Name="TKIND_MODULE" 		Value="2" />
+                <Set Name="TKIND_INTERFACE"     Value="3" />
+                <Set Name="TKIND_DISPATCH"		Value="4" />
+                <Set Name="TKIND_COCLASS"		Value="5" />
+                <Set Name="TKIND_ALIAS"		    Value="6" />
+                <Set Name="TKIND_UNION"		    Value="7" />
+            </Enum>
+        </Variable>
+        <Variable Name="TYPEKIND*" Type="Pointer" Base="TYPEKIND" />
+
+        <!-- CHANGEKIND -->
+        <Variable Name="CHANGEKIND" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="CHANGEKIND_ADDMEMBER"		    Value="0" />
+                <Set Name="CHANGEKIND_DELETEMEMBER"		    Value="1" />
+                <Set Name="CHANGEKIND_SETNAMES"		        Value="2" />
+                <Set Name="CHANGEKIND_SETDOCUMENTATION"     Value="3" />
+                <Set Name="CHANGEKIND_GENERAL"		        Value="4" />
+                <Set Name="CHANGEKIND_INVALIDATE"		    Value="5" />
+                <Set Name="CHANGEKIND_CHANGEFAILED"		    Value="6" />
+            </Enum>
+        </Variable>
+
+        <!-- DESCKIND -->
+        <Variable Name="DESCKIND" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="DESCKIND_NONE"		        Value="0" />
+                <Set Name="DESCKIND_FUNCDESC"		    Value="1" />
+                <Set Name="DESCKIND_VARDESC"		    Value="2" />
+                <Set Name="DESCKIND_TYPECOMP"		    Value="3" />
+                <Set Name="DESCKIND_IMPLICITAPPOBJ"     Value="4" />
+            </Enum>
+        </Variable>
+        <Variable Name="DESCKIND*" Type="Pointer" Base="DESCKIND" />
+
+        <!-- SYSKIND -->
+        <Variable Name="SYSKIND" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="SYS_WIN16"       Value="0" />
+                <Set Name="SYS_WIN32"       Value="1" />
+                <Set Name="SYS_MAC"    	    Value="2" />
+                <Set Name="SYS_WIN64"       Value="3" />
+            </Enum>
+        </Variable>
+
+        <!-- LIBFLAGS -->
+        <Variable Name="LIBFLAGS" Type="Alias" Base="WORD">
+            <Display Name="WORD" />
+            <Flag>
+                <Set Name="LIBFLAG_FRESTRICTED"     Value="0x1" />
+                <Set Name="LIBFLAG_FCONTROL"        Value="0x2" />
+                <Set Name="LIBFLAG_FHIDDEN"         Value="0x4" />
+                <Set Name="LIBFLAG_FHASDISKIMAGE"   Value="0x8" />
+            </Flag>
+        </Variable>
+
+        <!-- TLIBATTR -->
+        <Variable Name="TLIBATTR" Type="Struct">
+            <Field Type="GUID"      Name="guid" />
+            <Field Type="LCID"      Name="lcid" />
+            <Field Type="SYSKIND"   Name="syskind" />
+            <Field Type="WORD"      Name="wMajorVerNum" />
+            <Field Type="WORD"      Name="wMinorVerNum" />
+            <Field Type="LIBFLAGS"  Name="wLibFlags" />
+        </Variable>
+        <Variable Name="TLIBATTR*"  Type="Pointer" Base="TLIBATTR" />
+        <Variable Name="TLIBATTR**" Type="Pointer"  Base="TLIBATTR*" />
+
+        <!-- DISPPARAMS -->
+        <Variable Name="DISPPARAMS" Type="Struct">
+            <Field Type="VARIANTARG*"   Name="rgvarg" Count="cArgs" />
+            <Field Type="DISPID*"       Name="rgdispidNamedArgs" Count="cNamedArgs" />
+            <Field Type="UINT"          Name="cArgs" />
+            <Field Type="UINT"          Name="cNamedArgs" />
+        </Variable>
+        <Variable Name="DISPPARAMS*" Type="Pointer" Base="DISPPARAMS" />
+
+        <!-- EXCEPINFO -->
+        <Variable Name="EXCEPINFO" Type="Struct">
+            <Field Type="WORD"      Name="wCode" />
+            <Field Type="WORD"      Name="wReserved" />
+            <Field Type="BSTR"      Name="bstrSource" />
+            <Field Type="BSTR"      Name="bstrDescription" />
+            <Field Type="BSTR"      Name="bstrHelpFile" />
+            <Field Type="DWORD"     Name="dwHelpContext" />
+            <Field Type="PVOID"     Name="pvReserved" />
+            <Field Type="LPVOID"    Name="pfnDeferredFillIn" Display="HRESULT (__stdcall *)(struct tagEXCEPINFO *)" />
+            <Field Type="SCODE"     Name="scode" />
+        </Variable>
+        <Variable Name="EXCEPINFO*" Type="Pointer" Base="EXCEPINFO" />
+
+        <!-- TYPEFLAGS -->
+        <Variable Name="TYPEFLAGS" Type="Alias" Base="WORD">
+            <Display Name="WORD" />
+            <Flag>
+                <Set Name="TYPEFLAG_FAPPOBJECT"         Value="0x1" />
+                <Set Name="TYPEFLAG_FCANCREATE"         Value="0x2" />
+                <Set Name="TYPEFLAG_FLICENSED"          Value="0x4" />
+                <Set Name="TYPEFLAG_FPREDECLID"         Value="0x8" />
+                <Set Name="TYPEFLAG_FHIDDEN"            Value="0x10" />
+                <Set Name="TYPEFLAG_FCONTROL"           Value="0x20" />
+                <Set Name="TYPEFLAG_FDUAL"              Value="0x40" />
+                <Set Name="TYPEFLAG_FNONEXTENSIBLE"     Value="0x80" />
+                <Set Name="TYPEFLAG_FOLEAUTOMATION"     Value="0x100" />
+                <Set Name="TYPEFLAG_FRESTRICTED"        Value="0x200" />
+                <Set Name="TYPEFLAG_FAGGREGATABLE"      Value="0x400" />
+                <Set Name="TYPEFLAG_FREPLACEABLE"       Value="0x800" />
+                <Set Name="TYPEFLAG_FDISPATCHABLE"      Value="0x1000" />
+                <Set Name="TYPEFLAG_FREVERSEBIND"       Value="0x2000" />
+                <Set Name="TYPEFLAG_FPROXY"             Value="0x4000" />
+            </Flag>
+        </Variable>
+
+        <!-- TYPEATTR -->
+        <Variable Name="TYPEATTR" Type="Struct">
+            <Field Type="GUID"          Name="guid" />
+            <Field Type="LCID"          Name="lcid" />
+            <Field Type="DWORD"         Name="dwReserved" />
+            <Field Type="MEMBERID"      Name="memidConstructor" />
+            <Field Type="MEMBERID"      Name="memidDestructor" />
+            <Field Type="LPOLESTR"      Name="lpstrSchema" />
+            <Field Type="ULONG"         Name="cbSizeInstance" />
+            <Field Type="TYPEKIND"      Name="typekind" />
+            <Field Type="WORD"          Name="cFuncs" />
+            <Field Type="WORD"          Name="cVars" />
+            <Field Type="WORD"          Name="cImplTypes" />
+            <Field Type="WORD"          Name="cbSizeVft" />
+            <Field Type="WORD"          Name="cbAlignment" />
+            <Field Type="TYPEFLAGS"     Name="wTypeFlags" />
+            <Field Type="WORD"          Name="wMajorVerNum" />
+            <Field Type="WORD"          Name="wMinorVerNum" />
+            <Field Type="TYPEDESC"      Name="tdescAlias" />
+            <Field Type="IDLDESC"       Name="idldescType" />
+        </Variable>
+        <Variable Name="TYPEATTR*"  Type="Pointer" Base="TYPEATTR" />
+        <Variable Name="TYPEATTR**" Type="Pointer"  Base="TYPEATTR*" />
+
+        <!-- BINDPTR -->
+        <Variable Name="BINDPTR" Type="Union">
+            <Field Type="FUNCDESC*"     Name="lpfuncdesc" />
+            <Field Type="VARDESC*"      Name="lpvardesc" />
+            <Field Type="ITypeComp*"     Name="lptcomp" />
+        </Variable>
+        <Variable Name="BINDPTR*" Type="Pointer" Base="BINDPTR" />
+
+        <!-- Methods -->
+        <Api Name="QueryInterface">
+            <Param Type="REFIID" Name="riid" />
+            <Param Type="void**" Name="ppvObject" InterfaceId="riid" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="AddRef">
+            <Return Type="ULONG" />
+        </Api>
+        <Api Name="Release">
+            <Return Type="ULONG" />
+        </Api>
+    </Interface>
+</ApiMonitor>

@@ -1,0 +1,22 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IAMDevMemoryControl" Id="{c6545bf1-e76b-11d0-bd52-00a0c911ce86}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/DirectShow">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="QueryWriteSync">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="WriteSync">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetDevId">
+            <Param Type="DWORD*" Name="pdwDevId" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

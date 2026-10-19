@@ -1,0 +1,25 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Module Name="Mstask.dll" CallingConvention="STDCALL" ErrorFunc="HRESULT" OnlineHelp="MSDN">
+        <!-- Network Management -->
+        <!-- Schedule -->
+        <Category Name="Networking/Network Management/Schedule" />
+        <Api Name="GetNetScheduleAccountInformation">
+            <Param Type="LPCWSTR" Name="pwszServerName" />
+            <Param Type="DWORD" Name="ccAccount" />
+            <Param Type="WCHAR []" Name="wszAccount" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetNetScheduleAccountInformation">
+            <Param Type="LPCWSTR" Name="pwszServerName" />
+            <Param Type="LPCWSTR" Name="pwszAccount" />
+            <Param Type="LPCWSTR" Name="pwszPassword" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Module>
+</ApiMonitor>

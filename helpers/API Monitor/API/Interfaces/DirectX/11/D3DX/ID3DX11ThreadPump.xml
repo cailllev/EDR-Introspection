@@ -1,0 +1,39 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="ID3DX11ThreadPump" Id="{C93FECFA-6967-478a-ABBC-402D90621FCB}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Graphics and Gaming/DirectX Graphics and Gaming/Direct3D/11/D3DX">
+    <!-- Variables -->
+    <!-- Methods -->
+        <Api Name="AddWorkItem">
+            <Param Type="ID3DX11DataLoader*" Name="pDataLoader" />
+            <Param Type="ID3DX11DataProcessor*" Name="pDataProcessor" />
+            <Param Type="HRESULT*" Name="pHResult" />
+            <Param Type="void**" Name="ppDeviceObject" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetWorkItemCount">
+            <Return Type="UINT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="WaitForAllItems">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ProcessDeviceWorkItems">
+            <Param Type="UINT" Name="iWorkItemCount" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="PurgeAllItems">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetQueueStatus">
+            <Param Type="UINT*" Name="pIoQueue" />
+            <Param Type="UINT*" Name="pProcessQueue" />
+            <Param Type="UINT*" Name="pDeviceQueue" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

@@ -1,0 +1,30 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IConfigInterleaving" Id="{BEE3D220-157B-11d0-BD23-00A0C911CE86}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/DirectShow">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="put_Mode">
+            <Param Type="InterleavingMode" Name="mode" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="get_Mode">
+            <Param Type="InterleavingMode*" Name="pMode" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="put_Interleaving">
+            <Param Type="const REFERENCE_TIME*" Name="prtInterleave" />
+            <Param Type="const REFERENCE_TIME*" Name="prtPreroll" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="get_Interleaving">
+            <Param Type="REFERENCE_TIME*" Name="prtInterleave" />
+            <Param Type="REFERENCE_TIME*" Name="prtPreroll" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

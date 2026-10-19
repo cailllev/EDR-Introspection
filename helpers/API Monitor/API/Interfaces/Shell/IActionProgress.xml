@@ -1,0 +1,38 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IActionProgress" Id="{49ff1173-eadc-446d-9285-156453a6431c}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Windows Environment Development/Windows Shell/Interfaces">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="Begin">
+            <Param Type="SPACTION" Name="action" />
+            <Param Type="SPBEGINF" Name="flags" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="UpdateProgress">
+            <Param Type="ULONGLONG" Name="ulCompleted" />
+            <Param Type="ULONGLONG" Name="ulTotal" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="UpdateText">
+            <Param Type="SPTEXT" Name="sptext" />
+            <Param Type="LPCWSTR" Name="pszText" />
+            <Param Type="BOOL" Name="fMayCompact" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="QueryCancel">
+            <Param Type="BOOL*" Name="pfCancelled" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ResetCancel">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="End">
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

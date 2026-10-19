@@ -1,0 +1,21 @@
+<!--
+    API Monitor Definitions
+    (c) 2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Include Filename="Headers\dotnet.h.xml" />
+
+    <Module Name="alink.dll" CallingConvention="STDCALL" ErrorFunc="HRESULT" OnlineHelp="MSDN">
+
+        <!-- .NET Framework/Unmanaged/ALink -->
+        <Category Name="Microsoft .NET/Unmanaged/ALink" />
+        <Api Name="CreateALink">
+            <Param Type="REFIID" Name="riid" />
+            <Param Type="IUnknown**" Name="ppInterface" InterfaceId="riid" />
+            <Return Type="HRESULT" />
+        </Api>
+
+    </Module>
+</ApiMonitor>

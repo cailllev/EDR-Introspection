@@ -1,0 +1,86 @@
+<!--
+    API Monitor Definitions
+    (c) 2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Include Filename="Headers\dotnet.h.xml" />
+
+    <Module Name="fusion.dll" CallingConvention="STDCALL" ErrorFunc="HRESULT" OnlineHelp="MSDN">
+        
+        <!-- .NET Framework/Unmanaged/Fusion -->
+        <Category Name="Microsoft .NET/Unmanaged/Fusion" />
+        <Api Name="ClearDownloadCache">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CreateApplicationContext">
+            <Param Type="IAssemblyName*" Name="pName" />
+            <Param Type="LPPAPPLICATIONCONTEXT*" Name="ppCtx" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CreateAssemblyCache">
+            <Param Type="IAssemblyCache**" Name="ppAsmCache" />
+            <Param Type="DWORD" Name="dwReserved" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CreateAssemblyEnum">
+            <Param Type="IAssemblyEnum**" Name="pEnum" />
+            <Param Type="IUnknown*" Name="pUnkReserved" />
+            <Param Type="IAssemblyName*" Name="pName" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="LPVOID" Name="pvReserved" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CreateAssemblyNameObject">
+            <Param Type="LPASSEMBLYNAME*" Name="ppAssemblyNameObj" />
+            <Param Type="LPCWSTR" Name="szAssemblyName" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="LPVOID" Name="pvReserved" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CreateHistoryReader">
+            <Param Type="LPCWSTR" Name="wzFilePath" />
+            <Param Type="IHistoryReader**" Name="ppHistoryReader" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CreateInstallReferenceEnum">
+            <Param Type="IInstallReferenceEnum**" Name="ppRefEnum" />
+            <Param Type="IAssemblyName*" Name="pName" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="LPVOID" Name="pvReserved" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetCachePath">
+            <Param Type="ASM_CACHE_FLAGS" Name="dwCacheFlags" />
+            <Param Type="LPWSTR" Name="pwzCachePath" />
+            <Param Type="PDWORD" Name="pcchPath" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetHistoryFileDirectory">
+            <Param Type="LPWSTR" Name="wzDir" />
+            <Param Type="LPCWSTR*" Name="pdwsize" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="IsFrameworkAssembly">
+            <Param Type="LPCWSTR" Name="pwzAssemblyReference" />
+            <Param Type="LPBOOL" Name="pbIsFrameworkAssembly" />
+            <Param Type="LPWSTR" Name="pwzFrameworkAssemblyIdentity" />
+            <Param Type="LPDWORD" Name="pccSize" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="NukeDownloadedCache">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="PreBindAssemblyEx">
+            <Param Type="IApplicationContext*" Name="pAppCtx" />
+            <Param Type="IAssemblyName*" Name="pName" />
+            <Param Type="IAssembly*" Name="pAsmParent" />
+            <Param Type="LPCWSTR" Name="pwzRuntimeVersion" />
+            <Param Type="IAssemblyName**" Name="ppNamePostPolicy" />
+            <Param Type="LPVOID" Name="pvReserved" />
+            <Return Type="HRESULT" />
+        </Api>
+
+    </Module>
+</ApiMonitor>

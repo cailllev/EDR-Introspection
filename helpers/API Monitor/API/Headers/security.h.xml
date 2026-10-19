@@ -1,0 +1,784 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2012, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Include Filename="Headers\cryptography.h.xml" />
+    <Headers>
+
+        <!-- TODO: Unions (Complex) -->
+        <Variable Name="PSEC_WINNT_AUTH_IDENTITY_OPAQUE"    Type="Alias"    Base="LPVOID" />
+        <Variable Name="PSEC_WINNT_AUTH_IDENTITY_OPAQUE*"   Type="Pointer"  Base="PSEC_WINNT_AUTH_IDENTITY_OPAQUE" />
+
+        <!-- Variables -->
+        <!-- TODO: SECURITY_STATUS - Overwrite S_OK with SEC_E_OK? -->
+        <Variable Name="SECURITY_STATUS"                Type="Alias"    Base="HRESULT" />
+        <Variable Name="SAFER_LEVEL_HANDLE"             Type="Alias"    Base="HANDLE" />
+        <Variable Name="SAFER_LEVEL_HANDLE*"            Type="Pointer"  Base="SAFER_LEVEL_HANDLE" />
+        <Variable Name="BYTE [SAFER_MAX_HASH_SIZE]"     Type="Array"    Base="BYTE" Count="64" />
+        <Variable Name="CHAR [TOKEN_SOURCE_LENGTH]"     Type="Array"    Base="CHAR" Count="8" />
+
+        <!-- TODO: External Interfaces -->
+        <Variable Name="ISecurityInformation"   Type="Interface" />
+
+        <!-- Interface Aliases -->
+        <Variable Name="LPSECURITYINFO"         Type="Alias"    Base="ISecurityInformation*" />
+        <Variable Name="LPSECURITYINFO*"        Type="Pointer"  Base="LPSECURITYINFO" />
+
+        <!-- [AceFlags] -->
+        <Variable Name="[AceFlags]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="OBJECT_INHERIT_ACE"                  Value="0x1" />
+                <Set Name="CONTAINER_INHERIT_ACE"               Value="0x2" />
+                <Set Name="SUB_CONTAINERS_AND_OBJECTS_INHERIT"  Value="0x3" />
+                <Set Name="NO_PROPAGATE_INHERIT_ACE"            Value="0x4" />
+                <Set Name="INHERIT_ONLY_ACE"                    Value="0x8" />
+                <Set Name="INHERITED_ACE"                       Value="0x10" />
+            </Flag>
+        </Variable>
+
+        <!-- ACCESS_MODE -->
+        <Variable Name="ACCESS_MODE" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="NOT_USED_ACCESS"     Value="0" />
+                <Set Name="GRANT_ACCESS"        Value="1" />
+                <Set Name="SET_ACCESS"          Value="2" />
+                <Set Name="DENY_ACCESS"         Value="3" />
+                <Set Name="REVOKE_ACCESS"       Value="4" />
+                <Set Name="SET_AUDIT_SUCCESS"   Value="5" />
+                <Set Name="SET_AUDIT_FAILURE"   Value="6" />
+            </Enum>
+        </Variable>
+
+        <!-- MULTIPLE_TRUSTEE_OPERATION -->
+        <Variable Name="MULTIPLE_TRUSTEE_OPERATION" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="NO_MULTIPLE_TRUSTEE"     Value="0" />
+                <Set Name="TRUSTEE_IS_IMPERSONATE"  Value="1" />
+            </Enum>
+        </Variable>
+
+        <!-- TRUSTEE_FORM -->
+        <Variable Name="TRUSTEE_FORM" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="TRUSTEE_IS_SID"              Value="0" />
+                <Set Name="TRUSTEE_IS_NAME"             Value="1" />
+                <Set Name="TRUSTEE_BAD_FORM"            Value="2" />
+                <Set Name="TRUSTEE_IS_OBJECTS_AND_SID"  Value="3" />
+                <Set Name="TRUSTEE_IS_OBJECTS_AND_NAME" Value="4" />
+            </Enum>
+        </Variable>
+
+        <!-- TRUSTEE_TYPE -->
+        <Variable Name="TRUSTEE_TYPE" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="TRUSTEE_IS_UNKNOWN"          Value="0" />
+                <Set Name="TRUSTEE_IS_USER"             Value="1" />
+                <Set Name="TRUSTEE_IS_GROUP"            Value="2" />
+                <Set Name="TRUSTEE_IS_DOMAIN"           Value="3" />
+                <Set Name="TRUSTEE_IS_ALIAS"            Value="4" />
+                <Set Name="TRUSTEE_IS_WELL_KNOWN_GROUP" Value="5" />
+                <Set Name="TRUSTEE_IS_DELETED"          Value="6" />
+                <Set Name="TRUSTEE_IS_INVALID"          Value="7" />
+                <Set Name="TRUSTEE_IS_COMPUTER"         Value="8" />
+            </Enum>
+        </Variable>
+
+        <!-- OBJECTS_AND_SID -->
+        <Variable Name="OBJECTS_AND_SID" Type="Struct">
+            <Field Type="DWORD"   	Name="ObjectsPresent" />
+            <Field Type="GUID"    	Name="ObjectTypeGuid" />
+            <Field Type="GUID"    	Name="InheritedObjectTypeGuid" />
+            <Field Type="SID*"      Name="pSid" />
+        </Variable>
+        <Variable Name="POBJECTS_AND_SID" Type="Pointer" Base="OBJECTS_AND_SID" />
+        <Variable Name="OBJECTS_AND_SID*" Type="Pointer" Base="OBJECTS_AND_SID" />
+
+        <!-- SE_OBJECT_TYPE -->
+        <Variable Name="SE_OBJECT_TYPE" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="SE_UNKNOWN_OBJECT_TYPE"      Value="0" />
+                <Set Name="SE_FILE_OBJECT"              Value="1" />
+                <Set Name="SE_SERVICE"                  Value="2" />
+                <Set Name="SE_PRINTER"                  Value="3" />
+                <Set Name="SE_REGISTRY_KEY"             Value="4" />
+                <Set Name="SE_LMSHARE"                  Value="5" />
+                <Set Name="SE_KERNEL_OBJECT"            Value="6" />
+                <Set Name="SE_WINDOW_OBJECT"            Value="7" />
+                <Set Name="SE_DS_OBJECT"                Value="8" />
+                <Set Name="SE_DS_OBJECT_ALL"            Value="9" />
+                <Set Name="SE_PROVIDER_DEFINED_OBJECT"  Value="10" />
+                <Set Name="SE_WMIGUID_OBJECT"           Value="11" />
+                <Set Name="SE_REGISTRY_WOW64_32KEY"     Value="12" />
+            </Enum>
+        </Variable>
+
+        <!-- OBJECTS_AND_NAME -->
+        <Variable Name="OBJECTS_AND_NAME" Type="Struct">
+            <Field Type="DWORD"          	Name="ObjectsPresent" />
+            <Field Type="SE_OBJECT_TYPE" 	Name="ObjectType" />
+            <Field Type="LPTSTR"   	        Name="ObjectTypeName" />
+            <Field Type="LPTSTR"   	        Name="InheritedObjectTypeName" />
+            <Field Type="LPTSTR"   	        Name="ptstrName" />
+        </Variable>
+        <Variable Name="POBJECTS_AND_NAME" Type="Pointer" Base="OBJECTS_AND_NAME" />
+        <Variable Name="OBJECTS_AND_NAME*" Type="Pointer" Base="OBJECTS_AND_NAME" />
+
+        <!-- [TRUSTEE_u] -->
+        <Variable Name="[TRUSTEE_u]" Type="Union">
+            <Display Name="union" />
+            <Field Type="LPTSTR"                Name="ptstrName" />
+            <Field Type="SID*"                  Name="pSid" />
+            <Field Type="OBJECTS_AND_SID*"      Name="pObjectsAndSid" />
+            <Field Type="OBJECTS_AND_NAME*"     Name="pObjectsAndName" />
+        </Variable>
+
+        <!-- TRUSTEE -->
+        <Variable Name="TRUSTEE" Type="Struct">
+            <!-- TODO: Self-Referencing - pMultipleTrustee is TRUSTEE* -->
+            <Field Type="LPVOID"                        Name="pMultipleTrustee" Display="TRUSTEE*" />
+            <Field Type="MULTIPLE_TRUSTEE_OPERATION"    Name="MultipleTrusteeOperation" />
+            <Field Type="TRUSTEE_FORM"                  Name="TrusteeForm" />
+            <Field Type="TRUSTEE_TYPE"                  Name="TrusteeType" />
+            <Field Type="[TRUSTEE_u]"                   Name="" />
+        </Variable>
+        <Variable Name="PTRUSTEE"   Type="Pointer" Base="TRUSTEE" />
+        <Variable Name="PTRUSTEE*"  Type="Pointer" Base="PTRUSTEE" />
+
+        <!-- EXPLICIT_ACCESS -->
+        <Variable Name="EXPLICIT_ACCESS" Type="Struct">
+            <Field Type="[ACCESS_MASK_DWORD]"   Name="grfAccessPermissions" />
+            <Field Type="ACCESS_MODE"           Name="grfAccessMode" />
+            <Field Type="[AceFlags]"            Name="grfInheritance" />
+            <Field Type="TRUSTEE"               Name="Trustee" />
+        </Variable>
+        <Variable Name="PEXPLICIT_ACCESS"   Type="Pointer" Base="EXPLICIT_ACCESS" />
+        <Variable Name="PEXPLICIT_ACCESS*"  Type="Pointer" Base="PEXPLICIT_ACCESS" />
+
+        <!-- TOKEN_SOURCE -->
+        <Variable Name="TOKEN_SOURCE" Type="Struct">
+            <Field Type="CHAR [TOKEN_SOURCE_LENGTH]"    Name="SourceName" />
+            <Field Type="LUID"                          Name="SourceIdentifier" />
+        </Variable>
+        <Variable Name="PTOKEN_SOURCE" Type="Pointer" Base="TOKEN_SOURCE" />
+
+        <!-- [SAFER_CRITERIA] -->
+        <Variable Name="[SAFER_CRITERIA]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="SAFER_CRITERIA_IMAGEPATH"        Value="0x00001" />
+                <Set Name="SAFER_CRITERIA_NOSIGNEDHASH"     Value="0x00002" />
+                <Set Name="SAFER_CRITERIA_IMAGEHASH"        Value="0x00004" />
+                <Set Name="SAFER_CRITERIA_AUTHENTICODE"     Value="0x00008" />
+                <Set Name="SAFER_CRITERIA_URLZONE"          Value="0x00010" />
+                <Set Name="SAFER_CRITERIA_IMAGEPATH_NT"     Value="0x01000" />
+            </Flag>
+        </Variable>
+
+        <!-- SAFER_CODE_PROPERTIES -->
+        <Variable Name="SAFER_CODE_PROPERTIES" Type="Struct" Pack="8">
+            <Field Type="DWORD"                         Name="cbSize" />
+            <Field Type="[SAFER_CRITERIA]"              Name="dwCheckFlags" />
+            <Field Type="LPCWSTR"                       Name="ImagePath" />
+            <Field Type="HANDLE"                        Name="hImageFileHandle" />
+            <Field Type="URLZONE"                       Name="UrlZoneId" />
+            <Field Type="BYTE [SAFER_MAX_HASH_SIZE]"    Name="ImageHash" />
+            <Field Type="DWORD"                         Name="dwImageHashSize" />
+            <Field Type="LARGE_INTEGER"                 Name="ImageSize" />
+            <Field Type="ALG_ID"                        Name="HashAlgorithm" />
+            <Field Type="LPBYTE"                        Name="pByteBlock" />
+            <Field Type="HWND"                          Name="hWndParent" />
+            <Field Type="[WTD_UI]"                      Name="dwWVTUIChoice" />
+            <Field Type="LPCWSTR"                       Name="PackageMoniker" />
+            <Field Type="LPCWSTR"                       Name="PackagePublisher" />
+            <Field Type="LPCWSTR"                       Name="PackageName" />
+            <Field Type="ULONG64"                       Name="PackageVersion" />
+            <Field Type="BOOL"                          Name="PackageIsFramework" />
+        </Variable>
+        <Variable Name="PSAFER_CODE_PROPERTIES" Type="Pointer" Base="SAFER_CODE_PROPERTIES" />
+
+        <!-- SID_IDENTIFIER_AUTHORITY -->
+        <Variable Name="SID_IDENTIFIER_AUTHORITY" Type="Struct">
+            <Field Type="BYTE [6]" Name="Value" />
+        </Variable>
+        <Variable Name="PSID_IDENTIFIER_AUTHORITY" Type="Pointer" Base="SID_IDENTIFIER_AUTHORITY" />
+
+        <!-- AUDIT_POLICY_INFORMATION -->
+        <Variable Name="AUDIT_POLICY_INFORMATION" Type="Struct">
+            <Field Type="GUID"    	Name="AuditSubCategoryGuid" />
+            <Field Type="ULONG"   	Name="AuditingInformation" />
+            <Field Type="GUID"    	Name="AuditCategoryGuid" />
+        </Variable>
+        <Variable Name="PCAUDIT_POLICY_INFORMATION" Type="Pointer" Base="AUDIT_POLICY_INFORMATION" />
+        <Variable Name="PAUDIT_POLICY_INFORMATION*" Type="Pointer" Base="PCAUDIT_POLICY_INFORMATION" />
+
+        <!-- [AceType] -->
+        <Variable Name="[AceType]" Type="Alias" Base="BYTE">
+            <Display Name="BYTE" />
+            <Enum>
+                <Set Name="ACCESS_ALLOWED_ACE_TYPE"                     Value="0x0" />
+                <Set Name="ACCESS_DENIED_ACE_TYPE"                      Value="0x1" />
+                <Set Name="SYSTEM_AUDIT_ACE_TYPE"                       Value="0x2" />
+                <Set Name="SYSTEM_ALARM_ACE_TYPE"                       Value="0x3" />
+                <Set Name="ACCESS_ALLOWED_COMPOUND_ACE_TYPE"            Value="0x4" />
+                <Set Name="ACCESS_ALLOWED_OBJECT_ACE_TYPE"              Value="0x5" />
+                <Set Name="ACCESS_DENIED_OBJECT_ACE_TYPE"               Value="0x6" />
+                <Set Name="SYSTEM_AUDIT_OBJECT_ACE_TYPE"                Value="0x7" />
+                <Set Name="SYSTEM_ALARM_OBJECT_ACE_TYPE"                Value="0x8" />
+                <Set Name="ACCESS_ALLOWED_CALLBACK_ACE_TYPE"            Value="0x9" />
+                <Set Name="ACCESS_DENIED_CALLBACK_ACE_TYPE"             Value="0xA" />
+                <Set Name="ACCESS_ALLOWED_CALLBACK_OBJECT_ACE_TYPE"     Value="0xB" />
+                <Set Name="ACCESS_DENIED_CALLBACK_OBJECT_ACE_TYPE"      Value="0xC" />
+                <Set Name="SYSTEM_AUDIT_CALLBACK_ACE_TYPE"              Value="0xD" />
+                <Set Name="SYSTEM_ALARM_CALLBACK_ACE_TYPE"              Value="0xE" />
+                <Set Name="SYSTEM_AUDIT_CALLBACK_OBJECT_ACE_TYPE"       Value="0xF" />
+                <Set Name="SYSTEM_ALARM_CALLBACK_OBJECT_ACE_TYPE"       Value="0x10" />
+                <Set Name="SYSTEM_MANDATORY_LABEL_ACE_TYPE"             Value="0x11" />
+                <Set Name="SYSTEM_RESOURCE_ATTRIBUTE_ACE_TYPE"          Value="0x12" />
+                <Set Name="SYSTEM_SCOPED_POLICY_ID_ACE_TYPE"            Value="0x13" />
+            </Enum>
+        </Variable>
+        <Variable Name="[ACE_TYPE|UCHAR]" Type="Alias" Base="[AceType]">
+            <Display Name="UCHAR" />
+        </Variable>
+
+        <!-- [AceFlags] -->
+        <Variable Name="[AceFlags-BYTE]" Type="Alias" Base="BYTE">
+            <Display Name="BYTE" />
+            <Flag>
+                <Set Name="OBJECT_INHERIT_ACE"                  Value="0x1" />
+                <Set Name="CONTAINER_INHERIT_ACE"               Value="0x2" />
+                <Set Name="SUB_CONTAINERS_AND_OBJECTS_INHERIT"  Value="0x3" />
+                <Set Name="NO_PROPAGATE_INHERIT_ACE"            Value="0x4" />
+                <Set Name="INHERIT_ONLY_ACE"                    Value="0x8" />
+                <Set Name="INHERITED_ACE"                       Value="0x10" />
+            </Flag>
+        </Variable>
+
+        <!-- ACE_HEADER -->
+        <Variable Name="ACE_HEADER" Type="Struct">
+            <Field Type="[AceType]"         Name="AceType" />
+            <Field Type="[AceFlags-BYTE]"   Name="AceFlags" />
+            <Field Type="WORD"              Name="AceSize" />
+        </Variable>
+
+        <!-- ACE -->
+        <Variable Name="ACE" Type="Struct">
+            <Field Type="ACE_HEADER"    Name="Header" />
+            <Field Type="ACCESS_MASK"   Name="AccessMask" />
+        </Variable>
+        <Variable Name="PACE"  Type="Pointer" Base="ACE" />
+        <Variable Name="PACE*" Type="Pointer" Base="PACE" />
+
+        <!-- GENERIC_MAPPING -->
+        <Variable Name="GENERIC_MAPPING" Type="Struct">
+            <Field Type="ACCESS_MASK" 	Name="GenericRead" />
+            <Field Type="ACCESS_MASK" 	Name="GenericWrite" />
+            <Field Type="ACCESS_MASK" 	Name="GenericExecute" />
+            <Field Type="ACCESS_MASK" 	Name="GenericAll" />
+        </Variable>
+        <Variable Name="PGENERIC_MAPPING" Type="Pointer" Base="GENERIC_MAPPING" />
+
+        <!-- LUID_AND_ATTRIBUTES -->
+        <Variable Name="LUID_AND_ATTRIBUTES" Type="Struct" Pack="4">
+            <Field Type="LUID"      Name="Luid" />
+            <Field Type="DWORD" 	Name="Attributes" />
+        </Variable>
+        <Variable Name="PLUID_AND_ATTRIBUTES"                   Type="Pointer"  Base="LUID_AND_ATTRIBUTES" />
+        <Variable Name="LUID_AND_ATTRIBUTES [ANYSIZE_ARRAY]"    Type="Array"    Base="LUID_AND_ATTRIBUTES" Count="1" />
+
+        <!-- [PRIVILEGE_SET] -->
+        <Variable Name="[PRIVILEGE_SET]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="PRIVILEGE_SET_ALL_NECESSARY" Value="1" />
+            </Flag>
+        </Variable>
+
+        <!-- PRIVILEGE_SET -->
+        <Variable Name="PRIVILEGE_SET" Type="Struct">
+            <Field Type="DWORD"                                 Name="PrivilegeCount" />
+            <Field Type="[PRIVILEGE_SET]"                       Name="Control" />
+            <Field Type="LUID_AND_ATTRIBUTES [ANYSIZE_ARRAY]"   Name="Privilege" Count="PrivilegeCount" />
+        </Variable>
+        <Variable Name="PPRIVILEGE_SET" Type="Pointer" Base="PRIVILEGE_SET" />
+
+        <!-- TOKEN_PRIVILEGES -->
+        <Variable Name="TOKEN_PRIVILEGES" Type="Struct">
+            <Field Type="DWORD"                                 Name="PrivilegeCount" />
+            <Field Type="LUID_AND_ATTRIBUTES [ANYSIZE_ARRAY]"   Name="Privileges" />
+        </Variable>
+        <Variable Name="PTOKEN_PRIVILEGES" Type="Pointer" Base="TOKEN_PRIVILEGES" />
+
+        <!-- ACL -->
+        <Variable Name="ACL" Type="Struct">
+            <Field Type="BYTE"  	Name="AclRevision" />
+            <Field Type="BYTE"  	Name="Sbz1" />
+            <Field Type="WORD"   	Name="AclSize" />
+            <Field Type="WORD"   	Name="AceCount" />
+            <Field Type="WORD"      Name="Sbz2" />
+        </Variable>
+        <Variable Name="PACL"   Type="Pointer" Base="ACL" />
+        <Variable Name="PACL*"  Type="Pointer" Base="PACL" />
+
+        <!-- CREDENTIAL_ATTRIBUTE -->
+        <Variable Name="CREDENTIAL_ATTRIBUTE" Type="Struct">
+            <Field Type="LPTSTR"  	Name="Keyword" />
+            <Field Type="DWORD" 	Name="Flags" />
+            <Field Type="DWORD" 	Name="ValueSize" />
+            <Field Type="LPBYTE" 	Name="Value" />
+        </Variable>
+        <Variable Name="PCREDENTIAL_ATTRIBUTE" Type="Pointer" Base="CREDENTIAL_ATTRIBUTE" />
+
+        <!-- CREDENTIAL -->
+        <Variable Name="CREDENTIAL" Type="Struct">
+            <Field Type="DWORD" 	                Name="Flags" />
+            <Field Type="DWORD" 	                Name="Type" />
+            <Field Type="LPTSTR" 	                Name="TargetName" />
+            <Field Type="LPTSTR" 	                Name="Comment" />
+            <Field Type="FILETIME" 	                Name="LastWritten" />
+            <Field Type="DWORD" 	                Name="CredentialBlobSize" />
+            <Field Type="LPBYTE" 	                Name="CredentialBlob" />
+            <Field Type="DWORD" 	                Name="Persist" />
+            <Field Type="DWORD" 	                Name="AttributeCount" />
+            <Field Type="PCREDENTIAL_ATTRIBUTE" 	Name="Attributes" />
+            <Field Type="LPTSTR" 	                Name="TargetAlias" />
+            <Field Type="LPTSTR" 	                Name="UserName" />
+        </Variable>
+        <Variable Name="PCREDENTIAL"    Type="Pointer" Base="CREDENTIAL" />
+        <Variable Name="PCREDENTIAL*"   Type="Pointer"  Base="PCREDENTIAL" />
+        <Variable Name="PCREDENTIAL**"  Type="Pointer"  Base="PCREDENTIAL*" />
+
+        <!-- CREDENTIAL_TARGET_INFORMATION -->
+        <Variable Name="CREDENTIAL_TARGET_INFORMATION" Type="Struct">
+            <Field Type="LPTSTR" 	Name="TargetName" />
+            <Field Type="LPTSTR" 	Name="NetbiosServerName" />
+            <Field Type="LPTSTR" 	Name="DnsServerName" />
+            <Field Type="LPTSTR" 	Name="NetbiosDomainName" />
+            <Field Type="LPTSTR" 	Name="DnsDomainName" />
+            <Field Type="LPTSTR" 	Name="DnsTreeName" />
+            <Field Type="LPTSTR" 	Name="PackageName" />
+            <Field Type="ULONG" 	Name="Flags" />
+            <Field Type="DWORD" 	Name="CredTypeCount" />
+            <Field Type="LPDWORD" 	Name="CredTypes" />
+        </Variable>
+        <Variable Name="PCREDENTIAL_TARGET_INFORMATION"  Type="Pointer" Base="CREDENTIAL_TARGET_INFORMATION" />
+        <Variable Name="PCREDENTIAL_TARGET_INFORMATION*" Type="Pointer"  Base="PCREDENTIAL_TARGET_INFORMATION" />
+
+        <!-- POLICY_AUDIT_SID_ARRAY -->
+        <Variable Name="POLICY_AUDIT_SID_ARRAY" Type="Struct">
+            <Field Type="ULONG" 	Name="UsersCount" />
+            <Field Type="PSID*" 	Name="UserSidArray" />
+        </Variable>
+        <Variable Name="PPOLICY_AUDIT_SID_ARRAY"  Type="Pointer" Base="POLICY_AUDIT_SID_ARRAY" />
+        <Variable Name="PPOLICY_AUDIT_SID_ARRAY*" Type="Pointer" Base="PPOLICY_AUDIT_SID_ARRAY" />
+
+        <!-- QUOTA_LIMITS -->
+        <Variable Name="QUOTA_LIMITS" Type="Struct">
+            <Field Type="SIZE_T" 	        Name="PagedPoolLimit" />
+            <Field Type="SIZE_T" 	        Name="NonPagedPoolLimit" />
+            <Field Type="SIZE_T" 	        Name="MinimumWorkingSetSize" />
+            <Field Type="SIZE_T" 	        Name="MaximumWorkingSetSize" />
+            <Field Type="SIZE_T" 	        Name="PagefileLimit" />
+            <Field Type="LARGE_INTEGER"     Name="TimeLimit" />
+        </Variable>
+        <Variable Name="PQUOTA_LIMITS" Type="Pointer" Base="QUOTA_LIMITS" />
+
+        <!-- SecHandle -->
+        <Variable Name="SecHandle" Type="Struct">
+            <Field Type="ULONG_PTR" 	Name="dwLower" />
+            <Field Type="ULONG_PTR"     Name="dwUpper" />
+        </Variable>
+        
+        <!-- PCtxtHandle -->
+        <Variable Name="PCtxtHandle" Type="Pointer" Base="SecHandle" />
+
+        <!-- SECURITY_DESCRIPTOR_CONTROL -->
+        <Variable Name="SECURITY_DESCRIPTOR_CONTROL" Type="Alias" Base="WORD">
+            <Flag>
+                <Set Name="SE_OWNER_DEFAULTED"          Value="0x0001" />
+                <Set Name="SE_GROUP_DEFAULTED"          Value="0x0002" />
+                <Set Name="SE_DACL_PRESENT"             Value="0x0004" />
+                <Set Name="SE_DACL_DEFAULTED"           Value="0x0008" />
+                <Set Name="SE_SACL_PRESENT"             Value="0x0010" />
+                <Set Name="SE_SACL_DEFAULTED"           Value="0x0020" />
+                <Set Name="SE_DACL_AUTO_INHERIT_REQ"    Value="0x0100" />
+                <Set Name="SE_SACL_AUTO_INHERIT_REQ"    Value="0x0200" />
+                <Set Name="SE_DACL_AUTO_INHERITED"      Value="0x0400" />
+                <Set Name="SE_SACL_AUTO_INHERITED"      Value="0x0800" />
+                <Set Name="SE_DACL_PROTECTED"           Value="0x1000" />
+                <Set Name="SE_SACL_PROTECTED"           Value="0x2000" />
+                <Set Name="SE_RM_CONTROL_VALID"         Value="0x4000" />
+                <Set Name="SE_SELF_RELATIVE"            Value="0x8000" />
+            </Flag>
+        </Variable>
+        <Variable Name="PSECURITY_DESCRIPTOR_CONTROL" Type="Pointer" Base="SECURITY_DESCRIPTOR_CONTROL" />
+
+        <!-- TOKEN_TYPE -->
+        <Variable Name="TOKEN_TYPE" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="TokenPrimary"        Value="1" />
+                <Set Name="TokenImpersonation"  Value="2" />
+            </Enum>
+        </Variable>
+
+        <!-- TOKEN_INFORMATION_CLASS -->
+        <Variable Name="TOKEN_INFORMATION_CLASS" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="TokenUser"                               Value="1" />
+                <Set Name="TokenGroups"                             Value="2" />
+                <Set Name="TokenPrivileges"                         Value="3" />
+                <Set Name="TokenOwner"                              Value="4" />
+                <Set Name="TokenPrimaryGroup"                       Value="5" />
+                <Set Name="TokenDefaultDacl"                        Value="6" />
+                <Set Name="TokenSource"                             Value="7" />
+                <Set Name="TokenType"                               Value="8" />
+                <Set Name="TokenImpersonationLevel"                 Value="9" />
+                <Set Name="TokenStatistics"                         Value="10" />
+                <Set Name="TokenRestrictedSids"                     Value="11" />
+                <Set Name="TokenSessionId"                          Value="12" />
+                <Set Name="TokenGroupsAndPrivileges"                Value="13" />
+                <Set Name="TokenSessionReference"                   Value="14" />
+                <Set Name="TokenSandBoxInert"                       Value="15" />
+                <Set Name="TokenAuditPolicy"                        Value="16" />
+                <Set Name="TokenOrigin"                             Value="17" />
+                <Set Name="TokenElevationType"                      Value="18" />
+                <Set Name="TokenLinkedToken"                        Value="19" />
+                <Set Name="TokenElevation"                          Value="20" />
+                <Set Name="TokenHasRestrictions"                    Value="21" />
+                <Set Name="TokenAccessInformation"                  Value="22" />
+                <Set Name="TokenVirtualizationAllowed"              Value="23" />
+                <Set Name="TokenVirtualizationEnabled"              Value="24" />
+                <Set Name="TokenIntegrityLevel"                     Value="25" />
+                <Set Name="TokenUIAccess"                           Value="26" />
+                <Set Name="TokenMandatoryPolicy"                    Value="27" />
+                <Set Name="TokenLogonSid"                           Value="28" />
+                <Set Name="TokenIsAppContainer"                     Value="29" />
+                <Set Name="TokenCapabilities"                       Value="30" />
+                <Set Name="TokenAppContainerSid"                    Value="31" />
+                <Set Name="TokenAppContainerNumber"                 Value="32" />
+                <Set Name="TokenUserClaimAttributes"                Value="33" />
+                <Set Name="TokenDeviceClaimAttributes"              Value="34" />
+                <Set Name="TokenRestrictedUserClaimAttributes"      Value="35" />
+                <Set Name="TokenRestrictedDeviceClaimAttributes"    Value="36" />
+                <Set Name="TokenDeviceGroups"                       Value="37" />
+                <Set Name="TokenRestrictedDeviceGroups"             Value="38" />
+                <Set Name="TokenSecurityAttributes"                 Value="39" />
+                <Set Name="TokenIsRestricted"                       Value="40" />
+            </Enum>
+        </Variable>
+
+        <!-- SECURITY_IMPERSONATION_LEVEL -->
+        <Variable Name="SECURITY_IMPERSONATION_LEVEL" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="SecurityAnonymous"       Value="0" />
+                <Set Name="SecurityIdentification"  Value="1" />
+                <Set Name="SecurityImpersonation"   Value="2" />
+                <Set Name="SecurityDelegation"      Value="3" />
+            </Enum>
+        </Variable>
+
+        <!-- SECURITY_CONTEXT_TRACKING_MODE -->
+        <Variable Name="SECURITY_CONTEXT_TRACKING_MODE" Type="Integer" Size="1">
+            <Enum DefaultName="SECURITY_DYNAMIC_TRACKING">
+                <Set Name="SECURITY_DYNAMIC_TRACKING"   Value="1" />
+                <Set Name="SECURITY_STATIC_TRACKING"    Value="0" />
+            </Enum>
+        </Variable>
+
+        <!-- SECURITY_QUALITY_OF_SERVICE -->
+        <Variable Name="SECURITY_QUALITY_OF_SERVICE" Type="Struct">
+            <Field Type="DWORD" 	                        Name="Length" />
+            <Field Type="SECURITY_IMPERSONATION_LEVEL" 	    Name="ImpersonationLevel" />
+            <Field Type="SECURITY_CONTEXT_TRACKING_MODE" 	Name="ContextTrackingMode" />
+            <Field Type="BOOLEAN" 	                        Name="EffectiveOnly" />
+        </Variable>
+
+        <Variable Name="const SECURITY_QUALITY_OF_SERVICE*" Type="Pointer" Base="SECURITY_QUALITY_OF_SERVICE" />
+        <Variable Name="PSECURITY_QUALITY_OF_SERVICE"       Type="Pointer" Base="SECURITY_QUALITY_OF_SERVICE" />
+
+        <!-- ACL_INFORMATION_CLASS -->
+        <Variable Name="ACL_INFORMATION_CLASS" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="AclRevisionInformation"      Value="1" />
+                <Set Name="AclSizeInformation"          Value="2" />
+            </Enum>
+        </Variable>
+
+        <!-- SAFER_POLICY_INFO_CLASS -->
+        <Variable Name="SAFER_POLICY_INFO_CLASS" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="SaferPolicyLevelList"                    Value="1" />
+                <Set Name="SaferPolicyEnableTransparentEnforcement" Value="2" />
+                <Set Name="SaferPolicyDefaultLevel"                 Value="3" />
+                <Set Name="SaferPolicyEvaluateUserScope"            Value="4" />
+                <Set Name="SaferPolicyScopeFlags"                   Value="5" />
+                <Set Name="SaferPolicyDefaultLevelFlags"            Value="6" />
+                <Set Name="SaferPolicyAuthenticodeEnabled"          Value="7" />
+            </Enum>
+        </Variable>
+
+        <!-- WELL_KNOWN_SID_TYPE -->
+        <Variable Name="WELL_KNOWN_SID_TYPE" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="WinNullSid"                                      Value="0" />
+                <Set Name="WinWorldSid"                                     Value="1" />
+                <Set Name="WinLocalSid"                                     Value="2" />
+                <Set Name="WinCreatorOwnerSid"                              Value="3" />
+                <Set Name="WinCreatorGroupSid"                              Value="4" />
+                <Set Name="WinCreatorOwnerServerSid"                        Value="5" />
+                <Set Name="WinCreatorGroupServerSid"                        Value="6" />
+                <Set Name="WinNtAuthoritySid"                               Value="7" />
+                <Set Name="WinDialupSid"                                    Value="8" />
+                <Set Name="WinNetworkSid"                                   Value="9" />
+                <Set Name="WinBatchSid"                                     Value="10" />
+                <Set Name="WinInteractiveSid"                               Value="11" />
+                <Set Name="WinServiceSid"                                   Value="12" />
+                <Set Name="WinAnonymousSid"                                 Value="13" />
+                <Set Name="WinProxySid"                                     Value="14" />
+                <Set Name="WinEnterpriseControllersSid"                     Value="15" />
+                <Set Name="WinSelfSid"                                      Value="16" />
+                <Set Name="WinAuthenticatedUserSid"                         Value="17" />
+                <Set Name="WinRestrictedCodeSid"                            Value="18" />
+                <Set Name="WinTerminalServerSid"                            Value="19" />
+                <Set Name="WinRemoteLogonIdSid"                             Value="20" />
+                <Set Name="WinLogonIdsSid"                                  Value="21" />
+                <Set Name="WinLocalSystemSid"                               Value="22" />
+                <Set Name="WinLocalServiceSid"                              Value="23" />
+                <Set Name="WinNetworkServiceSid"                            Value="24" />
+                <Set Name="WinBuiltinDomainSid"                             Value="25" />
+                <Set Name="WinBuiltinAdministratorsSid"                     Value="26" />
+                <Set Name="WinBuiltinUsersSid"                              Value="27" />
+                <Set Name="WinBuiltinGuestsSid"                             Value="28" />
+                <Set Name="WinBuiltinPowerUsersSid"                         Value="29" />
+                <Set Name="WinBuiltinAccountOperatorsSid"                   Value="30" />
+                <Set Name="WinBuiltinSystemOperatorsSid"                    Value="31" />
+                <Set Name="WinBuiltinPrintOperatorsSid"                     Value="32" />
+                <Set Name="WinBuiltinBackupOperatorsSid"                    Value="33" />
+                <Set Name="WinBuiltinReplicatorSid"                         Value="34" />
+                <Set Name="WinBuiltinPreWindows2000CompatibleAccessSid"     Value="35" />
+                <Set Name="WinBuiltinRemoteDesktopUsersSid"                 Value="36" />
+                <Set Name="WinBuiltinNetworkConfigurationOperatorsSid"      Value="37" />
+                <Set Name="WinAccountAdministratorSid"                      Value="38" />
+                <Set Name="WinAccountGuestSid"                              Value="39" />
+                <Set Name="WinAccountKrbtgtSid"                             Value="40" />
+                <Set Name="WinAccountDomainAdminsSid"                       Value="41" />
+                <Set Name="WinAccountDomainUsersSid"                        Value="42" />
+                <Set Name="WinAccountDomainGuestsSid"                       Value="43" />
+                <Set Name="WinAccountComputersSid"                          Value="44" />
+                <Set Name="WinAccountControllersSid"                        Value="45" />
+                <Set Name="WinAccountCertAdminsSid"                         Value="46" />
+                <Set Name="WinAccountSchemaAdminsSid"                       Value="47" />
+                <Set Name="WinAccountEnterpriseAdminsSid"                   Value="48" />
+                <Set Name="WinAccountPolicyAdminsSid"                       Value="49" />
+                <Set Name="WinAccountRasAndIasServersSid"                   Value="50" />
+                <Set Name="WinNTLMAuthenticationSid"                        Value="51" />
+                <Set Name="WinDigestAuthenticationSid"                      Value="52" />
+                <Set Name="WinSChannelAuthenticationSid"                    Value="53" />
+                <Set Name="WinThisOrganizationSid"                          Value="54" />
+                <Set Name="WinOtherOrganizationSid"                         Value="55" />
+                <Set Name="WinBuiltinIncomingForestTrustBuildersSid"        Value="56" />
+                <Set Name="WinBuiltinPerfMonitoringUsersSid"                Value="57" />
+                <Set Name="WinBuiltinPerfLoggingUsersSid"                   Value="58" />
+                <Set Name="WinBuiltinAuthorizationAccessSid"                Value="59" />
+                <Set Name="WinBuiltinTerminalServerLicenseServersSid"       Value="60" />
+                <Set Name="WinBuiltinDCOMUsersSid"                          Value="61" />
+                <Set Name="WinBuiltinIUsersSid"                             Value="62" />
+                <Set Name="WinIUserSid"                                     Value="63" />
+                <Set Name="WinBuiltinCryptoOperatorsSid"                    Value="64" />
+                <Set Name="WinUntrustedLabelSid"                            Value="65" />
+                <Set Name="WinLowLabelSid"                                  Value="66" />
+                <Set Name="WinMediumLabelSid"                               Value="67" />
+                <Set Name="WinHighLabelSid"                                 Value="68" />
+                <Set Name="WinSystemLabelSid"                               Value="69" />
+                <Set Name="WinWriteRestrictedCodeSid"                       Value="70" />
+                <Set Name="WinCreatorOwnerRightsSid"                        Value="71" />
+                <Set Name="WinCacheablePrincipalsGroupSid"                  Value="72" />
+                <Set Name="WinNonCacheablePrincipalsGroupSid"               Value="73" />
+                <Set Name="WinEnterpriseReadonlyControllersSid"             Value="74" />
+                <Set Name="WinAccountReadonlyControllersSid"                Value="75" />
+                <Set Name="WinBuiltinEventLogReadersGroup"                  Value="76" />
+                <Set Name="WinNewEnterpriseReadonlyControllersSid"          Value="77" />
+                <Set Name="WinBuiltinCertSvcDComAccessGroup"                Value="78" />
+                <Set Name="WinMediumPlusLabelSid"                           Value="79" />
+                <Set Name="WinLocalLogonSid"                                Value="80" />
+                <Set Name="WinConsoleLogonSid"                              Value="81" />
+                <Set Name="WinThisOrganizationCertificateSid"               Value="82" />
+                <Set Name="WinApplicationPackageAuthoritySid"               Value="83" />
+                <Set Name="WinBuiltinAnyPackageSid"                         Value="84" />
+                <Set Name="WinCapabilityInternetClientSid"                  Value="85" />
+                <Set Name="WinCapabilityInternetClientServerSid"            Value="86" />
+                <Set Name="WinCapabilityPrivateNetworkClientServerSid"      Value="87" />
+                <Set Name="WinCapabilityPicturesLibrarySid"                 Value="88" />
+                <Set Name="WinCapabilityVideosLibrarySid"                   Value="89" />
+                <Set Name="WinCapabilityMusicLibrarySid"                    Value="90" />
+                <Set Name="WinCapabilityDocumentsLibrarySid"                Value="91" />
+                <Set Name="WinCapabilitySharedUserCertificatesSid"          Value="92" />
+                <Set Name="WinCapabilityDefaultWindowsCredentialsSid"       Value="93" />
+                <Set Name="WinCapabilityRemovableStorageSid"                Value="94" />
+                <Set Name="WinBuiltinRDSRemoteAccessServersSid"             Value="95" />
+                <Set Name="WinBuiltinRDSEndpointServersSid"                 Value="96" />
+                <Set Name="WinBuiltinRDSManagementServersSid"               Value="97" />
+                <Set Name="WinUserModeDriversSid"                           Value="98" />
+                <Set Name="WinBuiltinHyperVAdminsSid"                       Value="99" />
+                <Set Name="WinAccountCloneableControllersSid"               Value="100" />
+                <Set Name="WinBuiltinAccessControlAssistanceOperatorsSid"   Value="101" />
+                <Set Name="WinBuiltinRemoteManagementUsersSid"              Value="102" />
+                <Set Name="WinAuthenticationAuthorityAssertedSid"           Value="103" />
+                <Set Name="WinAuthenticationServiceAssertedSid"             Value="104" />
+            </Enum>
+        </Variable>
+
+        <!-- SID_NAME_USE -->
+        <Variable Name="SID_NAME_USE" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="SidTypeUser"             Value="1" />
+                <Set Name="SidTypeGroup"            Value="2" />
+                <Set Name="SidTypeDomain"           Value="3" />
+                <Set Name="SidTypeAlias"            Value="4" />
+                <Set Name="SidTypeWellKnownGroup"   Value="5" />
+                <Set Name="SidTypeDeletedAccount"   Value="6" />
+                <Set Name="SidTypeInvalid"          Value="7" />
+                <Set Name="SidTypeUnknown"          Value="8" />
+                <Set Name="SidTypeComputer"         Value="9" />
+                <Set Name="SidTypeLabel"            Value="10" />
+            </Enum>
+        </Variable>
+        <Variable Name="PSID_NAME_USE" Type="Pointer" Base="SID_NAME_USE" />
+
+        <!-- SAFER_OBJECT_INFO_CLASS -->
+        <Variable Name="SAFER_OBJECT_INFO_CLASS" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="SaferObjectLevelId"                  Value="1" />
+                <Set Name="SaferObjectScopeId"                  Value="2" />
+                <Set Name="SaferObjectFriendlyName"             Value="3" />
+                <Set Name="SaferObjectDescription"              Value="4" />
+                <Set Name="SaferObjectBuiltin"                  Value="5" />
+                <Set Name="SaferObjectDisallowed"               Value="6" />
+                <Set Name="SaferObjectDisableMaxPrivilege"      Value="7" />
+                <Set Name="SaferObjectInvertDeletedPrivileges"  Value="8" />
+                <Set Name="SaferObjectDeletedPrivileges"        Value="9" />
+                <Set Name="SaferObjectDefaultOwner"             Value="10" />
+                <Set Name="SaferObjectSidsToDisable"            Value="11" />
+                <Set Name="SaferObjectRestrictedSidsInverted"   Value="12" />
+                <Set Name="SaferObjectRestrictedSidsAdded"      Value="13" />
+                <Set Name="SaferObjectAllIdentificationGuids"   Value="14" />
+                <Set Name="SaferObjectSingleIdentification"     Value="15" />
+                <Set Name="SaferObjectExtendedError"            Value="16" />
+            </Enum>
+        </Variable>
+
+        <!-- CRED_PROTECTION_TYPE -->
+        <Variable Name="CRED_PROTECTION_TYPE" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="CredUnprotected"         Value="0" />
+                <Set Name="CredUserProtection"      Value="1" />
+                <Set Name="CredTrustedProtection"   Value="2" />
+            </Enum>
+        </Variable>
+        <Variable Name="CRED_PROTECTION_TYPE*" Type="Pointer" Base="CRED_PROTECTION_TYPE" />
+
+        <!-- CRED_MARSHAL_TYPE -->
+        <Variable Name="CRED_MARSHAL_TYPE" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="CertCredential"                  Value="1" />
+                <Set Name="UsernameTargetCredential"        Value="2" />
+                <Set Name="BinaryBlobCredential"            Value="3" />
+                <Set Name="UsernameForPackedCredentials"    Value="4" />
+            </Enum>
+        </Variable>
+        <Variable Name="PCRED_MARSHAL_TYPE" Type="Pointer" Base="CRED_MARSHAL_TYPE" />
+
+        <!-- AUDIT_EVENT_TYPE -->
+        <Variable Name="AUDIT_EVENT_TYPE" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="AuditEventObjectAccess"              Value="0" />
+                <Set Name="AuditEventDirectoryServiceAccess"    Value="1" />
+            </Enum>
+        </Variable>
+
+        <!-- POLICY_AUDIT_EVENT_TYPE -->
+        <Variable Name="POLICY_AUDIT_EVENT_TYPE" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="AuditCategorySystem"                 Value="0" />
+                <Set Name="AuditCategoryLogon"                  Value="1" />
+                <Set Name="AuditCategoryObjectAccess"           Value="2" />
+                <Set Name="AuditCategoryPrivilegeUse"           Value="3" />
+                <Set Name="AuditCategoryDetailedTracking"       Value="4" />
+                <Set Name="AuditCategoryPolicyChange"           Value="5" />
+                <Set Name="AuditCategoryAccountManagement"      Value="6" />
+                <Set Name="AuditCategoryDirectoryServiceAccess" Value="7" />
+                <Set Name="AuditCategoryAccountLogon"           Value="8" />
+            </Enum>
+        </Variable>
+        <Variable Name="PPOLICY_AUDIT_EVENT_TYPE" Type="Pointer" Base="POLICY_AUDIT_EVENT_TYPE" />
+
+        <!-- OBJECT_TYPE_LIST -->
+        <Variable Name="OBJECT_TYPE_LIST" Type="Struct">
+            <Field Type="WORD"   	Name="Level" />
+            <Field Type="WORD"   	Name="Sbz" />
+            <Field Type="GUID*" 	Name="ObjectType" />
+        </Variable>
+        <Variable Name="POBJECT_TYPE_LIST" Type="Pointer" Base="OBJECT_TYPE_LIST" />
+
+        <!-- SID_AND_ATTRIBUTES -->
+        <Variable Name="SID_AND_ATTRIBUTES" Type="Struct">
+            <Field Type="PSID" 	Name="Sid" />
+            <Field Type="DWORD" Name="Attributes" />
+        </Variable>
+        <Variable Name="SID_AND_ATTRIBUTES*"                Type="Pointer"  Base="SID_AND_ATTRIBUTES" />
+        <Variable Name="PSID_AND_ATTRIBUTES"                Type="Pointer"  Base="SID_AND_ATTRIBUTES" />
+        <Variable Name="PSID_AND_ATTRIBUTES*"               Type="Pointer"  Base="PSID_AND_ATTRIBUTES" />
+        <Variable Name="SID_AND_ATTRIBUTES [ANYSIZE_ARRAY]" Type="Array"    Base="SID_AND_ATTRIBUTES" Count="1" />
+
+        <!-- TOKEN_GROUPS -->
+        <Variable Name="TOKEN_GROUPS" Type="Struct">
+            <Field Type="DWORD"                                 Name="GroupCount" />
+            <Field Type="SID_AND_ATTRIBUTES [ANYSIZE_ARRAY]"    Name="Groups" Count="GroupCount" />
+        </Variable>
+        <Variable Name="PTOKEN_GROUPS" Type="Pointer" Base="TOKEN_GROUPS" />
+
+        <!-- SECURITY_DESCRIPTOR -->
+        <Variable Name="SECURITY_DESCRIPTOR" Type="Struct">
+            <Field Type="BYTE"                          Name="Revision" />
+            <Field Type="BYTE"                          Name="Sbz1" />
+            <Field Type="SECURITY_DESCRIPTOR_CONTROL"   Name="Control" />
+            <Field Type="PSID"                          Name="Owner" />
+            <Field Type="PSID"                          Name="Group" />
+            <Field Type="PACL"                          Name="Sacl" />
+            <Field Type="PACL"                          Name="Dacl" />
+        </Variable>
+        <Variable Name="PSECURITY_DESCRIPTOR"   Type="Pointer" Base="SECURITY_DESCRIPTOR" />
+        <Variable Name="PSECURITY_DESCRIPTOR*"  Type="Pointer"  Base="PSECURITY_DESCRIPTOR" />
+
+        <!-- SECURITY_ATTRIBUTES -->
+        <Variable Name="SECURITY_ATTRIBUTES" Type="Struct">
+            <Field Type="DWORD" 	            Name="nLength" />
+            <Field Type="PSECURITY_DESCRIPTOR" 	Name="lpSecurityDescriptor" />
+            <Field Type="BOOL" 	                Name="bInheritHandle" />
+        </Variable>
+        <Variable Name="SECURITY_ATTRIBUTES*"           Type="Pointer" Base="SECURITY_ATTRIBUTES" />
+        <Variable Name="LPSECURITY_ATTRIBUTES"          Type="Pointer" Base="SECURITY_ATTRIBUTES" />
+        <Variable Name="PSECURITY_ATTRIBUTES"           Type="Pointer" Base="SECURITY_ATTRIBUTES" />
+        <Variable Name="const LPSECURITY_ATTRIBUTES"    Type="Pointer" Base="SECURITY_ATTRIBUTES" />
+        <Variable Name="const SECURITY_ATTRIBUTES*"     Type="Pointer" Base="SECURITY_ATTRIBUTES" />
+
+        <!-- SECURITY_DESCRIPTOR_RELATIVE -->
+        <Variable Name="SECURITY_DESCRIPTOR_RELATIVE" Type="Struct">
+            <Field Type="BYTE"  	                    Name="Revision" />
+            <Field Type="BYTE"  	                    Name="Sbz1" />
+            <Field Type="SECURITY_DESCRIPTOR_CONTROL" 	Name="Control" />
+            <Field Type="DWORD" 	                    Name="Owner" />
+            <Field Type="DWORD" 	                    Name="Group" />
+            <Field Type="DWORD" 	                    Name="Sacl" />
+            <Field Type="DWORD" 	                    Name="Dacl" />
+        </Variable>
+        <Variable Name="PSECURITY_DESCRIPTOR_RELATIVE"  Type="Pointer" Base="SECURITY_DESCRIPTOR_RELATIVE" />
+        <Variable Name="PISECURITY_DESCRIPTOR_RELATIVE" Type="Pointer" Base="SECURITY_DESCRIPTOR_RELATIVE" />
+        <Variable Name="PSECURITY_DESCRIPTOR_RELATIVE*" Type="Pointer" Base="PSECURITY_DESCRIPTOR_RELATIVE" />
+
+    </Headers>
+</ApiMonitor>

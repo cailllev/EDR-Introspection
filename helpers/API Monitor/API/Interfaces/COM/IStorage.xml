@@ -1,0 +1,114 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2012, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IStorage" Id="{0000000b-0000-0000-C000-000000000046}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Component Object Model (COM)/Structured Storage/Interfaces">
+        <!-- Variables -->
+        
+        <!-- STGMOVE -->
+        <Variable Name="STGMOVE" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="STGMOVE_MOVE"            Value="0" />
+                <Set Name="STGMOVE_COPY"            Value="1" />
+                <Set Name="STGMOVE_SHALLOWCOPY"     Value="2" />
+            </Enum>
+        </Variable>
+
+        <!-- Methods -->
+        <Api Name="CreateStream">
+            <Param Type="const OLECHAR*" Name="pwcsName" />
+            <Param Type="[STGM_FLAGS]" Name="grfMode" />
+            <Param Type="DWORD" Name="reserved1" />
+            <Param Type="DWORD" Name="reserved2" />
+            <Param Type="IStream**" Name="ppstm" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="OpenStream">
+            <Param Type="const OLECHAR*" Name="pwcsName" />
+            <Param Type="void*" Name="reserved1" />
+            <Param Type="[STGM_FLAGS]" Name="grfMode" />
+            <Param Type="DWORD" Name="reserved2" />
+            <Param Type="IStream**" Name="ppstm" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CreateStorage">
+            <Param Type="const OLECHAR*" Name="pwcsName" />
+            <Param Type="[STGM_FLAGS]" Name="grfMode" />
+            <Param Type="DWORD" Name="reserved1" />
+            <Param Type="DWORD" Name="reserved2" />
+            <Param Type="IStorage**" Name="ppstg" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="OpenStorage">
+            <Param Type="const OLECHAR*" Name="pwcsName" />
+            <Param Type="IStorage*" Name="pstgPriority" />
+            <Param Type="[STGM_FLAGS]" Name="grfMode" />
+            <Param Type="SNB" Name="snbExclude" />
+            <Param Type="DWORD" Name="reserved" />
+            <Param Type="IStorage**" Name="ppstg" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CopyTo">
+            <Param Type="DWORD" Name="ciidExclude" />
+            <Param Type="const IID*" Name="rgiidExclude" Count="ciidExclude" />
+            <Param Type="SNB" Name="snbExclude" />
+            <Param Type="IStorage*" Name="pstgDest" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="MoveElementTo">
+            <Param Type="const OLECHAR*" Name="pwcsName" />
+            <Param Type="IStorage*" Name="pstgDest" />
+            <Param Type="const OLECHAR*" Name="pwcsNewName" />
+            <Param Type="STGMOVE" Name="grfFlags" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Commit">
+            <Param Type="STGC" Name="grfCommitFlags" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Revert">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="EnumElements">
+            <Param Type="DWORD" Name="reserved1" />
+            <Param Type="void*" Name="reserved2" />
+            <Param Type="DWORD" Name="reserved3" />
+            <Param Type="IEnumSTATSTG**" Name="ppenum" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DestroyElement">
+            <Param Type="const OLECHAR*" Name="pwcsName" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="RenameElement">
+            <Param Type="const OLECHAR*" Name="pwcsOldName" />
+            <Param Type="const OLECHAR*" Name="pwcsNewName" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetElementTimes">
+            <Param Type="const OLECHAR*" Name="pwcsName" />
+            <Param Type="const FILETIME*" Name="pctime" />
+            <Param Type="const FILETIME*" Name="patime" />
+            <Param Type="const FILETIME*" Name="pmtime" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetClass">
+            <Param Type="REFCLSID" Name="clsid" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetStateBits">
+            <Param Type="DWORD" Name="grfStateBits" />
+            <Param Type="DWORD" Name="grfMask" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Stat">
+            <Param Type="STATSTG*" Name="pstatstg" />
+            <Param Type="STATFLAG" Name="grfStatFlag" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

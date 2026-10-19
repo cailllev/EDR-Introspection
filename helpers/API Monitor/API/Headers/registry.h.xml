@@ -1,0 +1,136 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2012, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Headers>
+
+        <!-- HKEY - Use negative values instead of hex, otherwise they will be incorrect on x64 -->
+        <Variable Name="HKEY" Type="Alias" Base="HANDLE">
+            <Enum>
+                <Set Name="HKEY_CLASSES_ROOT"                   Value="-2147483648" />
+                <Set Name="HKEY_CURRENT_USER"                   Value="-2147483647" />
+                <Set Name="HKEY_LOCAL_MACHINE"                  Value="-2147483646" />
+                <Set Name="HKEY_USERS"                          Value="-2147483645" />
+                <Set Name="HKEY_PERFORMANCE_DATA"               Value="-2147483644" />
+                <Set Name="HKEY_PERFORMANCE_TEXT"               Value="-2147483568" />
+                <Set Name="HKEY_PERFORMANCE_NLSTEXT"            Value="-2147483552" />
+                <Set Name="HKEY_CURRENT_CONFIG"                 Value="-2147483643" />
+                <Set Name="HKEY_DYN_DATA"                       Value="-2147483642" />
+                <Set Name="HKEY_CURRENT_USER_LOCAL_SETTINGS"    Value="-2147483641" />
+            </Enum>
+        </Variable>
+        <Variable Name="HKEY*"          Type="Pointer"  Base="HKEY" />
+        <Variable Name="PHKEY"          Type="Alias"    Base="HKEY*" />
+        <Variable Name="const HKEY*"    Type="Alias"    Base="HKEY*" />
+
+        <!-- REGSAM -->
+        <Variable Name="REGSAM" Type="Alias" Base="DWORD">
+            <Flag>
+                <Set Name="DELETE"                  Value="0x00010000" />
+                <Set Name="READ_CONTROL"            Value="0x00020000" />
+                <Set Name="WRITE_DAC"               Value="0x00040000" />
+                <Set Name="WRITE_OWNER"             Value="0x00080000" />
+                <Set Name="ACCESS_SYSTEM_SECURITY"  Value="0x01000000" />
+                <Set Name="KEY_QUERY_VALUE"         Value="0x0001" />
+                <Set Name="KEY_SET_VALUE"           Value="0x0002" />
+                <Set Name="KEY_CREATE_SUB_KEY"      Value="0x0004" />
+                <Set Name="KEY_ENUMERATE_SUB_KEYS"  Value="0x0008" />
+                <Set Name="KEY_NOTIFY"              Value="0x0010" />
+                <Set Name="KEY_CREATE_LINK"         Value="0x0020" />
+                <Set Name="KEY_WOW64_32KEY"         Value="0x0200" />
+                <Set Name="KEY_WOW64_64KEY"         Value="0x0100" />
+                <Set Name="KEY_WOW64_RES"           Value="0x0300" />
+                <Set Name="KEY_READ"                Value="0x20019" />
+                <Set Name="KEY_WRITE"               Value="0x20006" />
+                <Set Name="KEY_ALL_ACCESS"          Value="0xF003F" />
+                <Set Name="MAXIMUM_ALLOWED"         Value="0x02000000" />
+            </Flag>
+        </Variable>
+
+        <!-- [RegType] -->
+        <Variable Name="[RegType]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="REG_NONE"                        Value="0" />
+                <Set Name="REG_SZ"                          Value="1" />
+                <Set Name="REG_EXPAND_SZ"                   Value="2" />
+                <Set Name="REG_BINARY"                      Value="3" />
+                <Set Name="REG_DWORD"                       Value="4" />
+                <Set Name="REG_DWORD_BIG_ENDIAN"            Value="5" />
+                <Set Name="REG_LINK"                        Value="6" />
+                <Set Name="REG_MULTI_SZ"                    Value="7" />
+                <Set Name="REG_RESOURCE_LIST"               Value="8" />
+                <Set Name="REG_FULL_RESOURCE_DESCRIPTOR"    Value="9" />
+                <Set Name="REG_RESOURCE_REQUIREMENTS_LIST"  Value="10" />
+                <Set Name="REG_QWORD"                       Value="11" />
+            </Enum>
+        </Variable>
+        <Variable Name="[RegType*]" Type="Pointer" Base="[RegType]">
+            <Display Name="LPDWORD" />
+        </Variable>
+
+        <Variable Name="[RegType-ULONG]" Type="Alias" Base="[RegType]">
+            <Display Name="ULONG" />
+        </Variable>
+
+        <Variable Name="[RegType-PULONG]" Type="Pointer" Base="[RegType-ULONG]">
+            <Display Name="PULONG" />
+        </Variable>
+
+        <!-- [RegOptions] -->
+        <Variable Name="[RegOptions]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <!-- <Set Name="REG_OPTION_NON_VOLATILE"     Value="0x00000000" /> -->
+                <Set Name="REG_OPTION_VOLATILE"         Value="0x00000001" />
+                <Set Name="REG_OPTION_CREATE_LINK"      Value="0x00000002" />
+                <Set Name="REG_OPTION_BACKUP_RESTORE"   Value="0x00000004" />
+                <Set Name="REG_OPTION_OPEN_LINK"        Value="0x00000008" />
+            </Flag>
+        </Variable>
+
+        <!-- [RegDisposition] -->
+        <Variable Name="[RegDisposition]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="REG_CREATED_NEW_KEY"         Value="0x00000001" />
+                <Set Name="REG_OPENED_EXISTING_KEY"     Value="0x00000002" />
+            </Flag>
+        </Variable>
+        <Variable Name="[RegDisposition*]" Type="Pointer" Base="[RegDisposition]">
+            <Display Name="LPDWORD" />
+        </Variable>
+        
+        <Variable Name="[RegDisposition-ULONG]" Type="Alias" Base="[RegDisposition]">
+            <Display Name="ULONG" />
+        </Variable>
+
+        <Variable Name="[RegDisposition-PULONG]" Type="Pointer" Base="[RegDisposition-ULONG]">
+            <Display Name="PULONG" />
+        </Variable>
+
+        <!-- [RegMuiFlags] -->
+        <Variable Name="[RegMuiFlags]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="REG_MUI_STRING_TRUNCATE"     Value="0x00000001" />
+            </Flag>
+        </Variable>
+
+        <!-- [RegNotifyFlags] -->
+        <Variable Name="[RegNotifyFlags]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="REG_NOTIFY_CHANGE_NAME"          Value="0x00000001" />
+                <Set Name="REG_NOTIFY_CHANGE_ATTRIBUTES"    Value="0x00000002" />
+                <Set Name="REG_NOTIFY_CHANGE_LAST_SET"      Value="0x00000004" />
+                <Set Name="REG_NOTIFY_CHANGE_SECURITY"      Value="0x00000008" />
+                <Set Name="REG_NOTIFY_THREAD_AGNOSTIC"      Value="0x10000000" />
+            </Flag>
+        </Variable>
+
+    </Headers>
+</ApiMonitor>

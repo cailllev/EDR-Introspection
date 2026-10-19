@@ -1,0 +1,301 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2012, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Headers>
+
+        <!-- Variables -->
+        <Variable Name="PFN_SC_NOTIFY_CALLBACK" Type="Alias" Base="LPVOID" />
+        <Variable Name="SERVICE_STATUS_HANDLE"  Type="Alias" Base="HANDLE" />
+        <Variable Name="SC_HANDLE"              Type="Alias" Base="HANDLE" />
+        <Variable Name="SC_LOCK"                Type="Alias" Base="LPVOID" />
+
+        <!-- SC_STATUS_TYPE -->-->
+        <Variable Name="SC_STATUS_TYPE" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="SC_STATUS_PROCESS_INFO"  Value="0" />
+            </Enum>
+        </Variable>
+
+        <!-- [ServiceType] -->
+        <Variable Name="[ServiceType]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="SERVICE_KERNEL_DRIVER"           Value="0x00000001" />
+                <Set Name="SERVICE_FILE_SYSTEM_DRIVER"      Value="0x00000002" />
+                <Set Name="SERVICE_ADAPTER"                 Value="0x00000004" />
+                <Set Name="SERVICE_RECOGNIZER_DRIVER"       Value="0x00000008" />
+                <Set Name="SERVICE_DRIVER"                  Value="0x0000000B" />
+                <Set Name="SERVICE_WIN32_OWN_PROCESS"       Value="0x00000010" />
+                <Set Name="SERVICE_WIN32_SHARE_PROCESS"     Value="0x00000020" />
+                <Set Name="SERVICE_INTERACTIVE_PROCESS"     Value="0x00000100" />
+                <Set Name="SERVICE_WIN32"                   Value="0x00000030" />
+                <Set Name="SERVICE_NO_CHANGE"               Value="0xffffffff" />
+            </Flag>
+        </Variable>
+
+        <!-- [ServiceState] -->
+        <Variable Name="[ServiceState]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="SERVICE_ACTIVE"      Value="0x00000001" />
+                <Set Name="SERVICE_INACTIVE"    Value="0x00000002" />
+                <Set Name="SERVICE_STATE_ALL"   Value="0x00000003" />
+            </Flag>
+        </Variable>
+
+        <!-- [ServiceCurrentState] -->
+        <Variable Name="[ServiceCurrentState]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="SERVICE_STOPPED"                 Value="0x00000001" />
+                <Set Name="SERVICE_START_PENDING"           Value="0x00000002" />
+                <Set Name="SERVICE_STOP_PENDING"            Value="0x00000003" />
+                <Set Name="SERVICE_RUNNING"                 Value="0x00000004" />
+                <Set Name="SERVICE_CONTINUE_PENDING"        Value="0x00000005" />
+                <Set Name="SERVICE_PAUSE_PENDING"           Value="0x00000006" />
+                <Set Name="SERVICE_PAUSED"                  Value="0x00000007" />
+            </Enum>
+        </Variable>
+
+        <!-- [ServiceStartType] -->
+        <Variable Name="[ServiceStartType]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="SERVICE_BOOT_START"      Value="0x00000000" />
+                <Set Name="SERVICE_SYSTEM_START"    Value="0x00000001" />
+                <Set Name="SERVICE_AUTO_START"      Value="0x00000002" />
+                <Set Name="SERVICE_DEMAND_START"    Value="0x00000003" />
+                <Set Name="SERVICE_DISABLED"        Value="0x00000004" />
+                <Set Name="SERVICE_NO_CHANGE"       Value="0xffffffff" />
+            </Enum>
+        </Variable>
+
+        <!-- [ServiceErrorControl] -->
+        <Variable Name="[ServiceErrorControl]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="SERVICE_ERROR_IGNORE"    Value="0x00000000" />
+                <Set Name="SERVICE_ERROR_NORMAL"    Value="0x00000001" />
+                <Set Name="SERVICE_ERROR_SEVERE"    Value="0x00000002" />
+                <Set Name="SERVICE_ERROR_CRITICAL"  Value="0x00000003" />
+                <Set Name="SERVICE_NO_CHANGE"       Value="0xffffffff" />
+            </Enum>
+        </Variable>
+
+        <!-- [ServiceInfoLevel] -->
+        <Variable Name="[ServiceInfoLevel]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="SERVICE_CONFIG_DESCRIPTION"              Value="1" />
+                <Set Name="SERVICE_CONFIG_FAILURE_ACTIONS"          Value="2" />
+                <Set Name="SERVICE_CONFIG_DELAYED_AUTO_START_INFO"  Value="3" />
+                <Set Name="SERVICE_CONFIG_FAILURE_ACTIONS_FLAG"     Value="4" />
+                <Set Name="SERVICE_CONFIG_SERVICE_SID_INFO"         Value="5" />
+                <Set Name="SERVICE_CONFIG_REQUIRED_PRIVILEGES_INFO" Value="6" />
+                <Set Name="SERVICE_CONFIG_PRESHUTDOWN_INFO"         Value="7" />
+                <Set Name="SERVICE_CONFIG_TRIGGER_INFO"             Value="8" />
+                <Set Name="SERVICE_CONFIG_PREFERRED_NODE"           Value="9" />
+            </Enum>
+        </Variable>
+
+        <!-- [SCManagerAccess] -->
+        <Variable Name="[SCManagerAccess]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="GENERIC_READ"                    Value="0x80000000" />
+                <Set Name="GENERIC_WRITE"                   Value="0x40000000" />
+                <Set Name="GENERIC_EXECUTE"                 Value="0x20000000" />
+                <Set Name="SC_MANAGER_CONNECT"              Value="0x0001" />
+                <Set Name="SC_MANAGER_CREATE_SERVICE"       Value="0x0002" />
+                <Set Name="SC_MANAGER_ENUMERATE_SERVICE"    Value="0x0004" />
+                <Set Name="SC_MANAGER_LOCK"                 Value="0x0008" />
+                <Set Name="SC_MANAGER_QUERY_LOCK_STATUS"    Value="0x0010" />
+                <Set Name="SC_MANAGER_MODIFY_BOOT_CONFIG"   Value="0x0020" />
+                <Set Name="SC_MANAGER_ALL_ACCESS"           Value="0xF003F" />
+            </Flag>
+        </Variable>
+
+        <!-- [ServiceAccess] -->
+        <Variable Name="[ServiceAccess]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="SERVICE_QUERY_CONFIG"            Value="0x0001" />
+                <Set Name="SERVICE_CHANGE_CONFIG"           Value="0x0002" />
+                <Set Name="SERVICE_QUERY_STATUS"            Value="0x0004" />
+                <Set Name="SERVICE_ENUMERATE_DEPENDENTS"    Value="0x0008" />
+                <Set Name="SERVICE_START"                   Value="0x0010" />
+                <Set Name="SERVICE_STOP"                    Value="0x0020" />
+                <Set Name="SERVICE_PAUSE_CONTINUE"          Value="0x0040" />
+                <Set Name="SERVICE_INTERROGATE"             Value="0x0080" />
+                <Set Name="SERVICE_USER_DEFINED_CONTROL"    Value="0x0100" />
+                <Set Name="SERVICE_ALL_ACCESS"              Value="0xF01FF" />
+                <Set Name="ACCESS_SYSTEM_SECURITY"          Value="0x01000000" />
+                <Set Name="DELETE"                          Value="0x00010000" />
+                <Set Name="READ_CONTROL"                    Value="0x00020000" />
+                <Set Name="WRITE_DAC"                       Value="0x00040000" />
+                <Set Name="WRITE_OWNER"                     Value="0x00080000" />
+                <Set Name="GENERIC_READ"                    Value="0x80000000" />
+                <Set Name="GENERIC_WRITE"                   Value="0x40000000" />
+                <Set Name="GENERIC_EXECUTE"                 Value="0x20000000" />
+                <Set Name="MAXIMUM_ALLOWED"                 Value="0x02000000" />
+            </Flag>
+        </Variable>
+
+        <!-- [ServiceControl] -->
+        <Variable Name="[ServiceControl]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="SERVICE_CONTROL_STOP"                    Value="0x00000001" />
+                <Set Name="SERVICE_CONTROL_PAUSE"                   Value="0x00000002" />
+                <Set Name="SERVICE_CONTROL_CONTINUE"                Value="0x00000003" />
+                <Set Name="SERVICE_CONTROL_INTERROGATE"             Value="0x00000004" />
+                <Set Name="SERVICE_CONTROL_SHUTDOWN"                Value="0x00000005" />
+                <Set Name="SERVICE_CONTROL_PARAMCHANGE"             Value="0x00000006" />
+                <Set Name="SERVICE_CONTROL_NETBINDADD"              Value="0x00000007" />
+                <Set Name="SERVICE_CONTROL_NETBINDREMOVE"           Value="0x00000008" />
+                <Set Name="SERVICE_CONTROL_NETBINDENABLE"           Value="0x00000009" />
+                <Set Name="SERVICE_CONTROL_NETBINDDISABLE"          Value="0x0000000A" />
+                <Set Name="SERVICE_CONTROL_DEVICEEVENT"             Value="0x0000000B" />
+                <Set Name="SERVICE_CONTROL_HARDWAREPROFILECHANGE"   Value="0x0000000C" />
+                <Set Name="SERVICE_CONTROL_POWEREVENT"              Value="0x0000000D" />
+                <Set Name="SERVICE_CONTROL_SESSIONCHANGE"           Value="0x0000000E" />
+                <Set Name="SERVICE_CONTROL_PRESHUTDOWN"             Value="0x0000000F" />
+            </Enum>
+        </Variable>
+
+        <!-- [ServiceAcceptControls] -->
+        <Variable Name="[ServiceAcceptControls]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="SERVICE_ACCEPT_STOP"                    	Value="0x00000001" />
+                <Set Name="SERVICE_ACCEPT_PAUSE_CONTINUE"          	Value="0x00000002" />
+                <Set Name="SERVICE_ACCEPT_SHUTDOWN"                	Value="0x00000004" />
+                <Set Name="SERVICE_ACCEPT_PARAMCHANGE"             	Value="0x00000008" />
+                <Set Name="SERVICE_ACCEPT_NETBINDCHANGE"           	Value="0x00000010" />
+                <Set Name="SERVICE_ACCEPT_HARDWAREPROFILECHANGE"    Value="0x00000020" />
+                <Set Name="SERVICE_ACCEPT_POWEREVENT"              	Value="0x00000040" />
+                <Set Name="SERVICE_ACCEPT_SESSIONCHANGE"           	Value="0x00000080" />
+                <Set Name="SERVICE_ACCEPT_PRESHUTDOWN"             	Value="0x00000100" />
+                <Set Name="SERVICE_ACCEPT_TIMECHANGE"              	Value="0x00000200" />
+                <Set Name="SERVICE_ACCEPT_TRIGGEREVENT"            	Value="0x00000400" />
+            </Flag>
+        </Variable>
+
+        <!-- [ServiceNotifyMask] -->
+        <Variable Name="[ServiceNotifyMask]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="SERVICE_NOTIFY_STOPPED"              Value="0x00000001" />
+                <Set Name="SERVICE_NOTIFY_START_PENDING"        Value="0x00000002" />
+                <Set Name="SERVICE_NOTIFY_STOP_PENDING"         Value="0x00000004" />
+                <Set Name="SERVICE_NOTIFY_RUNNING"              Value="0x00000008" />
+                <Set Name="SERVICE_NOTIFY_CONTINUE_PENDING"     Value="0x00000010" />
+                <Set Name="SERVICE_NOTIFY_PAUSE_PENDING"        Value="0x00000020" />
+                <Set Name="SERVICE_NOTIFY_PAUSED"               Value="0x00000040" />
+                <Set Name="SERVICE_NOTIFY_CREATED"              Value="0x00000080" />
+                <Set Name="SERVICE_NOTIFY_DELETED"              Value="0x00000100" />
+                <Set Name="SERVICE_NOTIFY_DELETE_PENDING"       Value="0x00000200" />
+            </Flag>
+        </Variable>
+
+        <!-- [ServiceFlags] -->
+        <Variable Name="[ServiceFlags]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="SERVICE_RUNS_IN_SYSTEM_PROCESS" Value="0x00000001" />
+            </Flag>
+        </Variable>
+
+        <!-- SERVICE_STATUS_PROCESS -->
+        <Variable Name="SERVICE_STATUS_PROCESS" Type="Struct">
+            <Field Type="[ServiceType]"             Name="dwServiceType" />
+            <Field Type="[ServiceCurrentState]"     Name="dwCurrentState" />
+            <Field Type="[ServiceAcceptControls]"   Name="dwControlsAccepted" />
+            <Field Type="DWORD"                     Name="dwWin32ExitCode" />
+            <Field Type="DWORD"                     Name="dwServiceSpecificExitCode" />
+            <Field Type="DWORD"                     Name="dwCheckPoint" />
+            <Field Type="DWORD"                     Name="dwWaitHint" />
+            <Field Type="DWORD"                     Name="dwProcessId" />
+            <Field Type="[ServiceFlags]"            Name="dwServiceFlags" />
+        </Variable>
+
+        <!-- SERVICE_NOTIFY -->
+        <Variable Name="SERVICE_NOTIFY" Type="Struct">
+            <Field Type="DWORD"                     Name="dwVersion" />
+            <Field Type="PFN_SC_NOTIFY_CALLBACK"    Name="pfnNotifyCallback" />
+            <Field Type="PVOID"                     Name="pContext" />
+            <Field Type="DWORD"                     Name="dwNotificationStatus" />
+            <Field Type="SERVICE_STATUS_PROCESS"    Name="ServiceStatus" />
+            <Field Type="DWORD"                     Name="dwNotificationTriggered" />
+            <Field Type="LPTSTR"                    Name="pszServiceNames" />
+        </Variable>
+        <Variable Name="PSERVICE_NOTIFY" Type="Pointer" Base="SERVICE_NOTIFY" />
+
+        <!-- SERVICE_NOTIFYA -->
+        <Variable Name="SERVICE_NOTIFYA" Type="Struct">
+            <Field Type="DWORD"                     Name="dwVersion" />
+            <Field Type="PFN_SC_NOTIFY_CALLBACK"    Name="pfnNotifyCallback" />
+            <Field Type="PVOID"                     Name="pContext" />
+            <Field Type="DWORD"                     Name="dwNotificationStatus" />
+            <Field Type="SERVICE_STATUS_PROCESS"    Name="ServiceStatus" />
+            <Field Type="DWORD"                     Name="dwNotificationTriggered" />
+            <Field Type="LPSTR"                     Name="pszServiceNames" />
+        </Variable>
+        <Variable Name="PSERVICE_NOTIFYA" Type="Pointer" Base="SERVICE_NOTIFYA" />
+
+        <!-- SERVICE_STATUS -->
+        <Variable Name="SERVICE_STATUS" Type="Struct">
+            <Field Type="[ServiceType]"   	        Name="dwServiceType" />
+            <Field Type="[ServiceCurrentState]"     Name="dwCurrentState" />
+            <Field Type="[ServiceAcceptControls]"   Name="dwControlsAccepted" />
+            <Field Type="DWORD"   	                Name="dwWin32ExitCode" />
+            <Field Type="DWORD"   	                Name="dwServiceSpecificExitCode" />
+            <Field Type="DWORD"   	                Name="dwCheckPoint" />
+            <Field Type="DWORD"   	                Name="dwWaitHint" />
+        </Variable>
+        <Variable Name="LPSERVICE_STATUS" Type="Pointer" Base="SERVICE_STATUS" />
+
+        <!-- SERVICE_TABLE_ENTRY -->
+        <Variable Name="LPSERVICE_MAIN_FUNCTION" Type="Alias" Base="LPVOID" />
+        <Variable Name="SERVICE_TABLE_ENTRY" Type="Struct">
+            <Field Type="LPTSTR"                    Name="lpServiceName" />
+            <Field Type="LPSERVICE_MAIN_FUNCTION"   Name="lpServiceProc" />
+        </Variable>
+        <Variable Name="const SERVICE_TABLE_ENTRY*" Type="Pointer" Base="SERVICE_TABLE_ENTRY" />
+
+        <!-- ENUM_SERVICE_STATUS -->
+        <Variable Name="ENUM_SERVICE_STATUS" Type="Struct">
+            <Field Type="LPTSTR"            Name="lpServiceName" />
+            <Field Type="LPTSTR"            Name="lpDisplayName" />
+            <Field Type="SERVICE_STATUS"    Name="ServiceStatus" />
+        </Variable>
+        <Variable Name="LPENUM_SERVICE_STATUS" Type="Pointer" Base="ENUM_SERVICE_STATUS" />
+
+        <!-- QUERY_SERVICE_CONFIG -->
+        <Variable Name="QUERY_SERVICE_CONFIG" Type="Struct">
+            <Field Type="[ServiceType]"   	    Name="dwServiceType" />
+            <Field Type="[ServiceStartType]"   	Name="dwStartType" />
+            <Field Type="[ServiceErrorControl]" Name="dwErrorControl" />
+            <Field Type="LPTSTR"            	Name="lpBinaryPathName" />
+            <Field Type="LPTSTR"            	Name="lpLoadOrderGroup" />
+            <Field Type="DWORD"   	            Name="dwTagId" />
+            <Field Type="LPTSTR"            	Name="lpDependencies" />
+            <Field Type="LPTSTR"            	Name="lpServiceStartName" />
+            <Field Type="LPTSTR"            	Name="lpDisplayName" />
+        </Variable>
+        <Variable Name="LPQUERY_SERVICE_CONFIG" Type="Pointer" Base="QUERY_SERVICE_CONFIG" />
+
+        <!-- QUERY_SERVICE_LOCK_STATUS -->
+        <Variable Name="QUERY_SERVICE_LOCK_STATUS" Type="Struct">
+            <Field Type="DWORD"   	Name="fIsLocked" />
+            <Field Type="LPTSTR"   	Name="lpLockOwner" />
+            <Field Type="DWORD"   	Name="dwLockDuration" />
+        </Variable>
+        <Variable Name="LPQUERY_SERVICE_LOCK_STATUS" Type="Pointer" Base="QUERY_SERVICE_LOCK_STATUS" />
+
+    </Headers>
+</ApiMonitor>

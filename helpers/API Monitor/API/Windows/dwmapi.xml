@@ -1,0 +1,341 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2012, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Include Filename="Headers\gdi.h.xml" />
+    <Module Name="dwmapi.dll" CallingConvention="STDCALL" ErrorFunc="HRESULT" OnlineHelp="MSDN">
+
+        <!-- Variables -->
+        <Variable Name="DWM_FRAME_COUNT"    Type="Alias"    Base="ULONGLONG" />
+        <Variable Name="QPC_TIME"           Type="Alias"    Base="ULONGLONG" />
+        <Variable Name="HTHUMBNAIL"         Type="Alias"    Base="HANDLE" />
+        <Variable Name="PHTHUMBNAIL"        Type="Pointer"  Base="HTHUMBNAIL" />
+
+        <!-- [DWM_BLURBEHIND_Flags] -->
+        <Variable Name="[DWM_BLURBEHIND_Flags]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="DWM_BB_ENABLE"                   Value="0x00000001" />
+                <Set Name="DWM_BB_BLURREGION"               Value="0x00000002" />
+                <Set Name="DWM_BB_TRANSITIONONMAXIMIZED"    Value="0x00000004" />
+            </Flag>
+        </Variable>
+
+        <!-- DWM_BLURBEHIND -->
+        <Variable Name="DWM_BLURBEHIND" Type="Struct" Pack="1">
+            <Field Type="[DWM_BLURBEHIND_Flags]"    Name="dwFlags" />
+            <Field Type="BOOL" 	                    Name="fEnable" />
+            <Field Type="HRGN" 	                    Name="hRgnBlur" />
+            <Field Type="BOOL" 	                    Name="fTransitionOnMaximized" />
+        </Variable>
+        <Variable Name="const DWM_BLURBEHIND*" Type="Pointer" Base="DWM_BLURBEHIND" />
+
+        <!-- UNSIGNED_RATIO -->
+        <Variable Name="UNSIGNED_RATIO" Type="Struct" Pack="1">
+            <Field Type="UINT32" 	Name="uiNumerator" />
+            <Field Type="UINT32" 	Name="uiDenominator" />
+        </Variable>
+
+        <!-- DWM_TIMING_INFO -->
+        <Variable Name="DWM_TIMING_INFO" Type="Struct" Pack="1">
+            <Field Type="UINT32"                    Name="cbSize" />
+            <Field Type="UNSIGNED_RATIO"            Name="rateRefresh" />
+            <Field Type="QPC_TIME"                  Name="qpcRefreshPeriod" />
+            <Field Type="UNSIGNED_RATIO"            Name="rateCompose" />
+            <Field Type="QPC_TIME"                  Name="qpcVBlank" />
+            <Field Type="DWM_FRAME_COUNT"           Name="cRefresh" />
+            <Field Type="UINT"                      Name="cDXRefresh" />
+            <Field Type="QPC_TIME"                  Name="qpcCompose" />
+            <Field Type="DWM_FRAME_COUNT"           Name="cFrame" />
+            <Field Type="UINT"                      Name="cDXPresent" />
+            <Field Type="DWM_FRAME_COUNT"           Name="cRefreshFrame" />
+            <Field Type="DWM_FRAME_COUNT"           Name="cFrameSubmitted" />
+            <Field Type="UINT"                      Name="cDXPresentSubmitted" />
+            <Field Type="DWM_FRAME_COUNT"           Name="cFrameConfirmed" />
+            <Field Type="UINT"                      Name="cDXPresentConfirmed" />
+            <Field Type="DWM_FRAME_COUNT"           Name="cRefreshConfirmed" />
+            <Field Type="UINT"                      Name="cDXRefreshConfirmed" />
+            <Field Type="DWM_FRAME_COUNT"           Name="cFramesLate" />
+            <Field Type="UINT"                      Name="cFramesOutstanding" />
+            <Field Type="DWM_FRAME_COUNT"           Name="cFrameDisplayed" />
+            <Field Type="QPC_TIME"                  Name="qpcFrameDisplayed" />
+            <Field Type="DWM_FRAME_COUNT"           Name="cRefreshFrameDisplayed" />
+            <Field Type="DWM_FRAME_COUNT"           Name="cFrameComplete" />
+            <Field Type="QPC_TIME"                  Name="qpcFrameComplete" />
+            <Field Type="DWM_FRAME_COUNT"           Name="cFramePending" />
+            <Field Type="QPC_TIME"                  Name="qpcFramePending" />
+            <Field Type="DWM_FRAME_COUNT"           Name="cFramesDisplayed" />
+            <Field Type="DWM_FRAME_COUNT"           Name="cFramesComplete" />
+            <Field Type="DWM_FRAME_COUNT"           Name="cFramesPending" />
+            <Field Type="DWM_FRAME_COUNT"           Name="cFramesAvailable" />
+            <Field Type="DWM_FRAME_COUNT"           Name="cFramesDropped" />
+            <Field Type="DWM_FRAME_COUNT"           Name="cFramesMissed" />
+            <Field Type="DWM_FRAME_COUNT"           Name="cRefreshNextDisplayed" />
+            <Field Type="DWM_FRAME_COUNT"           Name="cRefreshNextPresented" />
+            <Field Type="DWM_FRAME_COUNT"           Name="cRefreshesDisplayed" />
+            <Field Type="DWM_FRAME_COUNT"           Name="cRefreshesPresented" />
+            <Field Type="DWM_FRAME_COUNT"           Name="cRefreshStarted" />
+            <Field Type="ULONGLONG"                 Name="cPixelsReceived" />
+            <Field Type="ULONGLONG"                 Name="cPixelsDrawn" />
+            <Field Type="DWM_FRAME_COUNT"           Name="cBuffersEmpty" />
+        </Variable>
+        <Variable Name="DWM_TIMING_INFO*" Type="Pointer" Base="DWM_TIMING_INFO" />
+
+        <!-- MilMatrix3x2D -->
+        <Variable Name="MilMatrix3x2D" Type="Struct" Pack="1">
+            <Field Type="DOUBLE" 	Name="S_11" />
+            <Field Type="DOUBLE" 	Name="S_12" />
+            <Field Type="DOUBLE" 	Name="S_21" />
+            <Field Type="DOUBLE" 	Name="S_22" />
+            <Field Type="DOUBLE" 	Name="DX" />
+            <Field Type="DOUBLE" 	Name="DY" />
+        </Variable>
+        <Variable Name="MilMatrix3x2D*" Type="Pointer" Base="MilMatrix3x2D" />
+
+        <!-- DWM_SOURCE_FRAME_SAMPLING -->
+        <Variable Name="DWM_SOURCE_FRAME_SAMPLING" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="DWM_SOURCE_FRAME_SAMPLING_POINT"     Value="0" />
+                <Set Name="DWM_SOURCE_FRAME_SAMPLING_COVERAGE"  Value="1" />
+            </Enum>
+        </Variable>
+
+        <!-- DWM_PRESENT_PARAMETERS -->
+        <Variable Name="DWM_PRESENT_PARAMETERS" Type="Struct" Pack="1">
+            <Field Type="UINT32"          	            Name="cbSize" />
+            <Field Type="BOOL"            	            Name="fQueue" />
+            <Field Type="DWM_FRAME_COUNT" 	            Name="cRefreshStart" />
+            <Field Type="UINT"            	            Name="cBuffer" />
+            <Field Type="BOOL"            	            Name="fUseSourceRate" />
+            <Field Type="UNSIGNED_RATIO"  	            Name="rateSource" />
+            <Field Type="UINT"            	            Name="cRefreshesPerFrame" />
+            <Field Type="DWM_SOURCE_FRAME_SAMPLING"  	Name="eSampling" />
+        </Variable>
+        <Variable Name="DWM_PRESENT_PARAMETERS*" Type="Pointer" Base="DWM_PRESENT_PARAMETERS" />
+
+        <!-- [DWM_TNP] -->
+        <Variable Name="[DWM_TNP]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="DWM_TNP_RECTDESTINATION"         Value="0x00000001" />
+                <Set Name="DWM_TNP_RECTSOURCE"              Value="0x00000002" />
+                <Set Name="DWM_TNP_OPACITY"                 Value="0x00000004" />
+                <Set Name="DWM_TNP_VISIBLE"                 Value="0x00000008" />
+                <Set Name="DWM_TNP_SOURCECLIENTAREAONLY"    Value="0x00000010" />
+            </Flag>
+        </Variable>
+
+        <!-- DWM_THUMBNAIL_PROPERTIES -->
+        <Variable Name="DWM_THUMBNAIL_PROPERTIES" Type="Struct" Pack="1">
+            <Field Type="[DWM_TNP]"     Name="dwFlags" />
+            <Field Type="RECT"          Name="rcDestination" />
+            <Field Type="RECT"          Name="rcSource" />
+            <Field Type="BYTE"          Name="opacity" />
+            <Field Type="BOOL"          Name="fVisible" />
+            <Field Type="BOOL"          Name="fSourceClientAreaOnly" />
+        </Variable>
+        <Variable Name="const DWM_THUMBNAIL_PROPERTIES*" Type="Pointer" Base="DWM_THUMBNAIL_PROPERTIES" />
+
+        <!-- GESTURE_TYPE -->
+        <Variable Name="GESTURE_TYPE" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="GT_PEN_TAP"                      Value="0" />
+                <Set Name="GT_PEN_DOUBLETAP"                Value="1" />
+                <Set Name="GT_PEN_RIGHTTAP"                 Value="2" />
+                <Set Name="GT_PEN_PRESSANDHOLD"             Value="3" />
+                <Set Name="GT_PEN_PRESSANDHOLDABORT"        Value="4" />
+                <Set Name="GT_TOUCH_TAP"                    Value="5" />
+                <Set Name="GT_TOUCH_DOUBLETAP"              Value="6" />
+                <Set Name="GT_TOUCH_RIGHTTAP"               Value="7" />
+                <Set Name="GT_TOUCH_PRESSANDHOLD"           Value="8" />
+                <Set Name="GT_TOUCH_PRESSANDHOLDABORT"      Value="9" />
+                <Set Name="GT_TOUCH_PRESSANDTAP"            Value="10" />
+            </Enum>
+        </Variable>
+
+        <!-- DWM_SHOWCONTACT -->
+        <Variable Name="DWM_SHOWCONTACT" Type="Alias" Base="UINT">
+            <Flag>
+                <Set Name="DWMSC_DOWN"          Value="0x00000001" />
+                <Set Name="DWMSC_UP"            Value="0x00000002" />
+                <Set Name="DWMSC_DRAG"          Value="0x00000004" />
+                <Set Name="DWMSC_HOLD"          Value="0x00000008" />
+                <Set Name="DWMSC_PENBARREL"     Value="0x00000010" />
+                <Set Name="DWMSC_NONE"          Value="0x00000000" />
+                <Set Name="DWMSC_ALL"           Value="0xFFFFFFFF" />
+            </Flag>
+        </Variable>
+
+        <!-- DWMTRANSITION_OWNEDWINDOW_TARGET -->
+        <Variable Name="DWMTRANSITION_OWNEDWINDOW_TARGET" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="DWMTRANSITION_OWNEDWINDOW_NULL"          Value="-1" />
+                <Set Name="DWMTRANSITION_OWNEDWINDOW_REPOSITION"    Value="0" />
+            </Enum>
+        </Variable>
+
+        <!-- Desktop Window Manager (DWM) -->
+        <Category Name="Windows Application UI Development/Desktop Window Manager (DWM)" />
+        <Api Name="DwmAttachMilContent">
+            <Param Type="HWND" Name="hwnd" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DwmDefWindowProc">
+            <Param Type="HWND" Name="hwnd" />
+            <Param Type="[WinMsg]" Name="msg" />
+            <Param Type="WPARAM" Name="wParam" />
+            <Param Type="LPARAM" Name="lParam" />
+            <Param Type="LRESULT*" Name="plResult" />
+            <Return Type="BOOL" />
+            <Success />
+        </Api>
+        <Api Name="DwmDetachMilContent">
+            <Param Type="HWND" Name="hwnd" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DwmEnableBlurBehindWindow">
+            <Param Type="HWND" Name="hWnd" />
+            <Param Type="const DWM_BLURBEHIND*" Name="pBlurBehind" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DwmEnableComposition" Ordinal="102">
+            <Param Type="UINT" Name="uCompositionAction" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DwmEnableMMCSS">
+            <Param Type="BOOL" Name="fEnableMMCSS" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DwmExtendFrameIntoClientArea">
+            <Param Type="HWND" Name="hWnd" />
+            <Param Type="const MARGINS*" Name="pMarInset" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DwmFlush">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DwmGetColorizationColor">
+            <Param Type="DWORD*" Name="pcrColorization" />
+            <Param Type="BOOL*" Name="pfOpaqueBlend" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DwmGetCompositionTimingInfo">
+            <Param Type="HWND" Name="hwnd" />
+            <Param Type="DWM_TIMING_INFO*" Name="pTimingInfo" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DwmGetGraphicsStreamClient">
+            <Param Type="UINT" Name="uIndex" />
+            <Param Type="UUID*" Name="pClientUuid" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DwmGetGraphicsStreamTransformHint">
+            <Param Type="UINT" Name="uIndex" />
+            <Param Type="MilMatrix3x2D*" Name="pTransform" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DwmGetTransportAttributes">
+            <Param Type="BOOL*" Name="pfIsRemoting" />
+            <Param Type="BOOL*" Name="pfIsConnected" />
+            <Param Type="DWORD*" Name="pDwGeneration" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DwmGetWindowAttribute">
+            <Param Type="HWND" Name="hwnd" />
+            <Param Type="[DwmWindowAttr]" Name="dwAttribute" />
+            <Param Type="PVOID" Name="pvAttribute" PostLength="cbAttribute" />
+            <Param Type="DWORD" Name="cbAttribute" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DwmInvalidateIconicBitmaps">
+            <Param Type="HWND" Name="hwnd" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DwmIsCompositionEnabled">
+            <Param Type="BOOL*" Name="pfEnabled" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DwmModifyPreviousDxFrameDuration">
+            <Param Type="HWND" Name="hwnd" />
+            <Param Type="INT" Name="cRefreshes" />
+            <Param Type="BOOL" Name="fRelative" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DwmQueryThumbnailSourceSize">
+            <Param Type="HTHUMBNAIL" Name="hThumbnail" />
+            <Param Type="PSIZE" Name="pSize" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DwmRenderGesture">
+            <Param Type="GESTURE_TYPE" Name="gt" />
+            <Param Type="UINT" Name="cContacts" />
+            <Param Type="DWORD*" Name="pdwPointerID" />
+            <Param Type="POINT*" Name="pPoints" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DwmSetDxFrameDuration">
+            <Param Type="HWND" Name="hwnd" />
+            <Param Type="INT" Name="cRefreshes" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DwmSetIconicLivePreviewBitmap">
+            <Param Type="HWND" Name="hwnd" />
+            <Param Type="HBITMAP" Name="hbmp" />
+            <Param Type="POINT*" Name="pptClient" />
+            <Param Type="DWORD" Name="dwSITFlags" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DwmSetIconicThumbnail">
+            <Param Type="HWND" Name="hwnd" />
+            <Param Type="HBITMAP" Name="hbmp" />
+            <Param Type="DWORD" Name="dwSITFlags" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DwmSetPresentParameters">
+            <Param Type="HWND" Name="hwnd" />
+            <Param Type="DWM_PRESENT_PARAMETERS*" Name="pPresentParams" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DwmSetWindowAttribute">
+            <Param Type="HWND" Name="hwnd" />
+            <Param Type="[DwmWindowAttr]" Name="dwAttribute" />
+            <Param Type="LPCVOID" Name="pvAttribute" Length="cbAttribute" />
+            <Param Type="DWORD" Name="cbAttribute" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DwmShowContact">
+            <Param Type="DWORD" Name="dwPointerID" />
+            <Param Type="DWM_SHOWCONTACT" Name="eShowContact" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DwmTetherContact">
+            <Param Type="DWORD" Name="dwPointerID" />
+            <Param Type="BOOL" Name="fEnable" />
+            <Param Type="POINT" Name="ptTether" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DwmTransitionOwnedWindow">
+            <Param Type="HWND" Name="hwnd" />
+            <Param Type="DWMTRANSITION_OWNEDWINDOW_TARGET" Name="target" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DwmUnregisterThumbnail">
+            <Param Type="HTHUMBNAIL" Name="hThumbnailId" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DwmRegisterThumbnail">
+            <Param Type="HWND" Name="hwndDestination" />
+            <Param Type="HWND*" Name="hwndSource" />
+            <Param Type="PHTHUMBNAIL" Name="phThumbnailId" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DwmUpdateThumbnailProperties">
+            <Param Type="HTHUMBNAIL" Name="hThumbnailId" />
+            <Param Type="const DWM_THUMBNAIL_PROPERTIES*" Name="ptnProperties" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Module>
+</ApiMonitor>

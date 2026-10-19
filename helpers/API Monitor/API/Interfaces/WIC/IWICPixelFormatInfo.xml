@@ -1,0 +1,34 @@
+<!--
+    API Monitor Definitions
+    (c) 2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\WIC\IWICComponentInfo.xml" />
+    <Interface Name="IWICPixelFormatInfo" Id="{E8EDA601-3D48-431a-AB44-69059BE88BBE}" BaseInterface="IWICComponentInfo" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Graphics and Gaming/Windows Imaging Component (WIC)">
+        <!-- Methods -->
+        <Api Name="GetFormatGUID">
+            <Param Type="GUID*" Name="pFormat" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="GetColorContext">
+            <Param Type="IWICColorContext**" Name="ppIColorContext" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="GetBitsPerPixel">
+            <Param Type="UINT*" Name="puiBitsPerPixel" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="GetChannelCount">
+            <Param Type="UINT*" Name="puiChannelCount" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="GetChannelMask">
+            <Param Type="UINT" Name="uiChannelIndex" />
+            <Param Type="UINT" Name="cbMaskBuffer" />
+            <Param Type="BYTE*" Name="pbMaskBuffer" />
+            <Param Type="UINT*" Name="pcbActual" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+    </Interface>
+</ApiMonitor>

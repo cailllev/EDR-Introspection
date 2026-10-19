@@ -1,0 +1,91 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Include Filename="MAPI\mapi.h.xml" />
+    <Interface Name="IMAPIProp" Id="{00020303-0000-0000-C000-000000000046}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Office Development/Microsoft Office/Outlook/Outlook MAPI/Interfaces">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="GetLastError">
+            <Param Type="HRESULT" Name="hResult" />
+            <Param Type="ULONG" Name="ulFlags" />
+            <Param Type="LPMAPIERROR*" Name="lppMAPIError" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SaveChanges">
+            <Param Type="ULONG" Name="ulFlags" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetProps">
+            <Param Type="LPSPropTagArray" Name="lpPropTagArray" />
+            <Param Type="ULONG" Name="ulFlags" />
+            <Param Type="ULONG*" Name="lpcValues" />
+            <Param Type="LPSPropValue*" Name="lppPropArray" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetPropList">
+            <Param Type="ULONG" Name="ulFlags" />
+            <Param Type="LPSPropTagArray*" Name="lppPropTagArray" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="OpenProperty">
+            <Param Type="ULONG" Name="ulPropTag" />
+            <Param Type="LPCIID" Name="lpiid" />
+            <Param Type="ULONG" Name="ulInterfaceOptions" />
+            <Param Type="ULONG" Name="ulFlags" />
+            <Param Type="LPUNKNOWN*" Name="lppUnk" InterfaceId="lpiid" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetProps">
+            <Param Type="ULONG" Name="cValues" />
+            <Param Type="LPSPropValue" Name="lpPropArray" />
+            <Param Type="LPSPropProblemArray*" Name="lppProblems" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DeleteProps">
+            <Param Type="LPSPropTagArray" Name="lpPropTagArray" />
+            <Param Type="LPSPropProblemArray*" Name="lppProblems" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CopyTo">
+            <Param Type="ULONG" Name="ciidExclude" />
+            <Param Type="LPCIID" Name="rgiidExclude" Count="ciidExclude" />
+            <Param Type="LPSPropTagArray" Name="lpExcludeProps" />
+            <Param Type="ULONG" Name="ulUIParam" />
+            <Param Type="LPMAPIPROGRESS" Name="lpProgress" />
+            <Param Type="LPCIID" Name="lpInterface" />
+            <Param Type="LPVOID" Name="lpDestObj" />
+            <Param Type="ULONG" Name="ulFlags" />
+            <Param Type="LPSPropProblemArray*" Name="lppProblems" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CopyProps">
+            <Param Type="LPSPropTagArray" Name="lpIncludeProps" />
+            <Param Type="ULONG" Name="ulUIParam" />
+            <Param Type="LPMAPIPROGRESS" Name="lpProgress" />
+            <Param Type="LPCIID" Name="lpInterface" />
+            <Param Type="LPVOID" Name="lpDestObj" />
+            <Param Type="ULONG" Name="ulFlags" />
+            <Param Type="LPSPropProblemArray*" Name="lppProblems" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetNamesFromIDs">
+            <Param Type="LPSPropTagArray*" Name="lppPropTags" />
+            <Param Type="LPGUID" Name="lpPropSetGuid" />
+            <Param Type="ULONG" Name="ulFlags" />
+            <Param Type="ULONG*" Name="lpcPropNames" />
+            <Param Type="LPMAPINAMEID**" Name="lpppPropNames" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetIDsFromNames">
+            <Param Type="ULONG" Name="cPropNames" />
+            <Param Type="LPMAPINAMEID*" Name="lppPropNames" />
+            <Param Type="ULONG" Name="ulFlags" />
+            <Param Type="LPSPropTagArray*" Name="lppPropTags" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

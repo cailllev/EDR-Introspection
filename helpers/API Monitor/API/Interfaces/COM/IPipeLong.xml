@@ -1,0 +1,23 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IPipeLong" Id="{DB2F3ACC-2F86-11d1-8E04-00C04FB9989A}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Component Object Model (COM)/COM Fundamentals/Interfaces">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="Pull">
+            <Param Type="LONG*" Name="buf" />
+            <Param Type="ULONG" Name="cRequest" />
+            <Param Type="ULONG*" Name="pcReturned" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Push">
+            <Param Type="LONG*" Name="buf" />
+            <Param Type="ULONG" Name="cSent" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

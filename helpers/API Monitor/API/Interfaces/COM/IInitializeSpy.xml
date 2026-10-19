@@ -1,0 +1,32 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Include Filename="Headers\ole.h.xml" />
+    <Interface Name="IInitializeSpy" Id="{00000034-0000-0000-C000-000000000046}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Component Object Model (COM)/COM Fundamentals/Interfaces">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="PreInitialize">
+            <Param Type="[COINIT_FLAG]" Name="dwCoInit" />
+            <Param Type="DWORD" Name="dwCurThreadAptRefs" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="PostInitialize">
+            <Param Type="HRESULT" Name="hrCoInit" />
+            <Param Type="[COINIT_FLAG]" Name="dwCoInit" />
+            <Param Type="DWORD" Name="dwNewThreadAptRefs" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="PreUninitialize">
+            <Param Type="DWORD" Name="dwCurThreadAptRefs" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="PostUninitialize">
+            <Param Type="DWORD" Name="dwNewThreadAptRefs" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

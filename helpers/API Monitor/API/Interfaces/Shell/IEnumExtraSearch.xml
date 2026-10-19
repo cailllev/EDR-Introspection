@@ -1,0 +1,29 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IEnumExtraSearch" Id="{0E700BE1-9DB6-11d1-A1CE-00C04FD75D13}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Windows Environment Development/Windows Shell/Interfaces">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="Next">
+            <Param Type="ULONG" Name="celt" />
+            <Param Type="EXTRASEARCH*" Name="rgelt" PostCount="celt" />
+            <Param Type="ULONG*" Name="pceltFetched" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Skip">
+            <Param Type="ULONG" Name="celt" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Reset">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Clone">
+            <Param Type="IEnumExtraSearch**" Name="ppenum" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

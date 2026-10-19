@@ -1,0 +1,29 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IDistributorNotify" Id="{56a868af-0ad4-11ce-b03a-0020af0ba770}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/DirectShow">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="Stop">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Pause">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Run">
+            <Param Type="REFERENCE_TIME" Name="tStart" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetSyncSource">
+            <Param Type="IReferenceClock*" Name="pClock" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="NotifyGraphChange">
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

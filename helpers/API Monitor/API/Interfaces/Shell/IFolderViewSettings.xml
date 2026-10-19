@@ -1,0 +1,45 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IFolderViewSettings" Id="{ae8c987d-8797-4ed3-be72-2a47dd938db0}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Windows Environment Development/Windows Shell/Interfaces">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="GetColumnPropertyList">
+            <Param Type="REFIID" Name="riid" />
+            <Param Type="void**" Name="ppv" InterfaceId="riid" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetGroupByProperty">
+            <Param Type="PROPERTYKEY*" Name="pkey" />
+            <Param Type="BOOL*" Name="pfGroupAscending" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetViewMode">
+            <Param Type="FOLDERLOGICALVIEWMODE*" Name="plvm" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetIconSize">
+            <Param Type="UINT*" Name="puIconSize" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetFolderFlags">
+            <Param Type="FOLDERFLAGS*" Name="pfolderMask" />
+            <Param Type="FOLDERFLAGS*" Name="pfolderFlags" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetSortColumns">
+            <Param Type="SORTCOLUMN*" Name="rgSortColumns" PostCount="pcColumnsOut" />
+            <Param Type="UINT" Name="cColumnsIn" />
+            <Param Type="UINT*" Name="pcColumnsOut" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetGroupSubsetCount">
+            <Param Type="UINT*" Name="pcVisibleRows" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

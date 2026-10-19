@@ -1,0 +1,21 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="INewMenuClient" Id="{dcb07fdc-3bb5-451c-90be-966644fed7b0}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Windows Environment Development/Windows Shell/Interfaces">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="IncludeItems">
+            <Param Type="NMCII_FLAGS*" Name="pflags" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SelectAndEditItem">
+            <Param Type="PCIDLIST_ABSOLUTE" Name="pidlItem" />
+            <Param Type="NMCSAEI_FLAGS" Name="flags" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

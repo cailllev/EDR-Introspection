@@ -1,0 +1,28 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IComThreadingInfo" Id="{000001ce-0000-0000-C000-000000000046}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Component Object Model (COM)/COM Fundamentals/Interfaces">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="GetCurrentApartmentType">
+            <Param Type="APTTYPE*" Name="pAptType" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetCurrentThreadType">
+            <Param Type="THDTYPE*" Name="pThreadType" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetCurrentLogicalThreadId">
+            <Param Type="GUID*" Name="pguidLogicalThreadId" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetCurrentLogicalThreadId">
+            <Param Type="REFGUID" Name="rguid" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

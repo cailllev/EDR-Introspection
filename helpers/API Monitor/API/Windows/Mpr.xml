@@ -1,0 +1,321 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Module Name="Mpr.dll" CallingConvention="STDCALL" ErrorFunc="GetLastError" ErrorIsReturnValue="True" OnlineHelp="MSDN">
+        
+        <!-- NETCONNECTINFOSTRUCT -->
+        <Variable Name="NETCONNECTINFOSTRUCT" Type="Struct">
+            <Field Type="DWORD" 	Name="cbStructure" />
+            <Field Type="DWORD" 	Name="dwFlags" />
+            <Field Type="DWORD" 	Name="dwSpeed" />
+            <Field Type="DWORD" 	Name="dwDelay" />
+            <Field Type="DWORD" 	Name="dwOptDataSize" />
+        </Variable>
+        <Variable Name="LPNETCONNECTINFOSTRUCT" Type="Pointer" Base="NETCONNECTINFOSTRUCT" />
+
+        <!-- DISCDLGSTRUCT -->
+        <Variable Name="DISCDLGSTRUCT" Type="Struct">
+            <Field Type="DWORD"     Name="cbStructure" />
+            <Field Type="HWND"      Name="hwndOwner" />
+            <Field Type="LPTSTR"    Name="lpLocalName" />
+            <Field Type="LPTSTR"    Name="lpRemoteName" />
+            <Field Type="DWORD"     Name="dwFlags" />
+        </Variable>
+        <Variable Name="LPDISCDLGSTRUCT" Type="Pointer" Base="DISCDLGSTRUCT" />
+
+        <!-- NETINFOSTRUCT -->
+        <Variable Name="NETINFOSTRUCT" Type="Struct">
+            <Field Type="DWORD" 	Name="cbStructure" />
+            <Field Type="DWORD" 	Name="dwProviderVersion" />
+            <Field Type="DWORD" 	Name="dwStatus" />
+            <Field Type="DWORD" 	Name="dwCharacteristics" />
+            <Field Type="ULONG_PTR" Name="dwHandle" />
+            <Field Type="WORD"  	Name="wNetType" />
+            <Field Type="DWORD" 	Name="dwPrinters" />
+            <Field Type="DWORD"     Name="dwDrives" />
+        </Variable>
+        <Variable Name="LPNETINFOSTRUCT" Type="Pointer" Base="NETINFOSTRUCT" />
+
+        <!-- [ResourceScope] -->
+        <Variable Name="[ResourceScope]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="RESOURCE_CONNECTED"      Value="0x00000001" />
+                <Set Name="RESOURCE_GLOBALNET"      Value="0x00000002" />
+                <Set Name="RESOURCE_REMEMBERED"     Value="0x00000003" />
+                <Set Name="RESOURCE_RECENT"         Value="0x00000004" />
+                <Set Name="RESOURCE_CONTEXT"        Value="0x00000005" />
+            </Enum>
+        </Variable>
+        
+        <!-- [RESOURCETYPE] -->
+        <Variable Name="[RESOURCETYPE]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="RESOURCETYPE_ANY"        Value="0x00000000" />
+                <Set Name="RESOURCETYPE_DISK"       Value="0x00000001" />
+                <Set Name="RESOURCETYPE_PRINT"      Value="0x00000002" />
+                <Set Name="RESOURCETYPE_RESERVED"   Value="0x00000008" />
+                <Set Name="RESOURCETYPE_UNKNOWN"    Value="0xFFFFFFFF" />
+            </Flag>
+        </Variable>
+        
+        <!-- [RESOURCEUSAGE] -->
+        <Variable Name="[RESOURCEUSAGE]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="RESOURCEUSAGE_CONNECTABLE"           Value="0x00000001" />
+                <Set Name="RESOURCEUSAGE_CONTAINER"             Value="0x00000002" />
+                <Set Name="RESOURCEUSAGE_NOLOCALDEVICE"         Value="0x00000004" />
+                <Set Name="RESOURCEUSAGE_SIBLING"               Value="0x00000008" />
+                <Set Name="RESOURCEUSAGE_ATTACHED"              Value="0x00000010" />
+                <Set Name="RESOURCEUSAGE_ALL"                   Value="0x00000013" />
+                <Set Name="RESOURCEUSAGE_RESERVED"              Value="0x80000000" />
+            </Flag>
+        </Variable>
+
+        <!-- [UniversalInfoLevel] -->
+        <Variable Name="[UniversalInfoLevel]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="UNIVERSAL_NAME_INFO_LEVEL"   Value="0x00000001" />
+                <Set Name="REMOTE_NAME_INFO_LEVEL"      Value="0x00000002" />
+            </Enum>
+        </Variable>
+
+        <!-- [ConnectFlags] -->
+        <Variable Name="[ConnectFlags]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="CONNECT_UPDATE_PROFILE"      Value="0x00000001" />
+                <Set Name="CONNECT_UPDATE_RECENT"       Value="0x00000002" />
+                <Set Name="CONNECT_TEMPORARY"           Value="0x00000004" />
+                <Set Name="CONNECT_INTERACTIVE"         Value="0x00000008" />
+                <Set Name="CONNECT_PROMPT"              Value="0x00000010" />
+                <Set Name="CONNECT_NEED_DRIVE"          Value="0x00000020" />
+                <Set Name="CONNECT_REFCOUNT"            Value="0x00000040" />
+                <Set Name="CONNECT_REDIRECT"            Value="0x00000080" />
+                <Set Name="CONNECT_LOCALDRIVE"          Value="0x00000100" />
+                <Set Name="CONNECT_CURRENT_MEDIA"       Value="0x00000200" />
+                <Set Name="CONNECT_DEFERRED"            Value="0x00000400" />
+                <Set Name="CONNECT_RESERVED"            Value="0xFF000000" />
+                <Set Name="CONNECT_COMMANDLINE"         Value="0x00000800" />
+                <Set Name="CONNECT_CMD_SAVECRED"        Value="0x00001000" />
+                <Set Name="CONNECT_CRED_RESET"          Value="0x00002000" />
+            </Flag>
+        </Variable>
+
+        <!-- [RESOURCEDISPLAYTYPE] -->
+        <Variable Name="[RESOURCEDISPLAYTYPE]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="RESOURCEDISPLAYTYPE_GENERIC"             Value="0x00000000" />
+                <Set Name="RESOURCEDISPLAYTYPE_DOMAIN"              Value="0x00000001" />
+                <Set Name="RESOURCEDISPLAYTYPE_SERVER"              Value="0x00000002" />
+                <Set Name="RESOURCEDISPLAYTYPE_SHARE"               Value="0x00000003" />
+                <Set Name="RESOURCEDISPLAYTYPE_FILE"                Value="0x00000004" />
+                <Set Name="RESOURCEDISPLAYTYPE_GROUP"               Value="0x00000005" />
+                <Set Name="RESOURCEDISPLAYTYPE_NETWORK"             Value="0x00000006" />
+                <Set Name="RESOURCEDISPLAYTYPE_ROOT"                Value="0x00000007" />
+                <Set Name="RESOURCEDISPLAYTYPE_SHAREADMIN"          Value="0x00000008" />
+                <Set Name="RESOURCEDISPLAYTYPE_DIRECTORY"           Value="0x00000009" />
+                <Set Name="RESOURCEDISPLAYTYPE_TREE"                Value="0x0000000A" />
+                <Set Name="RESOURCEDISPLAYTYPE_NDSCONTAINER"        Value="0x0000000B" />
+            </Enum>
+        </Variable>
+
+        <!-- NETRESOURCE -->
+        <Variable Name="NETRESOURCE" Type="Struct">
+            <Field Type="[ResourceScope]"           Name="dwScope" />
+            <Field Type="[RESOURCETYPE]"            Name="dwType" />
+            <Field Type="[RESOURCEDISPLAYTYPE]"     Name="dwDisplayType" />
+            <Field Type="[RESOURCEUSAGE]"           Name="dwUsage" />
+            <Field Type="LPTSTR"                    Name="lpLocalName" />
+            <Field Type="LPTSTR"                    Name="lpRemoteName" />
+            <Field Type="LPTSTR"                    Name="lpComment" />
+            <Field Type="LPTSTR"                    Name="lpProvider" />
+        </Variable>
+        <Variable Name="LPNETRESOURCE" Type="Pointer" Base="NETRESOURCE" />
+
+        <!-- [CONNDLG] -->
+        <Variable Name="[CONNDLG]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="CONNDLG_RO_PATH"         Value="0x00000001" />
+                <Set Name="CONNDLG_CONN_POINT"      Value="0x00000002" />
+                <Set Name="CONNDLG_USE_MRU"         Value="0x00000004" />
+                <Set Name="CONNDLG_HIDE_BOX"        Value="0x00000008" />
+                <Set Name="CONNDLG_PERSIST"         Value="0x00000010" />
+                <Set Name="CONNDLG_NOT_PERSIST"     Value="0x00000020" />
+            </Flag>
+        </Variable>
+
+        <!-- CONNECTDLGSTRUCT -->
+        <Variable Name="CONNECTDLGSTRUCT" Type="Struct">
+            <Field Type="DWORD"             Name="cbStructure" />
+            <Field Type="HWND"              Name="hwndOwner" />
+            <Field Type="LPNETRESOURCE"     Name="lpConnRes" />
+            <Field Type="[CONNDLG]"         Name="dwFlags" />
+            <Field Type="DWORD"             Name="dwDevNum" />
+        </Variable>
+        <Variable Name="LPCONNECTDLGSTRUCT" Type="Pointer" Base="CONNECTDLGSTRUCT" />
+
+        <!-- Windows Networking (WNet) -->
+        <Category Name="Networking/Windows Networking (WNet)" />
+        <Api Name="WNetSetLastError" BothCharset="True">
+            <Param Type="DWORD" Name="err" />
+            <Param Type="LPTSTR" Name="lpError" />
+            <Param Type="LPTSTR" Name="lpProvider" />
+            <Return Type="void" />
+        </Api>
+        <Api Name="MultinetGetConnectionPerformance" BothCharset="True">
+            <Param Type="LPNETRESOURCE" Name="lpNetResource" />
+            <Param Type="LPNETCONNECTINFOSTRUCT" Name="lpNetConnectInfoStruct" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="WNetAddConnection2" BothCharset="True">
+            <Param Type="LPNETRESOURCE" Name="lpNetResource" />
+            <Param Type="LPCTSTR" Name="lpPassword" />
+            <Param Type="LPCTSTR" Name="lpUsername" />
+            <Param Type="[ConnectFlags]" Name="dwFlags" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="WNetAddConnection3" BothCharset="True">
+            <Param Type="HWND" Name="hwndOwner" />
+            <Param Type="LPNETRESOURCE" Name="lpNetResource" />
+            <Param Type="LPTSTR" Name="lpPassword" />
+            <Param Type="LPTSTR" Name="lpUserName" />
+            <Param Type="[ConnectFlags]" Name="dwFlags" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="WNetCancelConnection" BothCharset="True">
+            <Param Type="LPCTSTR" Name="lpName" />
+            <Param Type="BOOL" Name="fForce" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="WNetCancelConnection2" BothCharset="True">
+            <Param Type="LPCTSTR" Name="lpName" />
+            <Param Type="[ConnectFlags]" Name="dwFlags" />
+            <Param Type="BOOL" Name="fForce" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="WNetCloseEnum">
+            <Param Type="HANDLE" Name="hEnum" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="WNetConnectionDialog">
+            <Param Type="HWND" Name="hwnd" />
+            <Param Type="[RESOURCETYPE]" Name="dwType" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="WNetConnectionDialog1" BothCharset="True">
+            <Param Type="LPCONNECTDLGSTRUCT" Name="lpConnDlgStruct" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="WNetDisconnectDialog">
+            <Param Type="HWND" Name="hwnd" />
+            <Param Type="[RESOURCETYPE]" Name="dwType" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="WNetDisconnectDialog1" BothCharset="True">
+            <Param Type="LPDISCDLGSTRUCT" Name="lpConnDlgStruct" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="WNetEnumResource" BothCharset="True">
+            <Param Type="HANDLE" Name="hEnum" />
+            <Param Type="LPDWORD" Name="lpcCount" />
+            <Param Type="LPNETRESOURCE" Name="lpBuffer" Display="LPVOID" PostCount="lpcCount" />
+            <!--
+            <Param Type="LPVOID" Name="lpBuffer" PostLength="lpBufferSize" />
+            -->
+            <Param Type="LPDWORD" Name="lpBufferSize" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="WNetGetConnection" BothCharset="True">
+            <Param Type="LPCTSTR" Name="lpLocalName" />
+            <Param Type="LPTSTR" Name="lpRemoteName" />
+            <Param Type="LPDWORD" Name="lpnLength" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="WNetGetLastError" BothCharset="True">
+            <Param Type="LPDWORD" Name="lpError" />
+            <Param Type="LPTSTR" Name="lpErrorBuf" />
+            <Param Type="DWORD" Name="nErrorBufSize" />
+            <Param Type="LPTSTR" Name="lpNameBuf" />
+            <Param Type="DWORD" Name="nNameBufSize" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="WNetGetNetworkInformation" BothCharset="True">
+            <Param Type="LPCTSTR" Name="lpProvider" />
+            <Param Type="LPNETINFOSTRUCT" Name="lpNetInfoStruct" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="WNetGetProviderName" BothCharset="True">
+            <Param Type="DWORD" Name="dwNetType" />
+            <Param Type="LPTSTR" Name="lpProviderName" OutputOnly="True" />
+            <Param Type="LPDWORD" Name="lpBufferSize" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="WNetGetResourceInformation" BothCharset="True">
+            <Param Type="LPNETRESOURCE" Name="lpNetResource" />
+            <Param Type="LPVOID" Name="lpBuffer" PostLength="lpcbBuffer" />
+            <Param Type="LPDWORD" Name="lpcbBuffer" />
+            <Param Type="LPTSTR*" Name="lplpSystem" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="WNetGetResourceParent" BothCharset="True">
+            <Param Type="LPNETRESOURCE" Name="lpNetResource" />
+            <Param Type="LPNETRESOURCE" Display="LPVOID" Name="lpBuffer" />
+            <Param Type="LPDWORD" Name="lpcbBuffer" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="WNetGetUniversalName" BothCharset="True">
+            <Param Type="LPCTSTR" Name="lpLocalPath" />
+            <Param Type="[UniversalInfoLevel]" Name="dwInfoLevel" />
+            <Param Type="LPVOID" Name="lpBuffer" PostLength="lpBufferSize" />
+            <Param Type="LPDWORD" Name="lpBufferSize" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="WNetGetUser" BothCharset="True">
+            <Param Type="LPCTSTR" Name="lpName" />
+            <Param Type="LPTSTR" Name="lpUserName" />
+            <Param Type="LPDWORD" Name="lpnLength" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="WNetOpenEnum" BothCharset="True">
+            <Param Type="[ResourceScope]" Name="dwScope" />
+            <Param Type="[RESOURCETYPE]" Name="dwType" />
+            <Param Type="[RESOURCEUSAGE]" Name="dwUsage" />
+            <Param Type="LPNETRESOURCE" Name="lpNetResource" />
+            <Param Type="LPHANDLE" Name="lphEnum" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="WNetRestoreConnectionW">
+            <Param Type="HWND" Name="hwndParent" />
+            <Param Type="LPCWSTR" Name="lpDevice" />
+            <Param Type="BOOL" Name="fUseUI" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="WNetUseConnection" BothCharset="True">
+            <Param Type="HWND" Name="hwndOwner" />
+            <Param Type="LPNETRESOURCE" Name="lpNetResource" />
+            <Param Type="LPCTSTR" Name="lpPassword" />
+            <Param Type="LPCTSTR" Name="lpUserID" />
+            <Param Type="[ConnectFlags]" Name="dwFlags" />
+            <Param Type="LPTSTR" Name="lpAccessName" />
+            <Param Type="LPDWORD" Name="lpBufferSize" />
+            <Param Type="LPDWORD" Name="lpResult" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="WNetAddConnection" BothCharset="True">
+            <Param Type="LPCTSTR" Name="lpRemoteName" />
+            <Param Type="LPCTSTR" Name="lpPassword" />
+            <Param Type="LPCTSTR" Name="lpLocalName" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+    </Module>
+</ApiMonitor>

@@ -1,0 +1,77 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2012, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\directx.h.xml" />
+    <Include Filename="Headers\dwrite.h.xml" />
+    <Include Filename="Interfaces\Direct2D\Direct2D.h.xml" />
+    
+    <Module Name="d2d1.dll" CallingConvention="STDCALL" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Graphics and Gaming/DirectX Graphics and Gaming/Direct2D">
+
+        <!-- API -->
+        <Api Name="D2D1CreateFactory" Ordinal="1">
+            <Param Type="D2D1_FACTORY_TYPE" Name="factoryType" />
+            <Param Type="REFIID" Name="riid" />
+            <Param Type="CONST D2D1_FACTORY_OPTIONS*" Name="pFactoryOptions" />
+            <Param Type="void**" Name="ppIFactory" InterfaceId="riid" />
+            <Return Type="[D2D_HRESULT]" />
+        </Api>
+        <Api Name="D2D1MakeRotateMatrix" Ordinal="2">
+            <Param Type="FLOAT" Name="angle" />
+            <Param Type="D2D1_POINT_2F" Name="center" />
+            <Param Type="D2D1_MATRIX_3X2_F*" Name="matrix" />
+            <Return Type="void" />
+        </Api>
+        <Api Name="D2D1MakeSkewMatrix" Ordinal="3">
+            <Param Type="FLOAT" Name="angleX" />
+            <Param Type="FLOAT" Name="angleY" />
+            <Param Type="D2D1_POINT_2F" Name="center" />
+            <Param Type="D2D1_MATRIX_3X2_F*" Name="matrix" />
+            <Return Type="void" />
+        </Api>
+        <Api Name="D2D1IsMatrixInvertible" Ordinal="4">
+            <Param Type="CONST D2D1_MATRIX_3X2_F*" Name="matrix" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="D2D1InvertMatrix" Ordinal="5">
+            <Param Type="D2D1_MATRIX_3X2_F*" Name="matrix" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="D2D1ConvertColorSpace" Ordinal="6">
+            <Param Type="D2D1_COLOR_SPACE" Name="sourceColorSpace" />
+            <Param Type="D2D1_COLOR_SPACE" Name="destinationColorSpace" />
+            <Param Type="CONST D2D1_COLOR_F*" Name="color" />
+            <Return Type="D2D1_COLOR_F" />
+        </Api>
+        <Api Name="D2D1CreateDevice" Ordinal="7">
+            <Param Type="IDXGIDevice*" Name="dxgiDevice" />
+            <Param Type="CONST D2D1_CREATION_PROPERTIES*" Name="creationProperties" />
+            <Param Type="ID2D1Device**" Name="d2dDevice" />
+            <Return Type="[D2D_HRESULT]" />
+        </Api>
+        <Api Name="D2D1CreateDeviceContext" Ordinal="8">
+            <Param Type="IDXGISurface*" Name="dxgiSurface" />
+            <Param Type="CONST D2D1_CREATION_PROPERTIES*" Name="creationProperties" />
+            <Param Type="ID2D1DeviceContext**" Name="d2dDeviceContext" />
+            <Return Type="[D2D_HRESULT]" />
+        </Api>
+        <Api Name="D2D1SinCos" Ordinal="9">
+            <Param Type="FLOAT" Name="angle" />
+            <Param Type="FLOAT*" Name="s" />
+            <Param Type="FLOAT*" Name="c" />
+            <Return Type="void" />
+        </Api>
+        <Api Name="D2D1Tan" Ordinal="10">
+            <Param Type="FLOAT" Name="angle" />
+            <Return Type="FLOAT" />
+        </Api>
+        <Api Name="D2D1Vec3Length" Ordinal="11">
+            <Param Type="FLOAT" Name="x" />
+            <Param Type="FLOAT" Name="y" />
+            <Param Type="FLOAT" Name="z" />
+            <Return Type="FLOAT" />
+        </Api>
+    </Module>
+</ApiMonitor>

@@ -1,0 +1,33 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IEnumBackgroundCopyJobs" Id="{1af4f612-3b71-466f-8f58-7b6f73ac57ad}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Data Access and Storage/Background Intelligent Transfer Service (BITS)">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="Next">
+            <Param Type="ULONG" Name="celt" />
+            <Param Type="IBackgroundCopyJob**" Name="rgelt" PostCount="celt" />
+            <Param Type="ULONG*" Name="pceltFetched" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Skip">
+            <Param Type="ULONG" Name="celt" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Reset">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Clone">
+            <Param Type="IEnumBackgroundCopyJobs**" Name="ppenum" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetCount">
+            <Param Type="ULONG*" Name="puCount" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

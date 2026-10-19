@@ -1,0 +1,68 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2012, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\COM\ISequentialStream.xml" />
+    <Interface Name="IStream" Id="{0000000c-0000-0000-C000-000000000046}" BaseInterface="ISequentialStream" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Component Object Model (COM)/Structured Storage/Interfaces">
+        <!-- Variables -->
+
+        <!-- STREAM_SEEK -->
+        <Variable Name="STREAM_SEEK" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="STREAM_SEEK_SET"		Value="0" />
+                <Set Name="STREAM_SEEK_CUR"     Value="1" />
+                <Set Name="STREAM_SEEK_END"     Value="2" />
+            </Enum>
+        </Variable>
+
+        <!-- Methods -->
+        <Api Name="Seek">
+            <Param Type="LARGE_INTEGER" Name="dlibMove" />
+            <Param Type="STREAM_SEEK" Name="dwOrigin" />
+            <Param Type="ULARGE_INTEGER*" Name="plibNewPosition" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetSize">
+            <Param Type="ULARGE_INTEGER" Name="libNewSize" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CopyTo">
+            <Param Type="IStream*" Name="pstm" />
+            <Param Type="ULARGE_INTEGER" Name="cb" />
+            <Param Type="ULARGE_INTEGER*" Name="pcbRead" />
+            <Param Type="ULARGE_INTEGER*" Name="pcbWritten" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Commit">
+            <Param Type="STGC" Name="grfCommitFlags" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Revert">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="LockRegion">
+            <Param Type="ULARGE_INTEGER" Name="libOffset" />
+            <Param Type="ULARGE_INTEGER" Name="cb" />
+            <Param Type="LOCKTYPE" Name="dwLockType" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="UnlockRegion">
+            <Param Type="ULARGE_INTEGER" Name="libOffset" />
+            <Param Type="ULARGE_INTEGER" Name="cb" />
+            <Param Type="LOCKTYPE" Name="dwLockType" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Stat">
+            <Param Type="STATSTG*" Name="pstatstg" />
+            <Param Type="STATFLAG" Name="grfStatFlag" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Clone">
+            <Param Type="IStream**" Name="ppstm" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

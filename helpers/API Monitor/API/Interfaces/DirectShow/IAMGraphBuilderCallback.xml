@@ -1,0 +1,20 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IAMGraphBuilderCallback" Id="{4995f511-9ddb-4f12-bd3b-f04611807b79}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/DirectShow">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="SelectedFilter">
+            <Param Type="IMoniker*" Name="pMon" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CreatedFilter">
+            <Param Type="IBaseFilter*" Name="pFil" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

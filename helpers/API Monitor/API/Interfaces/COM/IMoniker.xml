@@ -1,0 +1,117 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\COM\IPersistStream.xml" />
+    <Interface Name="IMoniker" Id="{0000000f-0000-0000-C000-000000000046}" BaseInterface="IPersistStream" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Component Object Model (COM)/COM Fundamentals/Interfaces">
+        <!-- Variables -->
+
+        <!-- MKSYS -->
+        <Variable Name="MKSYS" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="MKSYS_NONE"					Value="0" />
+                <Set Name="MKSYS_GENERICCOMPOSITE"      Value="1" />
+                <Set Name="MKSYS_FILEMONIKER"			Value="2" />
+                <Set Name="MKSYS_ANTIMONIKER"			Value="3" />
+                <Set Name="MKSYS_ITEMMONIKER"			Value="4" />
+                <Set Name="MKSYS_POINTERMONIKER"		Value="5" />
+                <Set Name="MKSYS_CLASSMONIKER"			Value="7" />
+                <Set Name="MKSYS_OBJREFMONIKER"			Value="8" />
+                <Set Name="MKSYS_SESSIONMONIKER"		Value="9" />
+                <Set Name="MKSYS_LUAMONIKER"			Value="10" />
+            </Enum>
+        </Variable>
+        <Variable Name="MKSYS*" Type="Pointer" Base="MKSYS">
+            <Display Name="DWORD*" />
+        </Variable>
+
+        <!-- Methods -->
+        <Api Name="BindToObject">
+            <Param Type="IBindCtx*" Name="pbc" />
+            <Param Type="IMoniker*" Name="pmkToLeft" />
+            <Param Type="REFIID" Name="riidResult" />
+            <Param Type="void**" Name="ppvResult" InterfaceId="riidResult" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="BindToStorage">
+            <Param Type="IBindCtx*" Name="pbc" />
+            <Param Type="IMoniker*" Name="pmkToLeft" />
+            <Param Type="REFIID" Name="riid" />
+            <Param Type="void**" Name="ppvObj" InterfaceId="riid" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Reduce">
+            <Param Type="IBindCtx*" Name="pbc" />
+            <Param Type="DWORD" Name="dwReduceHowFar" />
+            <Param Type="IMoniker**" Name="ppmkToLeft" />
+            <Param Type="IMoniker**" Name="ppmkReduced" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ComposeWith">
+            <Param Type="IMoniker*" Name="pmkRight" />
+            <Param Type="BOOL" Name="fOnlyIfNotGeneric" />
+            <Param Type="IMoniker**" Name="ppmkComposite" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Enum">
+            <Param Type="BOOL" Name="fForward" />
+            <Param Type="IEnumMoniker**" Name="ppenumMoniker" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="IsEqual">
+            <Param Type="IMoniker*" Name="pmkOtherMoniker" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Hash">
+            <Param Type="DWORD*" Name="pdwHash" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="IsRunning">
+            <Param Type="IBindCtx*" Name="pbc" />
+            <Param Type="IMoniker*" Name="pmkToLeft" />
+            <Param Type="IMoniker*" Name="pmkNewlyRunning" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetTimeOfLastChange">
+            <Param Type="IBindCtx*" Name="pbc" />
+            <Param Type="IMoniker*" Name="pmkToLeft" />
+            <Param Type="FILETIME*" Name="pFileTime" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Inverse">
+            <Param Type="IMoniker**" Name="ppmk" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CommonPrefixWith">
+            <Param Type="IMoniker*" Name="pmkOther" />
+            <Param Type="IMoniker**" Name="ppmkPrefix" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="RelativePathTo">
+            <Param Type="IMoniker*" Name="pmkOther" />
+            <Param Type="IMoniker**" Name="ppmkRelPath" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetDisplayName">
+            <Param Type="IBindCtx*" Name="pbc" />
+            <Param Type="IMoniker*" Name="pmkToLeft" />
+            <Param Type="LPOLESTR*" Name="ppszDisplayName" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ParseDisplayName">
+            <Param Type="IBindCtx*" Name="pbc" />
+            <Param Type="IMoniker*" Name="pmkToLeft" />
+            <Param Type="LPOLESTR" Name="pszDisplayName" />
+            <Param Type="ULONG*" Name="pchEaten" />
+            <Param Type="IMoniker**" Name="ppmkOut" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="IsSystemMoniker">
+            <Param Type="MKSYS*" Name="pdwMksys" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

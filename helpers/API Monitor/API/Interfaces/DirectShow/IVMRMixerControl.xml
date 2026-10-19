@@ -1,0 +1,58 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IVMRMixerControl" Id="{1c1a17b0-bed0-415d-974b-dc6696131599}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/DirectShow">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="SetAlpha">
+            <Param Type="DWORD" Name="dwStreamID" />
+            <Param Type="float" Name="Alpha" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetAlpha">
+            <Param Type="DWORD" Name="dwStreamID" />
+            <Param Type="float*" Name="pAlpha" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetZOrder">
+            <Param Type="DWORD" Name="dwStreamID" />
+            <Param Type="DWORD" Name="dwZ" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetZOrder">
+            <Param Type="DWORD" Name="dwStreamID" />
+            <Param Type="DWORD*" Name="pZ" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetOutputRect">
+            <Param Type="DWORD" Name="dwStreamID" />
+            <Param Type="const NORMALIZEDRECT*" Name="pRect" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetOutputRect">
+            <Param Type="DWORD" Name="dwStreamID" />
+            <Param Type="NORMALIZEDRECT*" Name="pRect" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetBackgroundClr">
+            <Param Type="COLORREF" Name="ClrBkg" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetBackgroundClr">
+            <Param Type="COLORREF*" Name="lpClrBkg" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetMixingPrefs">
+            <Param Type="DWORD" Name="dwMixerPrefs" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetMixingPrefs">
+            <Param Type="DWORD*" Name="pdwMixerPrefs" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

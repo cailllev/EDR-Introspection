@@ -1,0 +1,48 @@
+<!--
+    API Monitor Definitions
+    (c) 2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="MMF\mmfdefs.h.xml" />
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IDirectXVideoDecoder" Id="{f2b0810a-fd00-43c9-918c-df94e2d8ef7d}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/Microsoft Media Foundation/Interfaces">
+        <Api Name="GetVideoDecoderService">
+            <Param Type="IDirectXVideoDecoderService**" Name="ppService" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetCreationParameters">
+            <Param Type="GUID*" Name="pDeviceGuid" />
+            <Param Type="DXVA2_VideoDesc*" Name="pVideoDesc" />
+            <Param Type="DXVA2_ConfigPictureDecode*" Name="pConfig" />
+            <!-- TODO: pDecoderRenderTargets is an array of *pNumSurfaces elements, but we need to first support monitoring
+            interfaces returned in array-->
+            <Param Type="IDirect3DSurface9***" Name="pDecoderRenderTargets" />
+            <Param Type="UINT*" Name="pNumSurfaces" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetBuffer">
+            <Param Type="UINT" Name="BufferType" />
+            <Param Type="void**" Name="ppBuffer" />
+            <Param Type="UINT*" Name="pBufferSize" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ReleaseBuffer">
+            <Param Type="UINT" Name="BufferType" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="BeginFrame">
+            <Param Type="IDirect3DSurface9*" Name="pRenderTarget" />
+            <Param Type="void*" Name="pvPVPData" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="EndFrame">
+            <Param Type="HANDLE*" Name="pHandleComplete" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Execute">
+            <Param Type="const DXVA2_DecodeExecuteParams*" Name="pExecuteParams" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

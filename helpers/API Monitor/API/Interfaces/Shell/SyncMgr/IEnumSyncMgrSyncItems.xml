@@ -1,0 +1,28 @@
+<!--
+    API Monitor Definitions
+    (c) 2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Include Filename="Interfaces\Shell\SyncMgr\SyncMgr.h.xml" />
+    <Interface Name="IEnumSyncMgrSyncItems" Id="{54b3abf3-f085-4181-b546-e29c403c726b}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Windows Environment Development/Windows Shell/Sync Manager">
+        <Api Name="Next">
+            <Param Type="ULONG" Name="celt" />
+            <Param Type="ISyncMgrSyncItem**" Name="rgelt" PostCount="celt" />
+            <Param Type="ULONG*" Name="pceltFetched" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Skip">
+            <Param Type="ULONG" Name="celt" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Reset">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Clone">
+            <Param Type="IEnumSyncMgrSyncItems**" Name="ppenum" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

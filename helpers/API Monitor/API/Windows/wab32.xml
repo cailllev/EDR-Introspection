@@ -1,0 +1,57 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Include Filename="Headers\ole.h.xml" />
+    
+    <Module Name="wab32.dll" CallingConvention="STDCALL" ErrorFunc="HRESULT" OnlineHelp="MSDN">
+        
+        <!-- Variables -->
+        <Variable Name="IAddrBook"          Type="Interface" />
+        <Variable Name="IWABObject"         Type="Interface" />
+        <Variable Name="LPWABOBJECT*"       Type="Alias" Base="IWABObject**" />
+
+        <!-- [WAB_PARAM_Flags] -->
+        <Variable Name="[WAB_PARAM_Flags]" Type="Alias" Base="ULONG">
+            <Display Name="ULONG" />
+            <Flag>
+                <Set Name="WAB_USE_OE_SENDMAIL" Value="0x00000001" />
+                <Set Name="WAB_ENABLE_PROFILES" Value="0x00400000" />
+            </Flag>
+        </Variable>
+
+        <!-- WAB_PARAM -->
+        <Variable Name="WAB_PARAM" Type="Struct">
+            <Field Type="ULONG"   	            Name="cbSize" />
+            <Field Type="HWND"    	            Name="hwnd" />
+            <Field Type="LPSTR"   	            Name="szFileName" />
+            <Field Type="[WAB_PARAM_Flags]"   	Name="ulFlags" />
+            <Field Type="GUID"    	            Name="guidPSExt" />
+        </Variable>
+        <Variable Name="LPWAB_PARAM" Type="Pointer" Base="WAB_PARAM" />
+        
+
+        <!-- Windows Address Book -->
+        <Category Name="Additional Resources/Legacy Collaboration Features/Windows Address Book" />
+        <Api Name="WABOpen">
+            <Param Type="LPADRBOOK*" Name="lppAdrBook" />
+            <Param Type="LPWABOBJECT*" Name="lppWABObject" />
+            <Param Type="LPWAB_PARAM" Name="lpWABParam" />
+            <Param Type="DWORD" Name="Reserved2" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="WABOpenEx">
+            <Param Type="LPADRBOOK*" Name="lppAdrBook" />
+            <Param Type="LPWABOBJECT*" Name="lppWABObject" />
+            <Param Type="LPWAB_PARAM" Name="lpWABParam" />
+            <Param Type="DWORD" Name="Reserved2" />
+            <Param Type="ALLOCATEBUFFER*" Name="lpfnAllocateBuffer" />
+            <Param Type="ALLOCATEMORE*" Name="lpfnAllocateMore" />
+            <Param Type="FREEBUFFER*" Name="lpfnFreeBuffer" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Module>
+</ApiMonitor>

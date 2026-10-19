@@ -1,0 +1,18 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IDirectSoundFXFlanger" Id="{903e9878-2c92-4072-9b2c-ea68f5396783}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/Legacy Audio and Video/DirectSound">
+        <Api Name="SetAllParameters">
+            <Param Type="LPCDSFXFlanger" Name="pcDsFxFlanger" />
+            <Return Type="[DS_HRESULT]" />
+        </Api>
+        <Api Name="GetAllParameters">
+            <Param Type="LPDSFXFlanger" Name="pDsFxFlanger" />
+            <Return Type="[DS_HRESULT]" />
+        </Api>
+    </Interface>
+</ApiMonitor>

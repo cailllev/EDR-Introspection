@@ -1,0 +1,77 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2012, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\COM\IOleWindow.xml" />
+    <Interface Name="IShellBrowser" Id="{000214E2-0000-0000-C000-000000000046}" BaseInterface="IOleWindow" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Windows Environment Development/Windows Shell/Interfaces">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="InsertMenusSB">
+            <Param Type="HMENU" Name="hmenuShared" />
+            <Param Type="LPOLEMENUGROUPWIDTHS" Name="lpMenuWidths" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetMenuSB">
+            <Param Type="HMENU" Name="hmenuShared" />
+            <Param Type="HOLEMENU" Name="holemenuRes" />
+            <Param Type="HWND" Name="hwndActiveObject" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="RemoveMenusSB">
+            <Param Type="HMENU" Name="hmenuShared" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetStatusTextSB">
+            <Param Type="LPCWSTR" Name="pszStatusText" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="EnableModelessSB">
+            <Param Type="BOOL" Name="fEnable" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="TranslateAcceleratorSB">
+            <Param Type="MSG*" Name="pmsg" />
+            <Param Type="WORD" Name="wID" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="BrowseObject">
+            <Param Type="PCUIDLIST_RELATIVE" Name="pidl" />
+            <Param Type="UINT" Name="wFlags" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetViewStateStream">
+            <Param Type="[STGM_FLAGS]" Name="grfMode" />
+            <Param Type="IStream**" Name="ppStrm" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetControlWindow">
+            <Param Type="UINT" Name="id" />
+            <Param Type="HWND*" Name="phwnd" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SendControlMsg">
+            <Param Type="UINT" Name="id" />
+            <Param Type="UINT" Name="uMsg" />
+            <Param Type="WPARAM" Name="wParam" />
+            <Param Type="LPARAM" Name="lParam" />
+            <Param Type="LRESULT*" Name="pret" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="QueryActiveShellView">
+            <Param Type="IShellView**" Name="ppshv" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="OnViewWindowActive">
+            <Param Type="IShellView*" Name="pshv" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetToolbarItems">
+            <Param Type="LPTBBUTTONSB" Name="lpButtons" />
+            <Param Type="UINT" Name="nButtons" />
+            <Param Type="UINT" Name="uFlags" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

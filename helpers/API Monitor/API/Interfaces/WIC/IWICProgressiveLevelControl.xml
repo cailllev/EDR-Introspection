@@ -1,0 +1,24 @@
+<!--
+    API Monitor Definitions
+    (c) 2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\WIC\WindowsCodecs.xml" />
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IWICProgressiveLevelControl" Id="{DAAC296F-7AA5-4dbf-8D15-225C5976F891}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Graphics and Gaming/Windows Imaging Component (WIC)">
+        <!-- Methods -->
+        <Api Name="GetLevelCount">
+            <Param Type="UINT*" Name="pcLevels" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="GetCurrentLevel">
+            <Param Type="UINT*" Name="pnLevel" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="SetCurrentLevel">
+            <Param Type="UINT" Name="nLevel" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+    </Interface>
+</ApiMonitor>

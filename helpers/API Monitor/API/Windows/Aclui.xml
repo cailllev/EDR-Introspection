@@ -1,0 +1,45 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    
+    <Include Filename="Headers\windows.h.xml" />
+    <Include Filename="Headers\ole.h.xml" />
+    <Include Filename="Headers\security.h.xml" />
+
+    <Module Name="Aclui.dll" CallingConvention="STDCALL" ErrorFunc="GetLastError" OnlineHelp="MSDN">
+       
+        <!-- SI_PAGE_TYPE -->
+        <Variable Name="SI_PAGE_TYPE" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="SI_PAGE_PERM"            Value="0" />
+                <Set Name="SI_PAGE_ADVPERM"         Value="1" />
+                <Set Name="SI_PAGE_AUDIT"           Value="2" />
+                <Set Name="SI_PAGE_OWNER"           Value="3" />
+                <Set Name="SI_PAGE_EFFECTIVE"       Value="4" />
+                <Set Name="SI_PAGE_TAKEOWNERSHIP"   Value="5" />
+            </Enum>
+        </Variable>
+
+        <!-- Authorization -->
+        <Category Name="Security and Identity/Authorization/Access Control Editor" />
+        <Api Name="CreateSecurityPage" Ordinal="1">
+            <Param Type="LPSECURITYINFO" Name="psi" />
+            <Return Type="HPROPSHEETPAGE" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="EditSecurity" Ordinal="2">
+            <Param Type="HWND" Name="hwndOwner" />
+            <Param Type="LPSECURITYINFO" Name="psi" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="EditSecurityAdvanced" Ordinal="3">
+            <Param Type="HWND" Name="hwndOwner" />
+            <Param Type="LPSECURITYINFO" Name="psi" />
+            <Param Type="SI_PAGE_TYPE" Name="uSIPage" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Module>
+</ApiMonitor>

@@ -1,0 +1,18 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IDirectSoundFXDistortion" Id="{8ecf4326-455f-4d8b-bda9-8d5d3e9e3e0b}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/Legacy Audio and Video/DirectSound">
+        <Api Name="SetAllParameters">
+            <Param Type="LPCDSFXDistortion" Name="pcDsFxDistortion" />
+            <Return Type="[DS_HRESULT]" />
+        </Api>
+        <Api Name="GetAllParameters">
+            <Param Type="LPDSFXDistortion" Name="pDsFxDistortion" />
+            <Return Type="[DS_HRESULT]" />
+        </Api>
+    </Interface>
+</ApiMonitor>

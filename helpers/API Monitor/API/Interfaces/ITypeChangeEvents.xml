@@ -1,0 +1,24 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="ITypeChangeEvents" Id="{00020410-0000-0000-C000-000000000046}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Component Object Model (COM)/Automation/Type Building">
+        <!-- Methods -->
+        <Api Name="RequestTypeChange">
+            <Param Type="CHANGEKIND" Name="changeKind" />
+            <Param Type="ITypeInfo*" Name="pTInfoBefore" />
+            <Param Type="LPOLESTR" Name="pStrName" />
+            <Param Type="INT*" Name="pfCancel" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="AfterTypeChange">
+            <Param Type="CHANGEKIND" Name="changeKind" />
+            <Param Type="ITypeInfo*" Name="pTInfoAfter" />
+            <Param Type="LPOLESTR" Name="pStrName" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

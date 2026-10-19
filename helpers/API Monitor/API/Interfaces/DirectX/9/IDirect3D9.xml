@@ -1,0 +1,120 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+
+    <Interface Name="IDirect3D9" Id="{81BDCBCA-64D4-426d-AE8D-AD0147F4275C}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Graphics and Gaming/DirectX Graphics and Gaming/Direct3D/9">
+        
+        <!-- Forward Interface Declarations -->
+        <Variable Name="IDirect3DDevice9"               Type="Interface" />
+        <Variable Name="IDirect3DDevice9Ex"             Type="Interface" />
+        <Variable Name="IDirect3DSurface9"              Type="Interface" />
+        <Variable Name="IDirect3DIndexBuffer9"          Type="Interface" />
+        <Variable Name="IDirect3DSwapChain9"            Type="Interface" />
+        <Variable Name="IDirect3DTexture9"              Type="Interface" />
+        <Variable Name="IDirect3DVolumeTexture9"        Type="Interface" />
+        <Variable Name="IDirect3DVertexBuffer9"         Type="Interface" />
+        <Variable Name="IDirect3DStateBlock9"           Type="Interface" />
+        <Variable Name="IDirect3DVertexDeclaration9"    Type="Interface" />
+        <Variable Name="IDirect3DVertexShader9"         Type="Interface" />
+        <Variable Name="IDirect3DPixelShader9"          Type="Interface" />
+        <Variable Name="IDirect3DQuery9"                Type="Interface" />
+        
+        <!-- Methods -->
+        <Api Name="RegisterSoftwareDevice">
+            <Param Type="void*" Name="pInitializeFunction" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetAdapterCount">
+            <Return Type="UINT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="GetAdapterIdentifier">
+            <Param Type="UINT" Name="Adapter" />
+            <Param Type="DWORD" Name="Flags" />
+            <Param Type="D3DADAPTER_IDENTIFIER9*" Name="pIdentifier" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetAdapterModeCount">
+            <Param Type="UINT" Name="Adapter" />
+            <Param Type="D3DFORMAT" Name="Format" />
+            <Return Type="UINT" />
+        </Api>
+        <Api Name="EnumAdapterModes">
+            <Param Type="UINT" Name="Adapter" />
+            <Param Type="D3DFORMAT" Name="Format" />
+            <Param Type="UINT" Name="Mode" />
+            <Param Type="D3DDISPLAYMODE*" Name="pMode" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetAdapterDisplayMode">
+            <Param Type="UINT" Name="Adapter" />
+            <Param Type="D3DDISPLAYMODE*" Name="pMode" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CheckDeviceType">
+            <Param Type="UINT" Name="Adapter" />
+            <Param Type="D3DDEVTYPE" Name="DevType" />
+            <Param Type="D3DFORMAT" Name="AdapterFormat" />
+            <Param Type="D3DFORMAT" Name="BackBufferFormat" />
+            <Param Type="BOOL" Name="bWindowed" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CheckDeviceFormat">
+            <Param Type="UINT" Name="Adapter" />
+            <Param Type="D3DDEVTYPE" Name="DeviceType" />
+            <Param Type="D3DFORMAT" Name="AdapterFormat" />
+            <Param Type="[D3DUSAGE]" Name="Usage" />
+            <Param Type="D3DRESOURCETYPE" Name="RType" />
+            <Param Type="D3DFORMAT" Name="CheckFormat" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CheckDeviceMultiSampleType">
+            <Param Type="UINT" Name="Adapter" />
+            <Param Type="D3DDEVTYPE" Name="DeviceType" />
+            <Param Type="D3DFORMAT" Name="SurfaceFormat" />
+            <Param Type="BOOL" Name="Windowed" />
+            <Param Type="D3DMULTISAMPLE_TYPE" Name="MultiSampleType" />
+            <Param Type="DWORD*" Name="pQualityLevels" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CheckDepthStencilMatch">
+            <Param Type="UINT" Name="Adapter" />
+            <Param Type="D3DDEVTYPE" Name="DeviceType" />
+            <Param Type="D3DFORMAT" Name="AdapterFormat" />
+            <Param Type="D3DFORMAT" Name="RenderTargetFormat" />
+            <Param Type="D3DFORMAT" Name="DepthStencilFormat" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CheckDeviceFormatConversion">
+            <Param Type="UINT" Name="Adapter" />
+            <Param Type="D3DDEVTYPE" Name="DeviceType" />
+            <Param Type="D3DFORMAT" Name="SourceFormat" />
+            <Param Type="D3DFORMAT" Name="TargetFormat" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetDeviceCaps">
+            <Param Type="UINT" Name="Adapter" />
+            <Param Type="D3DDEVTYPE" Name="DeviceType" />
+            <Param Type="D3DCAPS9*" Name="pCaps" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetAdapterMonitor">
+            <Param Type="UINT" Name="Adapter" />
+            <Return Type="HMONITOR" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CreateDevice">
+            <Param Type="UINT" Name="Adapter" />
+            <Param Type="D3DDEVTYPE" Name="DeviceType" />
+            <Param Type="HWND" Name="hFocusWindow" />
+            <Param Type="[D3DCREATE]" Name="BehaviorFlags" />
+            <Param Type="D3DPRESENT_PARAMETERS*" Name="pPresentationParameters" />
+            <Param Type="IDirect3DDevice9**" Name="ppReturnedDeviceInterface" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

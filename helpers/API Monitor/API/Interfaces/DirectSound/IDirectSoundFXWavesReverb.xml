@@ -1,0 +1,18 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IDirectSoundFXWavesReverb" Id="{46858c3a-0dc6-45e3-b760-d4eef16cb325}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/Legacy Audio and Video/DirectSound">
+        <Api Name="SetAllParameters">
+            <Param Type="LPCDSFXWavesReverb" Name="pcDsFxWavesReverb" />
+            <Return Type="[DS_HRESULT]" />
+        </Api>
+        <Api Name="GetAllParameters">
+            <Param Type="LPDSFXWavesReverb" Name="pDsFxWavesReverb" />
+            <Return Type="[DS_HRESULT]" />
+        </Api>
+    </Interface>
+</ApiMonitor>

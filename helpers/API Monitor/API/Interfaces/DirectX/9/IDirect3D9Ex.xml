@@ -1,0 +1,44 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\DirectX\9\IDirect3D9.xml" />
+    <Interface Name="IDirect3D9Ex" Id="{02177241-69FC-400C-8FF1-93A44DF6861D}" BaseInterface="IDirect3D9" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Graphics and Gaming/DirectX Graphics and Gaming/Direct3D/9">
+        <!-- DirectX -->
+        <Api Name="GetAdapterModeCountEx">
+            <Param Type="UINT" Name="Adapter" />
+            <Param Type="CONST D3DDISPLAYMODEFILTER*" Name="pFilter" />
+            <Return Type="UINT" />
+        </Api>
+        <Api Name="EnumAdapterModesEx">
+            <Param Type="UINT" Name="Adapter" />
+            <Param Type="CONST D3DDISPLAYMODEFILTER*" Name="pFilter" />
+            <Param Type="UINT" Name="Mode" />
+            <Param Type="D3DDISPLAYMODEEX*" Name="pMode" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetAdapterDisplayModeEx">
+            <Param Type="UINT" Name="Adapter" />
+            <Param Type="D3DDISPLAYMODEEX*" Name="pMode" />
+            <Param Type="D3DDISPLAYROTATION*" Name="pRotation" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CreateDeviceEx">
+            <Param Type="UINT" Name="Adapter" />
+            <Param Type="D3DDEVTYPE" Name="DeviceType" />
+            <Param Type="HWND" Name="hFocusWindow" />
+            <Param Type="[D3DCREATE]" Name="BehaviorFlags" />
+            <Param Type="D3DPRESENT_PARAMETERS*" Name="pPresentationParameters" />
+            <Param Type="D3DDISPLAYMODEEX*" Name="pFullscreenDisplayMode" />
+            <Param Type="IDirect3DDevice9Ex**" Name="ppReturnedDeviceInterface" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetAdapterLUID">
+            <Param Type="UINT" Name="Adapter" />
+            <Param Type="LUID*" Name="pLUID" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

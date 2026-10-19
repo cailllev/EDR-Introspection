@@ -1,0 +1,35 @@
+<!--
+    API Monitor Definitions
+    (c) 2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Include Filename="Interfaces\CoreAudio\coreaudio.h.xml" />
+    <Interface Name="IMMNotificationClient" Id="{7991EEC9-7E89-4D85-8390-6C703CEC60C0}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/Core Audio/Windows Multimedia Device">
+        <Api Name="OnDeviceStateChanged">
+            <Param Type="LPCWSTR" Name="pwstrDeviceId" />
+            <Param Type="DWORD" Name="dwNewState" />
+            <Return Type="[AUDCLNT_HRESULT]" />
+        </Api>
+        <Api Name="OnDeviceAdded">
+            <Param Type="LPCWSTR" Name="pwstrDeviceId" />
+            <Return Type="[AUDCLNT_HRESULT]" />
+        </Api>
+        <Api Name="OnDeviceRemoved">
+            <Param Type="LPCWSTR" Name="pwstrDeviceId" />
+            <Return Type="[AUDCLNT_HRESULT]" />
+        </Api>
+        <Api Name="OnDefaultDeviceChanged">
+            <Param Type="EDataFlow" Name="flow" />
+            <Param Type="ERole" Name="role" />
+            <Param Type="LPCWSTR" Name="pwstrDefaultDeviceId" />
+            <Return Type="[AUDCLNT_HRESULT]" />
+        </Api>
+        <Api Name="OnPropertyValueChanged">
+            <Param Type="LPCWSTR" Name="pwstrDeviceId" />
+            <Param Type="const PROPERTYKEY" Name="key" />
+            <Return Type="[AUDCLNT_HRESULT]" />
+        </Api>
+    </Interface>
+</ApiMonitor>

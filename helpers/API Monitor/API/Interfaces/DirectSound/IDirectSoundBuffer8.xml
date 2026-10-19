@@ -1,0 +1,28 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\DirectSound\IDirectSoundBuffer.xml" />
+    <Interface Name="IDirectSoundBuffer8" Id="{6825a449-7524-4d82-920f-50e36ab3ab1e}" BaseInterface="IDirectSoundBuffer" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/Legacy Audio and Video/DirectSound">
+        <Api Name="SetFX">
+            <Param Type="DWORD" Name="dwEffectsCount" />
+            <Param Type="LPDWORD" Name="pdwResultCodes" />
+            <Return Type="[DS_HRESULT]" />
+        </Api>
+        <Api Name="AcquireResources">
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="DWORD" Name="dwEffectsCount" />
+            <Param Type="LPDWORD" Name="pdwResultCodes" />
+            <Return Type="[DS_HRESULT]" />
+        </Api>
+        <Api Name="GetObjectInPath">
+            <Param Type="REFGUID" Name="rguidObject" />
+            <Param Type="DWORD" Name="dwIndex" />
+            <Param Type="REFGUID" Name="rguidInterface" />
+            <Param Type="LPVOID*" Name="ppObject" />
+            <Return Type="[DS_HRESULT]" />
+        </Api>
+    </Interface>
+</ApiMonitor>

@@ -1,0 +1,45 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IDirectSound" Id="{279afa83-4981-11ce-a521-0020af0be560}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/Legacy Audio and Video/DirectSound">
+        <Api Name="CreateSoundBuffer">
+            <Param Type="LPCDSBUFFERDESC" Name="pcDSBufferDesc" />
+            <Param Type="LPDIRECTSOUNDBUFFER*" Name="ppDSBuffer" />
+            <Param Type="LPUNKNOWN" Name="pUnkOuter" />
+            <Return Type="[DS_HRESULT]" />
+        </Api>
+        <Api Name="GetCaps">
+            <Param Type="LPDSCAPS" Name="pDSCaps" />
+            <Return Type="[DS_HRESULT]" />
+        </Api>
+        <Api Name="DuplicateSoundBuffer">
+            <Param Type="LPDIRECTSOUNDBUFFER" Name="pDSBufferOriginal" />
+            <Param Type="LPDIRECTSOUNDBUFFER*" Name="ppDSBufferDuplicate" />
+            <Return Type="[DS_HRESULT]" />
+        </Api>
+        <Api Name="SetCooperativeLevel">
+            <Param Type="HWND" Name="hwnd" />
+            <Param Type="[DSSCL_Flags]" Name="dwLevel" />
+            <Return Type="[DS_HRESULT]" />
+        </Api>
+        <Api Name="Compact">
+            <Return Type="[DS_HRESULT]" />
+        </Api>
+        <Api Name="GetSpeakerConfig">
+            <Param Type="[DSSPEAKER_Flags*]" Name="pdwSpeakerConfig" />
+            <Return Type="[DS_HRESULT]" />
+        </Api>
+        <Api Name="SetSpeakerConfig">
+            <Param Type="[DSSPEAKER_Flags]" Name="dwSpeakerConfig" />
+            <Return Type="[DS_HRESULT]" />
+        </Api>
+        <Api Name="Initialize">
+            <Param Type="LPCGUID" Name="pcGuidDevice" />
+            <Return Type="[DS_HRESULT]" />
+        </Api>
+    </Interface>
+</ApiMonitor>

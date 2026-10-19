@@ -1,0 +1,1679 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Include Filename="Headers\cryptography.h.xml" />
+
+    <Module Name="Crypt32.dll" CallingConvention="STDCALL" ErrorFunc="GetLastError" OnlineHelp="MSDN">
+
+        <!-- Cryptography -->
+        <Category Name="Security and Identity/Cryptography/Service Provider" />
+        <Api Name="CryptInstallDefaultContext">
+            <Param Type="HCRYPTPROV" Name="hCryptProv" />
+            <Param Type="DWORD" Name="dwDefaultType" />
+            <Param Type="const void*" Name="pvDefaultPara" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="void*" Name="pvReserved" />
+            <Param Type="HCRYPTDEFAULTCONTEXT*" Name="phDefaultContext" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptUninstallDefaultContext">
+            <Param Type="HCRYPTDEFAULTCONTEXT" Name="hDefaultContext" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="void*" Name="pvReserved" />
+            <Return Type="BOOL" />
+        </Api>
+        <Category Name="Security and Identity/Cryptography/Object Encoding and Decoding" />
+        <Api Name="CryptDecodeObject">
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="LPCSTR" Name="lpszStructType" />
+            <Param Type="const BYTE*" Name="pbEncoded" Length="cbEncoded" />
+            <Param Type="DWORD" Name="cbEncoded" />
+            <Param Type="[CryptDecodeObjectFlags]" Name="dwFlags" />
+            <Param Type="void*" Name="pvStructInfo" PostLength="pcbStructInfo" />
+            <Param Type="DWORD*" Name="pcbStructInfo" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptDecodeObjectEx">
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="LPCSTR" Name="lpszStructType" />
+            <Param Type="const BYTE*" Name="pbEncoded" Length="cbEncoded" />
+            <Param Type="DWORD" Name="cbEncoded" />
+            <Param Type="[CryptDecodeObjectFlags]" Name="dwFlags" />
+            <Param Type="PCRYPT_DECODE_PARA" Name="pDecodePara" />
+            <Param Type="void*" Name="pvStructInfo" PostLength="pcbStructInfo" />
+            <Param Type="DWORD*" Name="pcbStructInfo" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptEncodeObject">
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="LPCSTR" Name="lpszStructType" />
+            <Param Type="const void*" Name="pvStructInfo" />
+            <Param Type="BYTE*" Name="pbEncoded" PostLength="pcbEncoded" />
+            <Param Type="DWORD*" Name="pcbEncoded" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptEncodeObjectEx">
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="LPCSTR" Name="lpszStructType" />
+            <Param Type="const void*" Name="pvStructInfo" />
+            <Param Type="[CryptEncodeObjectFlags]" Name="dwFlags" />
+            <Param Type="PCRYPT_ENCODE_PARA" Name="pEncodePara" />
+            <Param Type="void*" Name="pvEncoded" PostLength="pcbEncoded" />
+            <Param Type="DWORD*" Name="pcbEncoded" />
+            <Return Type="BOOL" />
+        </Api>
+        <Category Name="Security and Identity/Cryptography/Data Encryption and Decryption" />
+        <Api Name="CryptProtectData">
+            <Param Type="DATA_BLOB*" Name="pDataIn" />
+            <Param Type="LPCWSTR" Name="szDataDescr" />
+            <Param Type="DATA_BLOB*" Name="pOptionalEntropy" />
+            <Param Type="PVOID" Name="pvReserved" />
+            <Param Type="CRYPTPROTECT_PROMPTSTRUCT*" Name="pPromptStruct" />
+            <Param Type="[CryptProtectDataFlags]" Name="dwFlags" />
+            <Param Type="DATA_BLOB*" Name="pDataOut" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptProtectMemory">
+            <Param Type="LPVOID" Name="pData" Length="cbData" />
+            <Param Type="DWORD" Name="cbData" />
+            <Param Type="[CryptProtectMemoryFlags]" Name="dwFlags" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptUnprotectData">
+            <Param Type="DATA_BLOB*" Name="pDataIn" />
+            <Param Type="LPWSTR*" Name="ppszDataDescr" />
+            <Param Type="DATA_BLOB*" Name="pOptionalEntropy" />
+            <Param Type="PVOID" Name="pvReserved" />
+            <Param Type="CRYPTPROTECT_PROMPTSTRUCT*" Name="pPromptStruct" />
+            <Param Type="[CryptProtectDataFlags]" Name="dwFlags" />
+            <Param Type="DATA_BLOB*" Name="pDataOut" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptUnprotectMemory">
+            <Param Type="LPVOID" Name="pData" Length="cbData" />
+            <Param Type="DWORD" Name="cbData" />
+            <Param Type="[CryptProtectMemoryFlags]" Name="dwFlags" />
+            <Return Type="BOOL" />
+        </Api>
+        <Category Name="Security and Identity/Cryptography/Certificate Store" />
+        <Api Name="CertAddStoreToCollection">
+            <Param Type="HCERTSTORE" Name="hCollectionStore" />
+            <Param Type="HCERTSTORE" Name="hSiblingStore" />
+            <Param Type="[CertPhysicalStoreFlags]" Name="dwUpdateFlag" />
+            <Param Type="DWORD" Name="dwPriority" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertCloseStore">
+            <Param Type="HCERTSTORE" Name="hCertStore" />
+            <Param Type="[CertCloseStoreFlags]" Name="dwFlags" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertControlStore">
+            <Param Type="HCERTSTORE" Name="hCertStore" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="[CertControlType]" Name="dwCtrlType" />
+            <Param Type="const void*" Name="pvCtrlPara" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertDuplicateStore">
+            <Param Type="HCERTSTORE" Name="hCertStore" />
+            <Return Type="HCERTSTORE" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertEnumPhysicalStore">
+            <Param Type="const void*" Name="pvSystemStore" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="void*" Name="pvArg" />
+            <Param Type="PFN_CERT_ENUM_PHYSICAL_STORE" Name="pfnEnum" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertEnumSystemStore">
+            <Param Type="[CertSystemStoreFlags]" Name="dwFlags" />
+            <Param Type="void*" Name="pvSystemStoreLocationPara" />
+            <Param Type="void*" Name="pvArg" />
+            <Param Type="PFN_CERT_ENUM_SYSTEM_STORE" Name="pfnEnum" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertEnumSystemStoreLocation">
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="void*" Name="pvArg" />
+            <Param Type="PFN_CERT_ENUM_SYSTEM_STORE_LOCATION" Name="pfnEnum" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertGetStoreProperty">
+            <Param Type="HCERTSTORE" Name="hCertStore" />
+            <Param Type="DWORD" Name="dwPropId" />
+            <Param Type="void*" Name="pvData" />
+            <Param Type="DWORD*" Name="pcbData" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertOpenStore">
+            <Param Type="[CERT_STORE_PROVIDER]" Name="lpszStoreProvider" />
+            <Param Type="[CertEncodingType]" Name="dwMsgAndCertEncodingType" />
+            <Param Type="HCRYPTPROV_LEGACY" Name="hCryptProv" />
+            <Param Type="[CertOpenStoreFlags]" Name="dwFlags" />
+            <Param Type="const void*" Name="pvPara" />
+            <Return Type="HCERTSTORE" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertOpenSystemStore" BothCharset="True">
+            <Param Type="HCRYPTPROV_LEGACY" Name="hprov" />
+            <Param Type="LPCTSTR" Name="szSubsystemProtocol" />
+            <Return Type="HCERTSTORE" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertRegisterPhysicalStore">
+            <Param Type="const void*" Name="pvSystemStore" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="LPCWSTR" Name="pwszStoreName" />
+            <Param Type="PCERT_PHYSICAL_STORE_INFO" Name="pStoreInfo" />
+            <Param Type="void*" Name="pvReserved" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertRegisterSystemStore">
+            <Param Type="const void*" Name="pvSystemStore" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="PCERT_SYSTEM_STORE_INFO" Name="pStoreInfo" />
+            <Param Type="void*" Name="pvReserved" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertRemoveStoreFromCollection">
+            <Param Type="HCERTSTORE" Name="hCollectionStore" />
+            <Param Type="HCERTSTORE" Name="hSiblingStore" />
+            <Return Type="void" />
+        </Api>
+        <Api Name="CertSaveStore">
+            <Param Type="HCERTSTORE" Name="hCertStore" />
+            <Param Type="DWORD" Name="dwMsgAndCertEncodingType" />
+            <Param Type="DWORD" Name="dwSaveAs" />
+            <Param Type="DWORD" Name="dwSaveTo" />
+            <Param Type="void*" Name="pvSaveToPara" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertSetStoreProperty">
+            <Param Type="HCERTSTORE" Name="hCertStore" />
+            <Param Type="DWORD" Name="dwPropId" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="const void*" Name="pvData" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertUnregisterPhysicalStore">
+            <Param Type="const void*" Name="pvSystemStore" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="LPCWSTR" Name="pwszStoreName" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertUnregisterSystemStore">
+            <Param Type="const void*" Name="pvSystemStore" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Return Type="BOOL" />
+        </Api>
+        <Category Name="Security and Identity/Cryptography/Certificate and Certificate Store Maintenance" />
+        <Api Name="CertAddSerializedElementToStore">
+            <Param Type="HCERTSTORE" Name="hCertStore" />
+            <Param Type="const BYTE*" Name="pbElement" />
+            <Param Type="DWORD" Name="cbElement" />
+            <Param Type="DWORD" Name="dwAddDisposition" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="DWORD" Name="dwContextTypeFlags" />
+            <Param Type="[CertificateStoreContextType*]" Name="pdwContextType" />
+            <Param Type="const void**" Name="ppvContext" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertCreateContext">
+            <Param Type="[CertificateStoreContextType]" Name="dwContextType" />
+            <Param Type="[CertEncodingType]" Name="dwEncodingType" />
+            <Param Type="const BYTE*" Name="pbEncoded" Length="cbEncoded" />
+            <Param Type="DWORD" Name="cbEncoded" />
+            <Param Type="[CertCreateContextFlags]" Name="dwFlags" />
+            <Param Type="PCERT_CREATE_CONTEXT_PARA" Name="pCreatePara" />
+            <Return Type="const void*" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertEnumSubjectInSortedCTL">
+            <Param Type="PCCTL_CONTEXT" Name="pCtlContext" />
+            <Param Type="void**" Name="ppvNextSubject" />
+            <Param Type="PCRYPT_DER_BLOB" Name="pSubjectIdentifier" />
+            <Param Type="PCRYPT_DER_BLOB" Name="pEncodedAttributes" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertFindSubjectInCTL">
+            <Param Type="[CertEncodingType]" Name="dwEncodingType" />
+            <Param Type="DWORD" Name="dwSubjectType" />
+            <Param Type="void*" Name="pvSubject" />
+            <Param Type="PCCTL_CONTEXT" Name="pCtlContext" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Return Type="PCTL_ENTRY" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertFindSubjectInSortedCTL">
+            <Param Type="PCRYPT_DATA_BLOB" Name="pSubjectIdentifier" />
+            <Param Type="PCCTL_CONTEXT" Name="pCtlContext" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="void*" Name="pvReserved" />
+            <Param Type="PCRYPT_DER_BLOB" Name="pEncodedAttributes" />
+            <Return Type="BOOL" />
+        </Api>
+        <Category Name="Security and Identity/Cryptography/Certificate" />
+        <Api Name="CertAddCertificateContextToStore">
+            <Param Type="HCERTSTORE" Name="hCertStore" />
+            <Param Type="PCCERT_CONTEXT" Name="pCertContext" />
+            <Param Type="DWORD" Name="dwAddDisposition" />
+            <Param Type="PCCERT_CONTEXT*" Name="ppStoreContext" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertAddCertificateLinkToStore">
+            <Param Type="HCERTSTORE" Name="hCertStore" />
+            <Param Type="PCCERT_CONTEXT" Name="pCertContext" />
+            <Param Type="DWORD" Name="dwAddDisposition" />
+            <Param Type="PCCERT_CONTEXT*" Name="ppStoreContext" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertAddEncodedCertificateToStore">
+            <Param Type="HCERTSTORE" Name="hCertStore" />
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="const BYTE*" Name="pbCertEncoded" Length="cbCertEncoded" />
+            <Param Type="DWORD" Name="cbCertEncoded" />
+            <Param Type="[CertStoreAddDisposition]" Name="dwAddDisposition" />
+            <Param Type="PCCERT_CONTEXT*" Name="ppCertContext" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertAddRefServerOcspResponse">
+            <Param Type="HCERT_SERVER_OCSP_RESPONSE" Name="hServerOcspResponse" />
+            <Return Type="VOID" />
+        </Api>
+        <Api Name="CertAddRefServerOcspResponseContext">
+            <Param Type="PCCERT_SERVER_OCSP_RESPONSE_CONTEXT" Name="pServerOcspResponseContext" />
+            <Return Type="VOID" />
+        </Api>
+        <Api Name="CertCloseServerOcspResponse">
+            <Param Type="HCERT_SERVER_OCSP_RESPONSE" Name="hServerOcspResponse" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Return Type="VOID" />
+        </Api>
+        <Api Name="CertCreateCertificateContext">
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="const BYTE*" Name="pbCertEncoded" />
+            <Param Type="DWORD" Name="cbCertEncoded" />
+            <Return Type="PCCERT_CONTEXT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertCreateSelfSignCertificate">
+            <Param Type="HCRYPTPROV_OR_NCRYPT_KEY_HANDLE" Name="hCryptProvOrNCryptKey" />
+            <Param Type="PCERT_NAME_BLOB" Name="pSubjectIssuerBlob" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="PCRYPT_KEY_PROV_INFO" Name="pKeyProvInfo" />
+            <Param Type="PCRYPT_ALGORITHM_IDENTIFIER" Name="pSignatureAlgorithm" />
+            <Param Type="PSYSTEMTIME" Name="pStartTime" />
+            <Param Type="PSYSTEMTIME" Name="pEndTime" />
+            <Param Type="PCERT_EXTENSIONS" Name="pExtensions" />
+            <Return Type="PCCERT_CONTEXT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertDeleteCertificateFromStore">
+            <Param Type="PCCERT_CONTEXT" Name="pCertContext" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertDuplicateCertificateContext">
+            <Param Type="PCCERT_CONTEXT" Name="pCertContext" />
+            <Return Type="PCCERT_CONTEXT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertEnumCertificatesInStore">
+            <Param Type="HCERTSTORE" Name="hCertStore" />
+            <Param Type="PCCERT_CONTEXT" Name="pPrevCertContext" />
+            <Return Type="PCCERT_CONTEXT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertFindCertificateInStore">
+            <Param Type="HCERTSTORE" Name="hCertStore" />
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="DWORD" Name="dwFindFlags" />
+            <Param Type="[CertFindType]" Name="dwFindType" />
+            <Param Type="const void*" Name="pvFindPara" />
+            <Param Type="PCCERT_CONTEXT" Name="pPrevCertContext" />
+            <Return Type="PCCERT_CONTEXT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertFreeCertificateContext">
+            <Param Type="PCCERT_CONTEXT" Name="pCertContext" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertGetIssuerCertificateFromStore">
+            <Param Type="HCERTSTORE" Name="hCertStore" />
+            <Param Type="PCCERT_CONTEXT" Name="pSubjectContext" />
+            <Param Type="PCCERT_CONTEXT" Name="pPrevIssuerContext" />
+            <Param Type="DWORD*" Name="pdwFlags" />
+            <Return Type="PCCERT_CONTEXT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertGetServerOcspResponseContext">
+            <Param Type="HCERT_SERVER_OCSP_RESPONSE" Name="hServerOcspResponse" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="LPVOID" Name="pvReserved" />
+            <Return Type="PCCERT_SERVER_OCSP_RESPONSE_CONTEXT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertGetSubjectCertificateFromStore">
+            <Param Type="HCERTSTORE" Name="hCertStore" />
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="PCERT_INFO" Name="pCertId" />
+            <Return Type="PCCERT_CONTEXT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertGetValidUsages">
+            <Param Type="DWORD" Name="cCerts" />
+            <Param Type="PCCERT_CONTEXT*" Name="rghCerts" Count="cCerts" />
+            <Param Type="int*" Name="cNumOIDs" />
+            <Param Type="LPSTR*" Name="rghOIDs" PostCount="pcbOIDs" />
+            <Param Type="DWORD*" Name="pcbOIDs" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertOpenServerOcspResponse">
+            <Param Type="PCCERT_CHAIN_CONTEXT" Name="pChainContext" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="LPVOID" Name="pvReserved" />
+            <Return Type="HCERT_SERVER_OCSP_RESPONSE" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertRetrieveLogoOrBiometricInfo">
+            <Param Type="PCCERT_CONTEXT" Name="pCertContext" />
+            <Param Type="LPCSTR" Name="lpszLogoOrBiometricType" />
+            <Param Type="DWORD" Name="dwRetrievalFlags" />
+            <Param Type="DWORD" Name="dwTimeout" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="void*" Name="pvReserved" />
+            <!-- TODO: PostLength -->
+            <Param Type="BYTE**" Name="ppbData" />
+            <Param Type="DWORD*" Name="pcbData" />
+            <Param Type="LPWSTR*" Name="ppwszMimeType" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertSelectCertificateChains">
+            <Param Type="LPCGUID" Name="pSelectionContext" />
+            <Param Type="[CertSelectFlags]" Name="dwFlags" />
+            <Param Type="PCCERT_SELECT_CHAIN_PARA" Name="pChainParameters" />
+            <Param Type="DWORD" Name="cCriteria" />
+            <Param Type="PCCERT_SELECT_CRITERIA" Name="rgpCriteria" Count="cCriteria" />
+            <Param Type="HCERTSTORE" Name="hStore" />
+            <Param Type="PDWORD" Name="pcSelection" />
+            <Param Type="PCCERT_CHAIN_CONTEXT**" Name="pprgpSelection" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertSerializeCertificateStoreElement">
+            <Param Type="PCCERT_CONTEXT" Name="pCertContext" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="BYTE*" Name="pbElement" PostLength="pcbElement" />
+            <Param Type="DWORD*" Name="pcbElement" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertVerifySubjectCertificateContext">
+            <Param Type="PCCERT_CONTEXT" Name="pSubject" />
+            <Param Type="PCCERT_CONTEXT" Name="pIssuer" />
+            <Param Type="DWORD*" Name="pdwFlags" />
+            <Return Type="BOOL" />
+        </Api>
+        <Category Name="Security and Identity/Cryptography/Certificate Revocation List" />
+        <Api Name="CertAddCRLContextToStore">
+            <Param Type="HCERTSTORE" Name="hCertStore" />
+            <Param Type="PCCRL_CONTEXT" Name="pCrlContext" />
+            <Param Type="DWORD" Name="dwAddDisposition" />
+            <Param Type="PCCRL_CONTEXT*" Name="ppStoreContext" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertAddCRLLinkToStore">
+            <Param Type="HCERTSTORE" Name="hCertStore" />
+            <Param Type="PCCRL_CONTEXT" Name="pCrlContext" />
+            <Param Type="DWORD" Name="dwAddDisposition" />
+            <Param Type="PCCRL_CONTEXT*" Name="ppStoreContext" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertAddEncodedCRLToStore">
+            <Param Type="HCERTSTORE" Name="hCertStore" />
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="const BYTE*" Name="pbCrlEncoded" Length="cbCrlEncoded" />
+            <Param Type="DWORD" Name="cbCrlEncoded" />
+            <Param Type="DWORD" Name="dwAddDisposition" />
+            <Param Type="PCCRL_CONTEXT*" Name="ppCrlContext" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertCreateCRLContext">
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="const BYTE*" Name="pbCrlEncoded" Length="cbCrlEncoded" />
+            <Param Type="DWORD" Name="cbCrlEncoded" />
+            <Return Type="PCCRL_CONTEXT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertDeleteCRLFromStore">
+            <Param Type="PCCRL_CONTEXT" Name="pCrlContext" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertDuplicateCRLContext">
+            <Param Type="PCCRL_CONTEXT" Name="pCrlContext" />
+            <Return Type="PCCRL_CONTEXT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertEnumCRLsInStore">
+            <Param Type="HCERTSTORE" Name="hCertStore" />
+            <Param Type="PCCRL_CONTEXT" Name="pPrevCrlContext" />
+            <Return Type="PCCRL_CONTEXT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertFindCertificateInCRL">
+            <Param Type="PCCERT_CONTEXT" Name="pCert" />
+            <Param Type="PCCRL_CONTEXT" Name="pCrlContext" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="void*" Name="pvReserved" />
+            <Param Type="PCRL_ENTRY*" Name="ppCrlEntry" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertFindCRLInStore">
+            <Param Type="HCERTSTORE" Name="hCertStore" />
+            <Param Type="[CertEncodingType]" Name="dwEncodingType" />
+            <Param Type="[CrlFindIssuedByFlags]" Name="dwFindFlags" />
+            <Param Type="[CrlFindType]" Name="dwFindType" />
+            <Param Type="const void*" Name="pvFindPara" />
+            <Param Type="PCCRL_CONTEXT" Name="pPrevCrlContext" />
+            <Return Type="PCCRL_CONTEXT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertFreeCRLContext">
+            <Param Type="PCCRL_CONTEXT" Name="pCrlContext" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertGetCRLFromStore">
+            <Param Type="HCERTSTORE" Name="hCertStore" />
+            <Param Type="PCCERT_CONTEXT" Name="pIssuerContext" />
+            <Param Type="PCCRL_CONTEXT" Name="pPrevCrlContext" />
+            <Param Type="DWORD*" Name="pdwFlags" />
+            <Return Type="PCCRL_CONTEXT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertSerializeCRLStoreElement">
+            <Param Type="PCCRL_CONTEXT" Name="pCrlContext" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="BYTE*" Name="pbElement" PostLength="pcbElement" />
+            <Param Type="DWORD*" Name="pcbElement" />
+            <Return Type="BOOL" />
+        </Api>
+        <Category Name="Security and Identity/Cryptography/Certificate Trust List" />
+        <Api Name="CertAddCTLContextToStore">
+            <Param Type="HCERTSTORE" Name="hCertStore" />
+            <Param Type="PCCTL_CONTEXT" Name="pCtlContext" />
+            <Param Type="DWORD" Name="dwAddDisposition" />
+            <Param Type="PCCTL_CONTEXT*" Name="ppStoreContext" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertAddCTLLinkToStore">
+            <Param Type="HCERTSTORE" Name="hCertStore" />
+            <Param Type="PCCTL_CONTEXT" Name="pCtlContext" />
+            <Param Type="DWORD" Name="dwAddDisposition" />
+            <Param Type="PCCTL_CONTEXT*" Name="ppStoreContext" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertAddEncodedCTLToStore">
+            <Param Type="HCERTSTORE" Name="hCertStore" />
+            <Param Type="DWORD" Name="dwMsgAndCertEncodingType" />
+            <Param Type="const BYTE*" Name="pbCtlEncoded" Length="cbCtlEncoded" />
+            <Param Type="DWORD" Name="cbCtlEncoded" />
+            <Param Type="DWORD" Name="dwAddDisposition" />
+            <Param Type="PCCTL_CONTEXT*" Name="ppCtlContext" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertCreateCTLContext">
+            <Param Type="DWORD" Name="dwMsgAndCertEncodingType" />
+            <Param Type="const BYTE*" Name="pbCtlEncoded" Length="cbCtlEncoded" />
+            <Param Type="DWORD" Name="cbCtlEncoded" />
+            <Return Type="PCCTL_CONTEXT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertDeleteCTLFromStore">
+            <Param Type="PCCTL_CONTEXT" Name="pCtlContext" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertDuplicateCTLContext">
+            <Param Type="PCCTL_CONTEXT" Name="pCtlContext" />
+            <Return Type="PCCTL_CONTEXT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertEnumCTLsInStore">
+            <Param Type="HCERTSTORE" Name="hCertStore" />
+            <Param Type="PCCTL_CONTEXT" Name="pPrevCtlContext" />
+            <Return Type="PCCTL_CONTEXT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertFindCTLInStore">
+            <Param Type="HCERTSTORE" Name="hCertStore" />
+            <Param Type="DWORD" Name="dwMsgAndCertEncodingType" />
+            <Param Type="DWORD" Name="dwFindFlags" />
+            <Param Type="DWORD" Name="dwFindType" />
+            <Param Type="const void*" Name="pvFindPara" />
+            <Param Type="PCCTL_CONTEXT" Name="pPrevCtlContext" />
+            <Return Type="PCCTL_CONTEXT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertFreeCTLContext">
+            <Param Type="PCCTL_CONTEXT" Name="pCtlContext" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertSerializeCTLStoreElement">
+            <Param Type="PCCTL_CONTEXT" Name="pCtlContext" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="BYTE*" Name="pbElement" PostLength="pcbElement" />
+            <Param Type="DWORD*" Name="pcbElement" />
+            <Return Type="BOOL" />
+        </Api>
+        <Category Name="Security and Identity/Cryptography/Extended Property" />
+        <Api Name="CertEnumCertificateContextProperties">
+            <Param Type="PCCERT_CONTEXT" Name="pCertContext" />
+            <Param Type="DWORD" Name="dwPropId" />
+            <Return Type="DWORD" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertEnumCRLContextProperties">
+            <Param Type="PCCRL_CONTEXT" Name="pCrlContext" />
+            <Param Type="DWORD" Name="dwPropId" />
+            <Return Type="DWORD" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertEnumCTLContextProperties">
+            <Param Type="PCCTL_CONTEXT" Name="pCtlContext" />
+            <Param Type="DWORD" Name="dwPropId" />
+            <Return Type="DWORD" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertGetCertificateContextProperty">
+            <Param Type="PCCERT_CONTEXT" Name="pCertContext" />
+            <Param Type="[CertPropId]" Name="dwPropId" />
+            <Param Type="void*" Name="pvData" PostLength="pcbData" />
+            <Param Type="DWORD*" Name="pcbData" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertGetCRLContextProperty">
+            <Param Type="PCCRL_CONTEXT" Name="pCrlContext" />
+            <Param Type="[CertPropId]" Name="dwPropId" />
+            <Param Type="void*" Name="pvData" PostLength="pcbData" />
+            <Param Type="DWORD*" Name="pcbData" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertGetCTLContextProperty">
+            <Param Type="PCCTL_CONTEXT" Name="pCtlContext" />
+            <Param Type="[CertPropId]" Name="dwPropId" />
+            <Param Type="void*" Name="pvData" PostLength="pcbData" />
+            <Param Type="DWORD*" Name="pcbData" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertSetCertificateContextProperty">
+            <Param Type="PCCERT_CONTEXT" Name="pCertContext" />
+            <Param Type="[CertPropId]" Name="dwPropId" />
+            <Param Type="[CertSetPropertyFlags]" Name="dwFlags" />
+            <Param Type="const void*" Name="pvData" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertSetCRLContextProperty">
+            <Param Type="PCCRL_CONTEXT" Name="pCrlContext" />
+            <Param Type="[CertPropId]" Name="dwPropId" />
+            <Param Type="[CertSetPropertyFlags]" Name="dwFlags" />
+            <Param Type="const void*" Name="pvData" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertSetCTLContextProperty">
+            <Param Type="PCCTL_CONTEXT" Name="pCtlContext" />
+            <Param Type="[CertPropId]" Name="dwPropId" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="const void*" Name="pvData" />
+            <Return Type="BOOL" />
+        </Api>
+        <Category Name="Security and Identity/Cryptography/Verification Functions Using CTLs" />
+        <Api Name="CertVerifyCTLUsage">
+            <Param Type="[CertEncodingType]" Name="dwEncodingType" />
+            <Param Type="DWORD" Name="dwSubjectType" />
+            <Param Type="void*" Name="pvSubject" />
+            <Param Type="PCTL_USAGE" Name="pSubjectUsage" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="PCTL_VERIFY_USAGE_PARA" Name="pVerifyUsagePara" />
+            <Param Type="PCTL_VERIFY_USAGE_STATUS" Name="pVerifyUsageStatus" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptMsgEncodeAndSignCTL">
+            <Param Type="[CertEncodingType]" Name="dwMsgEncodingType" />
+            <Param Type="PCTL_INFO" Name="pCtlInfo" />
+            <Param Type="PCMSG_SIGNED_ENCODE_INFO" Name="pSignInfo" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="BYTE*" Name="pbEncoded" PostLength="pcbEncoded" />
+            <Param Type="DWORD*" Name="pcbEncoded" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptMsgGetAndVerifySigner">
+            <Param Type="HCRYPTMSG" Name="hCryptMsg" />
+            <Param Type="DWORD" Name="cSignerStore" />
+            <Param Type="HCERTSTORE*" Name="rghSignerStore" Count="cSignerStore" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="PCCERT_CONTEXT*" Name="ppSigner" />
+            <Param Type="DWORD*" Name="pdwSignerIndex" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptMsgSignCTL">
+            <Param Type="[CertEncodingType]" Name="dwMsgEncodingType" />
+            <Param Type="BYTE*" Name="pbCtlContent" />
+            <Param Type="DWORD" Name="cbCtlContent" />
+            <Param Type="PCMSG_SIGNED_ENCODE_INFO" Name="pSignInfo" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="BYTE*" Name="pbEncoded" PostLength="pcbEncoded" />
+            <Param Type="DWORD*" Name="pcbEncoded" />
+            <Return Type="BOOL" />
+        </Api>
+        <Category Name="Security and Identity/Cryptography/Certificate Chain Verification" />
+        <Api Name="CertCreateCertificateChainEngine">
+            <Param Type="PCERT_CHAIN_ENGINE_CONFIG" Name="pConfig" />
+            <Param Type="HCERTCHAINENGINE*" Name="phChainEngine" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertCreateCTLEntryFromCertificateContextProperties">
+            <Param Type="PCCERT_CONTEXT" Name="pCertContext" />
+            <Param Type="DWORD" Name="cOptAttr" />
+            <Param Type="PCRYPT_ATTRIBUTE" Name="rgOptAttr" Count="cOptAttr" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="void*" Name="pvReserved" />
+            <Param Type="PCTL_ENTRY" Name="pCtlEntry" />
+            <Param Type="DWORD*" Name="pcbCtlEntry" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertDuplicateCertificateChain">
+            <Param Type="PCCERT_CHAIN_CONTEXT" Name="pChainContext" />
+            <Return Type="PCCERT_CHAIN_CONTEXT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertFindChainInStore">
+            <Param Type="HCERTSTORE" Name="hCertStore" />
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="DWORD" Name="dwFindFlags" />
+            <Param Type="DWORD" Name="dwFindType" />
+            <Param Type="const void*" Name="pvFindPara" />
+            <Param Type="PCCERT_CHAIN_CONTEXT" Name="pPrevChainContext" />
+            <Return Type="PCCERT_CHAIN_CONTEXT" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertFreeCertificateChain">
+            <Param Type="PCCERT_CHAIN_CONTEXT" Name="pChainContext" />
+            <Return Type="VOID" />
+        </Api>
+        <Api Name="CertFreeCertificateChainEngine">
+            <Param Type="HCERTCHAINENGINE" Name="hChainEngine" />
+            <Return Type="void" />
+        </Api>
+        <Api Name="CertFreeCertificateChainList">
+            <Param Type="PCCERT_CHAIN_CONTEXT*" Name="prgpSelection" />
+            <Return Type="VOID" />
+        </Api>
+        <Api Name="CertGetCertificateChain">
+            <Param Type="HCERTCHAINENGINE" Name="hChainEngine" />
+            <Param Type="PCCERT_CONTEXT" Name="pCertContext" />
+            <Param Type="LPFILETIME" Name="pTime" />
+            <Param Type="HCERTSTORE" Name="hAdditionalStore" />
+            <Param Type="PCERT_CHAIN_PARA" Name="pChainPara" />
+            <Param Type="[CertChainFlags]" Name="dwFlags" />
+            <Param Type="LPVOID" Name="pvReserved" />
+            <Param Type="PCCERT_CHAIN_CONTEXT*" Name="ppChainContext" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertIsValidCRLForCertificate">
+            <Param Type="PCCERT_CONTEXT" Name="pCert" />
+            <Param Type="PCCRL_CONTEXT" Name="pCRL" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="void*" Name="pvReserved" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertSetCertificateContextPropertiesFromCTLEntry">
+            <Param Type="PCCERT_CONTEXT" Name="pCertContext" />
+            <Param Type="PCTL_ENTRY" Name="pCtlEntry" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertVerifyCertificateChainPolicy">
+            <Param Type="LPCSTR" Name="pszPolicyOID" />
+            <Param Type="PCCERT_CHAIN_CONTEXT" Name="pChainContext" />
+            <Param Type="PCERT_CHAIN_POLICY_PARA" Name="pPolicyPara" />
+            <Param Type="PCERT_CHAIN_POLICY_STATUS" Name="pPolicyStatus" />
+            <Return Type="BOOL" />
+        </Api>
+        <Category Name="Security and Identity/Cryptography/Low-level Message" />
+        <Api Name="CryptMsgCalculateEncodedLength">
+            <Param Type="[CertEncodingType]" Name="dwMsgEncodingType" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="[CryptMsgType]" Name="dwMsgType" />
+            <Param Type="const void*" Name="pvMsgEncodeInfo" Length="cbData" />
+            <Param Type="LPSTR" Name="pszInnerContentObjID" />
+            <Param Type="DWORD" Name="cbData" />
+            <Return Type="DWORD" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CryptMsgClose">
+            <Param Type="HCRYPTMSG" Name="hCryptMsg" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptMsgControl">
+            <Param Type="HCRYPTMSG" Name="hCryptMsg" />
+            <Param Type="[CryptMsgControlFlags]" Name="dwFlags" />
+            <Param Type="[CryptMsgControlType]" Name="dwCtrlType" />
+            <Param Type="const void*" Name="pvCtrlPara" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptMsgUpdate">
+            <Param Type="HCRYPTMSG" Name="hCryptMsg" />
+            <Param Type="const BYTE*" Name="pbData" Length="cbData" />
+            <Param Type="DWORD" Name="cbData" />
+            <Param Type="BOOL" Name="fFinal" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptMsgCountersign">
+            <Param Type="HCRYPTMSG" Name="hCryptMsg" />
+            <Param Type="DWORD" Name="dwIndex" />
+            <Param Type="DWORD" Name="cCountersigners" />
+            <Param Type="PCMSG_SIGNER_ENCODE_INFO" Name="rgCountersigners" Count="cCountersigners" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptMsgCountersignEncoded">
+            <Param Type="[CertEncodingType]" Name="dwEncodingType" />
+            <Param Type="PBYTE" Name="pbSignerInfo" Length="cbSignerInfo" />
+            <Param Type="DWORD" Name="cbSignerInfo" />
+            <Param Type="DWORD" Name="cCountersigners" />
+            <Param Type="PCMSG_SIGNER_ENCODE_INFO" Name="rgCountersigners" Count="cCountersigners" />
+            <Param Type="PBYTE" Name="pbCountersignature" PostLength="pcbCountersignature" />
+            <Param Type="PDWORD" Name="pcbCountersignature" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptMsgDuplicate">
+            <Param Type="HCRYPTMSG" Name="hCryptMsg" />
+            <Return Type="HCRYPTMSG" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CryptMsgGetParam">
+            <Param Type="HCRYPTMSG" Name="hCryptMsg" />
+            <Param Type="[CryptMsgParamType]" Name="dwParamType" />
+            <Param Type="DWORD" Name="dwIndex" />
+            <Param Type="void*" Name="pvData" PostLength="pcbData" />
+            <Param Type="DWORD*" Name="pcbData" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptMsgOpenToDecode">
+            <Param Type="[CertEncodingType]" Name="dwMsgEncodingType" />
+            <Param Type="[CryptMsgOpenFlags]" Name="dwFlags" />
+            <Param Type="[CryptMsgType]" Name="dwMsgType" />
+            <Param Type="HCRYPTPROV_LEGACY" Name="hCryptProv" />
+            <Param Type="PCERT_INFO" Name="pRecipientInfo" />
+            <Param Type="PCMSG_STREAM_INFO" Name="pStreamInfo" />
+            <Return Type="HCRYPTMSG" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CryptMsgOpenToEncode">
+            <Param Type="[CertEncodingType]" Name="dwMsgEncodingType" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="[CryptMsgType]" Name="dwMsgType" />
+            <Param Type="const void*" Name="pvMsgEncodeInfo" />
+            <Param Type="LPSTR" Name="pszInnerContentObjID" />
+            <Param Type="PCMSG_STREAM_INFO" Name="pStreamInfo" />
+            <Return Type="HCRYPTMSG" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CryptMsgVerifyCountersignatureEncoded">
+            <Param Type="HCRYPTPROV_LEGACY" Name="hCryptProv" />
+            <Param Type="[CertEncodingType]" Name="dwEncodingType" />
+            <Param Type="PBYTE" Name="pbSignerInfo" Length="cbSignerInfo" />
+            <Param Type="DWORD" Name="cbSignerInfo" />
+            <Param Type="PBYTE" Name="pbSignerInfoCountersignature" PostLength="cbSignerInfoCountersignature" />
+            <Param Type="DWORD" Name="cbSignerInfoCountersignature" />
+            <Param Type="PCERT_INFO" Name="pciCountersigner" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptMsgVerifyCountersignatureEncodedEx">
+            <Param Type="HCRYPTPROV_LEGACY" Name="hCryptProv" />
+            <Param Type="[CertEncodingType]" Name="dwEncodingType" />
+            <Param Type="PBYTE" Name="pbSignerInfo" Length="cbSignerInfo" />
+            <Param Type="DWORD" Name="cbSignerInfo" />
+            <Param Type="PBYTE" Name="pbSignerInfoCountersignature" Length="cbSignerInfoCountersignature" />
+            <Param Type="DWORD" Name="cbSignerInfoCountersignature" />
+            <Param Type="[CryptMsgSignerType]" Name="dwSignerType" />
+            <Param Type="void*" Name="pvSigner" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="void*" Name="pvReserved" />
+            <Return Type="BOOL" />
+        </Api>
+        <Category Name="Security and Identity/Cryptography/Simplified Message" />
+        <Api Name="CryptDecodeMessage">
+            <Param Type="DWORD" Name="dwMsgTypeFlags" />
+            <Param Type="PCRYPT_DECRYPT_MESSAGE_PARA" Name="pDecryptPara" />
+            <Param Type="PCRYPT_VERIFY_MESSAGE_PARA" Name="pVerifyPara" />
+            <Param Type="DWORD" Name="dwSignerIndex" />
+            <Param Type="const BYTE*" Name="pbEncodedBlob" Length="cbEncodedBlob" />
+            <Param Type="DWORD" Name="cbEncodedBlob" />
+            <Param Type="DWORD" Name="dwPrevInnerContentType" />
+            <Param Type="[CryptMsgType*]" Name="pdwMsgType" />
+            <Param Type="DWORD*" Name="pdwInnerContentType" />
+            <Param Type="BYTE*" Name="pbDecoded" PostLength="pcbDecoded" />
+            <Param Type="DWORD*" Name="pcbDecoded" />
+            <Param Type="PCCERT_CONTEXT*" Name="ppXchgCert" />
+            <Param Type="PCCERT_CONTEXT*" Name="ppSignerCert" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptDecryptAndVerifyMessageSignature">
+            <Param Type="PCRYPT_DECRYPT_MESSAGE_PARA" Name="pDecryptPara" />
+            <Param Type="PCRYPT_VERIFY_MESSAGE_PARA" Name="pVerifyPara" />
+            <Param Type="DWORD" Name="dwSignerIndex" />
+            <Param Type="const BYTE*" Name="pbEncryptedBlob" Length="cbEncryptedBlob" />
+            <Param Type="DWORD" Name="cbEncryptedBlob" />
+            <Param Type="BYTE*" Name="pbDecrypted" PostCount="pcbDecrypted" />
+            <Param Type="DWORD*" Name="pcbDecrypted" />
+            <Param Type="PCCERT_CONTEXT*" Name="ppXchgCert" />
+            <Param Type="PCCERT_CONTEXT*" Name="ppSignerCert" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptDecryptMessage">
+            <Param Type="PCRYPT_DECRYPT_MESSAGE_PARA" Name="pDecryptPara" />
+            <Param Type="const BYTE*" Name="pbEncryptedBlob" Length="cbEncryptedBlob" />
+            <Param Type="DWORD" Name="cbEncryptedBlob" />
+            <Param Type="BYTE*" Name="pbDecrypted" PostLength="pcbDecrypted" />
+            <Param Type="DWORD*" Name="pcbDecrypted" />
+            <Param Type="PCCERT_CONTEXT*" Name="ppXchgCert" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptEncryptMessage">
+            <Param Type="PCRYPT_ENCRYPT_MESSAGE_PARA" Name="pEncryptPara" />
+            <Param Type="DWORD" Name="cRecipientCert" />
+            <Param Type="PCCERT_CONTEXT []" Name="rgpRecipientCert" Count="cRecipientCert" />
+            <Param Type="const BYTE*" Name="pbToBeEncrypted" Length="cbToBeEncrypted" />
+            <Param Type="DWORD" Name="cbToBeEncrypted" />
+            <Param Type="BYTE*" Name="pbEncryptedBlob" PostLength="pcbEncryptedBlob" />
+            <Param Type="DWORD*" Name="pcbEncryptedBlob" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptGetMessageCertificates">
+            <Param Type="DWORD" Name="dwMsgAndCertEncodingType" />
+            <Param Type="HCRYPTPROV_LEGACY" Name="hCryptProv" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="const BYTE*" Name="pbSignedBlob" Length="cbSignedBlob" />
+            <Param Type="DWORD" Name="cbSignedBlob" />
+            <Return Type="HCERTSTORE" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CryptGetMessageSignerCount">
+            <Param Type="[CertEncodingType]" Name="dwMsgEncodingType" />
+            <Param Type="const BYTE*" Name="pbSignedBlob" Length="cbSignedBlob" />
+            <Param Type="DWORD" Name="cbSignedBlob" />
+            <Return Type="LONG" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CryptHashMessage">
+            <Param Type="PCRYPT_HASH_MESSAGE_PARA" Name="pHashPara" />
+            <Param Type="BOOL" Name="fDetachedHash" />
+            <Param Type="DWORD" Name="cToBeHashed" />
+            <Param Type="const BYTE* []" Name="rgpbToBeHashed" Count="cToBeHashed" />
+            <Param Type="DWORD []" Name="rgcbToBeHashed" Count="cToBeHashed" />
+            <Param Type="BYTE*" Name="pbHashedBlob" PostLength="pcbHashedBlob" />
+            <Param Type="DWORD*" Name="pcbHashedBlob" />
+            <Param Type="BYTE*" Name="pbComputedHash" PostLength="pcbComputedHash" />
+            <Param Type="DWORD*" Name="pcbComputedHash" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptSignAndEncryptMessage">
+            <Param Type="PCRYPT_SIGN_MESSAGE_PARA" Name="pSignPara" />
+            <Param Type="PCRYPT_ENCRYPT_MESSAGE_PARA" Name="pEncryptPara" />
+            <Param Type="DWORD" Name="cRecipientCert" />
+            <Param Type="PCCERT_CONTEXT []" Name="rgpRecipientCert" Count="cRecipientCert" />
+            <Param Type="const BYTE*" Name="pbToBeSignedAndEncrypted" Length="cbToBeSignedAndEncrypted" />
+            <Param Type="DWORD" Name="cbToBeSignedAndEncrypted" />
+            <Param Type="BYTE*" Name="pbSignedAndEncryptedBlob" PostLength="pcbSignedAndEncryptedBlob" />
+            <Param Type="DWORD*" Name="pcbSignedAndEncryptedBlob" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptSignMessageWithKey">
+            <Param Type="PCRYPT_KEY_SIGN_MESSAGE_PARA" Name="pSignPara" />
+            <Param Type="const BYTE*" Name="pbToBeSigned" Length="cToBeSigned" />
+            <Param Type="DWORD" Name="cToBeSigned" />
+            <Param Type="BYTE*" Name="pbSignedBlob" PostLength="pcbSignedBlob" />
+            <Param Type="DWORD*" Name="pcbSignedBlob" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptSignMessage">
+            <Param Type="PCRYPT_SIGN_MESSAGE_PARA" Name="pSignPara" />
+            <Param Type="BOOL" Name="fDetachedSignature" />
+            <Param Type="DWORD" Name="cToBeSigned" />
+            <Param Type="const BYTE* []" Name="rgpbToBeSigned" Count="cToBeSigned" />
+            <Param Type="DWORD []" Name="rgcbToBeSigned" Count="cToBeSigned" />
+            <Param Type="BYTE*" Name="pbSignedBlob" PostLength="pcbSignedBlob" />
+            <Param Type="DWORD*" Name="pcbSignedBlob" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptVerifyDetachedMessageHash">
+            <Param Type="PCRYPT_HASH_MESSAGE_PARA" Name="pHashPara" />
+            <Param Type="BYTE*" Name="pbDetachedHashBlob" Length="cbDetachedHashBlob" />
+            <Param Type="DWORD" Name="cbDetachedHashBlob" />
+            <Param Type="DWORD" Name="cToBeHashed" />
+            <Param Type="const BYTE* []" Name="rgpbToBeHashed" Count="cToBeHashed" />
+            <Param Type="DWORD" Name="rgcbToBeHashed" />
+            <Param Type="BYTE*" Name="pbComputedHash" PostLength="pcbComputedHash" />
+            <Param Type="DWORD*" Name="pcbComputedHash" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptVerifyDetachedMessageSignature">
+            <Param Type="PCRYPT_VERIFY_MESSAGE_PARA" Name="pVerifyPara" />
+            <Param Type="DWORD" Name="dwSignerIndex" />
+            <Param Type="const BYTE*" Name="pbDetachedSignBlob" Length="cbDetachedSignBlob" />
+            <Param Type="DWORD" Name="cbDetachedSignBlob" />
+            <Param Type="DWORD" Name="cToBeSigned" />
+            <Param Type="const BYTE* []" Name="rgpbToBeSigned" Count="cToBeSigned" />
+            <Param Type="DWORD []" Name="rgcbToBeSigned" Count="cToBeSigned" />
+            <Param Type="PCCERT_CONTEXT*" Name="ppSignerCert" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptVerifyMessageHash">
+            <Param Type="PCRYPT_HASH_MESSAGE_PARA" Name="pHashPara" />
+            <Param Type="BYTE*" Name="pbHashedBlob" Length="cbHashedBlob" />
+            <Param Type="DWORD" Name="cbHashedBlob" />
+            <Param Type="BYTE*" Name="pbToBeHashed" PostLength="pcbToBeHashed" />
+            <Param Type="DWORD*" Name="pcbToBeHashed" />
+            <Param Type="BYTE*" Name="pbComputedHash" PostLength="pcbComputedHash" />
+            <Param Type="DWORD*" Name="pcbComputedHash" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptVerifyMessageSignature">
+            <Param Type="PCRYPT_VERIFY_MESSAGE_PARA" Name="pVerifyPara" />
+            <Param Type="DWORD" Name="dwSignerIndex" />
+            <Param Type="const BYTE*" Name="pbSignedBlob" Length="cbSignedBlob" />
+            <Param Type="DWORD" Name="cbSignedBlob" />
+            <Param Type="BYTE*" Name="pbDecoded" PostLength="pcbDecoded" />
+            <Param Type="DWORD*" Name="pcbDecoded" />
+            <Param Type="PCCERT_CONTEXT*" Name="ppSignerCert" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptVerifyMessageSignatureWithKey">
+            <Param Type="PCRYPT_KEY_VERIFY_MESSAGE_PARA" Name="pVerifyPara" />
+            <Param Type="PCERT_PUBLIC_KEY_INFO" Name="pPublicKeyInfo" />
+            <Param Type="const BYTE*" Name="pbSignedBlob" Length="cbSignedBlob" />
+            <Param Type="DWORD" Name="cbSignedBlob" />
+            <Param Type="BYTE*" Name="pbDecoded" PostLength="pcbDecoded" />
+            <Param Type="DWORD*" Name="pcbDecoded" />
+            <Return Type="BOOL" />
+        </Api>
+        <Category Name="Security and Identity/Cryptography/Data Management" />
+        <Api Name="CertCompareCertificate">
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="PCERT_INFO" Name="pCertId1" />
+            <Param Type="PCERT_INFO" Name="pCertId2" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertCompareCertificateName">
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="PCERT_NAME_BLOB" Name="pCertName1" />
+            <Param Type="PCERT_NAME_BLOB" Name="pCertName2" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertCompareIntegerBlob">
+            <Param Type="PCRYPT_INTEGER_BLOB" Name="pInt1" />
+            <Param Type="PCRYPT_INTEGER_BLOB" Name="pInt2" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertComparePublicKeyInfo">
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="PCERT_PUBLIC_KEY_INFO" Name="pPublicKey1" />
+            <Param Type="PCERT_PUBLIC_KEY_INFO" Name="pPublicKey2" />
+            <Return Type="BOOL" />
+            <Success />
+        </Api>
+        <Api Name="CertFindAttribute">
+            <Param Type="LPCSTR" Name="pszObjId" />
+            <Param Type="DWORD" Name="cAttr" />
+            <Param Type="CRYPT_ATTRIBUTE[]" Name="rgAttr" Count="cAttr" />
+            <Return Type="PCRYPT_ATTRIBUTE" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertFindExtension">
+            <Param Type="LPCSTR" Name="pszObjId" />
+            <Param Type="DWORD" Name="cExtensions" />
+            <Param Type="CERT_EXTENSION[]" Name="rgExtensions" Count="cExtensions" />
+            <Return Type="PCERT_EXTENSION" />
+        </Api>
+        <Api Name="CertFindRDNAttr">
+            <Param Type="LPCSTR" Name="pszObjId" />
+            <Param Type="PCERT_NAME_INFO" Name="pName" />
+            <Return Type="PCERT_RDN_ATTR" />
+        </Api>
+        <Api Name="CertGetIntendedKeyUsage">
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="PCERT_INFO" Name="pCertInfo" />
+            <Param Type="BYTE*" Name="pbKeyUsage" PostLength="cbKeyUsage" />
+            <Param Type="DWORD" Name="cbKeyUsage" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertGetPublicKeyLength">
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="PCERT_PUBLIC_KEY_INFO" Name="pPublicKey" />
+            <Return Type="DWORD" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertIsRDNAttrsInCertificateName">
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="PCERT_NAME_BLOB" Name="pCertName" />
+            <Param Type="PCERT_RDN" Name="pRDN" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertVerifyCRLRevocation">
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="PCERT_INFO" Name="pCertId" />
+            <Param Type="DWORD" Name="cCrlInfo" />
+            <Param Type="PCRL_INFO []" Name="rgpCrlInfo" Count="cCrlInfo" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertVerifyCRLTimeValidity">
+            <Param Type="LPFILETIME" Name="pTimeToVerify" />
+            <Param Type="PCRL_INFO" Name="pCrlInfo" />
+            <Return Type="LONG" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertVerifyRevocation">
+            <Param Type="[CertEncodingType]" Name="dwEncodingType" />
+            <Param Type="DWORD" Name="dwRevType" />
+            <Param Type="DWORD" Name="cContext" />
+            <Param Type="PVOID []" Name="rgpvContext" Count="cContext" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="PCERT_REVOCATION_PARA" Name="pRevPara" />
+            <Param Type="PCERT_REVOCATION_STATUS" Name="pRevStatus" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertVerifyTimeValidity">
+            <Param Type="LPFILETIME" Name="pTimeToVerify" />
+            <Param Type="PCERT_INFO" Name="pCertInfo" />
+            <Return Type="LONG" />
+        </Api>
+        <Api Name="CertVerifyValidityNesting">
+            <Param Type="PCERT_INFO" Name="pSubjectInfo" />
+            <Param Type="PCERT_INFO" Name="pIssuerInfo" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptExportPKCS8">
+            <Param Type="HCRYPTPROV" Name="hCryptProv" />
+            <Param Type="[CryptKeySpec]" Name="dwKeySpec" />
+            <Param Type="LPSTR" Name="pszPrivateKeyObjId" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="void*" Name="pvAuxInfo" />
+            <Param Type="BYTE*" Name="pbPrivateKeyBlob" PostLength="pcbPrivateKeyBlob" />
+            <Param Type="DWORD*" Name="pcbPrivateKeyBlob" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptExportPKCS8Ex">
+            <Param Type="CRYPT_PKCS8_EXPORT_PARAMS*" Name="psExportParams" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="void*" Name="pvAuxInfo" />
+            <Param Type="BYTE*" Name="pbPrivateKeyBlob" PostLength="pcbPrivateKeyBlob" />
+            <Param Type="DWORD*" Name="pcbPrivateKeyBlob" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptExportPublicKeyInfo">
+            <Param Type="HCRYPTPROV_OR_NCRYPT_KEY_HANDLE" Name="hCryptProvOrNCryptKey" />
+            <Param Type="[CryptKeySpec]" Name="dwKeySpec" />
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="PCERT_PUBLIC_KEY_INFO" Name="pInfo" />
+            <Param Type="DWORD*" Name="pcbInfo" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptExportPublicKeyInfoEx">
+            <Param Type="HCRYPTPROV_OR_NCRYPT_KEY_HANDLE" Name="hCryptProvOrNCryptKey" />
+            <Param Type="[CryptKeySpec]" Name="dwKeySpec" />
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="LPSTR" Name="pszPublicKeyObjId" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="void*" Name="pvAuxInfo" />
+            <Param Type="PCERT_PUBLIC_KEY_INFO" Name="pInfo" />
+            <Param Type="DWORD*" Name="pcbInfo" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptExportPublicKeyInfoFromBCryptKeyHandle">
+            <Param Type="BCRYPT_KEY_HANDLE" Name="hBCryptKey" />
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="LPSTR" Name="pszPublicKeyObjId" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="void*" Name="pvAuxInfo" />
+            <Param Type="PCERT_PUBLIC_KEY_INFO" Name="pInfo" />
+            <Param Type="DWORD" Name="pcbInfo" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptFindCertificateKeyProvInfo">
+            <Param Type="PCCERT_CONTEXT" Name="pCert" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="void*" Name="pvReserved" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptFindLocalizedName">
+            <Param Type="LPCWSTR" Name="pwszCryptName" />
+            <Return Type="LPCWSTR" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CryptHashCertificate">
+            <Param Type="HCRYPTPROV_LEGACY" Name="hCryptProv" />
+            <Param Type="ALG_ID" Name="Algid" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="const BYTE*" Name="pbEncoded" Length="cbEncoded" />
+            <Param Type="DWORD" Name="cbEncoded" />
+            <Param Type="BYTE*" Name="pbComputedHash" PostLength="pcbComputedHash" />
+            <Param Type="DWORD*" Name="pcbComputedHash" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptHashCertificate2">
+            <Param Type="LPCWSTR" Name="pwszCNGHashAlgid" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="void*" Name="pvReserved" />
+            <Param Type="BYTE*" Name="pbEncoded" Length="cbEncoded" />
+            <Param Type="DWORD" Name="cbEncoded" />
+            <Param Type="BYTE*" Name="pbComputedHash" PostLength="pcbComputedHash" />
+            <Param Type="DWORD*" Name="pcbComputedHash" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptHashPublicKeyInfo">
+            <Param Type="HCRYPTPROV_LEGACY" Name="hCryptProv" />
+            <Param Type="ALG_ID" Name="Algid" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="PCERT_PUBLIC_KEY_INFO" Name="pInfo" />
+            <Param Type="BYTE*" Name="pbComputedHash" PostLength="pcbComputedHash" />
+            <Param Type="DWORD*" Name="pcbComputedHash" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptHashToBeSigned">
+            <Param Type="HCRYPTPROV_LEGACY" Name="hCryptProv" />
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="const BYTE*" Name="pbEncoded" Length="cbEncoded" />
+            <Param Type="DWORD" Name="cbEncoded" />
+            <Param Type="BYTE*" Name="pbComputedHash" PostLength="pcbComputedHash" />
+            <Param Type="DWORD*" Name="pcbComputedHash" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptImportPKCS8">
+            <Param Type="CRYPT_PKCS8_IMPORT_PARAMS" Name="sPrivateKeyAndParams" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="HCRYPTPROV*" Name="phCryptProv" />
+            <Param Type="void*" Name="pvAuxInfo" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptImportPublicKeyInfo">
+            <Param Type="HCRYPTPROV" Name="hCryptProv" />
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="PCERT_PUBLIC_KEY_INFO" Name="pInfo" />
+            <Param Type="HCRYPTKEY*" Name="phKey" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptImportPublicKeyInfoEx">
+            <Param Type="HCRYPTPROV" Name="hCryptProv" />
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="PCERT_PUBLIC_KEY_INFO" Name="pInfo" />
+            <Param Type="ALG_ID" Name="aiKeyAlg" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="void*" Name="pvAuxInfo" />
+            <Param Type="HCRYPTKEY*" Name="phKey" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptImportPublicKeyInfoEx2">
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="PCERT_PUBLIC_KEY_INFO" Name="pInfo" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="void*" Name="pvAuxInfo" />
+            <Param Type="BCRYPT_KEY_HANDLE*" Name="phKey" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptMemAlloc">
+            <Param Type="ULONG" Name="cbSize" />
+            <Return Type="LPVOID" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CryptMemFree">
+            <Param Type="LPVOID" Name="pv" />
+            <Return Type="void" />
+        </Api>
+        <Api Name="CryptMemRealloc">
+            <Param Type="LPVOID" Name="pv" />
+            <Param Type="ULONG" Name="cbSize" />
+            <Return Type="LPVOID" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CryptQueryObject">
+            <Param Type="[CryptObjectType]" Name="dwObjectType" />
+            <Param Type="const void*" Name="pvObject" />
+            <Param Type="[CryptExpectedContentType]" Name="dwExpectedContentTypeFlags" />
+            <Param Type="[CryptExpectedFormatType]" Name="dwExpectedFormatTypeFlags" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="[CertEncodingType*]" Name="pdwMsgAndCertEncodingType" />
+            <Param Type="[CryptContentType*]" Name="pdwContentType" />
+            <Param Type="[CryptFormatType*]" Name="pdwFormatType" />
+            <Param Type="HCERTSTORE*" Name="phCertStore" />
+            <Param Type="HCRYPTMSG*" Name="phMsg" />
+            <Param Type="const void**" Name="ppvContext" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptSignAndEncodeCertificate">
+            <Param Type="HCRYPTPROV_OR_NCRYPT_KEY_HANDLE" Name="hCryptProvOrNCryptKey" />
+            <Param Type="[CryptKeySpec]" Name="dwKeySpec" />
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="LPCSTR" Name="lpszStructType" />
+            <Param Type="const void*" Name="pvStructInfo" />
+            <Param Type="PCRYPT_ALGORITHM_IDENTIFIER" Name="pSignatureAlgorithm" />
+            <Param Type="const void*" Name="pvHashAuxInfo" />
+            <Param Type="PBYTE" Name="pbEncoded" PostLength="pcbEncoded" />
+            <Param Type="DWORD*" Name="pcbEncoded" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptSignCertificate">
+            <Param Type="HCRYPTPROV_OR_NCRYPT_KEY_HANDLE" Name="hCryptProvOrNCryptKey" />
+            <Param Type="[CryptKeySpec]" Name="dwKeySpec" />
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="const BYTE*" Name="pbEncodedToBeSigned" Length="cbEncodedToBeSigned" />
+            <Param Type="DWORD" Name="cbEncodedToBeSigned" />
+            <Param Type="PCRYPT_ALGORITHM_IDENTIFIER" Name="pSignatureAlgorithm" />
+            <Param Type="const void*" Name="pvHashAuxInfo" />
+            <Param Type="BYTE*" Name="pbSignature" PostLength="pcbSignature" />
+            <Param Type="DWORD*" Name="pcbSignature" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptSIPAddProvider">
+            <Param Type="SIP_ADD_NEWPROVIDER*" Name="psNewProv" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptSIPCreateIndirectData">
+            <Param Type="SIP_SUBJECTINFO*" Name="pSubjectInfo" />
+            <Param Type="DWORD*" Name="pcbIndirectData" />
+            <Param Type="SIP_INDIRECT_DATA*" Name="pIndirectData" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptSIPGetSignedDataMsg">
+            <Param Type="SIP_SUBJECTINFO*" Name="pSubjectInfo" />
+            <Param Type="[CertEncodingType*]" Name="pdwEncodingType" />
+            <Param Type="DWORD" Name="dwIndex" />
+            <Param Type="DWORD*" Name="pcbSignedDataMsg" />
+            <Param Type="BYTE*" Name="pbSignedDataMsg" PostLength="pcbSignedDataMsg" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptSIPLoad">
+            <Param Type="const GUID*" Name="pgSubject" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="SIP_DISPATCH_INFO*" Name="pSipDispatch" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptSIPPutSignedDataMsg">
+            <Param Type="SIP_SUBJECTINFO*" Name="pSubjectInfo" />
+            <Param Type="[CertEncodingType*]" Name="pdwEncodingType" />
+            <Param Type="DWORD" Name="dwIndex" />
+            <Param Type="DWORD*" Name="pcbSignedDataMsg" />
+            <Param Type="BYTE*" Name="pbSignedDataMsg" PostLength="pcbSignedDataMsg" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptSIPRemoveProvider">
+            <Param Type="GUID*" Name="pgProv" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptSIPRemoveSignedDataMsg">
+            <Param Type="SIP_SUBJECTINFO*" Name="pSubjectInfo" />
+            <Param Type="DWORD" Name="dwIndex" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptSIPRetrieveSubjectGuid">
+            <Param Type="LPCWSTR" Name="FileName" />
+            <Param Type="HANDLE" Name="hFileIn" />
+            <Param Type="GUID*" Name="pgSubject" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptSIPRetrieveSubjectGuidForCatalogFile">
+            <Param Type="LPCWSTR" Name="FileName" />
+            <Param Type="HANDLE" Name="hFileIn" />
+            <Param Type="GUID*" Name="pgSubject" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptSIPVerifyIndirectData">
+            <Param Type="SIP_SUBJECTINFO*" Name="pSubjectInfo" />
+            <Param Type="SIP_INDIRECT_DATA*" Name="pIndirectData" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptUpdateProtectedState">
+            <Param Type="PSID" Name="pOldSid" />
+            <Param Type="LPCWSTR" Name="pwszOldPassword" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="DWORD*" Name="pdwSuccessCount" />
+            <Param Type="DWORD*" Name="pdwFailureCount" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptVerifyCertificateSignature">
+            <Param Type="HCRYPTPROV_LEGACY" Name="hCryptProv" />
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="BYTE*" Name="pbEncoded" Length="cbEncoded" />
+            <Param Type="DWORD" Name="cbEncoded" />
+            <Param Type="PCERT_PUBLIC_KEY_INFO" Name="pPublicKey" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptVerifyCertificateSignatureEx">
+            <Param Type="HCRYPTPROV_LEGACY" Name="hCryptProv" />
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="[CryptSubjectType]" Name="dwSubjectType" />
+            <Param Type="void*" Name="pvSubject" />
+            <Param Type="[CryptIssuerType]" Name="dwIssuerType" />
+            <Param Type="void*" Name="pvIssuer" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="void*" Name="pvReserved" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertIsStrongHashToSign">
+            <Param Type="PCCERT_STRONG_SIGN_PARA" Name="pStrongSignPara" />
+            <Param Type="LPCWSTR" Name="pwszCNGHashAlgid" />
+            <Param Type="PCCERT_CONTEXT" Name="pSigningCert" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptSIPGetCaps">
+            <Param Type="SIP_SUBJECTINFO*" Name="pSubjInfo" />
+            <Param Type="SIP_CAP_SET*" Name="pCaps" />
+            <Return Type="BOOL" />
+        </Api>
+        <Category Name="Security and Identity/Cryptography/Data Conversion" />
+        <Api Name="CertAlgIdToOID">
+            <Param Type="DWORD" Name="dwAlgId" />
+            <Return Type="LPCSTR" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertGetNameString" BothCharset="True">
+            <Param Type="PCCERT_CONTEXT" Name="pCertContext" />
+            <Param Type="[CertNameType]" Name="dwType" />
+            <Param Type="[CertNameFlags]" Name="dwFlags" />
+            <Param Type="void*" Name="pvTypePara" />
+            <Param Type="LPTSTR" Name="pszNameString" />
+            <Param Type="DWORD" Name="cchNameString" />
+            <Return Type="DWORD" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertNameToStr" BothCharset="True">
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="PCERT_NAME_BLOB" Name="pName" />
+            <Param Type="[CertStrType]" Name="dwStrType" />
+            <Param Type="LPTSTR" Name="psz" />
+            <Param Type="DWORD" Name="csz" />
+            <Return Type="DWORD" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertOIDToAlgId">
+            <Param Type="LPCSTR" Name="pszObjId" />
+            <Return Type="DWORD" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertRDNValueToStr" BothCharset="True">
+            <Param Type="DWORD" Name="dwValueType" />
+            <Param Type="PCERT_RDN_VALUE_BLOB" Name="pValue" />
+            <Param Type="LPTSTR" Name="psz" />
+            <Param Type="DWORD" Name="csz" />
+            <Return Type="DWORD" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CertStrToName" BothCharset="True">
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="LPCTSTR" Name="pszX500" />
+            <Param Type="[CertStrType]" Name="dwStrType" />
+            <Param Type="void*" Name="pvReserved" />
+            <Param Type="BYTE*" Name="pbEncoded" PostLength="pcbEncoded" />
+            <Param Type="DWORD*" Name="pcbEncoded" />
+            <Param Type="LPCTSTR*" Name="ppszError" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptBinaryToString" BothCharset="True">
+            <Param Type="const BYTE*" Name="pbBinary" Length="cbBinary" />
+            <Param Type="DWORD" Name="cbBinary" />
+            <Param Type="[CryptStringFlags]" Name="dwFlags" />
+            <Param Type="LPTSTR" Name="pszString" />
+            <Param Type="DWORD*" Name="pcchString" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptFormatObject">
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="DWORD" Name="dwFormatType" />
+            <Param Type="[CryptFormatStrType]" Name="dwFormatStrType" />
+            <Param Type="void*" Name="pFormatStruct" />
+            <Param Type="LPCSTR" Name="lpszStructType" />
+            <Param Type="const BYTE*" Name="pbEncoded" Length="cbEncoded" />
+            <Param Type="DWORD" Name="cbEncoded" />
+            <Param Type="void*" Name="pbFormat" PostLength="pcbFormat" />
+            <Param Type="DWORD*" Name="pcbFormat" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptStringToBinary" BothCharset="True">
+            <Param Type="LPCTSTR" Name="pszString" />
+            <Param Type="DWORD" Name="cchString" />
+            <Param Type="[CryptStringFlags]" Name="dwFlags" />
+            <Param Type="BYTE*" Name="pbBinary" PostLength="pcbBinary" />
+            <Param Type="DWORD*" Name="pcbBinary" />
+            <Param Type="DWORD*" Name="pdwSkip" />
+            <Param Type="[CryptStringFlags*]" Name="pdwFlags" />
+            <Return Type="BOOL" />
+        </Api>
+        <Category Name="Security and Identity/Cryptography/Enhanced Key Usage" />
+        <Api Name="CertAddEnhancedKeyUsageIdentifier">
+            <Param Type="PCCERT_CONTEXT" Name="pCertContext" />
+            <Param Type="LPCSTR" Name="pszUsageIdentifier" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertGetEnhancedKeyUsage">
+            <Param Type="PCCERT_CONTEXT" Name="pCertContext" />
+            <Param Type="[CertFindFlags]" Name="dwFlags" />
+            <!-- TODO: pUsage PostLength="pcbUsage" -->
+            <Param Type="PCERT_ENHKEY_USAGE" Name="pUsage" />
+            <Param Type="DWORD*" Name="pcbUsage" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertRemoveEnhancedKeyUsageIdentifier">
+            <Param Type="PCCERT_CONTEXT" Name="pCertContext" />
+            <Param Type="LPCSTR" Name="pszUsageIdentifier" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CertSetEnhancedKeyUsage">
+            <Param Type="PCCERT_CONTEXT" Name="pCertContext" />
+            <Param Type="PCERT_ENHKEY_USAGE" Name="pUsage" />
+            <Return Type="BOOL" />
+        </Api>
+        <Category Name="Security and Identity/Cryptography/Key Identifier" />
+        <Api Name="CryptCreateKeyIdentifierFromCSP">
+            <Param Type="[CertEncodingType]" Name="dwCertEncodingType" />
+            <Param Type="LPCSTR" Name="pszPubKeyOID" />
+            <Param Type="const PUBLICKEYSTRUC*" Name="pPubKeyStruc" />
+            <Param Type="DWORD" Name="cbPubKeyStruc" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="void*" Name="pvReserved" />
+            <Param Type="BYTE*" Name="pbHash" PostLength="pcbHash" />
+            <Param Type="DWORD*" Name="pcbHash" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptEnumKeyIdentifierProperties">
+            <Param Type="const CRYPT_HASH_BLOB*" Name="pKeyIdentifier" />
+            <Param Type="DWORD" Name="dwPropId" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="LPCWSTR" Name="pwszComputerName" />
+            <Param Type="void*" Name="pvReserved" />
+            <Param Type="void*" Name="pvArg" />
+            <Param Type="PFN_CRYPT_ENUM_KEYID_PROP" Name="pfnEnum" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptGetKeyIdentifierProperty">
+            <Param Type="const CRYPT_HASH_BLOB*" Name="pKeyIdentifier" />
+            <Param Type="DWORD" Name="dwPropId" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="LPCWSTR" Name="pwszComputerName" />
+            <Param Type="void*" Name="pvReserved" />
+            <Param Type="void*" Name="pvData" PostLength="pcbData" />
+            <Param Type="DWORD*" Name="pcbData" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptSetKeyIdentifierProperty">
+            <Param Type="const CRYPT_HASH_BLOB*" Name="pKeyIdentifier" />
+            <Param Type="DWORD" Name="dwPropId" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="LPCWSTR" Name="pwszComputerName" />
+            <Param Type="void*" Name="pvReserved" />
+            <Param Type="const void*" Name="pvData" />
+            <Return Type="BOOL" />
+        </Api>
+        <Category Name="Security and Identity/Cryptography/Object Identifier (OID) Support" />
+        <Api Name="CryptEnumOIDFunction">
+            <Param Type="[CertEncodingType]" Name="dwEncodingType" />
+            <Param Type="LPCSTR" Name="pszFuncName" />
+            <Param Type="LPCSTR" Name="pszOID" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="void*" Name="pvArg" />
+            <Param Type="PFN_CRYPT_ENUM_OID_FUNC" Name="pfnEnumOIDFunc" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptEnumOIDInfo">
+            <Param Type="[CryptGroupId]" Name="dwGroupId" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="void*" Name="pvArg" />
+            <Param Type="PFN_CRYPT_ENUM_OID_INFO" Name="pfnEnumOIDInfo" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptFindOIDInfo">
+            <Param Type="[CryptFindOidInfoKeyType]" Name="dwKeyType" />
+            <Param Type="void*" Name="pvKey" />
+            <Param Type="[CryptFindOidInfoGroudId]" Name="dwGroupId" />
+            <Return Type="PCCRYPT_OID_INFO" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CryptFreeOIDFunctionAddress">
+            <Param Type="HCRYPTOIDFUNCADDR" Name="hFuncAddr" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptGetOIDFunctionAddress">
+            <Param Type="HCRYPTOIDFUNCSET" Name="hFuncSet" />
+            <Param Type="[CertEncodingType]" Name="dwEncodingType" />
+            <Param Type="LPCSTR" Name="pszOID" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="void**" Name="ppvFuncAddr" />
+            <Param Type="HCRYPTOIDFUNCADDR*" Name="phFuncAddr" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptGetDefaultOIDFunctionAddress">
+            <Param Type="HCRYPTOIDFUNCSET" Name="hFuncSet" />
+            <Param Type="[CertEncodingType]" Name="dwEncodingType" />
+            <Param Type="LPCWSTR" Name="pwszDll" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="void**" Name="ppvFuncAddr" />
+            <Param Type="HCRYPTOIDFUNCADDR*" Name="phFuncAddr" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptGetDefaultOIDDllList">
+            <Param Type="HCRYPTOIDFUNCSET" Name="hFuncSet" />
+            <Param Type="[CertEncodingType]" Name="dwEncodingType" />
+            <Param Type="LPWSTR" Name="pwszDllList" />
+            <Param Type="DWORD*" Name="pcchDllList" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptGetOIDFunctionValue">
+            <Param Type="[CertEncodingType]" Name="dwEncodingType" />
+            <Param Type="LPCSTR" Name="pszFuncName" />
+            <Param Type="LPCSTR" Name="pszOID" />
+            <Param Type="LPCWSTR" Name="pwszValueName" />
+            <Param Type="DWORD*" Name="pdwValueType" />
+            <Param Type="BYTE*" Name="pbValueData" PostLength="pcbValueData" />
+            <Param Type="DWORD*" Name="pcbValueData" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptInitOIDFunctionSet">
+            <Param Type="LPCSTR" Name="pszFuncName" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Return Type="HCRYPTOIDFUNCSET" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="CryptInstallOIDFunctionAddress">
+            <Param Type="HMODULE" Name="hModule" />
+            <Param Type="[CertEncodingType]" Name="dwEncodingType" />
+            <Param Type="LPCSTR" Name="pszFuncName" />
+            <Param Type="DWORD" Name="cFuncEntry" />
+            <Param Type="CRYPT_OID_FUNC_ENTRY[]" Name="rgFuncEntry" Count="cFuncEntry" />
+            <Param Type="[CryptInstallOIDFlags]" Name="dwFlags" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptRegisterDefaultOIDFunction">
+            <Param Type="[CertEncodingType]" Name="dwEncodingType" />
+            <Param Type="LPCSTR" Name="pszFuncName" />
+            <Param Type="DWORD" Name="dwIndex" />
+            <Param Type="LPCWSTR" Name="pwszDll" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptRegisterOIDFunction">
+            <Param Type="[CertEncodingType]" Name="dwEncodingType" />
+            <Param Type="LPCSTR" Name="pszFuncName" />
+            <Param Type="LPCSTR" Name="pszOID" />
+            <Param Type="LPCWSTR" Name="pwszDll" />
+            <Param Type="LPCSTR" Name="pszOverrideFuncName" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptRegisterOIDInfo">
+            <Param Type="PCCRYPT_OID_INFO" Name="pInfo" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptSetOIDFunctionValue">
+            <Param Type="[CertEncodingType]" Name="dwEncodingType" />
+            <Param Type="LPCSTR" Name="pszFuncName" />
+            <Param Type="LPCSTR" Name="pszOID" />
+            <Param Type="LPCWSTR" Name="pwszValueName" />
+            <Param Type="DWORD" Name="dwValueType" />
+            <Param Type="const BYTE*" Name="pbValueData" Length="cbValueData" />
+            <Param Type="DWORD" Name="cbValueData" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptUnregisterDefaultOIDFunction">
+            <Param Type="[CertEncodingType]" Name="dwEncodingType" />
+            <Param Type="LPCSTR" Name="pszFuncName" />
+            <Param Type="LPCWSTR" Name="pwszDll" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptUnregisterOIDFunction">
+            <Param Type="[CertEncodingType]" Name="dwEncodingType" />
+            <Param Type="LPCSTR" Name="pszFuncName" />
+            <Param Type="LPCSTR" Name="pszOID" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CryptUnregisterOIDInfo">
+            <Param Type="PCCRYPT_OID_INFO" Name="pInfo" />
+            <Return Type="BOOL" />
+        </Api>
+        <Category Name="Security and Identity/Cryptography/Personal Information Exchange (PFX)" />
+        <Api Name="PFXExportCertStore">
+            <Param Type="HCERTSTORE" Name="hStore" />
+            <Param Type="CRYPT_DATA_BLOB*" Name="pPFX" />
+            <Param Type="LPCWSTR" Name="szPassword" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="PFXExportCertStoreEx">
+            <Param Type="HCERTSTORE" Name="hStore" />
+            <Param Type="CRYPT_DATA_BLOB*" Name="pPFX" />
+            <Param Type="LPCWSTR" Name="szPassword" />
+            <Param Type="void*" Name="pvReserved" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="PFXImportCertStore">
+            <Param Type="CRYPT_DATA_BLOB*" Name="pPFX" />
+            <Param Type="LPCWSTR" Name="szPassword" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Return Type="HCERTSTORE" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="PFXIsPFXBlob">
+            <Param Type="CRYPT_DATA_BLOB*" Name="pPFX" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="PFXVerifyPassword">
+            <Param Type="CRYPT_DATA_BLOB*" Name="pPFX" />
+            <Param Type="LPCWSTR" Name="szPassword" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Return Type="BOOL" />
+        </Api>
+    </Module>
+</ApiMonitor>

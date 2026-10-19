@@ -1,0 +1,54 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IRunningObjectTable" Id="{00000010-0000-0000-C000-000000000046}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Component Object Model (COM)/COM Fundamentals/Interfaces">
+
+        <!-- [ROTFLAGS] -->
+        <Variable Name="[ROTFLAGS]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="ROTFLAGS_REGISTRATIONKEEPSALIVE"     Value="0x1" />
+                <Set Name="ROTFLAGS_ALLOWANYCLIENT"             Value="0x2" />
+            </Flag>
+        </Variable>
+
+        <Api Name="Register">
+            <Param Type="[ROTFLAGS]" Name="grfFlags" />
+            <Param Type="IUnknown*" Name="punkObject" />
+            <Param Type="IMoniker*" Name="pmkObjectName" />
+            <Param Type="DWORD*" Name="pdwRegister" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Revoke">
+            <Param Type="DWORD" Name="dwRegister" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="IsRunning">
+            <Param Type="IMoniker*" Name="pmkObjectName" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetObject">
+            <Param Type="IMoniker*" Name="pmkObjectName" />
+            <Param Type="IUnknown**" Name="ppunkObject" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="NoteChangeTime">
+            <Param Type="DWORD" Name="dwRegister" />
+            <Param Type="FILETIME*" Name="pfiletime" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetTimeOfLastChange">
+            <Param Type="IMoniker*" Name="pmkObjectName" />
+            <Param Type="FILETIME*" Name="pfiletime" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="EnumRunning">
+            <Param Type="IEnumMoniker**" Name="ppenumMoniker" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

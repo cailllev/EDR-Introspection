@@ -1,0 +1,24 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\DirectX\9\IDirect3DSwapChain9.xml" />
+    <Interface Name="IDirect3DSwapChain9Ex" Id="{91886CAF-1C3D-4d2e-A0AB-3E4C7D8D3303}" BaseInterface="IDirect3DSwapChain9" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Graphics and Gaming/DirectX Graphics and Gaming/Direct3D/9">
+        <!-- Methods -->
+        <Api Name="GetLastPresentCount">
+            <Param Type="UINT*" Name="pLastPresentCount" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetPresentStats">
+            <Param Type="D3DPRESENTSTATS*" Name="pPresentationStatistics" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetDisplayModeEx">
+            <Param Type="D3DDISPLAYMODEEX*" Name="pMode" />
+            <Param Type="D3DDISPLAYROTATION*" Name="pRotation" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

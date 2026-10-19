@@ -1,0 +1,44 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Module Name="SensAPI.dll" CallingConvention="STDCALL" ErrorFunc="GetLastError" OnlineHelp="MSDN">
+        <!-- Variables -->
+
+        <!-- QOCINFO -->
+        <Variable Name="QOCINFO" Type="Struct">
+            <Field Type="DWORD" 	Name="dwSize" />
+            <Field Type="DWORD" 	Name="dwFlags" />
+            <Field Type="DWORD" 	Name="dwInSpeed" />
+            <Field Type="DWORD" 	Name="dwOutSpeed" />
+        </Variable>
+        <Variable Name="LPQOCINFO" Type="Pointer" Base="QOCINFO" />
+
+        <Variable Name="[NetworkAliveFlags]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="NETWORK_ALIVE_LAN" Value="0x00000001" />
+                <Set Name="NETWORK_ALIVE_WAN" Value="0x00000002" />
+                <Set Name="NETWORK_ALIVE_AOL" Value="0x00000004" />
+            </Flag>
+        </Variable>
+        <Variable Name="[NetworkAliveFlags*]" Type="Pointer" Base="[NetworkAliveFlags]">
+            <Display Name="LPDWORD" />
+        </Variable>
+
+        <!-- System Event Notification Service (SENS) -->
+        <Category Name="Diagnostics/System Event Notification Service (SENS)" />
+        <Api Name="IsDestinationReachable" BothCharset="True">
+            <Param Type="LPCSTR" Name="lpszDestination" />
+            <Param Type="LPQOCINFO" Name="lpQOCInfo" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="IsNetworkAlive">
+            <Param Type="[NetworkAliveFlags*]" Name="lpdwFlags" />
+            <Return Type="BOOL" />
+        </Api>
+    </Module>
+</ApiMonitor>

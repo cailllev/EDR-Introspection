@@ -1,0 +1,30 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IEnumObjects" Id="{2c1c7e2e-2d0e-4059-831e-1e6f82335c2e}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Windows Environment Development/Windows Shell/Interfaces">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="Next">
+            <Param Type="ULONG" Name="celt" />
+            <Param Type="REFIID" Name="riid" />
+            <Param Type="void**" Name="rgelt" PostCount="pceltFetched" />
+            <Param Type="ULONG*" Name="pceltFetched" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Skip">
+            <Param Type="ULONG" Name="celt" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Reset">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Clone">
+            <Param Type="IEnumObjects**" Name="ppenum" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

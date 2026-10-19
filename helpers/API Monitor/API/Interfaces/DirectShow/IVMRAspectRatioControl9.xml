@@ -1,0 +1,20 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IVMRAspectRatioControl9" Id="{00d96c29-bbde-4efc-9901-bb5036392146}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/DirectShow">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="GetAspectRatioMode">
+            <Param Type="LPDWORD" Name="lpdwARMode" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetAspectRatioMode">
+            <Param Type="DWORD" Name="dwARMode" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

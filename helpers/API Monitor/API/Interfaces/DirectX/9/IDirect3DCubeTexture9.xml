@@ -1,0 +1,41 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\DirectX\9\IDirect3DBaseTexture9.xml" />
+    
+    <Interface Name="IDirect3DCubeTexture9" Id="{FFF32F81-D953-473a-9223-93D652ABA93F}" BaseInterface="IDirect3DBaseTexture9" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Graphics and Gaming/DirectX Graphics and Gaming/Direct3D/9">
+        <!-- DirectX -->
+        <Api Name="GetLevelDesc">
+            <Param Type="UINT" Name="Level" />
+            <Param Type="D3DSURFACE_DESC*" Name="pDesc" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetCubeMapSurface">
+            <Param Type="D3DCUBEMAP_FACES" Name="FaceType" />
+            <Param Type="UINT" Name="Level" />
+            <Param Type="IDirect3DSurface9**" Name="ppCubeMapSurface" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="LockRect">
+            <Param Type="D3DCUBEMAP_FACES" Name="FaceType" />
+            <Param Type="UINT" Name="Level" />
+            <Param Type="D3DLOCKED_RECT*" Name="pLockedRect" />
+            <Param Type="CONST RECT*" Name="pRect" />
+            <Param Type="DWORD" Name="Flags" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="UnlockRect">
+            <Param Type="D3DCUBEMAP_FACES" Name="FaceType" />
+            <Param Type="UINT" Name="Level" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="AddDirtyRect">
+            <Param Type="D3DCUBEMAP_FACES" Name="FaceType" />
+            <Param Type="CONST RECT*" Name="pDirtyRect" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

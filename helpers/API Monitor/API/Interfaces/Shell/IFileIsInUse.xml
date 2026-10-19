@@ -1,0 +1,31 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IFileIsInUse" Id="{64a1cbf0-3a1a-4461-9158-376969693950}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Windows Environment Development/Windows Shell/Interfaces">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="GetAppName">
+            <Param Type="LPWSTR*" Name="ppszName" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetUsage">
+            <Param Type="FILE_USAGE_TYPE*" Name="pfut" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetCapabilities">
+            <Param Type="DWORD*" Name="pdwCapFlags" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetSwitchToHWND">
+            <Param Type="HWND*" Name="phwnd" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CloseFile">
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

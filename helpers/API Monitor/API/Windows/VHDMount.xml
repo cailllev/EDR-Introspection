@@ -1,0 +1,30 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    
+    <Module Name="VHDMount.dll" CallingConvention="STDCALL" ErrorFunc="GetLastError" OnlineHelp="MSDN">
+        <!-- Virtual Server -->
+        <Category Name="Virtualization/Microsoft Virtual Server" />
+        <Api Name="GetSCSIAddress">
+            <Param Type="PWCHAR" Name="VHDFileName" />
+            <Param Type="ULONG" Name="Flags" />
+            <Param Type="ULONG" Name="SCSIAddressLength" />
+            <Param Type="PWCHAR" Name="SCSIAddress" />
+            <Return Type="[ERROR_CODE_ULONG]" />
+        </Api>
+        <Api Name="MountVHD">
+            <Param Type="PWCHAR" Name="VHDFileName" />
+            <Param Type="ULONG" Name="Flags" />
+            <Return Type="[ERROR_CODE_ULONG]" />
+        </Api>
+        <Api Name="UnmountVHD">
+            <Param Type="PWCHAR" Name="VHDFileName" />
+            <Param Type="ULONG" Name="Flags" />
+            <Return Type="[ERROR_CODE_ULONG]" />
+        </Api>
+    </Module>
+</ApiMonitor>

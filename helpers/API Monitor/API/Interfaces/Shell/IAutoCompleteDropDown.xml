@@ -1,0 +1,20 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IAutoCompleteDropDown" Id="{3CD141F4-3C6A-11d2-BCAA-00C04FD929DB}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Windows Environment Development/Windows Shell/Interfaces">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="GetDropDownStatus">
+            <Param Type="DWORD*" Name="pdwFlags" />
+            <Param Type="LPWSTR*" Name="ppwszString" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ResetEnumerator">
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

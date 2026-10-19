@@ -1,0 +1,61 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IAttachmentExecute" Id="{73db1241-1e85-4581-8e4f-a81e1d0f8c57}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Windows Environment Development/Windows Shell/Interfaces">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="SetClientTitle">
+            <Param Type="LPCWSTR" Name="pszTitle" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetClientGuid">
+            <Param Type="REFGUID" Name="guid" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetLocalPath">
+            <Param Type="LPCWSTR" Name="pszLocalPath" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetFileName">
+            <Param Type="LPCWSTR" Name="pszFileName" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetSource">
+            <Param Type="LPCWSTR" Name="pszSource" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetReferrer">
+            <Param Type="LPCWSTR" Name="pszReferrer" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CheckPolicy">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Prompt">
+            <Param Type="HWND" Name="hwnd" />
+            <Param Type="ATTACHMENT_PROMPT" Name="prompt" />
+            <Param Type="ATTACHMENT_ACTION*" Name="paction" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Save">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Execute">
+            <Param Type="HWND" Name="hwnd" />
+            <Param Type="LPCWSTR" Name="pszVerb" />
+            <Param Type="HANDLE*" Name="phProcess" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SaveWithUI">
+            <Param Type="HWND" Name="hwnd" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ClearClientState">
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

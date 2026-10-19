@@ -1,0 +1,78 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2012, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Include Filename="Headers\sockets.h.xml" />
+    
+    <Module Name="Wsock32.dll" CallingConvention="STDCALL" ErrorFunc="WSAGetLastError" OnlineHelp="MSDN">
+
+        <!-- API's from WS2_32.DLL. All API's are available in Ws2_32.dll, however some of them differ
+        in ordinal numbers so we can't use that module as-is. Generate copies of API's. -->
+
+        <SourceModule Name="Ws2_32.dll" Copy="True" Include="Windows\Ws2_32.xml">
+            <Api Name="WSAAsyncGetHostByAddr" />
+            <Api Name="WSAAsyncGetHostByName" />
+            <Api Name="WSAAsyncGetProtoByName" />
+            <Api Name="WSAAsyncGetProtoByNumber" />
+            <Api Name="WSAAsyncGetServByName" />
+            <Api Name="WSAAsyncGetServByPort" />
+            <Api Name="WSAAsyncSelect" />
+            <Api Name="WSACancelAsyncRequest" />
+            <Api Name="WSACleanup" />
+            <Api Name="WSAGetLastError" />
+            <Api Name="WSAIsBlocking" />
+            <Api Name="WSASetLastError" />
+            <Api Name="WSAStartup" />
+            <Api Name="accept" />
+            <Api Name="bind" />
+            <Api Name="closesocket" />
+            <Api Name="connect" />
+            <Api Name="gethostbyaddr" />
+            <Api Name="gethostbyname" />
+            <Api Name="gethostname" />
+            <Api Name="getpeername" />
+            <Api Name="getprotobyname" />
+            <Api Name="getprotobynumber" />
+            <Api Name="getservbyname" />
+            <Api Name="getservbyport" />
+            <Api Name="getsockname" />
+            <Api Name="getsockopt" />
+            <Api Name="htonl" />
+            <Api Name="htons" />
+            <Api Name="listen" />
+            <Api Name="ntohl" />
+            <Api Name="ntohs" />
+            <Api Name="recv" />
+            <Api Name="recvfrom" />
+            <Api Name="select" />
+            <Api Name="send" />
+            <Api Name="sendto" />
+            <Api Name="setsockopt" />
+            <Api Name="shutdown" />
+            <Api Name="socket" />
+        </SourceModule>
+        
+        <!-- Windows Sockets 2. The following API's differ only in ordinal from the ones in Ws2_32.dll -->
+        <Category Name="Networking/Windows Sockets 2" />
+        <Api Name="inet_addr" Ordinal="10" ErrorFunc="">
+            <Param Type="const char*" Name="cp" />
+            <Return Type="[INET_ADDR_OUTPUT]" />
+            <Success Return="NotEqual" Value="0xffffffff" />
+        </Api>
+        <Api Name="inet_ntoa" Ordinal="11">
+            <Param Type="struct in_addr" Name="in" />
+            <Return Type="char*" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="ioctlsocket" Ordinal="12">
+            <Param Type="SOCKET" Name="s" />
+            <Param Type="[Socket_IOCTL]" Name="cmd" />
+            <Param Type="u_long*" Name="argp" />
+            <Return Type="[SocketCode-int]" />
+            <Success Return="Equal" Value="0" />
+        </Api>
+    </Module>
+</ApiMonitor>

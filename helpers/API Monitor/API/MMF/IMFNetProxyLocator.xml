@@ -1,0 +1,33 @@
+<!--
+    API Monitor Definitions
+    (c) 2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="MMF\mmfdefs.h.xml" />
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IMFNetProxyLocator" Id="{e9cd0383-a268-4bb4-82de-658d53574d41}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/Microsoft Media Foundation/Interfaces">
+        <Api Name="FindFirstProxy">
+            <Param Type="LPCWSTR" Name="pszHost" />
+            <Param Type="LPCWSTR" Name="pszUrl" />
+            <Param Type="BOOL" Name="fReserved" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="FindNextProxy">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="RegisterProxyResult">
+            <Param Type="HRESULT" Name="hrOp" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetCurrentProxy">
+            <Param Type="LPWSTR" Name="pszStr" />
+            <Param Type="DWORD*" Name="pcchStr" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Clone">
+            <Param Type="IMFNetProxyLocator**" Name="ppProxyLocator" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

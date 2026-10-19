@@ -1,0 +1,56 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Include Filename="Interfaces\ICreateTypeInfo.xml" />
+    
+    <Interface Name="ICreateTypeLib" Id="{00020406-0000-0000-C000-000000000046}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Component Object Model (COM)/Automation/Type Building">
+
+        <!-- Methods -->
+        <Api Name="CreateTypeInfo">
+            <Param Type="LPOLESTR" Name="szName" />
+            <Param Type="TYPEKIND" Name="tkind" />
+            <Param Type="ICreateTypeInfo**" Name="ppCTInfo" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetName">
+            <Param Type="LPOLESTR" Name="szName" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetVersion">
+            <Param Type="WORD" Name="wMajorVerNum" />
+            <Param Type="WORD" Name="wMinorVerNum" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetGuid">
+            <Param Type="REFGUID" Name="guid" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetDocString">
+            <Param Type="LPOLESTR" Name="szDoc" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetHelpFileName">
+            <Param Type="LPOLESTR" Name="szHelpFileName" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetHelpContext">
+            <Param Type="DWORD" Name="dwHelpContext" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetLcid">
+            <Param Type="LCID" Name="lcid" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetLibFlags">
+            <Param Type="UINT" Name="uLibFlags" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SaveAllChanges">
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

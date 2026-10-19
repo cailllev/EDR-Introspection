@@ -1,0 +1,19 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Module Name="MsCtfMonitor.dll" CallingConvention="STDCALL" ErrorFunc="GetLastError" OnlineHelp="MSDN">
+        <!-- Text Services Framework -->
+        <Category Name="Windows Application UI Development/User Interaction/Text Services Framework" />
+        <Api Name="InitLocalMsCtfMonitor">
+            <Param Type="DWORD" Name="dwFlags" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="UninitLocalMsCtfMonitor">
+            <Return Type="HRESULT" />
+        </Api>
+    </Module>
+</ApiMonitor>

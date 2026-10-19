@@ -1,0 +1,201 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Include Filename="Headers\security.h.xml" />
+    <Module Name="Credui.dll" CallingConvention="STDCALL" ErrorFunc="GetLastError" OnlineHelp="MSDN">
+
+        <!-- [CredUIFlags] -->
+        <Variable Name="[CredUIFlags]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="CREDUI_FLAGS_INCORRECT_PASSWORD"             Value="0x00001" />
+                <Set Name="CREDUI_FLAGS_DO_NOT_PERSIST"                 Value="0x00002" />
+                <Set Name="CREDUI_FLAGS_REQUEST_ADMINISTRATOR"          Value="0x00004" />
+                <Set Name="CREDUI_FLAGS_EXCLUDE_CERTIFICATES"           Value="0x00008" />
+                <Set Name="CREDUI_FLAGS_REQUIRE_CERTIFICATE"            Value="0x00010" />
+                <Set Name="CREDUI_FLAGS_SHOW_SAVE_CHECK_BOX"            Value="0x00040" />
+                <Set Name="CREDUI_FLAGS_ALWAYS_SHOW_UI"                 Value="0x00080" />
+                <Set Name="CREDUI_FLAGS_REQUIRE_SMARTCARD"              Value="0x00100" />
+                <Set Name="CREDUI_FLAGS_PASSWORD_ONLY_OK"               Value="0x00200" />
+                <Set Name="CREDUI_FLAGS_VALIDATE_USERNAME"              Value="0x00400" />
+                <Set Name="CREDUI_FLAGS_COMPLETE_USERNAME"              Value="0x00800" />
+                <Set Name="CREDUI_FLAGS_PERSIST"                        Value="0x01000" />
+                <Set Name="CREDUI_FLAGS_SERVER_CREDENTIAL"              Value="0x04000" />
+                <Set Name="CREDUI_FLAGS_EXPECT_CONFIRMATION"            Value="0x20000" />
+                <Set Name="CREDUI_FLAGS_GENERIC_CREDENTIALS"            Value="0x40000" />
+                <Set Name="CREDUI_FLAGS_USERNAME_TARGET_CREDENTIALS"    Value="0x80000" />
+                <Set Name="CREDUI_FLAGS_KEEP_USERNAME"                  Value="0x100000" />
+            </Flag>
+        </Variable>
+
+        <!-- CREDUI_INFO -->
+        <Variable Name="CREDUI_INFO" Type="Struct">
+            <Field Type="DWORD" 	Name="cbSize" />
+            <Field Type="HWND"      Name="hwndParent" />
+            <Field Type="PCTSTR" 	Name="pszMessageText" />
+            <Field Type="PCTSTR" 	Name="pszCaptionText" />
+            <Field Type="HBITMAP" 	Name="hbmBanner" />
+        </Variable>
+        <Variable Name="PCREDUI_INFO" Type="Pointer" Base="CREDUI_INFO" />
+
+        <!-- SEC_WINNT_CREDUI_CONTEXT_VECTOR -->
+        <Variable Name="SEC_WINNT_CREDUI_CONTEXT_VECTOR" Type="Struct">
+            <Field Type="ULONG" 	Name="CredUIContextArrayOffset" />
+            <Field Type="USHORT" 	Name="CredUIContextCount" />
+        </Variable>
+        <Variable Name="PSEC_WINNT_CREDUI_CONTEXT_VECTOR"   Type="Pointer"  Base="SEC_WINNT_CREDUI_CONTEXT_VECTOR" />
+        <Variable Name="PSEC_WINNT_CREDUI_CONTEXT_VECTOR*"  Type="Pointer"  Base="PSEC_WINNT_CREDUI_CONTEXT_VECTOR" />
+
+        <!-- CREDUI_INFOW -->
+        <Variable Name="CREDUI_INFOW" Type="Struct">
+            <Field Type="DWORD" 	Name="cbSize" />
+            <Field Type="HWND"      Name="hwndParent" />
+            <Field Type="PCWSTR" 	Name="pszMessageText" />
+            <Field Type="PCWSTR" 	Name="pszCaptionText" />
+            <Field Type="HBITMAP" 	Name="hbmBanner" />
+        </Variable>
+        <Variable Name="PCREDUI_INFOW" Type="Pointer" Base="CREDUI_INFOW" />
+
+        <!-- SEC_WINNT_CREDUI_CONTEXT -->
+        <Variable Name="SEC_WINNT_CREDUI_CONTEXT" Type="Struct">
+            <Field Type="USHORT"                            Name="cbHeaderLength" />
+            <Field Type="HANDLE"                            Name="CredUIContextHandle" />
+            <Field Type="PCREDUI_INFOW" 	                Name="UIInfo" />
+            <Field Type="ULONG"                             Name="dwAuthError" />
+            <Field Type="PSEC_WINNT_AUTH_IDENTITY_OPAQUE" 	Name="pInputAuthIdentity" />
+            <Field Type="PUNICODE_STRING"                   Name="TargetName" />
+        </Variable>
+        <Variable Name="PSEC_WINNT_CREDUI_CONTEXT"          Type="Pointer"  Base="SEC_WINNT_CREDUI_CONTEXT" />
+        <Variable Name="PSEC_WINNT_CREDUI_CONTEXT*"         Type="Pointer"  Base="PSEC_WINNT_CREDUI_CONTEXT" />
+
+        <!-- Authentication -->
+        <Category Name="Security and Identity/Authentication/Credentials Management UI" />
+        <Api Name="CredUICmdLinePromptForCredentials" BothCharset="True">
+            <Param Type="PCTSTR" Name="pszTargetName" />
+            <Param Type="PCtxtHandle" Name="Reserved" />
+            <Param Type="DWORD" Name="dwAuthError" />
+            <Param Type="PTSTR" Name="pszUserName" />
+            <Param Type="ULONG" Name="ulUserNameMaxChars" />
+            <Param Type="PTSTR" Name="pszPassword" />
+            <Param Type="ULONG" Name="ulPasswordMaxChars" />
+            <Param Type="PBOOL" Name="pfSave" />
+            <Param Type="[CredUIFlags]" Name="dwFlags" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="CredUIConfirmCredentials" BothCharset="True">
+            <Param Type="PCTSTR" Name="pszTargetName" />
+            <Param Type="BOOL" Name="bConfirm" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="CredUIParseUserName" BothCharset="True">
+            <Param Type="PCTSTR" Name="pszUserName" />
+            <Param Type="PTSTR" Name="pszUser" />
+            <Param Type="ULONG" Name="ulUserMaxChars" />
+            <Param Type="PTSTR" Name="pszDomain" />
+            <Param Type="ULONG" Name="ulDomainMaxChars" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="CredUIPromptForCredentials" BothCharset="True">
+            <Param Type="PCREDUI_INFO" Name="pUiInfo" />
+            <Param Type="PCTSTR" Name="pszTargetName" />
+            <Param Type="PCtxtHandle" Name="Reserved" />
+            <Param Type="DWORD" Name="dwAuthError" />
+            <Param Type="PCTSTR" Name="pszUserName" />
+            <Param Type="ULONG" Name="ulUserNameMaxChars" />
+            <Param Type="PCTSTR" Name="pszPassword" />
+            <Param Type="ULONG" Name="ulPasswordMaxChars" />
+            <Param Type="PBOOL" Name="pfSave" />
+            <Param Type="[CredUIFlags]" Name="dwFlags" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="CredUIPromptForWindowsCredentials" BothCharset="True">
+            <Param Type="PCREDUI_INFO" Name="pUiInfo" />
+            <Param Type="DWORD" Name="dwAuthError" />
+            <Param Type="ULONG*" Name="pulAuthPackage" />
+            <Param Type="LPCVOID" Name="pvInAuthBuffer" Length="ulInAuthBufferSize" />
+            <Param Type="ULONG" Name="ulInAuthBufferSize" />
+            <Param Type="LPVOID*" Name="ppvOutAuthBuffer" PostLength="pulOutAuthBufferSize" />
+            <Param Type="ULONG*" Name="pulOutAuthBufferSize" />
+            <Param Type="BOOL*" Name="pfSave" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="CredUIReadSSOCredW">
+            <Param Type="PCWSTR" Name="pszRealm" />
+            <Param Type="PWSTR*" Name="ppszUsername" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="CredUIStoreSSOCredW">
+            <Param Type="PCWSTR" Name="pszRealm" />
+            <Param Type="PCWSTR" Name="pszUsername" />
+            <Param Type="PCWSTR" Name="pszPassword" />
+            <Param Type="BOOL" Name="bPersist" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Category Name="Security and Identity/Authentication/Low-level Credentials Management" />
+        <Api Name="CredPackAuthenticationBuffer" BothCharset="True">
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="LPTSTR" Name="pszUserName" />
+            <Param Type="LPTSTR" Name="pszPassword" />
+            <Param Type="PBYTE" Name="pPackedCredentials" />
+            <Param Type="DWORD*" Name="pcbPackedCredentials" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CredUnPackAuthenticationBuffer" BothCharset="True">
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="PVOID" Name="pAuthBuffer" />
+            <Param Type="DWORD" Name="cbAuthBuffer" />
+            <Param Type="LPTSTR" Name="pszUserName" />
+            <Param Type="DWORD*" Name="pcchMaxUserName" />
+            <Param Type="LPTSTR" Name="pszDomainName" />
+            <Param Type="DWORD*" Name="pcchMaxDomainame" />
+            <Param Type="LPTSTR" Name="pszPassword" />
+            <Param Type="DWORD*" Name="pcchMaxPassword" />
+            <Return Type="BOOL" />
+        </Api>
+
+        <!-- Security Support Provider Interface (SSPI) -->
+        <Category Name="Security and Identity/Authentication/Security Support Provider Interface (SSPI)" />
+        <Api Name="SspiGetCredUIContext">
+            <Param Type="HANDLE" Name="ContextHandle" />
+            <Param Type="GUID*" Name="CredType" />
+            <Param Type="LUID*" Name="LogonId" />
+            <Param Type="PSEC_WINNT_CREDUI_CONTEXT_VECTOR*" Name="CredUIContexts" />
+            <Param Type="HANDLE*" Name="TokenHandle" />
+            <Return Type="SECURITY_STATUS" />
+        </Api>
+        <Api Name="SspiIsPromptingNeeded">
+            <Param Type="unsigned long" Name="ErrorOrNtStatus" />
+            <Return Type="BOOLEAN" />
+            <Success />
+        </Api>
+        <Api Name="SspiPromptForCredentials" BothCharset="True">
+            <Param Type="PCTSTR" Name="pszTargetName" />
+            <Param Type="PCREDUI_INFOW" Name="pUiInfo" />
+            <Param Type="DWORD" Name="dwAuthError" />
+            <Param Type="PCTSTR" Name="pszPackage" />
+            <Param Type="PSEC_WINNT_AUTH_IDENTITY_OPAQUE" Name="pInputAuthIdentity" />
+            <Param Type="PSEC_WINNT_AUTH_IDENTITY_OPAQUE*" Name="ppAuthIdentity" />
+            <Param Type="PBOOL" Name="pfSave" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Return Type="SECURITY_STATUS" />
+        </Api>
+        <Api Name="SspiUnmarshalCredUIContext">
+            <Param Type="PUCHAR" Name="MarshaledCredUIContext" />
+            <Param Type="ULONG" Name="MarshaledCredUIContextLength" />
+            <Param Type="PSEC_WINNT_CREDUI_CONTEXT*" Name="CredUIContext" />
+            <Return Type="SECURITY_STATUS" />
+        </Api>
+        <Api Name="SspiUpdateCredentials">
+            <Param Type="HANDLE" Name="ContextHandle" />
+            <Param Type="GUID*" Name="CredType" />
+            <Param Type="ULONG" Name="FlatCredUIContextLength" />
+            <Param Type="PUCHAR" Name="FlatCredUIContext" />
+            <Return Type="SECURITY_STATUS" />
+        </Api>
+    </Module>
+</ApiMonitor>

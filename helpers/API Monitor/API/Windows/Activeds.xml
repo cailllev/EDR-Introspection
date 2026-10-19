@@ -1,0 +1,110 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Include Filename="Headers\ole.h.xml" />
+    <Module Name="Activeds.dll" CallingConvention="STDCALL" ErrorFunc="HRESULT" OnlineHelp="MSDN">
+        <!-- Variables -->
+        <Variable Name="IADsContainer"      Type="Interface" />
+        <Variable Name="IEnumVARIANT"       Type="Interface" />
+
+        <!-- Active Directory Service Interfaces -->
+        <Category Name="Security and Identity/Directory, Identity, and Access Services/Directory Services/Directory Access Technologies/Active Directory Service Interfaces (ADSI)" />
+        <Api Name="ADsBuildEnumerator" Ordinal="4">
+            <Param Type="IADsContainer*" Name="pADsContainer" />
+            <Param Type="IEnumVARIANT**" Name="ppEnumVariant" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ADsBuildVarArrayInt" Ordinal="8">
+            <Param Type="LPDWORD" Name="lpdwObjectTypes" />
+            <Param Type="DWORD" Name="dwObjectTypes" />
+            <Param Type="VARIANT*" Name="pVar" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ADsBuildVarArrayStr" Ordinal="7">
+            <Param Type="LPWSTR*" Name="lppPathNames" />
+            <Param Type="DWORD" Name="dwPathNames" />
+            <Param Type="VARIANT*" Name="pVar" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ADsEncodeBinaryData" Ordinal="20">
+            <Param Type="PBYTE" Name="pbSrcData" Length="dwSrcLen" />
+            <Param Type="DWORD" Name="dwSrcLen" />
+            <Param Type="LPWSTR*" Name="ppszDestData" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ADsEnumerateNext" Ordinal="6">
+            <Param Type="IEnumVARIANT*" Name="pEnumVariant" />
+            <Param Type="ULONG" Name="cElements" />
+            <Param Type="VARIANT*" Name="pvar" />
+            <Param Type="ULONG*" Name="pcElementsFetched" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ADsFreeEnumerator" Ordinal="5">
+            <Param Type="IEnumVARIANT*" Name="pEnumVariant" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ADsGetLastError" Ordinal="13">
+            <Param Type="LPDWORD" Name="lpError" />
+            <Param Type="LPWSTR" Name="lpErrorBuf" />
+            <Param Type="DWORD" Name="dwErrorBufLen" />
+            <Param Type="LPWSTR" Name="lpNameBuf" />
+            <Param Type="DWORD" Name="dwNameBufLen" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ADsGetObject" Ordinal="3">
+            <Param Type="LPWSTR" Name="lpszPathName" />
+            <Param Type="REFIID" Name="riid" />
+            <Param Type="VOID**" Name="ppObject" InterfaceId="riid" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ADsOpenObject" Ordinal="9">
+            <Param Type="LPWSTR" Name="lpszPathName" />
+            <Param Type="LPWSTR" Name="lpszUserName" />
+            <Param Type="LPWSTR" Name="lpszPassword" />
+            <Param Type="DWORD" Name="dwReserved" />
+            <Param Type="REFIID" Name="riid" />
+            <Param Type="VOID**" Name="ppObject" InterfaceId="riid" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ADsSetLastError" Ordinal="12">
+            <Param Type="DWORD" Name="dwErr" />
+            <Param Type="LPWSTR" Name="pszError" />
+            <Param Type="LPWSTR" Name="pszProvider" />
+            <Return Type="VOID" />
+        </Api>
+        <Api Name="AllocADsMem" Ordinal="14">
+            <Param Type="DWORD" Name="cb" />
+            <Return Type="LPVOID" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="AllocADsStr" Ordinal="17">
+            <Param Type="LPWSTR" Name="pStr" />
+            <Return Type="LPWSTR" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="FreeADsMem" Ordinal="15">
+            <Param Type="LPVOID" Name="pMem" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="FreeADsStr" Ordinal="18">
+            <Param Type="LPWSTR" Name="pStr" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="ReallocADsMem" Ordinal="16">
+            <Param Type="LPVOID" Name="pOldMem" />
+            <Param Type="DWORD" Name="cbOld" />
+            <Param Type="DWORD" Name="cbNew" />
+            <Return Type="LPVOID" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="ReallocADsStr" Ordinal="19">
+            <Param Type="LPWSTR*" Name="ppStr" />
+            <Param Type="LPWSTR" Name="pStr" />
+            <Return Type="BOOL" />
+        </Api>
+    </Module>
+</ApiMonitor>

@@ -1,0 +1,25 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\DirectShow\IAMTuner.xml" />
+    <Interface Name="IBPCSatelliteTuner" Id="{211A8765-03AC-11d1-8D13-00AA00BD8339}" BaseInterface="IAMTuner" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/DirectShow">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="get_DefaultSubChannelTypes">
+            <Param Type="long*" Name="plDefaultVideoType" />
+            <Param Type="long*" Name="plDefaultAudioType" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="put_DefaultSubChannelTypes">
+            <Param Type="long" Name="lDefaultVideoType" />
+            <Param Type="long" Name="lDefaultAudioType" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="IsTapingPermitted">
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

@@ -1,0 +1,18 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IDvdCmd" Id="{5a4a97e4-94ee-4a55-9751-74b5643aa27d}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/DirectShow">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="WaitForStart">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="WaitForEnd">
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

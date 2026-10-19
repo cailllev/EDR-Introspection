@@ -1,0 +1,69 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Include Filename="Headers\cryptography.h.xml" />
+    <Module Name="CryptDlg.dll" CallingConvention="STDCALL" ErrorFunc="GetLastError" OnlineHelp="MSDN">
+        
+        <!-- Variables -->
+        <Variable Name="PFNCMHOOKPROC" Type="Alias" Base="LPVOID" />
+        <Variable Name="PFNCMFILTERPROC" Type="Alias" Base="LPVOID" />
+
+        <!-- CERT_SELECT_STRUCT -->
+        <Variable Name="CERT_SELECT_STRUCT" Type="Struct">
+            <Field Type="DWORD"               	Name="dwSize" />
+            <Field Type="HWND"                	Name="hwndParent" />
+            <Field Type="HINSTANCE"           	Name="hInstance" />
+            <Field Type="LPCTSTR"              	Name="pTemplateName" />
+            <Field Type="DWORD"               	Name="dwFlags" />
+            <Field Type="LPCTSTR"              	Name="szTitle" />
+            <Field Type="DWORD"               	Name="cCertStore" />
+            <Field Type="HCERTSTORE*"        	Name="arrayCertStore" />
+            <Field Type="LPCTSTR"              	Name="szPurposeOid" />
+            <Field Type="DWORD"               	Name="cCertContext" />
+            <Field Type="PCCERT_CONTEXT*"    	Name="arrayCertContext" />
+            <Field Type="LPARAM"              	Name="lCustData" />
+            <Field Type="PFNCMHOOKPROC"       	Name="pfnHook" />
+            <Field Type="PFNCMFILTERPROC"     	Name="pfnFilter" />
+            <Field Type="LPCTSTR"              	Name="szHelpFileName" />
+            <Field Type="DWORD"               	Name="dwHelpId" />
+            <Field Type="HCRYPTPROV"          	Name="hprov" />
+        </Variable>
+        <Variable Name="PCERT_SELECT_STRUCT" Type="Pointer" Base="CERT_SELECT_STRUCT" />
+
+        <!-- CTL_MODIFY_REQUEST -->
+        <Variable Name="CTL_MODIFY_REQUEST" Type="Struct">
+            <Field Type="PCCERT_CONTEXT"      	Name="pccert" />
+            <Field Type="DWORD"               	Name="dwOperation" />
+            <Field Type="DWORD"               	Name="dwError" />
+        </Variable>
+        <Variable Name="PCTL_MODIFY_REQUEST" Type="Pointer" Base="CTL_MODIFY_REQUEST" />
+
+        <!-- Cryptography -->
+        <Category Name="Security and Identity/Cryptography/Certificate" />
+        <Api Name="CertSelectCertificate" BothCharset="True">
+            <Param Type="PCERT_SELECT_STRUCT" Name="pCertSelectInfo" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetFriendlyNameOfCert" BothCharset="True">
+            <Param Type="PCCERT_CONTEXT" Name="pccert" />
+            <Param Type="LPTSTR" Name="pchBuffer" />
+            <Param Type="DWORD" Name="cchBuffer" />
+            <Return Type="DWORD" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Category Name="Security and Identity/Cryptography/Certificate Trust List" />
+        <Api Name="CertModifyCertificatesToTrust">
+            <Param Type="int" Name="cCerts" />
+            <Param Type="PCTL_MODIFY_REQUEST" Name="rgCerts" Count="cCerts" />
+            <Param Type="LPCSTR" Name="szPurpose" />
+            <Param Type="HWND" Name="hwnd" />
+            <Param Type="HCERTSTORE" Name="hcertstoreTrust" />
+            <Param Type="PCCERT_CONTEXT" Name="pccertSigner" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Module>
+</ApiMonitor>

@@ -1,0 +1,20 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IDispatch.xml" />
+    <Interface Name="IMediaTypeInfo" Id="{56a868bc-0ad4-11ce-b03a-0020af0ba770}" BaseInterface="IDispatch" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/DirectShow">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="get_Type">
+            <Param Type="BSTR*" Name="strType" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="get_Subtype">
+            <Param Type="BSTR*" Name="strType" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

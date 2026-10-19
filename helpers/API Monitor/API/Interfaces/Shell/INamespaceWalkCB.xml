@@ -1,0 +1,32 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="INamespaceWalkCB" Id="{d92995f8-cf5e-4a76-bf59-ead39ea2b97e}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Windows Environment Development/Windows Shell/Interfaces">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="FoundItem">
+            <Param Type="IShellFolder*" Name="psf" />
+            <Param Type="PCUITEMID_CHILD" Name="pidl" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="EnterFolder">
+            <Param Type="IShellFolder*" Name="psf" />
+            <Param Type="PCUITEMID_CHILD" Name="pidl" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="LeaveFolder">
+            <Param Type="IShellFolder*" Name="psf" />
+            <Param Type="PCUITEMID_CHILD" Name="pidl" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="InitializeProgressDialog">
+            <Param Type="LPWSTR*" Name="ppszTitle" />
+            <Param Type="LPWSTR*" Name="ppszCancel" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

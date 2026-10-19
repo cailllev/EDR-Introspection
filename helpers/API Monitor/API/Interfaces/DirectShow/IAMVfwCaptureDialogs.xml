@@ -1,0 +1,28 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IAMVfwCaptureDialogs" Id="{D8D715A0-6E5E-11D0-B3F0-00AA003761C5}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/DirectShow">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="HasDialog">
+            <Param Type="int" Name="iDialog" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ShowDialog">
+            <Param Type="int" Name="iDialog" />
+            <Param Type="HWND" Name="hwnd" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SendDriverMessage">
+            <Param Type="int" Name="iDialog" />
+            <Param Type="int" Name="uMsg" />
+            <Param Type="long" Name="dw1" />
+            <Param Type="long" Name="dw2" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

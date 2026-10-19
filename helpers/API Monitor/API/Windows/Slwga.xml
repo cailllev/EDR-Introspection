@@ -1,0 +1,44 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2012, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Module Name="Slwga.dll" CallingConvention="STDCALL" ErrorFunc="GetLastError" OnlineHelp="MSDN">
+
+        <!-- SL_GENUINE_STATE -->
+        <Variable Name="SL_GENUINE_STATE" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="SL_GEN_STATE_IS_GENUINE"         Value="0" />
+                <Set Name="SL_GEN_STATE_INVALID_LICENSE"    Value="1" />
+                <Set Name="SL_GEN_STATE_TAMPERED"           Value="2" />
+                <Set Name="SL_GEN_STATE_LAST"               Value="3" />
+            </Enum>
+        </Variable>
+        <Variable Name="SL_GENUINE_STATE*" Type="Pointer" Base="SL_GENUINE_STATE" />
+
+        <!-- SL_NONGENUINE_UI_OPTIONS -->
+        <Variable Name="SL_NONGENUINE_UI_OPTIONS" Type="Struct">
+            <Field Type="DWORD"         Name="cbSize" />
+            <Field Type="CONST SLID*"   Name="pComponentId" />
+            <Field Type="HRESULT"       Name="hResultUI" />
+        </Variable>
+        <Variable Name="SL_NONGENUINE_UI_OPTIONS*" Type="Pointer" Base="SL_NONGENUINE_UI_OPTIONS" />
+        
+        <!-- Software Licensing API (SLAPI) -->
+        <Category Name="System Administration/Software Licensing API (SLAPI)" />
+        <Api Name="SLIsGenuineLocal">
+            <Param Type="const SLID*" Name="pAppId" />
+            <Param Type="SL_GENUINE_STATE*" Name="pGenuineState" />
+            <Param Type="SL_NONGENUINE_UI_OPTIONS*" Name="pUIOptions" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SLIsGenuineLocalEx">
+            <Param Type="const SLID*" Name="pAppId" />
+            <Param Type="const SLID*" Name="pSkuId" />
+            <Param Type="SL_GENUINE_STATE*" Name="pGenuineState" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Module>
+</ApiMonitor>

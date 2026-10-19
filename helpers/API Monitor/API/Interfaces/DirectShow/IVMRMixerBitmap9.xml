@@ -1,0 +1,24 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IVMRMixerBitmap9" Id="{ced175e5-1935-4820-81bd-ff6ad00c9108}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/DirectShow">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="SetAlphaBitmap">
+            <Param Type="const VMR9AlphaBitmap*" Name="pBmpParms" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="UpdateAlphaBitmapParameters">
+            <Param Type="const VMR9AlphaBitmap*" Name="pBmpParms" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetAlphaBitmapParameters">
+            <Param Type="VMR9AlphaBitmap*" Name="pBmpParms" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

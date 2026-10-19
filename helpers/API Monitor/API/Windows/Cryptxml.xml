@@ -1,0 +1,464 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Include Filename="Headers\cryptography.h.xml" />
+    <Module Name="Cryptxml.dll" CallingConvention="STDCALL" ErrorFunc="GetLastError" OnlineHelp="MSDN">
+
+        <!-- Variables -->
+        <Variable Name="HCRYPTXML"                              Type="Alias"   Base="LPVOID" />
+        <Variable Name="HCRYPTXML*"                             Type="Pointer" Base="HCRYPTXML" />
+        <Variable Name="PFN_CRYPT_XML_DATA_PROVIDER_READ"       Type="Alias"   Base="LPVOID" />
+        <Variable Name="PFN_CRYPT_XML_DATA_PROVIDER_CLOSE"      Type="Alias"   Base="LPVOID" />
+        <Variable Name="PFN_CRYPT_XML_WRITE_CALLBACK"           Type="Alias"   Base="LPVOID" />
+        <Variable Name="PFN_CRYPT_XML_CREATE_TRANSFORM"         Type="Alias"   Base="LPVOID" />
+
+        <!-- CRYPT_XML_DATA_BLOB -->
+        <Variable Name="CRYPT_XML_DATA_BLOB" Type="Struct">
+            <Field Type="ULONG"     Name="cbData" />
+            <Field Type="BYTE*"     Name="pbData" Length="cbData" />
+        </Variable>
+
+        <!-- CRYPT_XML_CHARSET -->
+        <Variable Name="CRYPT_XML_CHARSET" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="CRYPT_XML_CHARSET_AUTO"      Value="0" />
+                <Set Name="CRYPT_XML_CHARSET_UTF8"      Value="1" />
+                <Set Name="CRYPT_XML_CHARSET_UTF16LE"   Value="2" />
+                <Set Name="CRYPT_XML_CHARSET_UTF16BE"   Value="3" />
+            </Enum>
+        </Variable>
+
+        <!-- CRYPT_XML_BLOB -->
+        <Variable Name="CRYPT_XML_BLOB" Type="Struct">
+            <Field Type="CRYPT_XML_CHARSET"     Name="dwCharset" />
+            <Field Type="ULONG"                 Name="cbData" />
+            <Field Type="BYTE*"                 Name="pbData" Length="cbData" />
+        </Variable>
+        <Variable Name="const PCRYPT_XML_BLOB"  Type="Pointer" Base="CRYPT_XML_BLOB" />
+        <Variable Name="const CRYPT_XML_BLOB*"  Type="Pointer" Base="CRYPT_XML_BLOB" />
+        <Variable Name="CRYPT_XML_BLOB*"        Type="Pointer" Base="CRYPT_XML_BLOB" />
+
+        <!-- [CRYPT_XML_KEY_VALUE_TYPE] -->
+        <Variable Name="[CRYPT_XML_KEY_VALUE_TYPE]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="CRYPT_XML_KEY_VALUE_TYPE_DSA"        Value="0x00000001" />
+                <Set Name="CRYPT_XML_KEY_VALUE_TYPE_RSA"        Value="0x00000002" />
+                <Set Name="CRYPT_XML_KEY_VALUE_TYPE_ECDSA"      Value="0x00000003" />
+                <Set Name="CRYPT_XML_KEY_VALUE_TYPE_CUSTOM"     Value="0x00000004" />
+            </Enum>
+        </Variable>
+        
+        <!-- CRYPT_XML_KEY_DSA_KEY_VALUE -->
+        <Variable Name="CRYPT_XML_KEY_DSA_KEY_VALUE" Type="Struct">
+            <Field Type="CRYPT_XML_DATA_BLOB"       Name="P" />
+            <Field Type="CRYPT_XML_DATA_BLOB"       Name="Q" />
+            <Field Type="CRYPT_XML_DATA_BLOB"       Name="G" />
+            <Field Type="CRYPT_XML_DATA_BLOB"       Name="Y" />
+            <Field Type="CRYPT_XML_DATA_BLOB"       Name="J" />
+            <Field Type="CRYPT_XML_DATA_BLOB"       Name="Seed" />
+            <Field Type="CRYPT_XML_DATA_BLOB"       Name="Counter" />
+        </Variable>
+
+        <!-- CRYPT_XML_KEY_RSA_KEY_VALUE -->
+        <Variable Name="CRYPT_XML_KEY_RSA_KEY_VALUE" Type="Struct">
+            <Field Type="CRYPT_XML_DATA_BLOB"       Name="Modulus" />
+            <Field Type="CRYPT_XML_DATA_BLOB"       Name="Exponent" />
+        </Variable>
+
+        <!-- CRYPT_XML_KEY_ECDSA_KEY_VALUE -->
+        <Variable Name="CRYPT_XML_KEY_ECDSA_KEY_VALUE" Type="Struct">
+            <Field Type="LPCWSTR"                   Name="wszNamedCurve" />
+            <Field Type="CRYPT_XML_DATA_BLOB"       Name="X" />
+            <Field Type="CRYPT_XML_DATA_BLOB"       Name="Y" />
+            <Field Type="CRYPT_XML_BLOB"            Name="ExplicitPara" />
+        </Variable>
+
+        <!-- [CRYPT_XML_KEY_VALUE_u] -->
+        <Variable Name="[CRYPT_XML_KEY_VALUE_u]" Type="Union">
+            <Display Name="union" />
+            <Field Type="CRYPT_XML_KEY_DSA_KEY_VALUE"       Name="DSAKeyValue" />
+            <Field Type="CRYPT_XML_KEY_RSA_KEY_VALUE"       Name="RSAKeyValue" />
+            <Field Type="CRYPT_XML_KEY_ECDSA_KEY_VALUE"     Name="ECDSAKeyValue" />
+            <Field Type="CRYPT_XML_BLOB"                    Name="Custom" />
+        </Variable>
+
+        <!-- CRYPT_XML_KEY_VALUE -->
+        <Variable Name="CRYPT_XML_KEY_VALUE" Type="Struct">
+            <Field Type="[CRYPT_XML_KEY_VALUE_TYPE]"    Name="dwType" />
+            <Field Type="[CRYPT_XML_KEY_VALUE_u]"       Name="" />
+        </Variable>
+        <Variable Name="CRYPT_XML_KEY_VALUE*" Type="Pointer" Base="CRYPT_XML_KEY_VALUE" />
+        
+        <!-- [CRYPT_XML_X509DATA_TYPE] -->
+        <Variable Name="[CRYPT_XML_X509DATA_TYPE]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="CRYPT_XML_X509DATA_TYPE_ISSUER_SERIAL"   Value="0x00000001" />
+                <Set Name="CRYPT_XML_X509DATA_TYPE_SKI"             Value="0x00000002" />
+                <Set Name="CRYPT_XML_X509DATA_TYPE_SUBJECT_NAME"    Value="0x00000003" />
+                <Set Name="CRYPT_XML_X509DATA_TYPE_CERTIFICATE"     Value="0x00000004" />
+                <Set Name="CRYPT_XML_X509DATA_TYPE_CRL"             Value="0x00000005" />
+                <Set Name="CRYPT_XML_X509DATA_TYPE_CUSTOM"          Value="0x00000006" />
+            </Enum>
+        </Variable>
+
+        <!-- CRYPT_XML_ISSUER_SERIAL -->
+        <Variable Name="CRYPT_XML_ISSUER_SERIAL" Type="Struct">
+            <Field Type="LPCWSTR"       Name="wszIssuer" />
+            <Field Type="LPCWSTR"       Name="wszSerial" />
+        </Variable>
+
+        <!-- [CRYPT_XML_X509DATA_ITEM_u] -->
+        <Variable Name="[CRYPT_XML_X509DATA_ITEM_u]" Type="Union">
+            <Display Name="union" />
+            <Field Type="CRYPT_XML_ISSUER_SERIAL"       Name="IssuerSerial" />
+            <Field Type="CRYPT_XML_DATA_BLOB"           Name="SKI" />
+            <Field Type="LPCWSTR"                       Name="wszSubjectName" />
+            <Field Type="CRYPT_XML_DATA_BLOB"           Name="Certificate" />
+            <Field Type="CRYPT_XML_DATA_BLOB"           Name="CRL" />
+            <Field Type="CRYPT_XML_BLOB"                Name="Custom" />
+        </Variable>
+
+        <!-- CRYPT_XML_X509DATA_ITEM -->
+        <Variable Name="CRYPT_XML_X509DATA_ITEM" Type="Struct">
+            <Field Type="[CRYPT_XML_X509DATA_TYPE]"     Name="dwType" />
+            <Field Type="[CRYPT_XML_X509DATA_ITEM_u]"   Name="" />
+        </Variable>
+        <Variable Name="CRYPT_XML_X509DATA_ITEM*" Type="Pointer" Base="CRYPT_XML_X509DATA_ITEM" />
+
+        <!-- CRYPT_XML_X509DATA -->
+        <Variable Name="CRYPT_XML_X509DATA" Type="Struct">
+            <Field Type="UINT"                          Name="cX509Data" />
+            <Field Type="CRYPT_XML_X509DATA_ITEM*"      Name="rgX509Data" Count="cX509Data" />
+        </Variable>
+
+        <!-- [CRYPT_XML_KEYINFO_TYPE] -->
+        <Variable Name="[CRYPT_XML_KEYINFO_TYPE]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="CRYPT_XML_KEYINFO_TYPE_KEYNAME"      Value="0x00000001" />
+                <Set Name="CRYPT_XML_KEYINFO_TYPE_KEYVALUE"     Value="0x00000002" />
+                <Set Name="CRYPT_XML_KEYINFO_TYPE_RETRIEVAL"    Value="0x00000003" />
+                <Set Name="CRYPT_XML_KEYINFO_TYPE_X509DATA"     Value="0x00000004" />
+                <Set Name="CRYPT_XML_KEYINFO_TYPE_CUSTOM"       Value="0x00000005" />
+            </Enum>
+        </Variable>
+
+        <!-- [CRYPT_XML_KEY_INFO_ITEM_u] -->
+        <Variable Name="[CRYPT_XML_KEY_INFO_ITEM_u]" Type="Union">
+            <Display Name="union" />
+            <Field Type="LPCWSTR"               Name="wszKeyName" />
+            <Field Type="CRYPT_XML_KEY_VALUE"   Name="KeyValue" />
+            <Field Type="CRYPT_XML_BLOB"        Name="RetrievalMethod" />
+            <Field Type="CRYPT_XML_X509DATA"    Name="X509Data" />
+            <Field Type="CRYPT_XML_BLOB"        Name="Custom" />
+        </Variable>
+
+        <!-- CRYPT_XML_KEY_INFO_ITEM -->
+        <Variable Name="CRYPT_XML_KEY_INFO_ITEM" Type="Struct">
+            <Field Type="[CRYPT_XML_KEYINFO_TYPE]"      Name="dwType" />
+            <Field Type="[CRYPT_XML_KEY_INFO_ITEM_u]"   Name="" />
+        </Variable>
+        <Variable Name="CRYPT_XML_KEY_INFO_ITEM*" Type="Pointer" Base="CRYPT_XML_KEY_INFO_ITEM" />
+
+        <!-- CRYPT_XML_ALGORITHM -->
+        <Variable Name="CRYPT_XML_ALGORITHM" Type="Struct">
+            <Field Type="ULONG"             Name="cbSize" />
+            <Field Type="LPCWSTR"           Name="wszAlgorithm" />
+            <Field Type="CRYPT_XML_BLOB"    Name="Encoded" />
+        </Variable>
+        <Variable Name="CRYPT_XML_ALGORITHM*"       Type="Pointer" Base="CRYPT_XML_ALGORITHM" />
+        <Variable Name="const CRYPT_XML_ALGORITHM*" Type="Pointer" Base="CRYPT_XML_ALGORITHM" />
+
+        <Variable Name="CRYPT_XML_PROPERTY_ID" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="CRYPT_XML_PROPERTY_MAX_HEAP_SIZE"        Value="1" />
+                <Set Name="CRYPT_XML_PROPERTY_SIGNATURE_LOCATION"   Value="2" />
+                <Set Name="CRYPT_XML_PROPERTY_MAX_SIGNATURES"       Value="3" />
+                <Set Name="CRYPT_XML_PROPERTY_DOC_DECLARATION"      Value="4" />
+                <Set Name="CRYPT_XML_PROPERTY_XML_OUTPUT_CHARSET"   Value="5" />
+            </Enum>
+        </Variable>
+
+        <!-- CRYPT_XML_PROPERTY -->
+        <Variable Name="CRYPT_XML_PROPERTY" Type="Struct">
+            <Field Type="CRYPT_XML_PROPERTY_ID"     Name="dwPropId" />
+            <Field Type="const void*"               Name="pvValue" Length="cbValue" />
+            <Field Type="ULONG"                     Name="cbValue" />
+        </Variable>
+        <Variable Name="CRYPT_XML_PROPERTY*"        Type="Pointer" Base="CRYPT_XML_PROPERTY" />
+        <Variable Name="const CRYPT_XML_PROPERTY*"  Type="Alias"    Base="CRYPT_XML_PROPERTY*" />
+
+        <!-- CRYPT_XML_REFERENCE -->
+        <Variable Name="CRYPT_XML_REFERENCE" Type="Struct">
+            <Field Type="ULONG"                     Name="cbSize" />
+            <Field Type="HCRYPTXML"                 Name="hReference" />
+            <Field Type="LPCWSTR"                   Name="wszId" />
+            <Field Type="LPCWSTR"                   Name="wszUri" />
+            <Field Type="LPCWSTR"                   Name="wszType" />
+            <Field Type="CRYPT_XML_ALGORITHM"       Name="DigestMethod" />
+            <Field Type="CRYPT_DATA_BLOB"           Name="DigestValue" />
+            <Field Type="ULONG"                     Name="cTransform" />
+            <Field Type="CRYPT_XML_ALGORITHM*"      Name="rgTransform" Count="cTransform" />
+        </Variable>
+        <Variable Name="PCRYPT_XML_REFERENCE"           Type="Pointer" Base="CRYPT_XML_REFERENCE" />
+        <Variable Name="PCRYPT_XML_REFERENCE*"          Type="Pointer" Base="PCRYPT_XML_REFERENCE" />
+        <Variable Name="CRYPT_XML_REFERENCE*"           Type="Pointer" Base="CRYPT_XML_REFERENCE" />
+        <Variable Name="const CRYPT_XML_REFERENCE**"    Type="Pointer" Base="CRYPT_XML_REFERENCE*" />
+
+        <!-- CRYPT_XML_REFERENCES -->
+        <Variable Name="CRYPT_XML_REFERENCES" Type="Struct">
+            <Field Type="ULONG"                     Name="cReference" />
+            <Field Type="PCRYPT_XML_REFERENCE*"     Name="rgpReference" Count="cReference" />
+        </Variable>
+
+        <!-- CRYPT_XML_OBJECT -->
+        <Variable Name="CRYPT_XML_OBJECT" Type="Struct">
+            <Field Type="ULONG"                     Name="cbSize" />
+            <Field Type="HCRYPTXML"                 Name="hObject" />
+            <Field Type="LPCWSTR"                   Name="wszId" />
+            <Field Type="LPCWSTR"                   Name="wszMimeType" />
+            <Field Type="LPCWSTR"                   Name="wszEncoding" />
+            <Field Type="CRYPT_XML_REFERENCES"      Name="Manifest" />
+            <Field Type="CRYPT_XML_BLOB"            Name="Encoded" />
+        </Variable>
+        <Variable Name="CRYPT_XML_OBJECT*"          Type="Pointer" Base="CRYPT_XML_OBJECT" />
+        <Variable Name="PCRYPT_XML_OBJECT"          Type="Pointer" Base="CRYPT_XML_OBJECT" />
+        <Variable Name="PCRYPT_XML_OBJECT*"         Type="Pointer" Base="PCRYPT_XML_OBJECT" />
+        <Variable Name="const CRYPT_XML_OBJECT**"   Type="Pointer" Base="CRYPT_XML_OBJECT*" />
+
+        <!-- CRYPT_XML_DATA_PROVIDER -->
+        <Variable Name="CRYPT_XML_DATA_PROVIDER" Type="Struct">
+            <Field Type="void*"                             Name="pvCallbackState" />
+            <Field Type="ULONG"                             Name="cbBufferSize" />
+            <Field Type="PFN_CRYPT_XML_DATA_PROVIDER_READ"  Name="pfnRead" />
+            <Field Type="PFN_CRYPT_XML_DATA_PROVIDER_CLOSE" Name="pfnClose" />
+        </Variable>
+        <Variable Name="CRYPT_XML_DATA_PROVIDER*" Type="Pointer" Base="CRYPT_XML_DATA_PROVIDER" />
+
+        <!-- CRYPT_XML_ALGORITHM_INFO -->
+        <Variable Name="CRYPT_XML_ALGORITHM_INFO" Type="Struct">
+            <Field Type="DWORD"     Name="cbSize" />
+            <Field Type="WCHAR*"    Name="wszAlgorithmURI" />
+            <Field Type="WCHAR*"    Name="wszName" />
+            <Field Type="DWORD"     Name="dwGroupId" />
+            <Field Type="WCHAR*"    Name="wszCNGAlgid" />
+            <Field Type="WCHAR*"    Name="wszCNGExtraAlgid" />
+            <Field Type="DWORD"     Name="dwSignFlags" />
+            <Field Type="DWORD"     Name="dwVerifyFlags" />
+            <Field Type="void*"     Name="pvPaddingInfo" />
+            <Field Type="void*"     Name="pvExtraInfo" />
+        </Variable>
+        <Variable Name="CRYPT_XML_ALGORITHM_INFO*"  Type="Pointer" Base="CRYPT_XML_ALGORITHM_INFO" />
+        <Variable Name="CRYPT_XML_ALGORITHM_INFO**" Type="Pointer" Base="CRYPT_XML_ALGORITHM_INFO*" />
+
+        <!-- CRYPT_XML_TRANSFORM_INFO -->
+        <Variable Name="CRYPT_XML_TRANSFORM_INFO" Type="Struct">
+            <Field Type="ULONG"                             Name="cbSize" />
+            <Field Type="LPCWSTR"                           Name="wszAlgorithm" />
+            <Field Type="ULONG"                             Name="cbBufferSize" />
+            <Field Type="DWORD"                             Name="dwFlags" />
+            <Field Type="PFN_CRYPT_XML_CREATE_TRANSFORM"    Name="pfnCreateTransform" />
+        </Variable>
+        <Variable Name="PCRYPT_XML_TRANSFORM_INFO"  Type="Pointer" Base="CRYPT_XML_TRANSFORM_INFO" />
+        <Variable Name="PCRYPT_XML_TRANSFORM_INFO*" Type="Pointer" Base="PCRYPT_XML_TRANSFORM_INFO" />
+
+        <!-- CRYPT_XML_TRANSFORM_CHAIN_CONFIG -->
+        <Variable Name="CRYPT_XML_TRANSFORM_CHAIN_CONFIG" Type="Struct">
+            <Field Type="ULONG"                         Name="cbSize" />
+            <Field Type="ULONG"                         Name="cTransformInfo" />
+            <Field Type="PCRYPT_XML_TRANSFORM_INFO*"    Name="rgpTransformInfo" Count="cTransformInfo" />
+        </Variable>
+        <Variable Name="CRYPT_XML_TRANSFORM_CHAIN_CONFIG*"  Type="Pointer" Base="CRYPT_XML_TRANSFORM_CHAIN_CONFIG" />
+        <Variable Name="CRYPT_XML_TRANSFORM_CHAIN_CONFIG**" Type="Pointer" Base="CRYPT_XML_TRANSFORM_CHAIN_CONFIG*" />
+
+        <!-- CRYPT_XML_SIGNED_INFO -->
+        <Variable Name="CRYPT_XML_SIGNED_INFO" Type="Struct">
+            <Field Type="ULONG"                     Name="cbSize" />
+            <Field Type="LPCWSTR"                   Name="wszId" />
+            <Field Type="CRYPT_XML_ALGORITHM"       Name="Canonicalization" />
+            <Field Type="CRYPT_XML_ALGORITHM"       Name="SignatureMethod" />
+            <Field Type="ULONG"                     Name="cReference" />
+            <Field Type="PCRYPT_XML_REFERENCE*"     Name="rgpReference" Count="cReference" />
+            <Field Type="CRYPT_XML_BLOB"            Name="Encoded" />
+        </Variable>
+
+        <!-- CRYPT_XML_KEY_INFO -->
+        <Variable Name="CRYPT_XML_KEY_INFO" Type="Struct">
+            <Field Type="ULONG"                         Name="cbSize" />
+            <Field Type="LPCWSTR"                       Name="wszId" />
+            <Field Type="UINT"                          Name="cKeyInfo" />
+            <Field Type="CRYPT_XML_KEY_INFO_ITEM*"      Name="rgKeyInfo" Count="cKeyInfo" />
+            <Field Type="BCRYPT_KEY_HANDLE"             Name="hVerifyKey" />
+        </Variable>
+        <Variable Name="CRYPT_XML_KEY_INFO*" Type="Pointer" Base="CRYPT_XML_KEY_INFO" />
+
+        <!-- CRYPT_XML_SIGNATURE -->
+        <Variable Name="CRYPT_XML_SIGNATURE" Type="Struct">
+            <Field Type="ULONG"                     Name="cbSize" />
+            <Field Type="HCRYPTXML"                 Name="hSignature" />
+            <Field Type="LPCWSTR"                   Name="wszId" />
+            <Field Type="CRYPT_XML_SIGNED_INFO"     Name="SignedInfo" />
+            <Field Type="CRYPT_DATA_BLOB"           Name="SignatureValue" />
+            <Field Type="CRYPT_XML_KEY_INFO*"       Name="pKeyInfo" />
+            <Field Type="ULONG"                     Name="cObject" />
+            <Field Type="PCRYPT_XML_OBJECT*"        Name="rgpObject" Count="cObject" />
+        </Variable>
+        <Variable Name="PCRYPT_XML_SIGNATURE"           Type="Pointer" Base="CRYPT_XML_SIGNATURE" />
+        <Variable Name="PCRYPT_XML_SIGNATURE*"          Type="Pointer" Base="PCRYPT_XML_SIGNATURE" />
+        <Variable Name="const CRYPT_XML_SIGNATURE**"    Type="Pointer" Base="PCRYPT_XML_SIGNATURE" />
+
+        <!-- CRYPT_XML_DOC_CTXT -->
+        <Variable Name="CRYPT_XML_DOC_CTXT" Type="Struct">
+            <Field Type="ULONG"                                 Name="cbSize" />
+            <Field Type="HCRYPTXML"                             Name="hDocCtxt" />
+            <Field Type="CRYPT_XML_TRANSFORM_CHAIN_CONFIG*"     Name="pTransformsConfig" />
+            <Field Type="ULONG"                                 Name="cSignature" />
+            <Field Type="PCRYPT_XML_SIGNATURE*"                 Name="rgpSignature" Count="cSignature" />
+        </Variable>
+        <Variable Name="CRYPT_XML_DOC_CTXT*"            Type="Pointer" Base="CRYPT_XML_DOC_CTXT" />
+        <Variable Name="const CRYPT_XML_DOC_CTXT**"     Type="Pointer" Base="CRYPT_XML_DOC_CTXT*" />
+
+        <!-- CRYPT_XML_STATUS -->
+        <Variable Name="CRYPT_XML_STATUS" Type="Struct">
+            <Field Type="ULONG"     Name="cbSize" />
+            <Field Type="DWORD"     Name="dwErrorStatus" />
+            <Field Type="DWORD"     Name="dwInfoStatus" />
+        </Variable>
+        <Variable Name="CRYPT_XML_STATUS*" Type="Pointer" Base="CRYPT_XML_STATUS" />
+
+        <Variable Name="CRYPT_XML_KEYINFO_SPEC" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="CRYPT_XML_KEYINFO_SPEC_NONE"     Value="0" />
+                <Set Name="CRYPT_XML_KEYINFO_SPEC_ENCODED"  Value="1" />
+                <Set Name="CRYPT_XML_KEYINFO_SPEC_PARAM"    Value="2" />
+            </Enum>
+        </Variable>
+
+        <!-- Cryptography -->
+        <Category Name="Security and Identity/Cryptography/CryptXML" />
+        <Api Name="CryptXmlCreateReference">
+            <Param Type="HCRYPTXML" Name="hCryptXml" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="LPCWSTR" Name="wszId" />
+            <Param Type="LPCWSTR" Name="wszURI" />
+            <Param Type="LPCWSTR" Name="wszType" />
+            <Param Type="const CRYPT_XML_ALGORITHM*" Name="pDigestMethod" />
+            <Param Type="ULONG" Name="cTransform" />
+            <Param Type="const CRYPT_XML_ALGORITHM*" Name="rgTransform" Count="cTransform" />
+            <Param Type="HCRYPTXML*" Name="phReference" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CryptXmlAddObject">
+            <Param Type="HCRYPTXML" Name="hSignatureOrObject" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="const CRYPT_XML_PROPERTY*" Name="rgProperty" Count="cProperty" />
+            <Param Type="ULONG" Name="cProperty" />
+            <Param Type="const PCRYPT_XML_BLOB" Name="pEncoded" />
+            <Param Type="const CRYPT_XML_OBJECT**" Name="ppObject" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CryptXmlClose">
+            <Param Type="HCRYPTXML" Name="hCryptXml" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CryptXmlDigestReference">
+            <Param Type="HCRYPTXML" Name="hReference" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="CRYPT_XML_DATA_PROVIDER*" Name="pDataProviderIn" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CryptXmlEncode">
+            <Param Type="HCRYPTXML" Name="hCryptXml" />
+            <Param Type="CRYPT_XML_CHARSET" Name="dwCharset" />
+            <Param Type="const CRYPT_XML_PROPERTY*" Name="rgProperty" Count="cProperty" />
+            <Param Type="ULONG" Name="cProperty" />
+            <Param Type="void*" Name="pvCallbackState" />
+            <Param Type="PFN_CRYPT_XML_WRITE_CALLBACK" Name="pfnWrite" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CryptXmlGetAlgorithmInfo">
+            <Param Type="const CRYPT_XML_ALGORITHM*" Name="pXmlAlgorithm" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="CRYPT_XML_ALGORITHM_INFO**" Name="ppAlgInfo" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CryptXmlGetDocContext">
+            <Param Type="HCRYPTXML" Name="hCryptXml" />
+            <Param Type="const CRYPT_XML_DOC_CTXT**" Name="ppStruct" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CryptXmlGetReference">
+            <Param Type="HCRYPTXML" Name="HCRYPTXML" />
+            <Param Type="const CRYPT_XML_REFERENCE**" Name="ppStruct" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CryptXmlGetSignature">
+            <Param Type="HCRYPTXML" Name="hCryptXml" />
+            <Param Type="const CRYPT_XML_SIGNATURE**" Name="ppStruct" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CryptXmlGetStatus">
+            <Param Type="HCRYPTXML" Name="hCryptXml" />
+            <Param Type="CRYPT_XML_STATUS*" Name="pStatus" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CryptXmlGetTransforms">
+            <Param Type="CRYPT_XML_TRANSFORM_CHAIN_CONFIG**" Name="ppConfig" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CryptXmlImportPublicKey">
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="CRYPT_XML_KEY_VALUE*" Name="pKeyValue" />
+            <Param Type="BCRYPT_KEY_HANDLE*" Name="phKey" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CryptXmlOpenToEncode">
+            <Param Type="CRYPT_XML_TRANSFORM_CHAIN_CONFIG*" Name="pConfig" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="LPCWSTR" Name="wszId" />
+            <Param Type="CRYPT_XML_PROPERTY*" Name="rgProperty" Count="cProperty" />
+            <Param Type="ULONG" Name="cProperty" />
+            <Param Type="CRYPT_XML_BLOB*" Name="pEncoded" />
+            <Param Type="HCRYPTXML*" Name="phSignature" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CryptXmlOpenToDecode">
+            <Param Type="CRYPT_XML_TRANSFORM_CHAIN_CONFIG*" Name="pConfig" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="const CRYPT_XML_PROPERTY*" Name="rgProperty" Count="cProperty" />
+            <Param Type="ULONG" Name="cProperty" />
+            <Param Type="const CRYPT_XML_BLOB*" Name="pEncoded" />
+            <Param Type="HCRYPTXML" Name="phCryptXml" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CryptXmlSetHMACSecret">
+            <Param Type="HCRYPTXML" Name="hSignature" />
+            <Param Type="const BYTE*" Name="pbSecret" />
+            <Param Type="ULONG" Name="cbSecret" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CryptXmlVerifySignature">
+            <Param Type="HCRYPTXML" Name="hSignature" />
+            <Param Type="BCRYPT_KEY_HANDLE" Name="hKey" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CryptXmlSign">
+            <Param Type="HCRYPTXML" Name="hSignature" />
+            <Param Type="HCRYPTPROV_OR_NCRYPT_KEY_HANDLE" Name="hKey" />
+            <Param Type="DWORD" Name="dwKeySpec" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Param Type="CRYPT_XML_KEYINFO_SPEC" Name="dwKeyInfoSpec" />
+            <Param Type="const void*" Name="pvKeyInfoSpec" />
+            <Param Type="const CRYPT_XML_ALGORITHM*" Name="pSignatureMethod" />
+            <Param Type="const CRYPT_XML_ALGORITHM*" Name="pCanonicalization" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Module>
+</ApiMonitor>

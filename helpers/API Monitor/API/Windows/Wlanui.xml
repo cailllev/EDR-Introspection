@@ -1,0 +1,32 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2012, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Module Name="Wlanui.dll" CallingConvention="STDCALL" ErrorFunc="HRESULT" OnlineHelp="MSDN">
+
+        <!-- WL_DISPLAY_PAGES -->
+        <Variable Name="WL_DISPLAY_PAGES" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="WLConnectionPage"	Value="0" />
+                <Set Name="WLSecurityPage"		Value="1" />
+                <Set Name="WLAdvPage"           Value="2" />
+            </Enum>
+        </Variable>
+
+        <!-- Native Wifi -->
+        <Category Name="Wireless Networking/Native Wifi" />
+        <Api Name="WlanUIEditProfile">
+            <Param Type="DWORD" Name="dwClientVersion" />
+            <Param Type="LPCWSTR" Name="wstrProfileName" />
+            <Param Type="GUID*" Name="pInterfaceGuid" />
+            <Param Type="HWND" Name="hWnd" />
+            <Param Type="WL_DISPLAY_PAGES" Name="wlStartPage" />
+            <Param Type="PVOID" Name="pReserved" />
+            <Param Type="PWLAN_REASON_CODE" Name="pWlanReasonCode" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+    </Module>
+</ApiMonitor>

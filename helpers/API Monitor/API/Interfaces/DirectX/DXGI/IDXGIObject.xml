@@ -1,0 +1,33 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2012, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Include Filename="Interfaces\DirectX\DXGI\DXGI.h.xml" />
+    <Interface Name="IDXGIObject" Id="{aec22fb8-76f3-4639-9be0-28eb43a67a2e}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Graphics and Gaming/DirectX Graphics and Gaming/DirectX Graphics Infrastructure (DXGI)">
+        <Api Name="SetPrivateData">
+            <Param Type="REFGUID" Name="Name" />
+            <Param Type="UINT" Name="DataSize" />
+            <Param Type="const void*" Name="pData" Length="DataSize" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetPrivateDataInterface">
+            <Param Type="REFGUID" Name="Name" />
+            <Param Type="const IUnknown*" Name="pUnknown" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetPrivateData">
+            <Param Type="REFGUID" Name="Name" />
+            <Param Type="UINT*" Name="pDataSize" />
+            <Param Type="void*" Name="pData" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetParent">
+            <Param Type="REFIID" Name="riid" />
+            <Param Type="void**" Name="ppParent" InterfaceId="riid" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

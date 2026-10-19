@@ -1,0 +1,148 @@
+<!--
+    API Monitor Definitions
+    (c) 2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\WIC\IWICBitmapFrameDecode.xml" />
+    <Interface Name="IWICDevelopRaw" Id="{fbec5e44-f7be-4b65-b7f8-c0c81fef026d}" BaseInterface="IWICBitmapFrameDecode" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Graphics and Gaming/Windows Imaging Component (WIC)">
+        <!-- Methods -->
+        <Api Name="QueryRawCapabilitiesInfo">
+            <Param Type="WICRawCapabilitiesInfo*" Name="pInfo" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="LoadParameterSet">
+            <Param Type="WICRawParameterSet" Name="ParameterSet" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="GetCurrentParameterSet">
+            <Param Type="IPropertyBag2**" Name="ppCurrentParameterSet" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="SetExposureCompensation">
+            <Param Type="double" Name="ev" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="GetExposureCompensation">
+            <Param Type="double*" Name="pEV" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="SetWhitePointRGB">
+            <Param Type="UINT" Name="Red" />
+            <Param Type="UINT" Name="Green" />
+            <Param Type="UINT" Name="Blue" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="GetWhitePointRGB">
+            <Param Type="UINT*" Name="pRed" />
+            <Param Type="UINT*" Name="pGreen" />
+            <Param Type="UINT*" Name="pBlue" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="SetNamedWhitePoint">
+            <Param Type="WICNamedWhitePoint" Name="WhitePoint" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="GetNamedWhitePoint">
+            <Param Type="WICNamedWhitePoint*" Name="pWhitePoint" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="SetWhitePointKelvin">
+            <Param Type="UINT" Name="WhitePointKelvin" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="GetWhitePointKelvin">
+            <Param Type="UINT*" Name="pWhitePointKelvin" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="GetKelvinRangeInfo">
+            <Param Type="UINT*" Name="pMinKelvinTemp" />
+            <Param Type="UINT*" Name="pMaxKelvinTemp" />
+            <Param Type="UINT*" Name="pKelvinTempStepValue" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="SetContrast">
+            <Param Type="double" Name="Contrast" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="GetContrast">
+            <Param Type="double*" Name="pContrast" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="SetGamma">
+            <Param Type="double" Name="Gamma" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="GetGamma">
+            <Param Type="double*" Name="pGamma" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="SetSharpness">
+            <Param Type="double" Name="Sharpness" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="GetSharpness">
+            <Param Type="double*" Name="pSharpness" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="SetSaturation">
+            <Param Type="double" Name="Saturation" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="GetSaturation">
+            <Param Type="double*" Name="pSaturation" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="SetTint">
+            <Param Type="double" Name="Tint" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="GetTint">
+            <Param Type="double*" Name="pTint" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="SetNoiseReduction">
+            <Param Type="double" Name="NoiseReduction" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="GetNoiseReduction">
+            <Param Type="double*" Name="pNoiseReduction" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="SetDestinationColorContext">
+            <Param Type="IWICColorContext*" Name="pColorContext" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="SetToneCurve">
+            <Param Type="UINT" Name="cbToneCurveSize" />
+            <Param Type="const WICRawToneCurve*" Name="pToneCurve" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="GetToneCurve">
+            <Param Type="UINT" Name="cbToneCurveBufferSize" />
+            <Param Type="WICRawToneCurve*" Name="pToneCurve" />
+            <Param Type="UINT*" Name="pcbActualToneCurveBufferSize" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="SetRotation">
+            <Param Type="double" Name="Rotation" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="GetRotation">
+            <Param Type="double*" Name="pRotation" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="SetRenderMode">
+            <Param Type="WICRawRenderMode" Name="RenderMode" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="GetRenderMode">
+            <Param Type="WICRawRenderMode*" Name="pRenderMode" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+        <Api Name="SetNotificationCallback">
+            <Param Type="IWICDevelopRawNotificationCallback*" Name="pCallback" />
+            <Return Type="[WIC_HRESULT]" />
+        </Api>
+    </Interface>
+</ApiMonitor>

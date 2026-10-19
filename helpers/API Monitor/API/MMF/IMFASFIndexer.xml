@@ -1,0 +1,75 @@
+<!--
+    API Monitor Definitions
+    (c) 2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="MMF\mmfdefs.h.xml" />
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IMFASFIndexer" Id="{53590F48-DC3B-4297-813F-787761AD7B3E}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/Microsoft Media Foundation/Interfaces">
+        <Api Name="SetFlags">
+            <Param Type="DWORD" Name="dwFlags" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetFlags">
+            <Param Type="DWORD*" Name="pdwFlags" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Initialize">
+            <Param Type="IMFASFContentInfo*" Name="pIContentInfo" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetIndexPosition">
+            <Param Type="IMFASFContentInfo*" Name="pIContentInfo" />
+            <Param Type="QWORD*" Name="pcbIndexOffset" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetIndexByteStreams">
+            <Param Type="IMFByteStream**" Name="ppIByteStreams" />
+            <Param Type="DWORD" Name="cByteStreams" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetIndexByteStreamCount">
+            <Param Type="DWORD*" Name="pcByteStreams" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetIndexStatus">
+            <Param Type="ASF_INDEX_IDENTIFIER*" Name="pIndexIdentifier" />
+            <Param Type="BOOL*" Name="pfIsIndexed" />
+            <Param Type="BYTE*" Name="pbIndexDescriptor" />
+            <Param Type="DWORD*" Name="pcbIndexDescriptor" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetIndexStatus">
+            <Param Type="BYTE*" Name="pbIndexDescriptor" />
+            <Param Type="DWORD" Name="cbIndexDescriptor" />
+            <Param Type="BOOL" Name="fGenerateIndex" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetSeekPositionForValue">
+            <Param Type="const PROPVARIANT*" Name="pvarValue" />
+            <Param Type="ASF_INDEX_IDENTIFIER*" Name="pIndexIdentifier" />
+            <Param Type="QWORD*" Name="pcbOffsetWithinData" />
+            <Param Type="MFTIME*" Name="phnsApproxTime" />
+            <Param Type="DWORD*" Name="pdwPayloadNumberOfStreamWithinPacket" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GenerateIndexEntries">
+            <Param Type="IMFSample*" Name="pIASFPacketSample" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CommitIndex">
+            <Param Type="IMFASFContentInfo*" Name="pIContentInfo" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetIndexWriteSpace">
+            <Param Type="QWORD*" Name="pcbIndexWriteSpace" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetCompletedIndex">
+            <Param Type="IMFMediaBuffer*" Name="pIIndexBuffer" />
+            <Param Type="QWORD" Name="cbOffsetWithinIndex" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

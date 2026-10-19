@@ -1,0 +1,31 @@
+<!--
+    API Monitor Definitions
+    (c) 2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\dwrite.h.xml" />
+    <Include Filename="Interfaces\DirectWrite\IDWriteFontList.xml" />
+    <Interface Name="IDWriteFontFamily" Id="{da20d8ef-812a-4c43-9802-62ec4abd7add}" BaseInterface="IDWriteFontList" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Graphics and Gaming/DirectX Graphics and Gaming/DirectWrite">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="GetFamilyNames">
+            <Param Type="IDWriteLocalizedStrings**" Name="names" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetFirstMatchingFont">
+            <Param Type="DWRITE_FONT_WEIGHT" Name="weight" />
+            <Param Type="DWRITE_FONT_STRETCH" Name="stretch" />
+            <Param Type="DWRITE_FONT_STYLE" Name="style" />
+            <Param Type="IDWriteFont**" Name="matchingFont" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetMatchingFonts">
+            <Param Type="DWRITE_FONT_WEIGHT" Name="weight" />
+            <Param Type="DWRITE_FONT_STRETCH" Name="stretch" />
+            <Param Type="DWRITE_FONT_STYLE" Name="style" />
+            <Param Type="IDWriteFontList**" Name="matchingFonts" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

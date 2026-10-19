@@ -1,0 +1,56 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2012, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IOleCommandTarget" Id="{b722bccb-4e68-101b-a2bc-00aa00404770}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Component Object Model (COM)/OLE and Data Transfer/Interfaces">
+        
+        <!-- Variables -->
+        <Variable Name="wchar_t [1]" Type="Array" Base="wchar_t" Count="1" />
+
+        <!-- OLECMD -->
+        <Variable Name="OLECMD" Type="Struct">
+            <Field Type="ULONG"     Name="cmdID" />
+            <Field Type="OLECMDF"   Name="cmdf" />
+        </Variable>
+        <Variable Name="OLECMD[]" Type="Pointer" Base="OLECMD" />
+
+        <!-- OLECMDTEXTF -->
+        <Variable Name="OLECMDTEXTF" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="OLECMDTEXTF_NONE"    Value="0" />
+                <Set Name="OLECMDTEXTF_NAME"    Value="1" />
+                <Set Name="OLECMDTEXTF_STATUS"  Value="2" />
+            </Flag>
+        </Variable>
+
+        <!-- OLECMDTEXT -->
+        <Variable Name="OLECMDTEXT" Type="Struct">
+            <Field Type="OLECMDTEXTF"   Name="cmdtextf" />
+            <Field Type="ULONG"         Name="cwActual" />
+            <Field Type="ULONG"         Name="cwBuf" />
+            <Field Type="wchar_t [1]"   Name="rgwz" Count="cwActual" />
+        </Variable>
+        <Variable Name="OLECMDTEXT*" Type="Pointer" Base="OLECMDTEXT" />
+
+        <!-- Methods -->
+        <Api Name="QueryStatus">
+            <Param Type="const GUID*" Name="pguidCmdGroup" />
+            <Param Type="ULONG" Name="cCmds" />
+            <Param Type="OLECMD[]" Name="prgCmds" Count="cCmds" />
+            <Param Type="OLECMDTEXT*" Name="pCmdText" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Exec">
+            <Param Type="const GUID*" Name="pguidCmdGroup" />
+            <Param Type="DWORD" Name="nCmdID" />
+            <Param Type="DWORD" Name="nCmdexecopt" />
+            <Param Type="VARIANT*" Name="pvaIn" />
+            <Param Type="VARIANT*" Name="pvaOut" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

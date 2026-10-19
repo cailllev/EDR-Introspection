@@ -1,0 +1,48 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IEncoderAPI" Id="{70423839-6ACC-4b23-B079-21DBF08156A5}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/DirectShow">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="IsSupported">
+            <Param Type="const GUID*" Name="Api" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="IsAvailable">
+            <Param Type="const GUID*" Name="Api" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetParameterRange">
+            <Param Type="const GUID*" Name="Api" />
+            <Param Type="VARIANT*" Name="ValueMin" />
+            <Param Type="VARIANT*" Name="ValueMax" />
+            <Param Type="VARIANT*" Name="SteppingDelta" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetParameterValues">
+            <Param Type="const GUID*" Name="Api" />
+            <Param Type="VARIANT**" Name="Values" />
+            <Param Type="ULONG*" Name="ValuesCount" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetDefaultValue">
+            <Param Type="const GUID*" Name="Api" />
+            <Param Type="VARIANT*" Name="Value" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetValue">
+            <Param Type="const GUID*" Name="Api" />
+            <Param Type="VARIANT*" Name="Value" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SetValue">
+            <Param Type="const GUID*" Name="Api" />
+            <Param Type="VARIANT*" Name="Value" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

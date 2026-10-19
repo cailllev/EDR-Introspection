@@ -1,0 +1,123 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Headers>
+
+        <!-- Variables -->
+        <Variable Name="HPOWERNOTIFY"       Type="Alias"        Base="PVOID" />
+        <Variable Name="PHPOWERNOTIFY"      Type="Pointer"      Base="HPOWERNOTIFY" />
+
+        <!-- POWER_INFORMATION_LEVEL -->
+        <Variable Name="POWER_INFORMATION_LEVEL" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="SystemPowerPolicyAc"                 Value="0" />
+                <Set Name="SystemPowerPolicyDc"                 Value="1" />
+                <Set Name="VerifySystemPolicyAc"                Value="2" />
+                <Set Name="VerifySystemPolicyDc"                Value="3" />
+                <Set Name="SystemPowerCapabilities"             Value="4" />
+                <Set Name="SystemBatteryState"                  Value="5" />
+                <Set Name="SystemPowerStateHandler"             Value="6" />
+                <Set Name="ProcessorStateHandler"               Value="7" />
+                <Set Name="SystemPowerPolicyCurrent"            Value="8" />
+                <Set Name="AdministratorPowerPolicy"            Value="9" />
+                <Set Name="SystemReserveHiberFile"              Value="10" />
+                <Set Name="ProcessorInformation"                Value="11" />
+                <Set Name="SystemPowerInformation"              Value="12" />
+                <Set Name="ProcessorStateHandler2"              Value="13" />
+                <Set Name="LastWakeTime"                        Value="14" />
+                <Set Name="LastSleepTime"                       Value="15" />
+                <Set Name="SystemExecutionState"                Value="16" />
+                <Set Name="SystemPowerStateNotifyHandler"       Value="17" />
+                <Set Name="ProcessorPowerPolicyAc"              Value="18" />
+                <Set Name="ProcessorPowerPolicyDc"              Value="19" />
+                <Set Name="VerifyProcessorPowerPolicyAc"        Value="20" />
+                <Set Name="VerifyProcessorPowerPolicyDc"        Value="21" />
+                <Set Name="ProcessorPowerPolicyCurrent"         Value="22" />
+                <Set Name="SystemPowerStateLogging"             Value="23" />
+                <Set Name="SystemPowerLoggingEntry"             Value="24" />
+                <Set Name="SetPowerSettingValue"                Value="25" />
+                <Set Name="NotifyUserPowerSetting"              Value="26" />
+                <Set Name="GetPowerTransitionVetoes"            Value="27" />
+                <Set Name="SetPowerTransitionVeto"              Value="28" />
+                <Set Name="SystemVideoState"                    Value="29" />
+                <Set Name="TraceApplicationPowerMessage"        Value="30" />
+                <Set Name="TraceApplicationPowerMessageEnd"     Value="31" />
+                <Set Name="ProcessorPerfStates"                 Value="32" />
+                <Set Name="ProcessorIdleStates"                 Value="33" />
+                <Set Name="ProcessorThrottleStates"             Value="34" />
+                <Set Name="SystemWakeSource"                    Value="35" />
+                <Set Name="SystemHiberFileInformation"          Value="36" />
+                <Set Name="TraceServicePowerMessage"            Value="37" />
+                <Set Name="ProcessorLoad"                       Value="38" />
+                <Set Name="PowerShutdownNotification"           Value="39" />
+            </Enum>
+        </Variable>
+        
+        <!-- POWER_DATA_ACCESSOR -->
+        <Variable Name="POWER_DATA_ACCESSOR" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="ACCESS_AC_POWER_SETTING_INDEX"               Value="0" />
+                <Set Name="ACCESS_DC_POWER_SETTING_INDEX"               Value="1" />
+                <Set Name="ACCESS_FRIENDLY_NAME"                        Value="2" />
+                <Set Name="ACCESS_DESCRIPTION"                          Value="3" />
+                <Set Name="ACCESS_POSSIBLE_POWER_SETTING"               Value="4" />
+                <Set Name="ACCESS_POSSIBLE_POWER_SETTING_FRIENDLY_NAME" Value="5" />
+                <Set Name="ACCESS_POSSIBLE_POWER_SETTING_DESCRIPTION"   Value="6" />
+                <Set Name="ACCESS_DEFAULT_AC_POWER_SETTING"             Value="7" />
+                <Set Name="ACCESS_DEFAULT_DC_POWER_SETTING"             Value="8" />
+                <Set Name="ACCESS_POSSIBLE_VALUE_MIN"                   Value="9" />
+                <Set Name="ACCESS_POSSIBLE_VALUE_MAX"                   Value="10" />
+                <Set Name="ACCESS_POSSIBLE_VALUE_INCREMENT"             Value="11" />
+                <Set Name="ACCESS_POSSIBLE_VALUE_UNITS"                 Value="12" />
+                <Set Name="ACCESS_ICON_RESOURCE"                        Value="13" />
+                <Set Name="ACCESS_DEFAULT_SECURITY_DESCRIPTOR"          Value="14" />
+                <Set Name="ACCESS_ATTRIBUTES"                           Value="15" />
+                <Set Name="ACCESS_SCHEME"                               Value="16" />
+                <Set Name="ACCESS_SUBGROUP"                             Value="17" />
+                <Set Name="ACCESS_INDIVIDUAL_SETTING"                   Value="18" />
+                <Set Name="ACCESS_ACTIVE_SCHEME"                        Value="19" />
+                <Set Name="ACCESS_CREATE_SCHEME"                        Value="20" />
+            </Enum>
+        </Variable>
+
+        <!-- POWER_ACTION -->
+        <Variable Name="POWER_ACTION" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="PowerActionNone"             Value="0" />
+                <Set Name="PowerActionReserved"         Value="1" />
+                <Set Name="PowerActionSleep"            Value="2" />
+                <Set Name="PowerActionHibernate"        Value="3" />
+                <Set Name="PowerActionShutdown"         Value="4" />
+                <Set Name="PowerActionShutdownReset"    Value="5" />
+                <Set Name="PowerActionShutdownOff"      Value="6" />
+                <Set Name="PowerActionWarmEject"        Value="7" />
+            </Enum>
+        </Variable>
+
+        <!-- SYSTEM_POWER_STATE -->
+        <Variable Name="SYSTEM_POWER_STATE" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="PowerSystemUnspecified"      Value="0" />
+                <Set Name="PowerSystemWorking"          Value="1" />
+                <Set Name="PowerSystemSleeping1"        Value="2" />
+                <Set Name="PowerSystemSleeping2"        Value="3" />
+                <Set Name="PowerSystemSleeping3"        Value="4" />
+                <Set Name="PowerSystemHibernate"        Value="5" />
+                <Set Name="PowerSystemShutdown"         Value="6" />
+            </Enum>
+        </Variable>
+
+        <!-- [POWER_NOTIFICATION_FLAGS] -->
+        <Variable Name="[POWER_NOTIFICATION_FLAGS]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="DEVICE_NOTIFY_CALLBACK" Value="2" />
+            </Flag>
+        </Variable>
+
+    </Headers>
+</ApiMonitor>

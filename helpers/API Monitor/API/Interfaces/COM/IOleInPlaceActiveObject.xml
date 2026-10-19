@@ -1,0 +1,34 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\COM\IOleWindow.xml" />
+    <Interface Name="IOleInPlaceActiveObject" Id="{00000117-0000-0000-C000-000000000046}" BaseInterface="IOleWindow" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Component Object Model (COM)/OLE and Data Transfer/Interfaces">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="TranslateAccelerator">
+            <Param Type="LPMSG" Name="lpmsg" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="OnFrameWindowActivate">
+            <Param Type="BOOL" Name="fActivate" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="OnDocWindowActivate">
+            <Param Type="BOOL" Name="fActivate" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="ResizeBorder">
+            <Param Type="LPCRECT" Name="prcBorder" />
+            <Param Type="IOleInPlaceUIWindow*" Name="pUIWindow" />
+            <Param Type="BOOL" Name="fFrameWindow" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="EnableModeless">
+            <Param Type="BOOL" Name="fEnable" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

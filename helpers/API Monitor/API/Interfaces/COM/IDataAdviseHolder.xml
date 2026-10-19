@@ -1,0 +1,34 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IDataAdviseHolder" Id="{00000110-0000-0000-C000-000000000046}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Component Object Model (COM)/OLE and Data Transfer/Interfaces">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="Advise">
+            <Param Type="IDataObject*" Name="pDataObject" />
+            <Param Type="FORMATETC*" Name="pFetc" />
+            <Param Type="ADVF" Name="advf" />
+            <Param Type="IAdviseSink*" Name="pAdvise" />
+            <Param Type="DWORD*" Name="pdwConnection" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Unadvise">
+            <Param Type="DWORD" Name="dwConnection" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="EnumAdvise">
+            <Param Type="IEnumSTATDATA**" Name="ppenumAdvise" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SendOnDataChange">
+            <Param Type="IDataObject*" Name="pDataObject" />
+            <Param Type="DWORD" Name="dwReserved" />
+            <Param Type="ADVF" Name="advf" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

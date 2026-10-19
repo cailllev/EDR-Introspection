@@ -1,0 +1,22 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\DirectX\DXGI\IDXGIDeviceSubObject.xml" />
+    <Interface Name="IDXGISurface" Id="{cafcb56c-6ac3-4889-bf47-9e23bbd260ec}" BaseInterface="IDXGIDeviceSubObject" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Graphics and Gaming/DirectX Graphics and Gaming/DirectX Graphics Infrastructure (DXGI)">
+        <Api Name="GetDesc">
+            <Param Type="DXGI_SURFACE_DESC*" Name="pDesc" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Map">
+            <Param Type="DXGI_MAPPED_RECT*" Name="pLockedRect" />
+            <Param Type="UINT" Name="MapFlags" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Unmap">
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

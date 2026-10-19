@@ -1,0 +1,259 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2012, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Include Filename="Headers\native.h.xml" />
+    <Module Name="ImageHlp.dll" CallingConvention="STDCALL" ErrorFunc="GetLastError" OnlineHelp="MSDN">
+
+        <!-- Variables -->
+        <Variable Name="DIGEST_FUNCTION"                 Type="Alias"        Base="LPVOID" />
+        <Variable Name="DIGEST_HANDLE"                   Type="Alias"        Base="PVOID" />
+        <Variable Name="PIMAGEHLP_STATUS_ROUTINE"        Type="Alias"        Base="LPVOID" />
+
+        <!-- IMAGE_LOAD_CONFIG_DIRECTORY (32-bit) -->
+        <Condition Architecture="32">
+            <Variable Name="IMAGE_LOAD_CONFIG_DIRECTORY" Type="Struct">
+                <Field Type="DWORD"         Name="Size" />
+                <Field Type="DWORD"         Name="TimeDateStamp" />
+                <Field Type="WORD"          Name="MajorVersion" />
+                <Field Type="WORD"          Name="MinorVersion" />
+                <Field Type="DWORD"         Name="GlobalFlagsClear" />
+                <Field Type="DWORD"         Name="GlobalFlagsSet" />
+                <Field Type="DWORD"         Name="CriticalSectionDefaultTimeout" />
+                <Field Type="DWORD"         Name="DeCommitFreeBlockThreshold" />
+                <Field Type="DWORD"         Name="DeCommitTotalFreeThreshold" />
+                <Field Type="DWORD"         Name="LockPrefixTable" />
+                <Field Type="DWORD"         Name="MaximumAllocationSize" />
+                <Field Type="DWORD"         Name="VirtualMemoryThreshold" />
+                <Field Type="[HEAP_FLAGS]"  Name="ProcessHeapFlags" />
+                <Field Type="DWORD"         Name="ProcessAffinityMask" />
+                <Field Type="WORD"          Name="CSDVersion" />
+                <Field Type="WORD"          Name="Reserved1" />
+                <Field Type="DWORD"         Name="EditList" />
+                <Field Type="DWORD"         Name="SecurityCookie" />
+                <Field Type="DWORD"         Name="SEHandlerTable" />
+                <Field Type="DWORD"         Name="SEHandlerCount" />
+            </Variable>
+        </Condition>
+
+        <!-- IMAGE_LOAD_CONFIG_DIRECTORY (64-bit) -->
+        <Condition Architecture="64">
+            <Variable Name="IMAGE_LOAD_CONFIG_DIRECTORY" Type="Struct">
+                <Field Type="DWORD"         Name="Size" />
+                <Field Type="DWORD"         Name="TimeDateStamp" />
+                <Field Type="WORD"          Name="MajorVersion" />
+                <Field Type="WORD"          Name="MinorVersion" />
+                <Field Type="DWORD"         Name="GlobalFlagsClear" />
+                <Field Type="DWORD"         Name="GlobalFlagsSet" />
+                <Field Type="DWORD"         Name="CriticalSectionDefaultTimeout" />
+                <Field Type="ULONGLONG"     Name="DeCommitFreeBlockThreshold" />
+                <Field Type="ULONGLONG"     Name="DeCommitTotalFreeThreshold" />
+                <Field Type="ULONGLONG"     Name="LockPrefixTable" />
+                <Field Type="ULONGLONG"     Name="MaximumAllocationSize" />
+                <Field Type="ULONGLONG"     Name="VirtualMemoryThreshold" />
+                <Field Type="ULONGLONG"     Name="ProcessAffinityMask" />
+                <Field Type="[HEAP_FLAGS]"  Name="ProcessHeapFlags" />
+                <Field Type="WORD"          Name="CSDVersion" />
+                <Field Type="WORD"          Name="Reserved1" />
+                <Field Type="ULONGLONG"     Name="EditList" />
+                <Field Type="ULONGLONG"     Name="SecurityCookie" />
+                <Field Type="ULONGLONG"     Name="SEHandlerTable" />
+                <Field Type="ULONGLONG"     Name="SEHandlerCount" />
+            </Variable>
+        </Condition>
+        <Variable Name="PIMAGE_LOAD_CONFIG_DIRECTORY" Type="Pointer" Base="IMAGE_LOAD_CONFIG_DIRECTORY" />
+
+        <!-- [WIN_CERT_TYPE] -->
+        <Variable Name="[WIN_CERT_TYPE]" Type="Alias" Base="WORD">
+            <Display Name="WORD" />
+            <Flag>
+                <Set Name="WIN_CERT_TYPE_X509"                  Value="0x0001" />
+                <Set Name="WIN_CERT_TYPE_PKCS_SIGNED_DATA"      Value="0x0002" />
+                <Set Name="WIN_CERT_TYPE_RESERVED_1"            Value="0x0003" />
+                <Set Name="WIN_CERT_TYPE_TS_STACK_SIGNED"       Value="0x0004" />
+            </Flag>
+        </Variable>
+
+        <!-- WIN_CERTIFICATE -->
+        <Variable Name="WIN_CERTIFICATE" Type="Struct">
+            <Field Type="DWORD"                 Name="dwLength" />
+            <Field Type="WORD"                  Name="wRevision" />
+            <Field Type="[WIN_CERT_TYPE]"       Name="wCertificateType" />
+            <Field Type="BYTE [ANYSIZE_ARRAY]"  Name="bCertificate" />
+        </Variable>
+        <Variable Name="LPWIN_CERTIFICATE" Type="Pointer" Base="WIN_CERTIFICATE" />
+
+        <!-- LOADED_IMAGE -->
+        <Variable Name="LOADED_IMAGE" Type="Struct">
+            <Field Type="PSTR"                                  Name="ModuleName" />
+            <Field Type="HANDLE"                                Name="hFile" />
+            <Field Type="PUCHAR"                                Name="MappedAddress" />
+            <Field Type="PIMAGE_NT_HEADERS"                     Name="FileHeader" />
+            <Field Type="PIMAGE_SECTION_HEADER"                 Name="LastRvaSection" />
+            <Field Type="ULONG"                                 Name="NumberOfSections" />
+            <Field Type="PIMAGE_SECTION_HEADER"                 Name="Sections" />
+            <Field Type="[IMAGE_FILE_CHARACTERISTICS_ULONG]"    Name="Characteristics" />
+            <Field Type="BOOLEAN"                               Name="fSystemImage" />
+            <Field Type="BOOLEAN"                               Name="fDOSImage" />
+            <Field Type="BOOLEAN"                               Name="fReadOnly" />
+            <Field Type="UCHAR"                                 Name="Version" />
+            <Field Type="LIST_ENTRY"                            Name="Links" />
+            <Field Type="ULONG"                                 Name="SizeOfImage" />
+        </Variable>
+        <Variable Name="PLOADED_IMAGE" Type="Pointer" Base="LOADED_IMAGE" />
+
+        <!-- API's -->
+        <Category Name="Diagnostics/Debugging and Error Handling/Debug Help Library/Image Help Library" />
+        <Api Name="GetImageConfigInformation">
+            <Param Type="PLOADED_IMAGE" Name="LoadedImage" />
+            <Param Type="PIMAGE_LOAD_CONFIG_DIRECTORY" Name="ImageConfigInformation" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="GetImageUnusedHeaderBytes">
+            <Param Type="PLOADED_IMAGE" Name="LoadedImage" />
+            <Param Type="PDWORD" Name="SizeUnusedHeaderBytes" />
+            <Return Type="DWORD" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="ImageLoad">
+            <Param Type="PSTR" Name="DllName" />
+            <Param Type="PSTR" Name="DllPath" />
+            <Return Type="PLOADED_IMAGE" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="ImageUnload">
+            <Param Type="PLOADED_IMAGE" Name="LoadedImage" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="MapAndLoad">
+            <Param Type="PSTR" Name="ImageName" />
+            <Param Type="PSTR" Name="DllPath" />
+            <Param Type="PLOADED_IMAGE" Name="LoadedImage" />
+            <Param Type="BOOL" Name="DotDll" />
+            <Param Type="BOOL" Name="ReadOnly" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="SetImageConfigInformation">
+            <Param Type="PLOADED_IMAGE" Name="LoadedImage" />
+            <Param Type="PIMAGE_LOAD_CONFIG_DIRECTORY" Name="ImageConfigInformation" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="UnMapAndLoad">
+            <Param Type="PLOADED_IMAGE" Name="LoadedImage" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="ImageAddCertificate">
+            <Param Type="HANDLE" Name="FileHandle" />
+            <Param Type="LPWIN_CERTIFICATE" Name="Certificate" />
+            <Param Type="PDWORD" Name="Index" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="ImageEnumerateCertificates">
+            <Param Type="HANDLE" Name="FileHandle" />
+            <Param Type="WORD" Name="TypeFilter" />
+            <Param Type="PDWORD" Name="CertificateCount" />
+            <Param Type="PDWORD" Name="Indices" Count="IndexCount" />
+            <Param Type="DWORD" Name="IndexCount" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="ImageGetCertificateData">
+            <Param Type="HANDLE" Name="FileHandle" />
+            <Param Type="DWORD" Name="CertificateIndex" />
+            <Param Type="LPWIN_CERTIFICATE" Name="Certificate" PostLength="RequiredLength" />
+            <Param Type="PDWORD" Name="RequiredLength" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="ImageGetCertificateHeader">
+            <Param Type="HANDLE" Name="FileHandle" />
+            <Param Type="DWORD" Name="CertificateIndex" />
+            <Param Type="LPWIN_CERTIFICATE" Name="CertificateHeader" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="ImageGetDigestStream">
+            <Param Type="HANDLE" Name="FileHandle" />
+            <Param Type="DWORD" Name="DigestLevel" />
+            <Param Type="DIGEST_FUNCTION" Name="DigestFunction" />
+            <Param Type="DIGEST_HANDLE" Name="DigestHandle" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="ImageRemoveCertificate">
+            <Param Type="HANDLE" Name="FileHandle" />
+            <Param Type="DWORD" Name="Index" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="BindImage">
+            <Param Type="PSTR" Name="ImageName" />
+            <Param Type="PSTR" Name="DllPath" />
+            <Param Type="PSTR" Name="SymbolPath" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="BindImageEx">
+            <Param Type="DWORD" Name="Flags" />
+            <Param Type="PSTR" Name="ImageName" />
+            <Param Type="PSTR" Name="DllPath" />
+            <Param Type="PSTR" Name="SymbolPath" />
+            <Param Type="PIMAGEHLP_STATUS_ROUTINE" Name="StatusRoutine" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="CheckSumMappedFile">
+            <Param Type="PVOID" Name="BaseAddress" />
+            <Param Type="DWORD" Name="FileLength" />
+            <Param Type="PDWORD" Name="HeaderSum" />
+            <Param Type="PDWORD" Name="CheckSum" />
+            <Return Type="PIMAGE_NT_HEADERS" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <!-- TODO: Decode return value -->
+        <Api Name="MapFileAndCheckSum" BothCharset="True" ErrorFunc="">
+            <Param Type="PTSTR" Name="Filename" />
+            <Param Type="PDWORD" Name="HeaderSum" />
+            <Param Type="PDWORD" Name="CheckSum" />
+            <Return Type="DWORD" />
+            <Success Return="Equal" Value="0" />
+        </Api>
+        <Api Name="ReBaseImage">
+            <Param Type="PCSTR" Name="CurrentImageName" />
+            <Param Type="PCSTR" Name="SymbolPath" />
+            <Param Type="BOOL" Name="fReBase" />
+            <Param Type="BOOL" Name="fRebaseSysfileOk" />
+            <Param Type="BOOL" Name="fGoingDown" />
+            <Param Type="ULONG" Name="CheckImageSize" />
+            <Param Type="ULONG*" Name="OldImageSize" />
+            <Param Type="ULONG_PTR*" Name="OldImageBase" />
+            <Param Type="ULONG*" Name="NewImageSize" />
+            <Param Type="ULONG_PTR*" Name="NewImageBase" />
+            <Param Type="ULONG" Name="TimeStamp" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="SplitSymbols">
+            <Param Type="PSTR" Name="ImageName" />
+            <Param Type="PSTR" Name="SymbolsPath" />
+            <Param Type="PSTR" Name="SymbolFilePath" />
+            <Param Type="DWORD" Name="Flags" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="TouchFileTimes">
+            <Param Type="HANDLE" Name="FileHandle" />
+            <Param Type="PSYSTEMTIME" Name="pSystemTime" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="UpdateDebugInfoFile">
+            <Param Type="PSTR" Name="ImageFileName" />
+            <Param Type="PSTR" Name="SymbolPath" />
+            <Param Type="PSTR" Name="DebugFilePath" />
+            <Param Type="PIMAGE_NT_HEADERS" Name="NtHeaders" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="UpdateDebugInfoFileEx">
+            <Param Type="PSTR" Name="ImageFileName" />
+            <Param Type="PSTR" Name="SymbolPath" />
+            <Param Type="PSTR" Name="DebugFilePath" />
+            <Param Type="PIMAGE_NT_HEADERS" Name="NtHeaders" />
+            <Param Type="DWORD" Name="OldChecksum" />
+            <Return Type="BOOL" />
+        </Api>
+    </Module>
+</ApiMonitor>

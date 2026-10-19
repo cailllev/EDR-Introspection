@@ -1,0 +1,43 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Module Name="Faultrep.dll" CallingConvention="STDCALL" ErrorFunc="GetLastError" OnlineHelp="MSDN">
+
+        <!-- EFaultRepRetVal -->
+        <Variable Name="EFaultRepRetVal" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="frrvOk"                  Value="0" />
+                <Set Name="frrvOkManifest"          Value="1" />
+                <Set Name="frrvOkQueued"            Value="2" />
+                <Set Name="frrvErr"                 Value="3" />
+                <Set Name="frrvErrNoDW"             Value="4" />
+                <Set Name="frrvErrTimeout"          Value="5" />
+                <Set Name="frrvLaunchDebugger"      Value="6" />
+                <Set Name="frrvOkHeadless"          Value="7" />
+                <Set Name="frrvErrAnotherInstance"  Value="8" />
+            </Enum>
+        </Variable>
+
+        <!-- Windows Error Reporting -->
+        <Category Name="Diagnostics/Windows Error Reporting" />
+        <Api Name="WerReportHang">
+            <Param Type="HWND" Name="hwndHungWinow" />
+            <Param Type="PCWSTR" Name="wszHungApplicationName" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="AddERExcludedApplication" BothCharset="True">
+            <Param Type="LPCTSTR" Name="szApplication" />
+            <Return Type="BOOL" />
+        </Api>
+        <Api Name="ReportFault">
+            <Param Type="LPEXCEPTION_POINTERS" Name="pep" />
+            <Param Type="DWORD" Name="dwMode" />
+            <Return Type="EFaultRepRetVal" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+    </Module>
+</ApiMonitor>

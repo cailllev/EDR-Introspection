@@ -1,0 +1,30 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IAMDroppedFrames" Id="{C6E13344-30AC-11d0-A18C-00A0C9118956}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/DirectShow">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="GetNumDropped">
+            <Param Type="long*" Name="plDropped" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetNumNotDropped">
+            <Param Type="long*" Name="plNotDropped" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetDroppedInfo">
+            <Param Type="long" Name="lSize" />
+            <Param Type="long*" Name="plArray" />
+            <Param Type="long*" Name="plNumCopied" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetAverageFrameSize">
+            <Param Type="long*" Name="plAverageSize" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

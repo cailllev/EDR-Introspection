@@ -1,0 +1,22 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\DirectShow\IVMRImagePresenterConfig.xml" />
+    <Interface Name="IVMRImagePresenterExclModeConfig" Id="{e6f7ce40-4673-44f1-8f77-5499d68cb4ea}" BaseInterface="IVMRImagePresenterConfig" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/DirectShow">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="SetXlcModeDDObjAndPrimarySurface">
+            <Param Type="LPDIRECTDRAW7" Name="lpDDObj" />
+            <Param Type="LPDIRECTDRAWSURFACE7" Name="lpPrimarySurf" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetXlcModeDDObjAndPrimarySurface">
+            <Param Type="LPDIRECTDRAW7*" Name="lpDDObj" />
+            <Param Type="LPDIRECTDRAWSURFACE7*" Name="lpPrimarySurf" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

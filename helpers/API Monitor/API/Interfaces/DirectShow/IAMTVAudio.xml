@@ -1,0 +1,37 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IAMTVAudio" Id="{83EC1C30-23D1-11d1-99E6-00A0C9560266}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/DirectShow">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="GetHardwareSupportedTVAudioModes">
+            <Param Type="long*" Name="plModes" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetAvailableTVAudioModes">
+            <Param Type="long*" Name="plModes" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="get_TVAudioMode">
+            <Param Type="long*" Name="plMode" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="put_TVAudioMode">
+            <Param Type="long" Name="lMode" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="RegisterNotificationCallBack">
+            <Param Type="IAMTunerNotification*" Name="pNotify" />
+            <Param Type="long" Name="lEvents" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="UnRegisterNotificationCallBack">
+            <Param Type="IAMTunerNotification*" Name="pNotify" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

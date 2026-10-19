@@ -1,0 +1,22 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2012, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Module Name="Loadperf.dll" CallingConvention="STDCALL" ErrorFunc="GetLastError" OnlineHelp="MSDN">
+        <!-- Performance Counters -->
+        <Category Name="Diagnostics/Performance Counters" />
+        <Api Name="LoadPerfCounterTextStrings" BothCharset="True">
+            <Param Type="LPCTSTR" Name="commandLine" />
+            <Param Type="BOOL" Name="bQuietModeArg" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+        <Api Name="UnloadPerfCounterTextStrings" BothCharset="True">
+            <Param Type="LPCTSTR" Name="commandLine" />
+            <Param Type="BOOL" Name="bQuietModeArg" />
+            <Return Type="[ERROR_CODE]" />
+        </Api>
+    </Module>
+</ApiMonitor>

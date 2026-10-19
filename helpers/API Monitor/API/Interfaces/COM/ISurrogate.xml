@@ -1,0 +1,19 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="ISurrogate" Id="{00000022-0000-0000-C000-000000000046}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Component Object Model (COM)/COM Fundamentals/Interfaces">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="LoadDllServer">
+            <Param Type="REFCLSID" Name="Clsid" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="FreeSurrogate">
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

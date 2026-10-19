@@ -1,0 +1,36 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Include Filename="Headers\dotnet.h.xml" />
+    
+    <Module Name="SxS.dll" CallingConvention="STDCALL" ErrorFunc="HRESULT" OnlineHelp="MSDN">
+
+        <!-- [CreateAsmNameObjFlags] -->-->
+        <Variable Name="[CreateAsmNameObjFlags]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="CANOF_PARSE_DISPLAY_NAME"    Value="0x1" />
+                <Set Name="CANOF_SET_DEFAULT_VALUES"    Value="0x2" />
+            </Flag>
+        </Variable>
+        
+        <!-- Side-by-side Assemblies -->
+        <Category Name="Application Installation and Servicing/Isolated Applications and Side-by-side Assemblies/Side-by-side Assemblies" />
+        <Api Name="CreateAssemblyCache">
+            <Param Type="IAssemblyCache**" Name="ppAsmCache" />
+            <Param Type="DWORD" Name="dwReserved" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CreateAssemblyNameObject">
+            <Param Type="LPASSEMBLYNAME*" Name="ppAssemblyNameObj" />
+            <Param Type="LPCWSTR" Name="szAssemblyName" />
+            <Param Type="[CreateAsmNameObjFlags]" Name="dwFlags" />
+            <Param Type="LPVOID" Name="pvReserved" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Module>
+</ApiMonitor>

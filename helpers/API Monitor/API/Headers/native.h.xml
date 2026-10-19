@@ -1,0 +1,347 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2012, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Headers\security.h.xml" />
+    <Include Filename="Headers\windows.h.xml" />
+    <Headers>
+        
+        <!-- Variables -->
+        <Variable Name="BYTE [IMAGE_SIZEOF_SHORT_NAME]" Type="Array" Base="BYTE" Count="8" />
+
+        <!-- [IMAGE_SECTION_HEADER_u] -->
+        <Variable Name="[IMAGE_SECTION_HEADER_u]" Type="Union">
+            <Display Name="union" />
+            <Field Type="DWORD"     Name="PhysicalAddress" />
+            <Field Type="DWORD"     Name="VirtualSize" />
+        </Variable>
+
+        <!-- IMAGE_SECTION_HEADER -->
+        <Variable Name="IMAGE_SECTION_HEADER" Type="Struct">
+            <Field Type="BYTE [IMAGE_SIZEOF_SHORT_NAME]"    Name="Name" />
+            <Field Type="[IMAGE_SECTION_HEADER_u]"          Name="Misc" />
+            <Field Type="DWORD"                             Name="VirtualAddress" />
+            <Field Type="DWORD"                             Name="SizeOfRawData" />
+            <Field Type="DWORD"                             Name="PointerToRawData" />
+            <Field Type="DWORD"                             Name="PointerToRelocations" />
+            <Field Type="DWORD"                             Name="PointerToLinenumbers" />
+            <Field Type="WORD"                              Name="NumberOfRelocations" />
+            <Field Type="WORD"                              Name="NumberOfLinenumbers" />
+            <Field Type="DWORD"                             Name="Characteristics" />
+        </Variable>
+        <Variable Name="PIMAGE_SECTION_HEADER"  Type="Pointer" Base="IMAGE_SECTION_HEADER" />
+        <Variable Name="PIMAGE_SECTION_HEADER*" Type="Pointer" Base="PIMAGE_SECTION_HEADER" />
+
+        <!-- EVENT_TYPE -->
+        <Variable Name="EVENT_TYPE" Type="Alias" Base="UINT">
+            <Enum>
+                <Set Name="NotificationEvent"       Value="0" />
+                <Set Name="SynchronizationEvent"    Value="1" />
+            </Enum>
+        </Variable>
+
+        <!-- [FILE_SHARE_MODE] -->
+        <Variable Name="[FILE_SHARE_MODE]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="FILE_SHARE_READ"     Value="0x00000001" />
+                <Set Name="FILE_SHARE_WRITE"    Value="0x00000002" />
+                <Set Name="FILE_SHARE_DELETE"   Value="0x00000004" />
+            </Flag>
+        </Variable>
+
+        <!-- [MemoryType] -->
+        <Variable Name="[MemoryType]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="MEM_IMAGE"   Value="0x1000000" />
+                <Set Name="MEM_MAPPED"  Value="0x40000" />
+                <Set Name="MEM_PRIVATE" Value="0x20000" />
+            </Flag>
+        </Variable>
+
+        <!-- [MemoryAllocationFlags] -->
+        <Variable Name="[MemoryAllocationFlags]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="MEM_COMMIT"          Value="0x1000" />
+                <Set Name="MEM_RESERVE"         Value="0x2000" />
+                <Set Name="MEM_DECOMMIT"        Value="0x4000" />
+                <Set Name="MEM_RELEASE"         Value="0x8000" />
+                <Set Name="MEM_FREE"            Value="0x10000" />
+                <Set Name="MEM_PRIVATE"         Value="0x20000" />
+                <Set Name="MEM_MAPPED"          Value="0x40000" />
+                <Set Name="MEM_RESET"           Value="0x80000" />
+                <Set Name="MEM_TOP_DOWN"        Value="0x100000" />
+                <Set Name="MEM_WRITE_WATCH"     Value="0x200000" />
+                <Set Name="MEM_PHYSICAL"        Value="0x400000" />
+                <Set Name="MEM_ROTATE"          Value="0x800000" />
+                <Set Name="MEM_LARGE_PAGES"     Value="0x20000000" />
+                <Set Name="MEM_4MB_PAGES"       Value="0x80000000" />
+            </Flag>
+        </Variable>
+
+        <!-- [MemoryProtection] -->
+        <Variable Name="[MemoryProtection]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="PAGE_EXECUTE"            Value="0x10" />
+                <Set Name="PAGE_EXECUTE_READ"       Value="0x20" />
+                <Set Name="PAGE_EXECUTE_READWRITE"  Value="0x40" />
+                <Set Name="PAGE_EXECUTE_WRITECOPY"  Value="0x80" />
+                <Set Name="PAGE_NOACCESS"           Value="0x01" />
+                <Set Name="PAGE_READONLY"           Value="0x02" />
+                <Set Name="PAGE_READWRITE"          Value="0x04" />
+                <Set Name="PAGE_WRITECOPY"          Value="0x08" />
+                <Set Name="PAGE_GUARD"              Value="0x100" />
+                <Set Name="PAGE_NOCACHE"            Value="0x200" />
+                <Set Name="PAGE_WRITECOMBINE"       Value="0x400" />
+                <Set Name="SEC_COMMIT"              Value="0x8000000" />
+                <Set Name="SEC_IMAGE"               Value="0x1000000" />
+                <Set Name="SEC_LARGE_PAGES"         Value="0x80000000" />
+                <Set Name="SEC_NOCACHE"             Value="0x10000000" />
+                <Set Name="SEC_RESERVE"             Value="0x4000000" />
+                <Set Name="SEC_WRITECOMBINE"        Value="0x40000000" />
+            </Flag>
+        </Variable>
+        <Variable Name="[MemoryProtection*]" Type="Pointer" Base="[MemoryProtection]">
+            <Display Name="PDWORD" />
+        </Variable>
+
+        <!-- [NtVerType] -->
+        <Variable Name="[NtVerType]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="VER_MINORVERSION"        Value="0x0000001" />
+                <Set Name="VER_MAJORVERSION"        Value="0x0000002" />
+                <Set Name="VER_BUILDNUMBER"         Value="0x0000004" />
+                <Set Name="VER_PLATFORMID"          Value="0x0000008" />
+                <Set Name="VER_SERVICEPACKMINOR"    Value="0x0000010" />
+                <Set Name="VER_SERVICEPACKMAJOR"    Value="0x0000020" />
+                <Set Name="VER_SUITENAME"           Value="0x0000040" />
+                <Set Name="VER_PRODUCT_TYPE"        Value="0x0000080" />
+            </Flag>
+        </Variable>
+
+        <!-- [TOKEN_ACCESS_MASK] -->
+        <Variable Name="[TOKEN_ACCESS_MASK]" Type="Alias" Base="DWORD">
+            <Display Name="ACCESS_MASK" />
+            <Flag>
+                <Set Name="GENERIC_READ"                Value="0x80000000" />
+                <Set Name="GENERIC_WRITE"               Value="0x40000000" />
+                <Set Name="GENERIC_EXECUTE"             Value="0x20000000" />
+                <Set Name="GENERIC_ALL"                 Value="0x10000000" />
+                <Set Name="MAXIMUM_ALLOWED"             Value="0x02000000" />
+                <Set Name="ACCESS_SYSTEM_SECURITY"      Value="0x01000000" />
+                <Set Name="SYNCHRONIZE"                 Value="0x00100000" />
+                <Set Name="STANDARD_RIGHTS_REQUIRED"    Value="0x000F0000" />
+                <Set Name="STANDARD_RIGHTS_ALL"         Value="0x001F0000" />
+                <Set Name="WRITE_OWNER"                 Value="0x00080000" />
+                <Set Name="WRITE_DAC"                   Value="0x00040000" />
+                <Set Name="DELETE"                      Value="0x00010000" />
+                <Set Name="TOKEN_ASSIGN_PRIMARY"        Value="0x0001" />
+                <Set Name="TOKEN_DUPLICATE"             Value="0x0002" />
+                <Set Name="TOKEN_IMPERSONATE"           Value="0x0004" />
+                <Set Name="TOKEN_QUERY"                 Value="0x0008" />
+                <Set Name="TOKEN_QUERY_SOURCE"          Value="0x0010" />
+                <Set Name="TOKEN_ADJUST_PRIVILEGES"     Value="0x0020" />
+                <Set Name="TOKEN_ADJUST_GROUPS"         Value="0x0040" />
+                <Set Name="TOKEN_ADJUST_DEFAULT"        Value="0x0080" />
+                <Set Name="TOKEN_ADJUST_SESSIONID"      Value="0x0100" />
+                <Set Name="TOKEN_ALL_ACCESS_P"          Value="0xf00ff" />
+                <Set Name="TOKEN_ALL_ACCESS"            Value="0xf01ff" />
+                <Set Name="TOKEN_READ"                  Value="0x20008" />
+                <Set Name="TOKEN_WRITE"                 Value="0x200e0" />
+                <Set Name="TOKEN_EXECUTE"               Value="0x20000" />
+            </Flag>
+        </Variable>
+
+        <!-- [ObjectAttributes] -->
+        <Variable Name="[ObjectAttributes]" Type="Alias" Base="ULONG">
+            <Display Name="ULONG" />
+            <Flag>
+                <Set Name="OBJ_INHERIT"             	Value="0x00000002" />
+                <Set Name="OBJ_PERMANENT"           	Value="0x00000010" />
+                <Set Name="OBJ_EXCLUSIVE"           	Value="0x00000020" />
+                <Set Name="OBJ_CASE_INSENSITIVE"    	Value="0x00000040" />
+                <Set Name="OBJ_OPENIF"              	Value="0x00000080" />
+                <Set Name="OBJ_OPENLINK"            	Value="0x00000100" />
+                <Set Name="OBJ_KERNEL_HANDLE"       	Value="0x00000200" />
+                <Set Name="OBJ_FORCE_ACCESS_CHECK"  	Value="0x00000400" />
+                <Set Name="OBJ_VALID_ATTRIBUTES"        Value="0x000007F2" />
+            </Flag>
+        </Variable>
+
+        <!-- OBJECT_ATTRIBUTES -->
+        <Variable Name="OBJECT_ATTRIBUTES" Type="Struct">
+            <Field Type="ULONG" 	                    Name="Length" />
+            <Field Type="HANDLE" 	                    Name="RootDirectory" />
+            <Field Type="PUNICODE_STRING" 	            Name="ObjectName" />
+            <Field Type="[ObjectAttributes]"            Name="Attributes" />
+            <Field Type="PSECURITY_DESCRIPTOR"          Name="SecurityDescriptor" />
+            <Field Type="PSECURITY_QUALITY_OF_SERVICE" 	Name="SecurityQualityOfService" />
+        </Variable>
+        <Variable Name="POBJECT_ATTRIBUTES"     Type="Pointer" Base="OBJECT_ATTRIBUTES" />
+        <Variable Name="OBJECT_ATTRIBUTES []"   Type="Pointer" Base="OBJECT_ATTRIBUTES" />
+
+        <!-- RTL_CRITICAL_SECTION_DEBUG -->
+        <Variable Name="RTL_CRITICAL_SECTION_DEBUG" Type="Struct">
+            <Field Type="WORD"          Name="Type" />
+            <Field Type="WORD"          Name="CreatorBackTraceIndex" />
+            <!-- TODO: Parent-Reference - CriticalSection is really RTL_CRITICAL_SECTION*-->
+            <Field Type="LPVOID"        Name="CriticalSection" Display="RTL_CRITICAL_SECTION*" />
+            <Field Type="LIST_ENTRY"    Name="ProcessLocksList" />
+            <Field Type="DWORD"         Name="EntryCount" />
+            <Field Type="DWORD"         Name="ContentionCount" />
+            <Field Type="DWORD"         Name="Flags" />
+            <Field Type="WORD"          Name="CreatorBackTraceIndexHigh" />
+            <Field Type="WORD"          Name="SpareWORD" />
+        </Variable>
+        <Variable Name="PRTL_CRITICAL_SECTION_DEBUG" Type="Pointer" Base="RTL_CRITICAL_SECTION_DEBUG" />
+        
+        <!-- RTL_RESOURCE_DEBUG -->
+        <Variable Name="RTL_RESOURCE_DEBUG"  Type="Alias" Base="RTL_CRITICAL_SECTION_DEBUG" />
+        <Variable Name="PRTL_RESOURCE_DEBUG" Type="Pointer" Base="RTL_RESOURCE_DEBUG" />
+
+        <!-- RTL_CRITICAL_SECTION -->
+        <Variable Name="RTL_CRITICAL_SECTION" Type="Struct" Pack="8">
+            <Field Type="PRTL_CRITICAL_SECTION_DEBUG"   Name="DebugInfo" />
+            <Field Type="LONG"                          Name="LockCount" />
+            <Field Type="LONG"                          Name="RecursionCount" />
+            <Field Type="HANDLE"                        Name="OwningThread" />
+            <Field Type="HANDLE"                        Name="LockSemaphore" />
+            <Field Type="ULONG_PTR"                     Name="SpinCount" />
+        </Variable>
+        <Variable Name="PRTL_CRITICAL_SECTION" Type="Pointer" Base="RTL_CRITICAL_SECTION" />
+
+        <!-- [NtProtectionFlags] -->
+        <Variable Name="[NtProtectionFlags]" Type="Alias" Base="ULONG">
+            <Display Name="ULONG" />
+            <Flag>
+                <Set Name="PAGE_NOACCESS"           Value="0x01" />
+                <Set Name="PAGE_READONLY"           Value="0x02" />
+                <Set Name="PAGE_READWRITE"          Value="0x04" />
+                <Set Name="PAGE_WRITECOPY"          Value="0x08" />
+                <Set Name="PAGE_EXECUTE"            Value="0x10" />
+                <Set Name="PAGE_EXECUTE_READ"       Value="0x20" />
+                <Set Name="PAGE_EXECUTE_READWRITE"  Value="0x40" />
+                <Set Name="PAGE_EXECUTE_WRITECOPY"  Value="0x80" />
+                <Set Name="PAGE_GUARD"              Value="0x100" />
+                <Set Name="PAGE_NOCACHE"            Value="0x200" />
+                <Set Name="PAGE_WRITECOMBINE"       Value="0x400" />
+            </Flag>
+        </Variable>
+        <Variable Name="[NtProtectionFlags*]" Type="Pointer" Base="[NtProtectionFlags]">
+            <Display Name="PULONG" />
+        </Variable>
+
+        <!-- [ProcThreadAttribute] -->
+        <Variable Name="[ProcThreadAttribute]" Type="Alias" Base="DWORD_PTR">
+            <Display Name="DWORD_PTR" />
+            <Enum>
+                <Set Name="PROC_THREAD_ATTRIBUTE_PARENT_PROCESS"    Value="0x00020000" />
+                <Set Name="PROC_THREAD_ATTRIBUTE_EXTENDED_FLAGS"    Value="0x00060001" />
+                <Set Name="PROC_THREAD_ATTRIBUTE_HANDLE_LIST"       Value="0x00020002" />
+                <Set Name="PROC_THREAD_ATTRIBUTE_IDEAL_PROCESSOR"   Value="0x00030005" />
+                <Set Name="PROC_THREAD_ATTRIBUTE_MITIGATION_POLICY" Value="0x00020007" />
+                <Set Name="PROC_THREAD_ATTRIBUTE_PREFERRED_NODE"    Value="0x00020004" />
+                <Set Name="PROC_THREAD_ATTRIBUTE_UMS_THREAD"        Value="0x00030006" />
+                <Set Name="PROC_THREAD_ATTRIBUTE_GROUP_AFFINITY"    Value="0x00030003" />
+            </Enum>
+        </Variable>
+
+        <!-- [ProcThreadAttributeFlags] -->
+        <Variable Name="[ProcThreadAttributeFlags]" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Flag>
+                <Set Name="PARENT_PROCESS"      Value="0x1" />
+                <Set Name="EXTENDED_FLAGS"      Value="0x2" />
+                <Set Name="HANDLE_LIST"         Value="0x4" />
+                <Set Name="GROUP_AFFINITY"      Value="0x8" />
+                <Set Name="PREFERRED_NODE"      Value="0x10" />
+                <Set Name="IDEAL_PROCESSOR"     Value="0x20" />
+                <Set Name="UMS_THREAD"          Value="0x40" />
+                <Set Name="MITIGATION_POLICY"   Value="0x80" />
+            </Flag>
+        </Variable>
+
+        <!-- Rohitab Batra: PROC_THREAD_ATTRIBUTE_ENTRY & PROC_THREAD_ATTRIBUTE_LIST were reverse engineered since
+        no documentation was available. Definitions that are available on the internet are incorrect. The ones below
+        have been tested for 32-bit and 64-bit applications running on Windows 7 x64. The 'Unknown' field in 
+        PROC_THREAD_ATTRIBUTE_LIST is only used when adding PROC_THREAD_ATTRIBUTE_EXTENDED_FLAGS. It always points
+        to a constant value of 0x00060001-->
+        
+        <!-- PROC_THREAD_ATTRIBUTE_ENTRY -->
+        <Variable Name="PROC_THREAD_ATTRIBUTE_ENTRY" Type="Struct">
+            <Field Type="[ProcThreadAttribute]"     Name="Attribute" />
+            <Field Type="SIZE_T"                    Name="cbSize" />
+            <Field Type="PVOID"                     Name="lpValue" Length="cbSize" />
+        </Variable>
+        <Variable Name="PROC_THREAD_ATTRIBUTE_ENTRY [ANYSIZE_ARRAY]" Type="Array" Base="PROC_THREAD_ATTRIBUTE_ENTRY" Count="1" />
+
+        <!-- PROC_THREAD_ATTRIBUTE_LIST -->
+        <Variable Name="PROC_THREAD_ATTRIBUTE_LIST" Type="Struct">
+            <Field Type="[ProcThreadAttributeFlags]"                    Name="dwFlags" />
+            <Field Type="ULONG"                                         Name="Size" />
+            <Field Type="ULONG"                                         Name="Count" />
+            <Field Type="ULONG"                                         Name="Reserved" />
+            <Field Type="PULONG"                                        Name="Unknown" />
+            <Field Type="PROC_THREAD_ATTRIBUTE_ENTRY [ANYSIZE_ARRAY]"   Name="Entries" Count="Count" />
+        </Variable>
+        <Variable Name="LPPROC_THREAD_ATTRIBUTE_LIST" Type="Pointer" Base="PROC_THREAD_ATTRIBUTE_LIST" />
+
+        <!-- CLIENT_ID -->
+        <Variable Name="[HANDLE_NO_HEX]" Type="Alias" Base="UINT_PTR">
+            <Display Name="HANDLE" />
+        </Variable>
+        <Variable Name="CLIENT_ID" Type="Struct">
+            <Field Type="[HANDLE_NO_HEX]"   Name="UniqueProcess" />
+            <Field Type="[HANDLE_NO_HEX]"   Name="UniqueThread" />
+        </Variable>
+        <Variable Name="PCLIENT_ID" Type="Pointer" Base="CLIENT_ID" />
+
+        <!-- NOTIFICATION_MASK -->
+        <Variable Name="NOTIFICATION_MASK" Type="Alias" Base="ULONG">
+            <Flag>
+                <Set Name="TRANSACTION_NOTIFY_PREPREPARE"               Value="0x00000001" />
+                <Set Name="TRANSACTION_NOTIFY_PREPARE"                  Value="0x00000002" />
+                <Set Name="TRANSACTION_NOTIFY_COMMIT"                   Value="0x00000004" />
+                <Set Name="TRANSACTION_NOTIFY_ROLLBACK"                 Value="0x00000008" />
+                <Set Name="TRANSACTION_NOTIFY_PREPREPARE_COMPLETE"      Value="0x00000010" />
+                <Set Name="TRANSACTION_NOTIFY_PREPARE_COMPLETE"         Value="0x00000020" />
+                <Set Name="TRANSACTION_NOTIFY_COMMIT_COMPLETE"          Value="0x00000040" />
+                <Set Name="TRANSACTION_NOTIFY_ROLLBACK_COMPLETE"        Value="0x00000080" />
+                <Set Name="TRANSACTION_NOTIFY_RECOVER"                  Value="0x00000100" />
+                <Set Name="TRANSACTION_NOTIFY_SINGLE_PHASE_COMMIT"      Value="0x00000200" />
+                <Set Name="TRANSACTION_NOTIFY_DELEGATE_COMMIT"          Value="0x00000400" />
+                <Set Name="TRANSACTION_NOTIFY_RECOVER_QUERY"            Value="0x00000800" />
+                <Set Name="TRANSACTION_NOTIFY_ENLIST_PREPREPARE"        Value="0x00001000" />
+                <Set Name="TRANSACTION_NOTIFY_LAST_RECOVER"             Value="0x00002000" />
+                <Set Name="TRANSACTION_NOTIFY_INDOUBT"                  Value="0x00004000" />
+                <Set Name="TRANSACTION_NOTIFY_PROPAGATE_PULL"           Value="0x00008000" />
+                <Set Name="TRANSACTION_NOTIFY_PROPAGATE_PUSH"           Value="0x00010000" />
+                <Set Name="TRANSACTION_NOTIFY_MARSHAL"                  Value="0x00020000" />
+                <Set Name="TRANSACTION_NOTIFY_ENLIST_MASK"              Value="0x00040000" />
+                <Set Name="TRANSACTION_NOTIFY_RM_DISCONNECTED"          Value="0x01000000" />
+                <Set Name="TRANSACTION_NOTIFY_TM_ONLINE"                Value="0x02000000" />
+                <Set Name="TRANSACTION_NOTIFY_COMMIT_REQUEST"           Value="0x04000000" />
+                <Set Name="TRANSACTION_NOTIFY_PROMOTE"                  Value="0x08000000" />
+                <Set Name="TRANSACTION_NOTIFY_PROMOTE_NEW"              Value="0x10000000" />
+                <Set Name="TRANSACTION_NOTIFY_REQUEST_OUTCOME"          Value="0x20000000" />
+                <Set Name="TRANSACTION_NOTIFY_COMMIT_FINALIZE"          Value="0x40000000" />
+            </Flag>
+        </Variable>
+
+        <!-- TRANSACTION_NOTIFICATION -->
+        <Variable Name="TRANSACTION_NOTIFICATION" Type="Struct">
+            <Field Type="PVOID"                 Name="TransactionKey" />
+            <Field Type="NOTIFICATION_MASK"     Name="TransactionNotification" Display="ULONG" />
+            <Field Type="LARGE_INTEGER"         Name="TmVirtualClock" />
+            <Field Type="ULONG"                 Name="ArgumentLength" />
+        </Variable>
+        <Variable Name="PTRANSACTION_NOTIFICATION" Type="Pointer" Base="TRANSACTION_NOTIFICATION" />
+
+    </Headers>
+</ApiMonitor>

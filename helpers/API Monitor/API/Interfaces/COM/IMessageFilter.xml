@@ -1,0 +1,66 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IMessageFilter" Id="{00000016-0000-0000-C000-000000000046}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Component Object Model (COM)/COM Fundamentals/Interfaces">
+        <!-- Variables -->
+
+        <!-- CALLTYPE -->
+        <Variable Name="CALLTYPE" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="CALLTYPE_TOPLEVEL"				Value="1" />
+                <Set Name="CALLTYPE_NESTED"					Value="2" />
+                <Set Name="CALLTYPE_ASYNC"					Value="3" />
+                <Set Name="CALLTYPE_TOPLEVEL_CALLPENDING"   Value="4" />
+                <Set Name="CALLTYPE_ASYNC_CALLPENDING"		Value="5" />
+            </Enum>
+        </Variable>
+
+        <!-- PENDINGTYPE -->
+        <Variable Name="PENDINGTYPE" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="PENDINGTYPE_TOPLEVEL"            Value="1" />
+                <Set Name="PENDINGTYPE_NESTED"				Value="2" />
+            </Enum>
+        </Variable>
+
+        <!-- PENDINGMSG -->
+        <Variable Name="PENDINGMSG" Type="Alias" Base="DWORD">
+            <Display Name="DWORD" />
+            <Enum>
+                <Set Name="PENDINGMSG_CANCELCALL"           Value="0" />
+                <Set Name="PENDINGMSG_WAITNOPROCESS"		Value="1" />
+                <Set Name="PENDINGMSG_WAITDEFPROCESS"		Value="2" />
+            </Enum>
+        </Variable>
+
+        <!-- Methods -->
+        <Api Name="HandleInComingCall">
+            <Param Type="CALLTYPE" Name="dwCallType" />
+            <Param Type="HTASK" Name="htaskCaller" />
+            <Param Type="DWORD" Name="dwTickCount" />
+            <Param Type="LPINTERFACEINFO" Name="lpInterfaceInfo" />
+            <Return Type="DWORD" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="RetryRejectedCall">
+            <Param Type="HTASK" Name="htaskCallee" />
+            <Param Type="DWORD" Name="dwTickCount" />
+            <Param Type="DWORD" Name="dwRejectType" />
+            <Return Type="DWORD" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+        <Api Name="MessagePending">
+            <Param Type="HTASK" Name="htaskCallee" />
+            <Param Type="DWORD" Name="dwTickCount" />
+            <Param Type="PENDINGTYPE" Name="dwPendingType" />
+            <Return Type="PENDINGMSG" />
+            <Success Return="NotEqual" Value="0" />
+        </Api>
+    </Interface>
+</ApiMonitor>

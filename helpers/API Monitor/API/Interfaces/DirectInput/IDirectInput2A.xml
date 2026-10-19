@@ -1,0 +1,16 @@
+<!--
+    API Monitor Definitions
+    (c) 2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\DirectInput\IDirectInputA.xml" />
+    <Interface Name="IDirectInput2A" Id="{5944e662-aa8a-11cf-bfc7-444553540000}" BaseInterface="IDirectInputA" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Graphics and Gaming/DirectX Graphics and Gaming/DirectX Input/DirectInput">
+        <Api Name="FindDevice">
+            <Param Type="REFGUID" Name="rguidClass" />
+            <Param Type="LPCSTR" Name="ptszName" />
+            <Param Type="LPGUID" Name="pguidInstance" />
+            <Return Type="[DI_HRESULT]" />
+        </Api>
+    </Interface>
+</ApiMonitor>

@@ -1,0 +1,45 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IDirect3DSwapChain9" Id="{794950F2-ADFC-458a-905E-10A10B0B503B}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Graphics and Gaming/DirectX Graphics and Gaming/Direct3D/9">
+        <!-- Methods -->
+        <Api Name="Present">
+            <Param Type="CONST RECT*" Name="pSourceRect" />
+            <Param Type="CONST RECT*" Name="pDestRect" />
+            <Param Type="HWND" Name="hDestWindowOverride" />
+            <Param Type="CONST RGNDATA*" Name="pDirtyRegion" />
+            <Param Type="DWORD" Name="dwFlags" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetFrontBufferData">
+            <Param Type="IDirect3DSurface9*" Name="pDestSurface" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetBackBuffer">
+            <Param Type="UINT" Name="iBackBuffer" />
+            <Param Type="D3DBACKBUFFER_TYPE" Name="Type" />
+            <Param Type="IDirect3DSurface9**" Name="ppBackBuffer" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetRasterStatus">
+            <Param Type="D3DRASTER_STATUS*" Name="pRasterStatus" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetDisplayMode">
+            <Param Type="D3DDISPLAYMODE*" Name="pMode" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetDevice">
+            <Param Type="IDirect3DDevice9**" Name="ppDevice" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetPresentParameters">
+            <Param Type="D3DPRESENT_PARAMETERS*" Name="pPresentationParameters" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

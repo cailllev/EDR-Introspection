@@ -1,0 +1,60 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    
+    <Interface Name="IDirect3DCryptoSession9" Id="{FA0AB799-7A9C-48ca-8C5B-237E71A54434}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Graphics and Gaming/DirectX Graphics and Gaming/Direct3D/9">
+        <!-- DirectX -->
+        <Api Name="GetCertificateSize">
+            <Param Type="UINT*" Name="pCertificateSize" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetCertificate">
+            <Param Type="UINT" Name="CertifacteSize" />
+            <Param Type="BYTE*" Name="ppCertificate" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="NegotiateKeyExchange">
+            <Param Type="UINT" Name="DataSize" />
+            <Param Type="VOID*" Name="pData" Length="DataSize" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="EncryptionBlt">
+            <Param Type="IDirect3DSurface9*" Name="pSrcSurface" />
+            <Param Type="IDirect3DSurface9*" Name="pDstSurface" />
+            <Param Type="UINT" Name="DstSurfaceSize" />
+            <Param Type="VOID*" Name="pIV" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="DecryptionBlt">
+            <Param Type="IDirect3DSurface9*" Name="pSrcSurface" />
+            <Param Type="IDirect3DSurface9*" Name="pDstSurface" />
+            <Param Type="UINT" Name="SrcSurfaceSize" />
+            <Param Type="D3DENCRYPTED_BLOCK_INFO*" Name="pEncryptedBlockInfo" />
+            <Param Type="VOID*" Name="pContentKey" />
+            <Param Type="VOID*" Name="pIV" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetSurfacePitch">
+            <Param Type="IDirect3DSurface9*" Name="pSrcSurface" />
+            <Param Type="UINT*" Name="pSurfacePitch" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="StartSessionKeyRefresh">
+            <Param Type="VOID*" Name="pRandomNumber" />
+            <Param Type="UINT" Name="RandomNumberSize" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="FinishSessionKeyRefresh">
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetEncryptionBltKey">
+            <Param Type="VOID*" Name="pReadbackKey" />
+            <Param Type="UINT" Name="KeySize" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

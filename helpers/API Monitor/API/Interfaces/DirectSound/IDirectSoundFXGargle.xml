@@ -1,0 +1,18 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IDirectSoundFXGargle" Id="{d616f352-d622-11ce-aac5-0020af0b99a3}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/Legacy Audio and Video/DirectSound">
+        <Api Name="SetAllParameters">
+            <Param Type="LPCDSFXGargle" Name="pcDsFxGargle" />
+            <Return Type="[DS_HRESULT]" />
+        </Api>
+        <Api Name="GetAllParameters">
+            <Param Type="LPDSFXGargle" Name="pDsFxGargle" />
+            <Return Type="[DS_HRESULT]" />
+        </Api>
+    </Interface>
+</ApiMonitor>

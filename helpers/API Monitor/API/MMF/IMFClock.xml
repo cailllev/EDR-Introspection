@@ -1,0 +1,34 @@
+<!--
+    API Monitor Definitions
+    (c) 2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="MMF\mmfdefs.h.xml" />
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Interface Name="IMFClock" Id="{2eb1e945-18b8-4139-9b1a-d5d584818530}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Audio and Video/Microsoft Media Foundation/Interfaces">
+        <Api Name="GetClockCharacteristics">
+            <Param Type="DWORD*" Name="pdwCharacteristics" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetCorrelatedTime">
+            <Param Type="DWORD" Name="dwReserved" />
+            <Param Type="LONGLONG*" Name="pllClockTime" />
+            <Param Type="MFTIME*" Name="phnsSystemTime" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetContinuityKey">
+            <Param Type="DWORD*" Name="pdwContinuityKey" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetState">
+            <Param Type="DWORD" Name="dwReserved" />
+            <Param Type="MFCLOCK_STATE*" Name="peClockState" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="GetProperties">
+            <Param Type="MFCLOCK_PROPERTIES*" Name="pClockProperties" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

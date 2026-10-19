@@ -1,0 +1,56 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Include Filename="MAPI\mapi.h.xml" />
+    <Interface Name="IMSProvider" Id="{00020310-0000-0000-C000-000000000046}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Office Development/Microsoft Office/Outlook/Outlook MAPI/Interfaces">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="Shutdown">
+            <Param Type="ULONG*" Name="lpulFlags" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="Logon">
+            <Param Type="LPMAPISUP" Name="lpMAPISup" />
+            <Param Type="ULONG" Name="ulUIParam" />
+            <Param Type="LPTSTR" Name="lpszProfileName" />
+            <Param Type="ULONG" Name="cbEntryID" />
+            <Param Type="LPENTRYID" Name="lpEntryID" />
+            <Param Type="ULONG" Name="ulFlags" />
+            <Param Type="LPCIID" Name="lpInterface" />
+            <Param Type="ULONG*" Name="lpcbSpoolSecurity" />
+            <Param Type="LPBYTE*" Name="lppbSpoolSecurity" />
+            <Param Type="LPMAPIERROR*" Name="lppMAPIError" />
+            <Param Type="LPMSLOGON*" Name="lppMSLogon" />
+            <Param Type="LPMDB*" Name="lppMDB" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="SpoolerLogon">
+            <Param Type="LPMAPISUP" Name="lpMAPISup" />
+            <Param Type="ULONG" Name="ulUIParam" />
+            <Param Type="LPTSTR" Name="lpszProfileName" />
+            <Param Type="ULONG" Name="cbEntryID" />
+            <Param Type="LPENTRYID" Name="lpEntryID" />
+            <Param Type="ULONG" Name="ulFlags" />
+            <Param Type="LPCIID" Name="lpInterface" />
+            <Param Type="ULONG" Name="cbSpoolSecurity" />
+            <Param Type="LPBYTE" Name="lpbSpoolSecurity" />
+            <Param Type="LPMAPIERROR*" Name="lppMAPIError" />
+            <Param Type="LPMSLOGON*" Name="lppMSLogon" />
+            <Param Type="LPMDB*" Name="lppMDB" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="CompareStoreIDs">
+            <Param Type="ULONG" Name="cbEntryID1" />
+            <Param Type="LPENTRYID" Name="lpEntryID1" />
+            <Param Type="ULONG" Name="cbEntryID2" />
+            <Param Type="LPENTRYID" Name="lpEntryID2" />
+            <Param Type="ULONG" Name="ulFlags" />
+            <Param Type="ULONG*" Name="lpulResult" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>

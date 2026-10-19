@@ -1,0 +1,24 @@
+<!--
+    API Monitor Definitions
+    (c) 2010-2011, Rohitab Batra <rohitab@rohitab.com>
+    http://www.rohitab.com/apimonitor/
+-->
+<ApiMonitor>
+    <Include Filename="Interfaces\IUnknown.xml" />
+    <Include Filename="MAPI\mapi.h.xml" />
+    <Interface Name="IMAPIFormAdviseSink" Id="{0002032F-0000-0000-C000-000000000046}" BaseInterface="IUnknown" OnlineHelp="MSDN" ErrorFunc="HRESULT" Category="Office Development/Microsoft Office/Outlook/Outlook MAPI/Interfaces">
+        <!-- Variables -->
+        <!-- Methods -->
+        <Api Name="OnChange">
+            <Param Type="ULONG" Name="ulDir" />
+            <Return Type="HRESULT" />
+        </Api>
+        <Api Name="OnActivateNext">
+            <Param Type="LPCSTR" Name="lpszMessageClass" />
+            <Param Type="ULONG" Name="ulMessageStatus" />
+            <Param Type="ULONG" Name="ulMessageFlags" />
+            <Param Type="LPPERSISTMESSAGE*" Name="ppPersistMessage" />
+            <Return Type="HRESULT" />
+        </Api>
+    </Interface>
+</ApiMonitor>
