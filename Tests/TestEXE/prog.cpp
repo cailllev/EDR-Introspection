@@ -67,11 +67,11 @@ int main(int argc, char* argv[]) {
         hQueueableWorker = CreateThread(NULL, 0, BusyWorkerThread, NULL, 0, NULL);
     }
 
-    // this let's the main thread wait for a signal to then OpenProcess(Explorer)
+    // this let's the main thread wait for a signal, and then does a syscall to OpenProcess(Explorer) for the hooks to intercept
     if (argc >= 2 && argv[1][0] != '0') {
         int targetPid = std::stoi(argv[1]);
         if (targetPid < 4) { // min PID is 4
-            printf("[!] TestEXE: Invalid PID provided: %i\n", targetPid);;
+            printf("[!] TestEXE: Invalid PID provided: %i\n", targetPid);
         }
         else {
             std::string triggerSignalName = "Local\\TestEXE_OpenProc_" + std::to_string(targetPid);
