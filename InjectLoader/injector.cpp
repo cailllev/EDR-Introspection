@@ -1033,33 +1033,31 @@ LOADER_RET DoHookForThreadless(HANDLE hProc, LPVOID lpStart, LPVOID lpParameters
         /* 0024 */ 0x49, 0xC7, 0xC0, 0x40, 0x00, 0x00, 0x00,                   // mov r8, 0x40                     ; flNewProtect, PAGE_EXECUTE_READWRITE
         /* 002b */ 0x4C, 0x8D, 0x0C, 0x24,                                     // lea r9, [rsp]                    ; lpflOldProtect, pointer for old value
         /* 002f */ 0xFF, 0xD6,                                                 // call rsi                         ; VirtualProtect(hookedFuncAddr, 12, RWX, old)
-        /* 0031 */ 0x48, 0x83, 0xC4, 0x28,                                     // add rsp, 28h                     ; un-allocate space
 
         // --- 3. Write Back Original Instructions ---
-        /* 0035 */ 0x48, 0xB8, 0xDD, 0xDD, 0xCC, 0xCC, 0xAA, 0xAA, 0x99, 0x99, // movabs rax, 0xddddccccaaaa9999   ; define originalInstructions_0_8 (patched)
-        /* 003f */ 0x48, 0x89, 0x03,                                           // mov qword ptr [rbx], rax         ; write to rbx (hookedFuncAddr)
-        /* 0042 */ 0xB8, 0x09, 0x09, 0x09, 0x09,                               // mov eax, 0x09090909              ; define originalInstructions_8_B (patched)
-        /* 0047 */ 0x89, 0x43, 0x08,                                           // mov dword ptr [rbx+8], eax       ; write to rbx+8 (hookedFuncAddr+8)
+        /* 0031 */ 0x48, 0xB8, 0xDD, 0xDD, 0xCC, 0xCC, 0xAA, 0xAA, 0x99, 0x99, // movabs rax, 0xddddccccaaaa9999   ; define originalInstructions_0_8 (patched)
+        /* 003b */ 0x48, 0x89, 0x03,                                           // mov qword ptr [rbx], rax         ; write to rbx (hookedFuncAddr)
+        /* 003e */ 0xB8, 0x09, 0x09, 0x09, 0x09,                               // mov eax, 0x09090909              ; define originalInstructions_8_B (patched)
+        /* 0043 */ 0x89, 0x43, 0x08,                                           // mov dword ptr [rbx+8], eax       ; write to rbx+8 (hookedFuncAddr+8)
 
         // --- 4. Re-VirtualProtect ---
-        /* 004a */ 0x48, 0x83, 0xEC, 0x28,                                     // sub rsp, 28h                     ; allocate space
-        /* 004e */ 0x48, 0x8B, 0xCB,                                           // mov rcx, rbx                     ; lpAddress, unprotect hookedFuncAddr
-        /* 0051 */ 0x48, 0xC7, 0xC2, 0x0C, 0x00, 0x00, 0x00,                   // mov rdx, 0xC                     ; dwSize, unprotect 12 bytes
-        /* 0058 */ 0x49, 0xC7, 0xC0, 0x20, 0x00, 0x00, 0x00,                   // mov r8, 0x20                     ; flNewProtect, PAGE_EXECUTE_READ
-        /* 005f */ 0x4C, 0x8D, 0x0C, 0x24,                                     // lea r9, [rsp]                    ; lpflOldProtect, pointer for old value
-        /* 0063 */ 0xFF, 0xD6,                                                 // call rsi                         ; VirtualProtect(hookedFuncAddr, 12, RX, old)
-        /* 0065 */ 0x48, 0x83, 0xC4, 0x28,                                     // add rsp, 28h                     ; un-allocate space
+        /* 0046 */ 0x48, 0x8B, 0xCB,                                           // mov rcx, rbx                     ; lpAddress, unprotect hookedFuncAddr
+        /* 0049 */ 0x48, 0xC7, 0xC2, 0x0C, 0x00, 0x00, 0x00,                   // mov rdx, 0xC                     ; dwSize, unprotect 12 bytes
+        /* 0050 */ 0x49, 0xC7, 0xC0, 0x20, 0x00, 0x00, 0x00,                   // mov r8, 0x20                     ; flNewProtect, PAGE_EXECUTE_READ
+        /* 0057 */ 0x4C, 0x8D, 0x0C, 0x24,                                     // lea r9, [rsp]                    ; lpflOldProtect, pointer for old value
+        /* 005b */ 0xFF, 0xD6,                                                 // call rsi                         ; VirtualProtect(hookedFuncAddr, 12, RX, old)
+        /* 005d */ 0x48, 0x83, 0xC4, 0x28,                                     // add rsp, 28h                     ; un-allocate space
 
         // --- 5. Setup Fake Return to lpStart & Restore ---
-        /* 0069 */ 0x48, 0x8B, 0xCB,                                           // mov rcx, rbx                     ; rbx still holds final return dest, but rbx must be restored now
-        /* 006c */ 0x5B, 0x5E,                                                 // pop rbx, rsi                     ; restore original rbx and rsi
-        /* 006e */ 0x51,                                                       // push rcx                         ; push final return destination (hookedFuncAddr) after lpStart
+        /* 0061 */ 0x48, 0x8B, 0xCB,                                           // mov rcx, rbx                     ; rbx still holds final return dest, but rbx must be restored now
+        /* 0064 */ 0x5B, 0x5E,                                                 // pop rbx, rsi                     ; restore original rbx and rsi
+        /* 0066 */ 0x51,                                                       // push rcx                         ; push final return destination (hookedFuncAddr) after lpStart
 
         // --- 6. Setup Arguments and call lpStart(lpParameters)) ---
-        /* 006f */ 0x48, 0xB9, 0x2f, 0x6d, 0x6e, 0x74, 0x2f, 0x61, 0x69, 0x6e, // movabs rcx, lpParameters         ; DLL path (patched)
-        /* 0079 */ 0x48, 0xB8, 0x77, 0x61, 0x73, 0x20, 0x68, 0x65, 0x72, 0x65, // movabs rax, lpStart              ; LoadLibraryA patched)
-        /* 0083 */ 0x50,                                                       // push rax                         ; push LoadLibrary entry point (maybe use call and align stack again?)
-        /* 0084 */ 0xC3                                                        // ret                              ; jumps to LoadLibrary; returns cleanly to hookedFuncAddr
+        /* 0067 */ 0x48, 0xB9, 0x2f, 0x6d, 0x6e, 0x74, 0x2f, 0x61, 0x69, 0x6e, // movabs rcx, lpParameters         ; DLL path (patched)
+        /* 0071 */ 0x48, 0xB8, 0x77, 0x61, 0x73, 0x20, 0x68, 0x65, 0x72, 0x65, // movabs rax, lpStart              ; LoadLibraryA patched)
+        /* 007b */ 0x50,                                                       // push rax                         ; push LoadLibrary entry point (maybe use call and align stack again?)
+        /* 007c */ 0xC3                                                        // ret                              ; jumps to LoadLibrary; returns cleanly to hookedFuncAddr
     };
 
     // 1. Patch the hooked function address into the shellcode loader stub
@@ -1069,14 +1067,14 @@ LOADER_RET DoHookForThreadless(HANDLE hProc, LPVOID lpStart, LPVOID lpParameters
     *reinterpret_cast<DWORD64*>(shellcodeLoader.data() + 0x0E) = virtProtAddr;
 
     // 3. Patch the 12 bytes that were in the original export prior to hooking
-    *reinterpret_cast<DWORD64*>(shellcodeLoader.data() + 0x37) = originalInstructions_0_8;
-    *reinterpret_cast<UINT*>(shellcodeLoader.data() + 0x43) = originalInstructions_8_B;
+    *reinterpret_cast<DWORD64*>(shellcodeLoader.data() + 0x33) = originalInstructions_0_8;
+    *reinterpret_cast<UINT*>(shellcodeLoader.data() + 0x3F) = originalInstructions_8_B;
 
     // 4. Patch lpParameters into RCX (offset 0x88)
-    *reinterpret_cast<DWORD64*>(shellcodeLoader.data() + 0x71) = (DWORD64)lpParameters;
+    *reinterpret_cast<DWORD64*>(shellcodeLoader.data() + 0x69) = (DWORD64)lpParameters;
 
     // 5. Patch lpStart into RAX (offset 0x92)
-    *reinterpret_cast<DWORD64*>(shellcodeLoader.data() + 0x7B) = (DWORD64)lpStart;
+    *reinterpret_cast<DWORD64*>(shellcodeLoader.data() + 0x73) = (DWORD64)lpStart;
 
     if (debug)
         printf("[+] Injector: Patched and prepared the threadless loader locally\n");
